@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^5.1.6",
     "@next/font": "^14.2.15",
     "@prisma/client": "^6.6.0",
     "chart.js": "^4.4.8",

@@ -3,23 +3,23 @@ import { FaDownload, FaEdit, FaTrash } from 'react-icons/fa';
 
 const PersonalData: React.FC = () => {
   return (
-    <div className="p-6 bg-white border border-red-700 rounded-lg">
+    <div className="p-6 bg-white border border-[#800000] rounded-lg">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Personal Data</h1>
         <div className="flex space-x-2">
-          <button className="bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
+          <button className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
             <FaDownload /> Download
           </button>
-          <button className="bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
+          <button className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
             <FaEdit /> Edit
           </button>
-          <button className="bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
+          <button className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
             <FaTrash /> Delete
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-red-700 p-4 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-[#800000] p-4 rounded-lg">
         {/* Left Column */}
         <div>
           <div className="mb-4">

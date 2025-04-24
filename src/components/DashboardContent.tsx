@@ -27,7 +27,7 @@ export default function DashboardContent() {
     <div className="p-6 bg-gray-100 min-h-screen w-full flex flex-col">
       {/* Date Picker */}
       <div className="flex justify-end mb-6">
-        <div className="flex items-center bg-red-700 text-white px-4 py-2 rounded cursor-pointer">
+        <div className="flex items-center bg-[#800000] text-white px-4 py-2 rounded cursor-pointer">
           <FaCalendarAlt className="mr-2" />
           <DatePicker
             selected={dateRange[0]}
@@ -37,13 +37,13 @@ export default function DashboardContent() {
             selectsRange
             dateFormat="yyyy-MM-dd"
             customInput={
-              <button className="flex items-center bg-red-700 text-white px-4 py-2 rounded">
+              <button className="flex items-center bg-[#800000] text-white px-4 py-2 rounded">
                 {dateRange[0]
                   ? `${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`
                   : "Select Date Range"}
               </button>
             }
-            className="bg-red-700 text-white outline-none cursor-pointer"
+            className="bg-[#800000] text-white outline-none cursor-pointer"
           />
         </div>
       </div>
@@ -51,45 +51,45 @@ export default function DashboardContent() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
         {/* Faculty Section */}
-        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-center">
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-38 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Faculty</h2>
           <div className="grid grid-cols-3 text-center">
             <div>
-              <p className="text-3xl font-bold text-red-700">28</p>
+              <p className="text-3xl font-bold text-[#800000]">28</p>
               <p className="text-gray-600">Total</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-red-700">25</p>
+              <p className="text-3xl font-bold text-[#800000]">25</p>
               <p className="text-gray-600">Regular</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-red-700">3</p>
+              <p className="text-3xl font-bold text-[#800000]">3</p>
               <p className="text-gray-600">Probationary</p>
             </div>
           </div>
         </div>
 
         {/* Active Users Section */}
-        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-center">
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-40 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Active Users</h2>
           <div className="grid grid-cols-3 text-center">
             <div>
-              <p className="text-3xl font-bold text-red-700">25</p>
+              <p className="text-3xl font-bold text-[#800000]">25</p>
               <p className="text-gray-600">Faculty</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-red-700">1</p>
+              <p className="text-3xl font-bold text-[#800000]">1</p>
               <p className="text-gray-600">Admin</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-red-700">26</p>
+              <p className="text-3xl font-bold text-[#800000]">26</p>
               <p className="text-gray-600">Total</p>
             </div>
           </div>
         </div>
 
         {/* Attendance Pie Chart */}
-        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-center">
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Attendance</h2>
           <div className="flex justify-center items-center">
             <div className="w-60 h-60">
@@ -99,7 +99,7 @@ export default function DashboardContent() {
         </div>
 
         {/* Activity Logs */}
-        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-center">
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Recent Activity Logs</h2>
           <table className="w-full text-left border-collapse">
             <thead>

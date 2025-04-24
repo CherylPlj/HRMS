@@ -60,7 +60,7 @@ export default function FacultyDashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'dashboard' ? 'text-red-500' : 'text-black'
+                  activeButton === 'dashboard' ? 'text-[#800000]' : 'text-black'
                 }`}
                 title="Dashboard"
                 onClick={() => handleButtonClick('dashboard')}
@@ -71,7 +71,7 @@ export default function FacultyDashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'personal-data' ? 'text-red-500' : 'text-black'
+                  activeButton === 'personal-data' ? 'text-[#800000]' : 'text-black'
                 }`}
                 title="Personal Data"
                 onClick={() => handleButtonClick('personal-data')}
@@ -82,7 +82,7 @@ export default function FacultyDashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'documents' ? 'text-red-500' : 'text-black'
+                  activeButton === 'documents' ? 'text-[#800000]' : 'text-black'
                 }`}
                 title="Documents"
                 onClick={() => handleButtonClick('documents')}
@@ -93,7 +93,7 @@ export default function FacultyDashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'attendance' ? 'text-red-500' : 'text-black'
+                  activeButton === 'attendance' ? 'text-[#800000]' : 'text-black'
                 }`}
                 title="Attendance"
                 onClick={() => handleButtonClick('attendance')}
@@ -104,7 +104,7 @@ export default function FacultyDashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'leave' ? 'text-red-500' : 'text-black'
+                  activeButton === 'leave' ? 'text-[#800000]' : 'text-black'
                 }`}
                 title="Leave Request"
                 onClick={() => handleButtonClick('leave')}
@@ -117,7 +117,7 @@ export default function FacultyDashboard() {
           <a
             href="#"
             className={`flex flex-col items-center ${
-              activeButton === 'logout' ? 'text-red-500' : 'text-black'
+              activeButton === 'logout' ? 'text-[#800000]' : 'text-black'
             }`}
             title="Log Out"
             onClick={() => setLogoutModalVisible(true)} // Show the logout modal
@@ -130,9 +130,9 @@ export default function FacultyDashboard() {
  <div className="flex flex-col flex-1">
           {/* Header Container */}
           {/* <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-red-700">DASHBOARD</h1> */}
+            <h1 className="text-xl font-bold text-[#800000]">DASHBOARD</h1> */}
             <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-red-700">
+              <h1 className="text-xl font-bold text-[#800000]">
                 {activeButton === 'dashboard' && 'DASHBOARD'}
                 {activeButton === 'personal-data' && 'PERSONAL DATA'}
                 {activeButton === 'documents' && 'DOCUMENTS'}
@@ -169,7 +169,7 @@ export default function FacultyDashboard() {
                 {/* User Information Section */}
                 <a
                   href="#"
-                  className="flex flex-col text-black hover:text-red-700 transition"
+                  className="flex flex-col text-black hover:text-[#800000] transition"
                   title="User Profile"
                 >
                   <div className="font-semibold">Jane Smith</div>
@@ -179,7 +179,7 @@ export default function FacultyDashboard() {
             </div>
           </div>
           {/* Main Content */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 overflow-y-auto p-6">
             {renderContent()} {/* Render the content dynamically based on activeButton */}
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function FacultyDashboard() {
       {isLogoutModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl text-center font-bold text-red-700 mb-4">LOGOUT</h2>
+            <h2 className="text-xl text-center font-bold text-[#800000] mb-4">LOGOUT</h2>
             <p className="text-gray-700 text-center mb-6">Are you sure you want to logout?</p>
             <div className="flex justify-center space-x-10">
               <button
@@ -199,7 +199,7 @@ export default function FacultyDashboard() {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800"
+                className="px-4 py-2 bg-[#800000] text-white rounded hover:bg-red-800"
                 onClick={handleLogout} // Perform logout
               >
                 Logout
@@ -275,7 +275,7 @@ export default function FacultyDashboard() {
 //               <a
 //                 href="#"
 //                 className={`flex flex-col items-center ${
-//                   activeButton === 'dashboard' ? 'text-red-500' : 'text-black'
+//                   activeButton === 'dashboard' ? 'text-[#800000]' : 'text-black'
 //                 }`}
 //                 title="Dashboard"
 //                 onClick={() => handleButtonClick('dashboard')}
@@ -286,7 +286,7 @@ export default function FacultyDashboard() {
 //               <a
 //                 href="#"
 //                 className={`flex flex-col items-center ${
-//                   activeButton === 'personal-data' ? 'text-red-500' : 'text-black'
+//                   activeButton === 'personal-data' ? 'text-[#800000]' : 'text-black'
 //                 }`}
 //                 title="Personal Data"
 //                 onClick={() => handleButtonClick('personal-data')}
@@ -297,7 +297,7 @@ export default function FacultyDashboard() {
 //               <a
 //                 href="#"
 //                 className={`flex flex-col items-center ${
-//                   activeButton === 'documents' ? 'text-red-500' : 'text-black'
+//                   activeButton === 'documents' ? 'text-[#800000]' : 'text-black'
 //                 }`}
 //                 title="Documents"
 //                 onClick={() => handleButtonClick('documents')}
@@ -308,7 +308,7 @@ export default function FacultyDashboard() {
 //               <a
 //                 href="#"
 //                 className={`flex flex-col items-center ${
-//                   activeButton === 'attendance' ? 'text-red-500' : 'text-black'
+//                   activeButton === 'attendance' ? 'text-[#800000]' : 'text-black'
 //                 }`}
 //                 title="Attendance"
 //                 onClick={() => handleButtonClick('attendance')}
@@ -319,7 +319,7 @@ export default function FacultyDashboard() {
 //               <a
 //                 href="#"
 //                 className={`flex flex-col items-center ${
-//                   activeButton === 'leave' ? 'text-red-500' : 'text-black'
+//                   activeButton === 'leave' ? 'text-[#800000]' : 'text-black'
 //                 }`}
 //                 title="Leave Request"
 //                 onClick={() => handleButtonClick('leave')}
@@ -332,7 +332,7 @@ export default function FacultyDashboard() {
 //           <a
 //             href="#"
 //             className={`flex flex-col items-center ${
-//               activeButton === 'logout' ? 'text-red-500' : 'text-black'
+//               activeButton === 'logout' ? 'text-[#800000]' : 'text-black'
 //             }`}
 //             title="Log Out"
 //             onClick={() => setLogoutModalVisible(true)} // Show the logout modal

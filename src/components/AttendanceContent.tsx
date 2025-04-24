@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { Search, Filter, Trash2 } from 'lucide-react';
+
 
 const AttendanceContent: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('schedule'); // Switch state
+    const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('attendance'); // Switch state
 
     const handleOpenModal = () => setIsModalOpen(true);
     const handleCloseModal = () => setIsModalOpen(false);
@@ -110,7 +112,7 @@ const AttendanceContent: React.FC = () => {
                 <div className="flex justify-center space-x-4">
                     <button
                         onClick={handleConfirmDelete}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                        className="bg-red-600 hover:bg-[#800000] text-white px-4 py-2 rounded"
                     >
                         Yes, Delete
                     </button>
@@ -129,28 +131,164 @@ const AttendanceContent: React.FC = () => {
         <div className="text-black p-4 min-h-screen">
             {/* Header with Toggle Switch */}
             <div className="flex justify-between items-center mb-4">
+                {/* Tabs for Attendance and Schedule */}
                 <div className="flex space-x-4">
                     <span 
                         onClick={() => setActiveTab('attendance')}
-                        className={`cursor-pointer ${activeTab === 'attendance' ? 'text-[#800000]' : 'text-gray-500'}`}
-                    >
-                        Attendance Management
-                    </span>
+                        className={`cursor-pointer text-xl font-semibold ${activeTab === 'attendance' ? 'text-[#800000]' : 'text-gray-500'}`}
+                    >Attendance Management</span>
                     <span className="text-gray-400">/</span>
                     <span 
                         onClick={() => setActiveTab('schedule')}
-                        className={`cursor-pointer ${activeTab === 'schedule' ? 'text-[#800000]' : 'text-gray-500'}`}
-                    >
-                        Schedule Management
+                        className={`cursor-pointer text-xl font-semibold ${activeTab === 'schedule' ? 'text-[#800000]' : 'text-gray-500'}`}
+                    >Schedule Management
                     </span>
                 </div>
+                {/* Add Download Button */}
+                {activeTab === 'attendance' && (
+                <button
+                    onClick={() => console.log("Download Attendance")}
+                    className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded flex items-center"
+                >
+                    <i className="fas fa-download mr-2"></i>
+                    Download
+                </button>
+                )}
+
+                {/* Add Schedule Button */}
+                {activeTab === 'schedule' && (
+                <button
+                    onClick={handleOpenModal}
+                    className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded flex items-center"
+                >
+                    <i className="fas fa-plus mr-2"></i>
+                    Add Schedule
+                </button>
+                )}
             </div>
+
+{/* Attendance Content */}
+            {activeTab === 'attendance' && (
+                <div>
+                    <div className="bg-white border-2 border-[#800000] p-4 rounded-lg h-[75vh] flex items-start justify-center">
+                    <main className="flex-1 p-6">
+                        {/* <div className="border border-[#8B0000] rounded-sm p-4"> */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
+                            {/* <div className="flex items-center border border-gray-300 rounded text-gray-700 text-sm px-3 py-1 w-full sm:w-[300px]"> */}
+                                {/* Search Bar */}
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-2 top-2.5 text-gray-500" size={18} />
+                                        <input
+                                        type="text"
+                                        placeholder="Search..."
+                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        />
+                                    </div>
+                                </div>
+                            {/* <input
+                                type="text"
+                                placeholder="Search..."
+                                aria-label="Search attendance"
+                                className="w-full bg-transparent focus:outline-none text-xs"
+                            /> */}
+                            {/* </div> */}
+                            <button className="flex items-center bg-black text-white text-md font-semibold rounded px-3 py-1">
+                            <i className="fas fa-calendar-alt mr-2" />
+                            2025-03-20 - 2025-03-20
+                            </button>
+                        </div>
+                        <table className="w-full text-md text-left border-collapse border-t">
+                            <thead className="bg-gray-100 text-black text-md font-semibold">
+                            <tr>
+                                {[
+                                "Faculty",
+                                "Date",
+                                "Time In",
+                                "Time Out",
+                                "Status",
+                                "Actions",
+                                "DTR",
+                                ].map((header) => (
+                                <th
+                                    key={header}
+                                    className="border border-white px-3 py-2 font-semibold text-black"
+                                >
+                                    {header}
+                                </th>
+                                ))}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {[
+                                {
+                                name: "Jane Smith",
+                                date: "2025-03-20",
+                                in: "08:30 AM",
+                                out: "03:50 PM",
+                                status: "Late",
+                                color: "text-yellow-500",
+                                icon: "fa-exclamation-triangle",
+                                img: "https://storage.googleapis.com/a1aa/image/0c7638f7-d5c8-47ab-3ea5-893e97de3cb9.jpg",
+                                },
+                                {
+                                name: "John Smith",
+                                date: "2025-03-20",
+                                in: "08:05 AM",
+                                out: "04:00 PM",
+                                status: "Present",
+                                color: "text-green-600",
+                                icon: "fa-check-square",
+                                img: "https://storage.googleapis.com/a1aa/image/84501257-0104-4432-6d67-54cc99d95ea7.jpg",
+                                },
+                                {
+                                name: "Ronel Reyes",
+                                date: "2025-03-20",
+                                in: "08:30 AM",
+                                out: "03:50 PM",
+                                status: "Late",
+                                color: "text-yellow-500",
+                                icon: "fa-exclamation-triangle",
+                                img: "https://storage.googleapis.com/a1aa/image/5cdfcb17-411b-49de-89ee-3627f14ca548.jpg",
+                                },
+                            ].map(({ name, date, in: timeIn, out: timeOut, status, color, icon, img }) => (
+                                <tr key={name} className="border border-white">
+                                <td className="border border-white px-3 py-2 flex items-center space-x-2">
+                                    <img src={img} alt={`${name} profile picture`} className="w-6 h-6 rounded-full" />
+                                    {name}
+                                </td>
+                                <td className="px-3 py-2">{date}</td>
+                                <td className="px-3 py-2">{timeIn}</td>
+                                <td className="px-3 py-2">{timeOut}</td>
+                                <td className={`px-3 py-2 ${color} flex items-center space-x-1`}>
+                                    <i className={`fas ${icon}`} />
+                                    <span>{status}</span>
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                    <button className="text-gray-600 hover:text-black" aria-label={`Edit ${name} attendance`}>
+                                    <i className="fas fa-pencil-alt" />
+                                    </button>
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                    <button className="bg-[#8B0000] text-white text-xs rounded px-3 py-1 hover:bg-[#6b0000]" aria-label={`View ${name} DTR`}>
+                                    View
+                                    </button>
+                                </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                        {/* </div> */}
+                        </main>
+                        </div>
+                        </div>
+                        )}
 
             {/* Content based on the active tab */}
             {activeTab === 'schedule' && (
                 <div>
                     {/* Add Schedule Button */}
-                    <div className="flex justify-end mb-4">
+                    {/* <div className="flex justify-end mb-4">
                         <button 
                             onClick={handleOpenModal}
                             className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded flex items-center"
@@ -158,11 +296,11 @@ const AttendanceContent: React.FC = () => {
                             <i className="fas fa-plus mr-2"></i>
                             Add Schedule
                         </button>
-                    </div>
+                    </div> */}
 
 
                     {/* Big Container for Schedule */}
-                    <div className="bg-white border-2 border-red-500 p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
+                    <div className="bg-white border-2 border-[#800000] p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
                         {/* Search Bar */}
                         <div className="mb-4">
                             <input
@@ -191,7 +329,7 @@ const AttendanceContent: React.FC = () => {
                                 <tbody>
                                     <tr className="hover:bg-gray-50">
                                         <td className="p-2 border-b">
-                                            <img src="https://via.placeholder.com/40" alt="Profile" className="w-10 h-10 rounded-full" />
+                                            <img src="/manprofileavatar.png" alt="Profile" className="w-10 h-10 rounded-full" />
                                         </td>
                                         <td className="p-2 border-b">John Doe</td>
                                         <td className="p-2 border-b">Mathematics</td>
@@ -207,7 +345,7 @@ const AttendanceContent: React.FC = () => {
                                             </button>
                                             <button 
                                                 onClick={handleOpenDeleteModal}
-                                                className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm ml-2"
+                                                className="bg-[#800000] hover:bg-red-600 text-white px-2 py-1 rounded text-sm ml-2"
                                             >
                                                 Delete
                                             </button>
@@ -219,14 +357,7 @@ const AttendanceContent: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            {activeTab === 'attendance' && (
-                <div>
-                    <div className="bg-white border-2 border-red-500 p-4 rounded-lg h-[75vh] flex items-center justify-center">
-                        <p className="text-gray-500 text-lg">Attendance page content here...</p>
-                    </div>
-                </div>
-            )}
+        
 
             {/* Modals */}
             {isModalOpen && renderModalContent(false)}

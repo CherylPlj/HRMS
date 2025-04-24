@@ -37,7 +37,7 @@ export default function DashboardContent() {
       <div className="p-6 bg-gray-100 min-h-screen w-full flex flex-col">
         {/* Date Picker */}
         <div className="flex justify-end mb-6">
-          <div className="flex items-center bg-red-700 text-white px-4 py-2 rounded cursor-pointer">
+          <div className="flex items-center bg-[#800000] text-white px-4 py-2 rounded cursor-pointer">
             {/* <FaCalendarAlt className="mr-2" /> */}
             <i className="fas fa-calendar-alt mr-2"></i> {/* Replaced FaCalendarAlt */}
             <DatePicker
@@ -48,13 +48,13 @@ export default function DashboardContent() {
               selectsRange
               dateFormat="yyyy-MM-dd"
               customInput={
-                <button className="flex items-center bg-red-700 text-white px-4 py-2 rounded">
+                <button className="flex items-center bg-[#800000] text-white px-4 py-2 rounded">
                   {dateRange[0]
                     ? `${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`
                     : "Select Date Range"}
                 </button>
               }
-              className="bg-red-700 text-white outline-none cursor-pointer"
+              className="bg-[#800000] text-white outline-none cursor-pointer"
             />
           </div>
         </div>
@@ -67,19 +67,19 @@ export default function DashboardContent() {
             <div className="space-y-2">
               <p>
                 <span className="font-bold text-black">Status:</span>{" "}
-                <span className="text-red-700 font-bold">CHECK-IN</span>
+                <span className="text-[#800000] font-bold">CHECK-IN</span>
               </p>
               <p>
                 <span className="font-bold text-black">Date:</span>{" "}
-                <span className="text-red-700">03/24/2025</span>
+                <span className="text-[#800000]">03/24/2025</span>
               </p>
               <p>
                 <span className="font-bold text-black">Time:</span>{" "}
-                <span className="text-red-700">8:05 AM</span>
+                <span className="text-[#800000]">8:05 AM</span>
               </p>
               <p>
                 <span className="font-bold text-black">IP Address:</span>{" "}
-                <span className="text-red-700">---.---.---.-- (school-based)</span>
+                <span className="text-[#800000]">---.---.---.-- (school-based)</span>
               </p>
             </div>
           </div>

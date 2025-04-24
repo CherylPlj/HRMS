@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  Admin
+  Faculty
+  Cashier
+  Registrar
+}
+
+enum Status {
+  Active
+  Inactive
+}
+
+enum EmploymentStatus {
+  Hired
+  Resigned
+}
+
+enum SubmissionStatus {
+  Submitted
+  Pending
+}
+
+enum ContractType {
+  Full_Time
+  Part_Time
+  Probationary
+}
+
+enum DayOfWeek {
+  Monday
+  Tuesday
+  Wednesday
+  Thursday
+  Friday
+  Saturday
+  Sunday
+}
+
+model User {
+  UserID       Int       @id @default(autoincrement())
+  FirstName    String
+  LastName     String
+  Email        String    @unique
+  Photo        String
+  PasswordHash String
+  Role         Role
+  Status       Status    @default(Active)
+  DateCreated  DateTime  @default(now())
+  DateModified DateTime?
+  LastLogin    DateTime?
+
+  Faculty      Faculty?
+  Cashier      Cashier?
+  Registrar    Registrar?
+  AIChat       AIChat[]
+  Notification Notification[]
+  Report       Report[]
+  ActivityLog  ActivityLog[]
+}
+
+model Faculty {
+  FacultyID        Int              @id @default(autoincrement())
+  UserID           Int              @unique
+  DateOfBirth      DateTime
+  Phone            String
+  Address          String
+  EmploymentStatus EmploymentStatus
+  HireDate         DateTime
+  ResignationDate  DateTime?
+  Position         String
+  DepartmentID     Int
+  ContractID       Int?
+
+  User       User       @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
+  Department Department @relation(fields: [DepartmentID], references: [DepartmentID])
+  Contract   Contract?  @relation(fields: [ContractID], references: [ContractID])
+
+  Documents Document[]
+  Schedules Schedule[]
+}
+
+model Cashier {
+  CashierID    Int       @id @default(autoincrement())
+  UserID       Int       @unique
+  WorkSchedule String?
+  ShiftStart   DateTime?
+  ShiftEnd     DateTime?
+
+  User User @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
+}
+
+model Registrar {
+  RegistrarID Int     @id @default(autoincrement())
+  UserID      Int     @unique
+  Schedule    String?
+
+  User User @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
+}
+
+model Department {
+  DepartmentID   Int    @id @default(autoincrement())
+  DepartmentName String @unique
+
+  Faculty Faculty[]
+}
+
+model Document {
+  DocumentID       Int              @id @default(autoincrement())
+  FacultyID        Int
+  DocumentTypeID   Int
+  UploadDate       DateTime         @default(now())
+  SubmissionStatus SubmissionStatus
+
+  Faculty      Faculty      @relation(fields: [FacultyID], references: [FacultyID])
+  DocumentType DocumentType @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
+}
+
+model DocumentType {
+  DocumentTypeID   Int    @id @default(autoincrement())
+  DocumentTypeName String @unique
+
+  Document Document[]
+}
+
+model Contract {
+  ContractID   Int          @id @default(autoincrement())
+  StartDate    DateTime
+  EndDate      DateTime
+  ContractType ContractType
+
+  Faculty Faculty[]
+}
+
+model Schedule {
+  ScheduleID   Int       @id @default(autoincrement())
+  FacultyID    Int
+  DayOfWeek    DayOfWeek
+  StartTime    DateTime
+  EndTime      DateTime
+  Subject      String
+  ClassSection String
+
+  Faculty Faculty @relation(fields: [FacultyID], references: [FacultyID])
+}
+
+model AIChat {
+  ChatID   Int    @id @default(autoincrement())
+  UserID   Int
+  Question String
+  Answer   String
+  Status   String
+
+  User User @relation(fields: [UserID], references: [UserID])
+}
+
+model Report {
+  ReportID      Int      @id @default(autoincrement())
+  GeneratedBy   Int
+  ReportType    String
+  GeneratedDate DateTime @default(now())
+  Details       String
+
+  User User @relation(fields: [GeneratedBy], references: [UserID])
+}
+
+model Notification {
+  NotificationID Int      @id @default(autoincrement())
+  UserID         Int
+  Message        String
+  DateSent       DateTime @default(now())
+  Type           String
+  IsRead         Boolean  @default(false)
+
+  User User @relation(fields: [UserID], references: [UserID])
+}
+
+model ActivityLog {
+  LogID          Int      @id @default(autoincrement())
+  UserID         Int?
+  ActionType     String
+  EntityAffected String
+  RecordID       Int?
+  ActionDetails  String
+  Timestamp      DateTime @default(now())
+  IPAddress      String
+
+  User User? @relation(fields: [UserID], references: [UserID], onDelete: SetNull)
+}

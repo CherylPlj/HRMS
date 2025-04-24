@@ -53,7 +53,7 @@ export default function Dashboard() {
       </Head>
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
         {/* Sidebar */}
-        <div className="bg-red-800 text-white w-20 p-4 flex flex-col items-center">
+        <div className="bg-[#800000] text-white w-20 p-4 flex flex-col items-center">
           <div className="mb-4">
             <img
               src="/sjsfilogo.png"
@@ -64,7 +64,7 @@ export default function Dashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'dashboard' ? 'text-yellow-500' : 'text-white'
+                  activeButton === 'dashboard' ? 'text-[#ffd700]' : 'text-white'
                 }`}
                 title="Dashboard"
                 onClick={() => handleButtonClick('dashboard')}
@@ -75,7 +75,7 @@ export default function Dashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'faculty' ? 'text-yellow-500' : 'text-white'
+                  activeButton === 'faculty' ? 'text-[#ffd700]' : 'text-white'
                 }`}
                 title="Faculty"
                 onClick={() => handleButtonClick('faculty')}
@@ -86,7 +86,7 @@ export default function Dashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'attendance' ? 'text-yellow-500' : 'text-white'
+                  activeButton === 'attendance' ? 'text-[#ffd700]' : 'text-white'
                 }`}
                 title="Attendance"
                 onClick={() => handleButtonClick('attendance')}
@@ -97,18 +97,18 @@ export default function Dashboard() {
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'leave' ? 'text-yellow-500' : 'text-white'
+                  activeButton === 'leave' ? 'text-[#ffd700]' : 'text-white'
                 }`}
                 title="Leave"
                 onClick={() => handleButtonClick('leave')}
               >
-                <i className="fas fa-clipboard"></i>
+                <i className="fas fa-clipboard text-xl"></i>
                 <span className="text-[10px]">Leave</span>
               </a>
               <a
                 href="#"
                 className={`flex flex-col items-center ${
-                  activeButton === 'users' ? 'text-yellow-500' : 'text-white'
+                  activeButton === 'users' ? 'text-[#ffd700]' : 'text-white'
                 }`}
                 title="Users"
                 onClick={() => handleButtonClick('users')}
@@ -121,7 +121,7 @@ export default function Dashboard() {
           <a
             href="#"
             className={`flex flex-col items-center mt-auto ${
-              activeButton === 'logout' ? 'text-yellow-500' : 'text-white'
+              activeButton === 'logout' ? 'text-[#ffd700]' : 'text-white'
             }`}
             title="Log Out"
             // onClick={() => handleButtonClick('logout')}
@@ -185,7 +185,7 @@ export default function Dashboard() {
             </div>
           </div>
           {/* Main Content */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 overflow-y-auto p-4">
             
             {renderContent()} {/* Render the content dynamically based on activeButton */}
   
@@ -207,7 +207,7 @@ export default function Dashboard() {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-red-800"
+                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
                 onClick={handleLogout} // Perform logout
               >
                 Logout
