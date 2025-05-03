@@ -57,7 +57,7 @@ const LeaveRequestFaculty: React.FC = () => {
             </div>
 
             {/* Leave Request Table */}
-            <div className="mt-6 bg-white border-2 border-[#800000] p-4 rounded-lg">
+            <div className="mt-6 bg-white shadow-lg p-4 rounded-lg">
                 <table className="min-w-full text-sm">
                     <thead>
                         <tr>

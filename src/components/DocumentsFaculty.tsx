@@ -12,10 +12,10 @@ const DocumentsFaculty: React.FC = () => {
 
 
     return (
-      <div className="p-6 bg-white border border-[#800000] rounded-lg">
+      <div className="p-6 bg-white shadow-lg rounded-lg">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Documents Checklist</h1>
+          <h1 className="text-2xl text-black font-bold">Documents Checklist</h1>
           <button className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
             <FaPlus /> Upload Files
           </button>
@@ -31,17 +31,17 @@ const DocumentsFaculty: React.FC = () => {
         </div>
 
         {/* Documents Table */}
-        <div className="overflow-x-auto border border-[#800000] rounded-lg">
+        <div className="overflow-x-auto rounded-lg">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 text-left">#</th>
-                <th className="p-3 text-left">Document</th>
-                <th className="p-3 text-left">File Uploaded</th>
-                <th className="p-3 text-left">Submission Status</th>
-                <th className="p-3 text-left">Date Submitted</th>
-                <th className="p-3 text-left">Action</th>
-                <th className="p-3 text-left">
+                <th className="p-3 text-left text-black">#</th>
+                <th className="p-3 text-left text-black">Document</th>
+                <th className="p-3 text-left text-black">File Uploaded</th>
+                <th className="p-3 text-left text-black">Submission Status</th>
+                <th className="p-3 text-left text-black">Date Submitted</th>
+                <th className="p-3 text-left text-black">Action</th>
+                <th className="p-3 text-left text-black">
                   <FaFilter />
                 </th>
               </tr>
@@ -50,10 +50,10 @@ const DocumentsFaculty: React.FC = () => {
               {documents.map((doc, index) => (
                 <tr key={doc.id} className="border-t hover:bg-gray-50">
                   {/* Sequential Number */}
-                  <td className="p-3 text-left">{index + 1}</td>
+                  <td className="p-3 text-left text-black">{index + 1}</td>
 
                   {/* Document Name with Checkbox */}
-                  <td className="p-3 gap-2">
+                  <td className="p-3 gap-2 text-black">
                     <input type="checkbox" checked readOnly className="h-4 w-4" />
                     <span>{doc.name}</span>
                   </td>
@@ -65,10 +65,10 @@ const DocumentsFaculty: React.FC = () => {
                   </td>
 
                   {/* Submission Status */}
-                  <td className="p-3 text-green-600">{doc.status}</td>
+                  <td className="p-3 text-green-600 text-black">{doc.status}</td>
 
                   {/* Date Submitted */}
-                  <td className="p-3 text-left">{doc.date}</td>
+                  <td className="p-3 text-left text-black">{doc.date}</td>
 
                   {/* Action */}
                   <td className="p-3 flex items-center gap-2">
@@ -81,7 +81,7 @@ const DocumentsFaculty: React.FC = () => {
         </div>
         {/* Pagination */}      
         {/* Submission Summary */}
-        <div className="mt-4 text-right text-sm">
+        <div className="mt-4 text-right text-sm text-black">
           <span className="text-green-600 font-bold">Complete</span> Submitted: {documents.length}/5
         </div>
       </div>
