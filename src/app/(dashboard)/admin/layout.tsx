@@ -1,6 +1,7 @@
 "use client";
 import Head from 'next/head';
 import { useState } from 'react';
+import { useUser } from '@clerk/nextjs'; // Import useUser from Clerk
 import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
 import AttendanceContent from '@/components/AttendanceContent';
@@ -9,19 +10,20 @@ import UsersContent from '@/components/UsersContent';
 import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
-  const [activeButton, setActiveButton] = useState('dashboard'); // Default to 'dashboard'
-  const [isLogoutModalVisible, setLogoutModalVisible] = useState(false); // State for logout modal
+  const [activeButton, setActiveButton] = useState('dashboard');
+  const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
+  const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
 
   const router = useRouter();
 
   const handleButtonClick = (buttonName: string) => {
-    setActiveButton(buttonName); // Set the clicked button as active
+    setActiveButton(buttonName);
   };
-  const handleLogout = () => {
-    console.log('User logged out'); // Perform logout logic here
-    setLogoutModalVisible(false); // Close the modal
-    router.push('/'); // Redirect to the login page
 
+  const handleLogout = () => {
+    console.log('User logged out');
+    setLogoutModalVisible(false);
+    router.push('/'); // Redirect to login page
   };
 
   const renderContent = () => {
@@ -63,9 +65,7 @@ export default function Dashboard() {
             <nav className="space-y-6">
               <a
                 href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'dashboard' ? 'text-[#ffd700]' : 'text-white'
-                }`}
+                className={`flex flex-col items-center ${activeButton === 'dashboard' ? 'text-[#ffd700]' : 'text-white'}`}
                 title="Dashboard"
                 onClick={() => handleButtonClick('dashboard')}
               >
@@ -74,9 +74,7 @@ export default function Dashboard() {
               </a>
               <a
                 href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'faculty' ? 'text-[#ffd700]' : 'text-white'
-                }`}
+                className={`flex flex-col items-center ${activeButton === 'faculty' ? 'text-[#ffd700]' : 'text-white'}`}
                 title="Faculty"
                 onClick={() => handleButtonClick('faculty')}
               >
@@ -85,9 +83,7 @@ export default function Dashboard() {
               </a>
               <a
                 href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'attendance' ? 'text-[#ffd700]' : 'text-white'
-                }`}
+                className={`flex flex-col items-center ${activeButton === 'attendance' ? 'text-[#ffd700]' : 'text-white'}`}
                 title="Attendance"
                 onClick={() => handleButtonClick('attendance')}
               >
@@ -96,9 +92,7 @@ export default function Dashboard() {
               </a>
               <a
                 href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'leave' ? 'text-[#ffd700]' : 'text-white'
-                }`}
+                className={`flex flex-col items-center ${activeButton === 'leave' ? 'text-[#ffd700]' : 'text-white'}`}
                 title="Leave"
                 onClick={() => handleButtonClick('leave')}
               >
@@ -107,9 +101,7 @@ export default function Dashboard() {
               </a>
               <a
                 href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'users' ? 'text-[#ffd700]' : 'text-white'
-                }`}
+                className={`flex flex-col items-center ${activeButton === 'users' ? 'text-[#ffd700]' : 'text-white'}`}
                 title="Users"
                 onClick={() => handleButtonClick('users')}
               >
@@ -120,32 +112,26 @@ export default function Dashboard() {
           </div>
           <a
             href="#"
-            className={`flex flex-col items-center mt-auto ${
-              activeButton === 'logout' ? 'text-[#ffd700]' : 'text-white'
-            }`}
+            className={`flex flex-col items-center mt-auto ${activeButton === 'logout' ? 'text-[#ffd700]' : 'text-white'}`}
             title="Log Out"
-            // onClick={() => handleButtonClick('logout')}
             onClick={() => setLogoutModalVisible(true)} // Show the logout modal
           >
             <i className="fas fa-sign-out-alt text-xl"></i>
             <span className="text-[10px]">Log Out</span>
           </a>
         </div>
-        
-      {/* Header and Main Content */}
+
+        {/* Main Content */}
         <div className="flex flex-col flex-1">
-          {/* Header Container */}
-          {/* <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-red-700">DASHBOARD</h1> */}
-            <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-red-700">
-                {activeButton === 'dashboard' && 'DASHBOARD'}
-                {activeButton === 'faculty' && 'FACULTY'}
-                {activeButton === 'attendance' && 'ATTENDANCE'}
-                {activeButton === 'leave' && 'LEAVE'}
-                {activeButton === 'users' && 'USERS'}
-              </h1>
-            {/* </div> */}
+          {/* Header */}
+          <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-red-700">
+              {activeButton === 'dashboard' && 'DASHBOARD'}
+              {activeButton === 'faculty' && 'FACULTY'}
+              {activeButton === 'attendance' && 'ATTENDANCE'}
+              {activeButton === 'leave' && 'LEAVE'}
+              {activeButton === 'users' && 'USERS'}
+            </h1>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-6">
                 {/* Icons Section */}
@@ -172,23 +158,27 @@ export default function Dashboard() {
                     <i className="fas fa-user-circle text-black text-lg"></i>
                   </a>
                 </div>
-                {/* User Information Section */}
-                <a
-                  href="#"
-                  className="flex flex-col text-black hover:text-red-700 transition"
-                  title="User Profile"
-                >
-                  <div className="font-semibold">Jane Smith</div>
-                  <div className="text-xs">Admin1-SJSFI</div>
-                </a>
+                {/* User Information */}
+                {isLoaded && isSignedIn && user ? (
+                  <a
+                    href="#"
+                    className="flex flex-col text-black hover:text-red-700 transition"
+                    title="User Profile"
+                  >
+                    <div className="font-semibold">{user.firstName} {user.lastName}</div>
+                    <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
+                    <div className="text-xs">{user.publicMetadata?.role}</div> {/* Role */}
+                  </a>
+                ) : (
+                  <div>Loading user info...</div> // Loading state
+                )}
               </div>
             </div>
           </div>
+
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto p-4">
-            
-            {renderContent()} {/* Render the content dynamically based on activeButton */}
-  
+            {renderContent()}
           </div>
         </div>
       </div>
@@ -215,8 +205,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      )}
+      )}s
     </>
   );
 }
-  

@@ -1,23 +1,74 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pie } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendarAlt } from "react-icons/fa";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function DashboardContent() {
   const [dateRange, setDateRange] = useState([new Date("2025-02-01"), new Date("2025-03-20")]);
+  const [facultyStats, setFacultyStats] = useState({ total: 0, regular: 0, probationary: 0 });
+  const [activeUsers, setActiveUsers] = useState({ faculty: 0, admin: 0, total: 0 });
+  const [attendanceData, setAttendanceData] = useState({ present: 0, absent: 0, late: 0 });
+  const [logs, setLogs] = useState([]);
 
   const handleDateChange = (dates) => {
     const [start, end] = dates;
     setDateRange([start, end]);
   };
 
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const { data: faculty } = await supabase.from("faculty").select("*");
+      const regularCount = faculty?.filter((f) => f.status === "regular").length || 0;
+      const probationaryCount = faculty?.filter((f) => f.status === "probationary").length || 0;
+
+      setFacultyStats({
+        total: faculty?.length || 0,
+        regular: regularCount,
+        probationary: probationaryCount,
+      });
+
+      const { data: users } = await supabase.from("users").select("*");
+      const facultyUsers = users?.filter((u) => u.role === "faculty").length || 0;
+      const adminUsers = users?.filter((u) => u.role === "admin").length || 0;
+
+      setActiveUsers({
+        faculty: facultyUsers,
+        admin: adminUsers,
+        total: facultyUsers + adminUsers,
+      });
+
+      const { data: attendance } = await supabase
+        .from("attendance")
+        .select("*")
+        .gte("date", dateRange[0].toISOString())
+        .lte("date", dateRange[1].toISOString());
+
+      setAttendanceData({
+        present: attendance?.filter((a) => a.status === "Present").length || 0,
+        absent: attendance?.filter((a) => a.status === "Absent").length || 0,
+        late: attendance?.filter((a) => a.status === "Late").length || 0,
+      });
+
+      const { data: activityLogs } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .order("timestamp", { ascending: false })
+        .limit(5);
+
+      setLogs(activityLogs || []);
+    };
+
+    fetchDashboardData();
+  }, [dateRange]);
+
   const pieData = {
     labels: ["Present", "Absent", "Late"],
     datasets: [
       {
-        data: [70, 20, 10],
+        data: [attendanceData.present, attendanceData.absent, attendanceData.late],
         backgroundColor: ["#4CAF50", "#F44336", "#FFC107"],
       },
     ],
@@ -25,7 +76,6 @@ export default function DashboardContent() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen w-full flex flex-col">
-      {/* Date Picker */}
       <div className="flex justify-end mb-6">
         <div className="flex items-center bg-[#800000] text-white px-4 py-2 rounded cursor-pointer">
           <FaCalendarAlt className="mr-2" />
@@ -48,47 +98,43 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {/* Faculty Section */}
         <div className="bg-white shadow-md p-6 rounded-lg w-full h-38 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Faculty</h2>
           <div className="grid grid-cols-3 text-center">
             <div>
-              <p className="text-3xl font-bold text-[#800000]">28</p>
+              <p className="text-3xl font-bold text-[#800000]">{facultyStats.total}</p>
               <p className="text-gray-600">Total</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-[#800000]">25</p>
+              <p className="text-3xl font-bold text-[#800000]">{facultyStats.regular}</p>
               <p className="text-gray-600">Regular</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-[#800000]">3</p>
+              <p className="text-3xl font-bold text-[#800000]">{facultyStats.probationary}</p>
               <p className="text-gray-600">Probationary</p>
             </div>
           </div>
         </div>
 
-        {/* Active Users Section */}
         <div className="bg-white shadow-md p-6 rounded-lg w-full h-40 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Active Users</h2>
           <div className="grid grid-cols-3 text-center">
             <div>
-              <p className="text-3xl font-bold text-[#800000]">25</p>
+              <p className="text-3xl font-bold text-[#800000]">{activeUsers.faculty}</p>
               <p className="text-gray-600">Faculty</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-[#800000]">1</p>
+              <p className="text-3xl font-bold text-[#800000]">{activeUsers.admin}</p>
               <p className="text-gray-600">Admin</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-[#800000]">26</p>
+              <p className="text-3xl font-bold text-[#800000]">{activeUsers.total}</p>
               <p className="text-gray-600">Total</p>
             </div>
           </div>
         </div>
 
-        {/* Attendance Pie Chart */}
         <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Attendance</h2>
           <div className="flex justify-center items-center">
@@ -98,7 +144,6 @@ export default function DashboardContent() {
           </div>
         </div>
 
-        {/* Activity Logs */}
         <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-start">
           <h2 className="text-lg text-black font-bold mb-4">Recent Activity Logs</h2>
           <table className="w-full text-left border-collapse">
@@ -112,27 +157,15 @@ export default function DashboardContent() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="p-2 text-black">1</td>
-                <td className="p-2 text-black">2025-0001-SJSFI</td>
-                <td className="p-2 text-black">Maria Reyes</td>
-                <td className="p-2 text-black">Login</td>
-                <td className="p-2 text-black">3/10/25 10:00:01 AM</td>
-              </tr>
-              <tr>
-                <td className="p-2 text-black">2</td>
-                <td className="p-2 text-black">Admin1</td>
-                <td className="p-2 text-black">John Dela Cruz</td>
-                <td className="p-2 text-black">Add User</td>
-                <td className="p-2 text-black">3/10/25 10:10:30 AM</td>
-              </tr>
-              <tr>
-                <td className="p-2 text-black">3</td>
-                <td className="p-2 text-black">2025-0003-SJSFI</td>
-                <td className="p-2 text-black">Angela Santos</td>
-                <td className="p-2 text-black">Logout</td>
-                <td className="p-2 text-black">3/10/25 10:11:21 AM</td>
-              </tr>
+              {logs.map((log, index) => (
+                <tr key={index}>
+                  <td className="p-2 text-black">{index + 1}</td>
+                  <td className="p-2 text-black">{log.user_id}</td>
+                  <td className="p-2 text-black">{log.name}</td>
+                  <td className="p-2 text-black">{log.action}</td>
+                  <td className="p-2 text-black">{new Date(log.timestamp).toLocaleString()}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
