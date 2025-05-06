@@ -79,8 +79,8 @@ model Faculty {
   FacultyID        Int              @id @default(autoincrement())
   UserID           Int              @unique
   DateOfBirth      DateTime
-  Phone            String
-  Address          String
+  Phone            String?
+  Address          String?
   EmploymentStatus EmploymentStatus
   HireDate         DateTime
   ResignationDate  DateTime?
