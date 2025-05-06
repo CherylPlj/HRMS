@@ -1,6 +1,6 @@
 "use client";
 import Head from 'next/head';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs'; // Import useUser from Clerk
 import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
@@ -13,9 +13,22 @@ export default function Dashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
-
   const router = useRouter();
 
+  // Redirect to admin layout if user is an admin
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      const userRole = user.publicMetadata?.role;
+  
+      if (userRole === 'admin') {
+        router.push('/admin');
+      } else if (userRole === 'faculty') {
+        router.push('/faculty-dashboard');
+      }
+      // Else: stay on dashboard
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+  
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
   };
@@ -167,10 +180,9 @@ export default function Dashboard() {
                   >
                     <div className="font-semibold">{user.firstName} {user.lastName}</div>
                     <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
-                    <div className="text-xs">{user.publicMetadata?.role}</div> {/* Role */}
                   </a>
                 ) : (
-                  <div>Loading user info...</div> // Loading state
+                  <div>Loading user info...</div>
                 )}
               </div>
             </div>
@@ -192,20 +204,20 @@ export default function Dashboard() {
             <div className="flex justify-center space-x-10">
               <button
                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                onClick={() => setLogoutModalVisible(false)} // Close the modal
+                onClick={() => setLogoutModalVisible(false)}
               >
                 Cancel
               </button>
               <button
                 className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
-                onClick={handleLogout} // Perform logout
+                onClick={handleLogout}
               >
                 Logout
               </button>
             </div>
           </div>
         </div>
-      )}s
+      )}
     </>
   );
 }

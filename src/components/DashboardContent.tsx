@@ -1,211 +1,189 @@
-"use client";
-import Head from 'next/head';
-import { useState } from 'react';
-import { useUser } from '@clerk/nextjs'; // Import useUser from Clerk
-import DashboardContent from '@/components/DashboardContent';
-import FacultyContent from '@/components/FacultyContent';
-import AttendanceContent from '@/components/AttendanceContent';
-import LeaveContent from '@/components/LeaveContent';
-import UsersContent from '@/components/UsersContent';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { Pie } from "react-chartjs-2";
+import "chart.js/auto";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { FaCalendarAlt } from "react-icons/fa";
+import { supabase } from "@/lib/supabaseClient"; // Make sure this path is correct!
 
-export default function Dashboard() {
-  const [activeButton, setActiveButton] = useState('dashboard');
-  const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
-  const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
+export default function DashboardContent() {
+  const [dateRange, setDateRange] = useState([new Date("2025-02-01"), new Date("2025-03-20")]);
+  const [facultyStats, setFacultyStats] = useState({ total: 0, regular: 0, probationary: 0 });
+  const [activeUsers, setActiveUsers] = useState({ faculty: 0, admin: 0, total: 0 });
+  const [attendanceData, setAttendanceData] = useState({ present: 0, absent: 0, late: 0 });
+  const [logs, setLogs] = useState([]);
 
-  const router = useRouter();
-
-  const handleButtonClick = (buttonName: string) => {
-    setActiveButton(buttonName);
-  };
-
-  const handleLogout = () => {
-    console.log('User logged out');
-    setLogoutModalVisible(false);
-    router.push('/'); // Redirect to login page
-  };
-
-  const renderContent = () => {
-    switch (activeButton) {
-      case 'dashboard':
-        return <DashboardContent />;
-      case 'faculty':
-        return <FacultyContent />;
-      case 'attendance':
-        return <AttendanceContent />;
-      case 'leave':
-        return <LeaveContent />;
-      case 'users':
-        return <UsersContent />;
-      default:
-        return <div>Select a menu item to view its content.</div>;
+  const handleDateChange = (dates) => {
+    const [start, end] = dates;
+    if (start && end) {
+      setDateRange([start, end]);
     }
   };
 
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch Faculty Stats
+        const { data: faculty } = await supabase.from("faculty").select("*");
+        const regularCount = faculty?.filter((f) => f.status === "regular").length || 0;
+        const probationaryCount = faculty?.filter((f) => f.status === "probationary").length || 0;
+
+        setFacultyStats({
+          total: faculty?.length || 0,
+          regular: regularCount,
+          probationary: probationaryCount,
+        });
+
+        // Fetch Active Users
+        const { data: users } = await supabase.from("users").select("*");
+        const facultyUsers = users?.filter((u) => u.role === "faculty").length || 0;
+        const adminUsers = users?.filter((u) => u.role === "admin").length || 0;
+
+        setActiveUsers({
+          faculty: facultyUsers,
+          admin: adminUsers,
+          total: facultyUsers + adminUsers,
+        });
+
+        // Fetch Attendance Data
+        const { data: attendance } = await supabase
+          .from("attendance")
+          .select("*")
+          .gte("date", dateRange[0].toISOString())
+          .lte("date", dateRange[1].toISOString());
+
+        setAttendanceData({
+          present: attendance?.filter((a) => a.status === "Present").length || 0,
+          absent: attendance?.filter((a) => a.status === "Absent").length || 0,
+          late: attendance?.filter((a) => a.status === "Late").length || 0,
+        });
+
+        // Fetch Activity Logs
+        const { data: activityLogs } = await supabase
+          .from("activity_logs")
+          .select("*")
+          .order("timestamp", { ascending: false })
+          .limit(5);
+
+        setLogs(activityLogs || []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, [dateRange]);
+
+  const pieData = {
+    labels: ["Present", "Absent", "Late"],
+    datasets: [
+      {
+        data: [attendanceData.present, attendanceData.absent, attendanceData.late],
+        backgroundColor: ["#4CAF50", "#F44336", "#FFC107"],
+      },
+    ],
+  };
+
   return (
-    <>
-      <Head>
-        <title>Dashboard</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-        />
-      </Head>
-      <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
-        {/* Sidebar */}
-        <div className="bg-[#800000] text-white w-20 p-4 flex flex-col items-center">
-          <div className="mb-4">
-            <img
-              src="/sjsfilogo.png"
-              alt="Logo"
-              className="w-10 h-10 mx-auto mb-6"
-            />
-            <nav className="space-y-6">
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'dashboard' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Dashboard"
-                onClick={() => handleButtonClick('dashboard')}
-              >
-                <i className="fas fa-tachometer-alt text-xl"></i>
-                <span className="text-[10px]">Dashboard</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'faculty' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Faculty"
-                onClick={() => handleButtonClick('faculty')}
-              >
-                <i className="fas fa-user text-xl"></i>
-                <span className="text-[10px]">Faculty</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'attendance' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Attendance"
-                onClick={() => handleButtonClick('attendance')}
-              >
-                <i className="fas fa-calendar-alt text-xl"></i>
-                <span className="text-[10px]">Attendance</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'leave' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Leave"
-                onClick={() => handleButtonClick('leave')}
-              >
-                <i className="fas fa-clipboard text-xl"></i>
-                <span className="text-[10px]">Leave</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'users' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Users"
-                onClick={() => handleButtonClick('users')}
-              >
-                <i className="fas fa-users text-xl"></i>
-                <span className="text-[10px]">Users</span>
-              </a>
-            </nav>
-          </div>
-          <a
-            href="#"
-            className={`flex flex-col items-center mt-auto ${activeButton === 'logout' ? 'text-[#ffd700]' : 'text-white'}`}
-            title="Log Out"
-            onClick={() => setLogoutModalVisible(true)} // Show the logout modal
-          >
-            <i className="fas fa-sign-out-alt text-xl"></i>
-            <span className="text-[10px]">Log Out</span>
-          </a>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex flex-col flex-1">
-          {/* Header */}
-          <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-red-700">
-              {activeButton === 'dashboard' && 'DASHBOARD'}
-              {activeButton === 'faculty' && 'FACULTY'}
-              {activeButton === 'attendance' && 'ATTENDANCE'}
-              {activeButton === 'leave' && 'LEAVE'}
-              {activeButton === 'users' && 'USERS'}
-            </h1>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-6">
-                {/* Icons Section */}
-                <div className="flex items-center space-x-4">
-                  <a
-                    href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Comments"
-                  >
-                    <i className="fas fa-comments text-black text-lg"></i>
-                  </a>
-                  <a
-                    href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Notifications"
-                  >
-                    <i className="fas fa-bell text-black text-lg"></i>
-                  </a>
-                  <a
-                    href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Profile"
-                  >
-                    <i className="fas fa-user-circle text-black text-lg"></i>
-                  </a>
-                </div>
-                {/* User Information */}
-                {isLoaded && isSignedIn && user ? (
-                  <a
-                    href="#"
-                    className="flex flex-col text-black hover:text-red-700 transition"
-                    title="User Profile"
-                  >
-                    <div className="font-semibold">{user.firstName} {user.lastName}</div>
-                    <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
-                    <div className="text-xs">{user.publicMetadata?.role}</div> {/* Role */}
-                  </a>
-                ) : (
-                  <div>Loading user info...</div> // Loading state
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {renderContent()}
-          </div>
+    <div className="p-6 bg-gray-100 min-h-screen w-full flex flex-col">
+      <div className="flex justify-end mb-6">
+        <div className="flex items-center bg-[#800000] text-white px-4 py-2 rounded cursor-pointer">
+          <FaCalendarAlt className="mr-2" />
+          <DatePicker
+            selected={dateRange[0]}
+            onChange={handleDateChange}
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            selectsRange
+            dateFormat="yyyy-MM-dd"
+            customInput={
+              <button className="flex items-center bg-[#800000] text-white px-4 py-2 rounded">
+                {dateRange[0]
+                  ? `${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`
+                  : "Select Date Range"}
+              </button>
+            }
+            className="bg-[#800000] text-white outline-none cursor-pointer"
+          />
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
-      {isLogoutModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl text-center font-bold text-red-700 mb-4">LOGOUT</h2>
-            <p className="text-gray-700 text-center mb-6">Are you sure you want to logout?</p>
-            <div className="flex justify-center space-x-10">
-              <button
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                onClick={() => setLogoutModalVisible(false)} // Close the modal
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
-                onClick={handleLogout} // Perform logout
-              >
-                Logout
-              </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-38 flex flex-col justify-start">
+          <h2 className="text-lg text-black font-bold mb-4">Faculty</h2>
+          <div className="grid grid-cols-3 text-center">
+            <div>
+              <p className="text-3xl font-bold text-[#800000]">{facultyStats.total}</p>
+              <p className="text-gray-600">Total</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[#800000]">{facultyStats.regular}</p>
+              <p className="text-gray-600">Regular</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[#800000]">{facultyStats.probationary}</p>
+              <p className="text-gray-600">Probationary</p>
             </div>
           </div>
         </div>
-      )}
-    </>
+
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-40 flex flex-col justify-start">
+          <h2 className="text-lg text-black font-bold mb-4">Active Users</h2>
+          <div className="grid grid-cols-3 text-center">
+            <div>
+              <p className="text-3xl font-bold text-[#800000]">{activeUsers.faculty}</p>
+              <p className="text-gray-600">Faculty</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[#800000]">{activeUsers.admin}</p>
+              <p className="text-gray-600">Admin</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[#800000]">{activeUsers.total}</p>
+              <p className="text-gray-600">Total</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-start">
+          <h2 className="text-lg text-black font-bold mb-4">Attendance</h2>
+          <div className="flex justify-center items-center">
+            <div className="w-60 h-60">
+              {attendanceData.present || attendanceData.absent || attendanceData.late ? (
+                <Pie data={pieData} />
+              ) : (
+                <p>Loading...</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-start">
+          <h2 className="text-lg text-black font-bold mb-4">Recent Activity Logs</h2>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border-b p-2 text-gray-600">#</th>
+                <th className="border-b p-2 text-gray-600">User ID</th>
+                <th className="border-b p-2 text-gray-600">Name</th>
+                <th className="border-b p-2 text-gray-600">Action Performed</th>
+                <th className="border-b p-2 text-gray-600">Date & Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log, index) => (
+                <tr key={index}>
+                  <td className="p-2 text-black">{index + 1}</td>
+                  <td className="p-2 text-black">{log.user_id}</td>
+                  <td className="p-2 text-black">{log.name}</td>
+                  <td className="p-2 text-black">{log.action}</td>
+                  <td className="p-2 text-black">{new Date(log.timestamp).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
