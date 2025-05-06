@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file, 
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -54,25 +51,25 @@ enum DayOfWeek {
 }
 
 model User {
-  UserID       Int       @id @default(autoincrement())
-  FirstName    String
-  LastName     String
-  Email        String    @unique
-  Photo        String
-  PasswordHash String
-  Role         Role
-  Status       Status    @default(Active)
-  DateCreated  DateTime  @default(now())
-  DateModified DateTime?
-  LastLogin    DateTime?
+  UserID       Int       @id @default(autoincrement()) // Primary key
+  FirstName    String // First name of the user
+  LastName     String // Last name of the user
+  Email        String    @unique // Email should be unique
+  Photo        String // Photo URL or file path
+  PasswordHash String // Hashed password
+  Role         Role // Enum for user role (e.g., Admin, User, etc.)
+  Status       Status    @default(Active) // Enum for user status (e.g., Active, Inactive)
+  DateCreated  DateTime  @default(now()) // Automatically set the creation date
+  DateModified DateTime? // Optional: Date when the record was last modified
+  LastLogin    DateTime? // Optional: Date when the user last logged in
 
-  Faculty      Faculty?
-  Cashier      Cashier?
-  Registrar    Registrar?
-  AIChat       AIChat[]
-  Notification Notification[]
-  Report       Report[]
-  ActivityLog  ActivityLog[]
+  Faculty      Faculty? // One-to-one relation with Faculty
+  Cashier      Cashier? // One-to-one relation with Cashier
+  Registrar    Registrar? // One-to-one relation with Registrar
+  AIChat       AIChat[] // One-to-many relation with AIChat
+  Notification Notification[] // One-to-many relation with Notification
+  Report       Report[] // One-to-many relation with Report
+  ActivityLog  ActivityLog[] // One-to-many relation with ActivityLog
 }
 
 model Faculty {
@@ -92,8 +89,8 @@ model Faculty {
   Department Department @relation(fields: [DepartmentID], references: [DepartmentID])
   Contract   Contract?  @relation(fields: [ContractID], references: [ContractID])
 
-  Documents Document[]
-  Schedules Schedule[]
+  Documents Document[] // Faculty can have many Documents
+  Schedules Schedule[] // Faculty can have many Schedules
 }
 
 model Cashier {
