@@ -1,7 +1,7 @@
 "use client";
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs'; // Import useUser from Clerk
+import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
 import AttendanceContent from '@/components/AttendanceContent';
@@ -13,30 +13,37 @@ export default function Dashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
+  const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
 
   // Redirect to admin layout if user is an admin
-useEffect(() => {
-  if (isLoaded && isSignedIn && user) {
-    const userRole = user.publicMetadata?.role;
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      const userRole = user.publicMetadata?.role;
 
-    if (userRole === 'admin') {
-      router.push('/admin');
-    } else if (userRole === 'faculty') {
-      router.push('/faculty-dashboard');
+      if (userRole === 'admin') {
+        router.push('/admin');
+      } else if (userRole === 'faculty') {
+        router.push('/faculty-dashboard');
+      }
+      // Else: stay on dashboard
     }
-    // Else: stay on dashboard
-  }
-}, [isLoaded, isSignedIn, user, router]);
+  }, [isLoaded, isSignedIn, user, router]);
 
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
   };
 
-  const handleLogout = () => {
-    console.log('User logged out');
-    setLogoutModalVisible(false);
-    router.push('/'); // Redirect to login page
+  const handleLogout = async () => {
+    try {
+      await signOut(); // Properly end the session
+      console.log('User logged out');
+      setActiveButton('dashboard'); // Reset state
+      setLogoutModalVisible(false);
+      router.push('/'); // Redirect to the landing page
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   const renderContent = () => {
