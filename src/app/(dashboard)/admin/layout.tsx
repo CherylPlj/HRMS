@@ -16,19 +16,19 @@ export default function Dashboard() {
   const router = useRouter();
 
   // Redirect to admin layout if user is an admin
-  useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role;
-  
-      if (userRole === 'admin') {
-        router.push('/admin');
-      } else if (userRole === 'faculty') {
-        router.push('/faculty-dashboard');
-      }
-      // Else: stay on dashboard
+useEffect(() => {
+  if (isLoaded && isSignedIn && user) {
+    const userRole = user.publicMetadata?.role;
+
+    if (userRole === 'admin') {
+      router.push('/admin');
+    } else if (userRole === 'faculty') {
+      router.push('/faculty-dashboard');
     }
-  }, [isLoaded, isSignedIn, user, router]);
-  
+    // Else: stay on dashboard
+  }
+}, [isLoaded, isSignedIn, user, router]);
+
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
   };
