@@ -1,40 +1,107 @@
-// /app/api/users/add.ts
+import { supabase } from '@/lib/supabaseClient';
+import { Clerk } from '@clerk/clerk-sdk-node';
 
-import { PrismaClient } from '@prisma/client'
-import { Clerk } from '@clerk/clerk-sdk-node'
-
-const prisma = new PrismaClient()
-const clerk = new Clerk({ secretKey: process.env.CLERK_SECRET_KEY! })
+const clerk = new Clerk({ secretKey: process.env.CLERK_SECRET_KEY! });
 
 export async function POST(req: Request) {
-  const body = await req.json()
-  const { firstName, lastName, email, role, status, photo } = body
-
   try {
-    // 1. Create user in Clerk (sends email invitation)
-    const clerkUser = await clerk.users.createUser({
-      emailAddress: [email],
-      firstName,
-      lastName,
-      publicMetadata: { role },
-    })
+    const body = await req.json();
+    const { firstName, lastName, email, role, status, photo } = body;
 
-    // 2. Create user in your database
-    const dbUser = await prisma.users.create({
-      data: {
-        FirstName: firstName,
-        LastName: lastName,
-        Email: email,
-        Photo: photo,
-        Role: role,
-        Status: status,
-        PasswordHash: '', // Clerk handles auth
-      },
-    })
+    if (!firstName || !lastName || !email || !role || !status) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: firstName, lastName, email, role, or status' }),
+        { status: 400 }
+      );
+    }
 
-    return Response.json({ message: 'User created', userId: dbUser.UserID })
-  } catch (error) {
-    console.error(error)
-    return new Response('Failed to create user', { status: 500 })
+    // Step 1: Create user in Clerk
+    let clerkUser;
+    try {
+      clerkUser = await clerk.users.createUser({
+        emailAddress: [email],
+        firstName,
+        lastName,
+        publicMetadata: { role },
+      });
+    } catch (clerkError: unknown) {
+      if (clerkError instanceof Error) {
+        console.error('Error creating user in Clerk:', clerkError.message);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user in Clerk', details: clerkError.message }),
+          { status: 500 }
+        );
+      } else {
+        console.error('Unexpected Clerk error:', clerkError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user in Clerk', details: 'Unknown error occurred' }),
+          { status: 500 }
+        );
+      }
+    }
+
+    // Step 2: Insert user into Supabase
+    try {
+      const { data, error } = await supabase.from('users').insert([
+        {
+          firstName,
+          lastName,
+          email,
+          role,
+          status,
+          photo,
+          clerk_user_id: clerkUser.id,
+        },
+      ]);
+
+      if (error) {
+        console.error('Error inserting into Supabase:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user in Supabase', details: error.message }),
+          { status: 500 }
+        );
+      }
+
+      if (!data || data.length === 0) {
+        console.error('No data returned from Supabase insert.');
+        return new Response(
+          JSON.stringify({ error: 'Failed to add user: No data returned from Supabase' }),
+          { status: 500 }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ message: 'User created successfully', userId: data[0].id }),
+        { status: 200 }
+      );
+    } catch (supabaseError: unknown) {
+      if (supabaseError instanceof Error) {
+        console.error('Unexpected Supabase error:', supabaseError.message);
+        return new Response(
+          JSON.stringify({ error: 'Unexpected Supabase error', details: supabaseError.message }),
+          { status: 500 }
+        );
+      } else {
+        console.error('Unknown Supabase error:', supabaseError);
+        return new Response(
+          JSON.stringify({ error: 'Unexpected Supabase error', details: 'Unknown error occurred' }),
+          { status: 500 }
+        );
+      }
+    }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Unexpected error:', error.message);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process the request', details: error.message }),
+        { status: 500 }
+      );
+    } else {
+      console.error('Unknown error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process the request', details: 'Unknown error occurred' }),
+        { status: 500 }
+      );
+    }
   }
 }
