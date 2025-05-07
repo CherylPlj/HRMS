@@ -42,18 +42,19 @@ export async function POST(req: Request) {
 
     // Step 2: Insert user into Supabase
     try {
-      const { data, error } = await supabase.from('users').insert([
-        {
+      const res = await fetch('/api/adduser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           firstName,
           lastName,
           email,
           role,
           status,
-          photo,
-          clerk_user_id: clerkUser.id,
-        },
-      ]);
-
+          photo: photo, // <-- this should be a string URL
+        }),
+      });
+      
       if (error) {
         console.error('Error inserting into Supabase:', error);
         return new Response(

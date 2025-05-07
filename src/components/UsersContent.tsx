@@ -5,7 +5,7 @@ import { Calendar, Plus, List, Users, Download, X, Save } from 'lucide-react';
 import React from 'react';
 import { supabase } from '../lib/supabaseClient'; // Adjust this import path to your supabase client initialization file
 
-interface user {
+interface User {
   id: string;
   firstName: string;
   lastName: string;
@@ -40,7 +40,7 @@ const UsersContent: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);  // Confirm add modal
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);  // Confirm edit modal
 
-  const [users, setUsers] = useState<user[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [newUser, setNewUser] = useState<NewUser>({
     firstName: '',
     lastName: '',
@@ -51,18 +51,18 @@ const UsersContent: React.FC = () => {
     isChecked: false,
   });
 
-  const [selectedUser, setSelectedUser] = useState<user | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Toggle between user management and logs
   const toggleView = () => setIsViewingLogs(!isViewingLogs);
 
   // Modal open/close handlers
   const openAddModal = () => setAddModalOpen(true);
-  const openEditModal = (user: user) => {
+  const openEditModal = (user: User) => {
     setSelectedUser(user);
     setEditModalOpen(true);
   };
-  const openDeleteModal = (user: user) => {
+  const openDeleteModal = (user: User) => {
     setSelectedUser(user);
     setDeleteModalOpen(true);
   };
@@ -81,7 +81,7 @@ const UsersContent: React.FC = () => {
   }, []);
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase.from<user>('users').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from<User>('users').select('*').order('created_at', { ascending: false });
     if (error) {
       console.error('Error fetching users:', error);
     } else {
@@ -92,44 +92,44 @@ const UsersContent: React.FC = () => {
   // Upload photo to Supabase Storage 'photos' bucket & return public URL
   const uploadPhoto = async (file: File) => {
     try {
+      // Validate file type explicitly
       if (!file.type.startsWith('image/png') && !file.type.startsWith('image/jpeg')) {
         alert('Only PNG or JPEG files are allowed.');
         return null;
       }
-  
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `user-photos/${fileName}`; // Path inside the bucket
-  
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('photos') // Replace 'photos' with your actual bucket name if different
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false, // Prevent overwriting existing files
-        });
-  
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        alert(`Upload failed: ${uploadError.message}`);
+      if (!fileExt) {
+        alert('File extension could not be determined.');
         return null;
       }
-  
-      // Get the public URL of the uploaded file
-      const { publicURL, error: publicUrlError } = supabase.storage
-        .from('photos')
-        .getPublicUrl(filePath);
-  
+
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `user-photos/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage.from('photos').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (uploadError) {
+        console.error('Error uploading photo:', uploadError.message);
+        alert('Upload failed: ' + uploadError.message);
+        return null;
+      }
+
+      // Get public URL for uploaded file
+      const { publicURL, error: publicUrlError } = supabase.storage.from('photos').getPublicUrl(filePath);
       if (publicUrlError) {
-        console.error('Public URL error:', publicUrlError);
+        console.error('Error getting public URL:', publicUrlError.message);
         alert('Failed to get public URL for uploaded photo.');
         return null;
       }
-  
+
       return publicURL;
     } catch (err) {
-      console.error('Error in uploadPhoto:', err);
-      alert('An unexpected error occurred while uploading the photo.');
+      console.error('Unexpected error in uploadPhoto:', err);
+      alert('Unexpected error during photo upload.');
       return null;
     }
   };
@@ -157,53 +157,60 @@ const UsersContent: React.FC = () => {
   };
 
   // Confirm add user - insert in Supabase & update UI
-const handleConfirmAdd = async () => {
-  let photo_url = null;
+  const handleConfirmAdd = async () => {
+    let photo_url = null; // default photo_url null for no photo
 
-  try {
-    if (newUser.photo instanceof File) {
-      const uploadedUrl = await uploadPhoto(newUser.photo);
-      if (uploadedUrl) {
-        photo_url = uploadedUrl;
-      } else {
-        alert('Photo upload failed. User not saved.');
-        return;
+    try {
+      if (newUser.photo instanceof File) {
+        const uploadedUrl = await uploadPhoto(newUser.photo);
+        if (uploadedUrl) {
+          photo_url = uploadedUrl;
+        } else {
+          alert('Photo upload failed, user not saved.');
+          return;
+        }
       }
-    }
 
-    // Call your API or directly insert into Supabase database
-    const response = await fetch('/api/users/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      console.log('Inserting user with data:', {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         email: newUser.email,
         role: newUser.role,
         status: newUser.status,
-        photo: photo_url, // Pass the uploaded photo URL
-      }),
-    });
+        photo_url,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('API error:', errorData);
-      alert('Failed to add user: ' + errorData.error);
-      return;
+      const { data, error } = await supabase.from('users').insert([
+        {
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          email: newUser.email,
+          role: newUser.role,
+          status: newUser.status,
+          photo_url: photo_url,
+        },
+      ]).select();
+
+      if (error) {
+        console.error('Insert error:', error);
+        alert('Failed to add user: ' + error.message);
+        return;
+      }
+
+      console.log('Insert success:', data);
+      if (!data || data.length === 0) {
+        alert('No user data returned after insertion.');
+        return;
+      }
+
+      setUsers((prev) => [data[0], ...prev]);
+      closeModals();
+      resetNewUser();
+    } catch (err) {
+      console.error('Unexpected error in handleConfirmAdd:', err);
+      alert('Unexpected error during adding user.');
     }
-
-    const responseData = await response.json();
-    console.log('User added successfully:', responseData);
-
-    // Update UI with the new user
-    setUsers((prev) => [responseData, ...prev]);
-    closeModals();
-    resetNewUser();
-  } catch (err) {
-    console.error('Error in handleConfirmAdd:', err);
-    alert('An unexpected error occurred while adding the user.');
-  }
-};
+  };
 
   // Remaining code unchanged ...
 
