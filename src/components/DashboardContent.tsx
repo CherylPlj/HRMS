@@ -13,13 +13,13 @@ export default function DashboardContent() {
   const [attendanceData, setAttendanceData] = useState({ present: 0, absent: 0, late: 0 });
   const [logs, setLogs] = useState([]);
 
-  const handleDateChange = (dates) => {
+  const handleDateChange = (dates: [Date | null, Date | null]) => {
     const [start, end] = dates;
     if (start && end) {
       setDateRange([start, end]);
     }
   };
-
+  
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -59,21 +59,33 @@ export default function DashboardContent() {
         });
 
         // Fetch Activity Logs
-        const { data: activityLogs } = await supabase
-          .from("activity_logs")
-          .select("*")
-          .order("timestamp", { ascending: false })
-          .limit(5);
-
-        setLogs(activityLogs || []);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      }
-    };
-
-    fetchDashboardData();
-  }, [dateRange]);
-
+        interface Log {
+          user_id: string;
+          name: string;
+          action: string;
+          timestamp: string;
+        }
+        
+        const [logs, setLogs] = useState<Log[]>([]);
+        
+        useEffect(() => {
+          const fetchLogs = async () => {
+            try {
+              const { data: activityLogs } = await supabase
+                .from("activity_logs")
+                .select("*")
+                .order("timestamp", { ascending: false })
+                .limit(5);
+        
+              setLogs(activityLogs || []);
+            } catch (error) {
+              console.error("Error fetching logs:", error);
+            }
+          };
+        
+          fetchLogs();
+        }, []);
+        
   const pieData = {
     labels: ["Present", "Absent", "Late"],
     datasets: [
