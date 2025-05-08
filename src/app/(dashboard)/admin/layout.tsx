@@ -238,7 +238,6 @@ export default function Dashboard() {
               <br />
               Email: {user?.emailAddresses[0]?.emailAddress}
               <br />
-              Role: {user?.publicMetadata?.role}
             </p>
             <div className="flex justify-center space-x-10">
               <button
