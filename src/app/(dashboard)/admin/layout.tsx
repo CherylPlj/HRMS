@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 export default function Dashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [isAdminInfoVisible, setAdminInfoVisible] = useState(false); // State for Admin Info Modal
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
@@ -184,6 +185,7 @@ export default function Dashboard() {
                     href="#"
                     className="flex flex-col text-black hover:text-red-700 transition"
                     title="User Profile"
+                    onClick={() => setAdminInfoVisible(true)} // Open Admin Info Modal
                   >
                     <div className="font-semibold">{user.firstName} {user.lastName}</div>
                     <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
@@ -220,6 +222,30 @@ export default function Dashboard() {
                 onClick={handleLogout}
               >
                 Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Info Modal */}
+      {isAdminInfoVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-xl text-center font-bold text-red-700 mb-4">Admin Information</h2>
+            <p className="text-gray-700 text-center mb-6">
+              Name: {user?.firstName} {user?.lastName}
+              <br />
+              Email: {user?.emailAddresses[0]?.emailAddress}
+              <br />
+              Role: {user?.publicMetadata?.role}
+            </p>
+            <div className="flex justify-center space-x-10">
+              <button
+                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
+                onClick={() => setAdminInfoVisible(false)}
+              >
+                Close
               </button>
             </div>
           </div>
