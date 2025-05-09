@@ -118,7 +118,7 @@ const UsersContent: React.FC = () => {
           </div>
 
           {/* Content Box */}
-          <div className="bg-white border-2 border-red-500 p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
+          <div className="bg-white border-2 border-{[#800000]} p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   {/* Search Field */}
                   <div>

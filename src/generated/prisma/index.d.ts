@@ -3788,8 +3788,8 @@ export namespace Prisma {
     FacultyID: number
     UserID: number
     DateOfBirth: Date
-    Phone: string
-    Address: string
+    Phone: string | null
+    Address: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date
     ResignationDate: Date | null
@@ -3918,8 +3918,8 @@ export namespace Prisma {
       FacultyID: number
       UserID: number
       DateOfBirth: Date
-      Phone: string
-      Address: string
+      Phone: string | null
+      Address: string | null
       EmploymentStatus: $Enums.EmploymentStatus
       HireDate: Date
       ResignationDate: Date | null
@@ -17379,8 +17379,8 @@ export namespace Prisma {
     FacultyID?: IntFilter<"Faculty"> | number
     UserID?: IntFilter<"Faculty"> | number
     DateOfBirth?: DateTimeFilter<"Faculty"> | Date | string
-    Phone?: StringFilter<"Faculty"> | string
-    Address?: StringFilter<"Faculty"> | string
+    Phone?: StringNullableFilter<"Faculty"> | string | null
+    Address?: StringNullableFilter<"Faculty"> | string | null
     EmploymentStatus?: EnumEmploymentStatusFilter<"Faculty"> | $Enums.EmploymentStatus
     HireDate?: DateTimeFilter<"Faculty"> | Date | string
     ResignationDate?: DateTimeNullableFilter<"Faculty"> | Date | string | null
@@ -17398,8 +17398,8 @@ export namespace Prisma {
     FacultyID?: SortOrder
     UserID?: SortOrder
     DateOfBirth?: SortOrder
-    Phone?: SortOrder
-    Address?: SortOrder
+    Phone?: SortOrderInput | SortOrder
+    Address?: SortOrderInput | SortOrder
     EmploymentStatus?: SortOrder
     HireDate?: SortOrder
     ResignationDate?: SortOrderInput | SortOrder
@@ -17420,8 +17420,8 @@ export namespace Prisma {
     OR?: FacultyWhereInput[]
     NOT?: FacultyWhereInput | FacultyWhereInput[]
     DateOfBirth?: DateTimeFilter<"Faculty"> | Date | string
-    Phone?: StringFilter<"Faculty"> | string
-    Address?: StringFilter<"Faculty"> | string
+    Phone?: StringNullableFilter<"Faculty"> | string | null
+    Address?: StringNullableFilter<"Faculty"> | string | null
     EmploymentStatus?: EnumEmploymentStatusFilter<"Faculty"> | $Enums.EmploymentStatus
     HireDate?: DateTimeFilter<"Faculty"> | Date | string
     ResignationDate?: DateTimeNullableFilter<"Faculty"> | Date | string | null
@@ -17439,8 +17439,8 @@ export namespace Prisma {
     FacultyID?: SortOrder
     UserID?: SortOrder
     DateOfBirth?: SortOrder
-    Phone?: SortOrder
-    Address?: SortOrder
+    Phone?: SortOrderInput | SortOrder
+    Address?: SortOrderInput | SortOrder
     EmploymentStatus?: SortOrder
     HireDate?: SortOrder
     ResignationDate?: SortOrderInput | SortOrder
@@ -17461,8 +17461,8 @@ export namespace Prisma {
     FacultyID?: IntWithAggregatesFilter<"Faculty"> | number
     UserID?: IntWithAggregatesFilter<"Faculty"> | number
     DateOfBirth?: DateTimeWithAggregatesFilter<"Faculty"> | Date | string
-    Phone?: StringWithAggregatesFilter<"Faculty"> | string
-    Address?: StringWithAggregatesFilter<"Faculty"> | string
+    Phone?: StringNullableWithAggregatesFilter<"Faculty"> | string | null
+    Address?: StringNullableWithAggregatesFilter<"Faculty"> | string | null
     EmploymentStatus?: EnumEmploymentStatusWithAggregatesFilter<"Faculty"> | $Enums.EmploymentStatus
     HireDate?: DateTimeWithAggregatesFilter<"Faculty"> | Date | string
     ResignationDate?: DateTimeNullableWithAggregatesFilter<"Faculty"> | Date | string | null
@@ -18211,8 +18211,8 @@ export namespace Prisma {
 
   export type FacultyCreateInput = {
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -18228,8 +18228,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -18242,8 +18242,8 @@ export namespace Prisma {
 
   export type FacultyUpdateInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18259,8 +18259,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18275,8 +18275,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -18287,8 +18287,8 @@ export namespace Prisma {
 
   export type FacultyUpdateManyMutationInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18299,8 +18299,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -19128,6 +19128,21 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
+  export type StringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
   export type EnumEmploymentStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.EmploymentStatus | EnumEmploymentStatusFieldRefInput<$PrismaModel>
     in?: $Enums.EmploymentStatus[] | ListEnumEmploymentStatusFieldRefInput<$PrismaModel>
@@ -19237,6 +19252,24 @@ export namespace Prisma {
     ContractID?: SortOrder
   }
 
+  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
+  }
+
   export type EnumEmploymentStatusWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.EmploymentStatus | EnumEmploymentStatusFieldRefInput<$PrismaModel>
     in?: $Enums.EmploymentStatus[] | ListEnumEmploymentStatusFieldRefInput<$PrismaModel>
@@ -19261,21 +19294,6 @@ export namespace Prisma {
     _sum?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedIntNullableFilter<$PrismaModel>
     _max?: NestedIntNullableFilter<$PrismaModel>
-  }
-
-  export type StringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
   export type CashierCountOrderByAggregateInput = {
@@ -19310,24 +19328,6 @@ export namespace Prisma {
   export type CashierSumOrderByAggregateInput = {
     CashierID?: SortOrder
     UserID?: SortOrder
-  }
-
-  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type RegistrarCountOrderByAggregateInput = {
@@ -20086,6 +20086,10 @@ export namespace Prisma {
     connect?: ScheduleWhereUniqueInput | ScheduleWhereUniqueInput[]
   }
 
+  export type NullableStringFieldUpdateOperationsInput = {
+    set?: string | null
+  }
+
   export type EnumEmploymentStatusFieldUpdateOperationsInput = {
     set?: $Enums.EmploymentStatus
   }
@@ -20184,10 +20188,6 @@ export namespace Prisma {
     create?: XOR<UserCreateWithoutCashierInput, UserUncheckedCreateWithoutCashierInput>
     connectOrCreate?: UserCreateOrConnectWithoutCashierInput
     connect?: UserWhereUniqueInput
-  }
-
-  export type NullableStringFieldUpdateOperationsInput = {
-    set?: string | null
   }
 
   export type UserUpdateOneRequiredWithoutCashierNestedInput = {
@@ -20618,11 +20618,42 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
+  export type NestedStringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
   export type NestedEnumEmploymentStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.EmploymentStatus | EnumEmploymentStatusFieldRefInput<$PrismaModel>
     in?: $Enums.EmploymentStatus[] | ListEnumEmploymentStatusFieldRefInput<$PrismaModel>
     notIn?: $Enums.EmploymentStatus[] | ListEnumEmploymentStatusFieldRefInput<$PrismaModel>
     not?: NestedEnumEmploymentStatusFilter<$PrismaModel> | $Enums.EmploymentStatus
+  }
+
+  export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumEmploymentStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -20660,37 +20691,6 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
-  }
-
-  export type NestedStringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
-  }
-
-  export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumSubmissionStatusFilter<$PrismaModel = never> = {
@@ -20759,8 +20759,8 @@ export namespace Prisma {
 
   export type FacultyCreateWithoutUserInput = {
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -20774,8 +20774,8 @@ export namespace Prisma {
   export type FacultyUncheckedCreateWithoutUserInput = {
     FacultyID?: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -20936,8 +20936,8 @@ export namespace Prisma {
 
   export type FacultyUpdateWithoutUserInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -20951,8 +20951,8 @@ export namespace Prisma {
   export type FacultyUncheckedUpdateWithoutUserInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -21585,8 +21585,8 @@ export namespace Prisma {
 
   export type FacultyCreateWithoutDepartmentInput = {
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21601,8 +21601,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21645,8 +21645,8 @@ export namespace Prisma {
     FacultyID?: IntFilter<"Faculty"> | number
     UserID?: IntFilter<"Faculty"> | number
     DateOfBirth?: DateTimeFilter<"Faculty"> | Date | string
-    Phone?: StringFilter<"Faculty"> | string
-    Address?: StringFilter<"Faculty"> | string
+    Phone?: StringNullableFilter<"Faculty"> | string | null
+    Address?: StringNullableFilter<"Faculty"> | string | null
     EmploymentStatus?: EnumEmploymentStatusFilter<"Faculty"> | $Enums.EmploymentStatus
     HireDate?: DateTimeFilter<"Faculty"> | Date | string
     ResignationDate?: DateTimeNullableFilter<"Faculty"> | Date | string | null
@@ -21657,8 +21657,8 @@ export namespace Prisma {
 
   export type FacultyCreateWithoutDocumentsInput = {
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21673,8 +21673,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21716,8 +21716,8 @@ export namespace Prisma {
 
   export type FacultyUpdateWithoutDocumentsInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -21732,8 +21732,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -21804,8 +21804,8 @@ export namespace Prisma {
 
   export type FacultyCreateWithoutContractInput = {
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21820,8 +21820,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21859,8 +21859,8 @@ export namespace Prisma {
 
   export type FacultyCreateWithoutSchedulesInput = {
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21875,8 +21875,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -21904,8 +21904,8 @@ export namespace Prisma {
 
   export type FacultyUpdateWithoutSchedulesInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -21920,8 +21920,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22497,8 +22497,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -22508,8 +22508,8 @@ export namespace Prisma {
 
   export type FacultyUpdateWithoutDepartmentInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22524,8 +22524,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22539,8 +22539,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22579,8 +22579,8 @@ export namespace Prisma {
     FacultyID?: number
     UserID: number
     DateOfBirth: Date | string
-    Phone: string
-    Address: string
+    Phone?: string | null
+    Address?: string | null
     EmploymentStatus: $Enums.EmploymentStatus
     HireDate: Date | string
     ResignationDate?: Date | string | null
@@ -22590,8 +22590,8 @@ export namespace Prisma {
 
   export type FacultyUpdateWithoutContractInput = {
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22606,8 +22606,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22621,8 +22621,8 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UserID?: IntFieldUpdateOperationsInput | number
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: StringFieldUpdateOperationsInput | string
-    Address?: StringFieldUpdateOperationsInput | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
     EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
