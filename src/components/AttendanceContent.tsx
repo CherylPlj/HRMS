@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 import { Search, Filter, Trash2 } from 'lucide-react';
+import { FaCalendarAlt } from 'react-icons/fa';
+import Head from 'next/head';
+import { BsFillPersonPlusFill } from 'react-icons/bs';
+import { MdDownload } from 'react-icons/md';    
+import { AiOutlineEdit } from 'react-icons/ai';
+import { BiTrash } from 'react-icons/bi';
+import { BsFillPersonFill } from 'react-icons/bs';
+import { BsFillPersonCheckFill } from 'react-icons/bs';
+
+
 
 
 const AttendanceContent: React.FC = () => {
