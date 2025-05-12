@@ -336,19 +336,19 @@ const UsersContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Content Box */}
-      <div className="bg-white border-2 border-red-500 p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Search Field */}
-          <div>
-            <input
-              type="text"
-              placeholder={isViewingLogs ? 'Search activity logs...' : 'Search users...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
+          {/* Content Box */}
+          <div className="bg-white border-2 border-red-500 p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Search Field */}
+                  <div>
+                      <input
+                          type="text"
+                          placeholder={isViewingLogs ? 'Search activity logs...' : 'Search users...'}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded"
+                      />
+                  </div>
 
           {/* Filters */}
           <div className="flex flex-col space-y-2 md:flex-row md:items-end md:space-x-4 md:space-y-0">
