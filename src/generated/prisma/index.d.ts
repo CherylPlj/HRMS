@@ -2047,16 +2047,16 @@ export namespace Prisma {
 
   export type UserCountOutputType = {
     AIChat: number
+    ActivityLog: number
     Notification: number
     Report: number
-    ActivityLog: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     AIChat?: boolean | UserCountOutputTypeCountAIChatArgs
+    ActivityLog?: boolean | UserCountOutputTypeCountActivityLogArgs
     Notification?: boolean | UserCountOutputTypeCountNotificationArgs
     Report?: boolean | UserCountOutputTypeCountReportArgs
-    ActivityLog?: boolean | UserCountOutputTypeCountActivityLogArgs
   }
 
   // Custom InputTypes
@@ -2080,6 +2080,13 @@ export namespace Prisma {
   /**
    * UserCountOutputType without action
    */
+  export type UserCountOutputTypeCountActivityLogArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ActivityLogWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
   export type UserCountOutputTypeCountNotificationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: NotificationWhereInput
   }
@@ -2089,13 +2096,6 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountReportArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReportWhereInput
-  }
-
-  /**
-   * UserCountOutputType without action
-   */
-  export type UserCountOutputTypeCountActivityLogArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: ActivityLogWhereInput
   }
 
 
@@ -2482,13 +2482,13 @@ export namespace Prisma {
     DateCreated?: boolean
     DateModified?: boolean
     LastLogin?: boolean
-    Faculty?: boolean | User$FacultyArgs<ExtArgs>
-    Cashier?: boolean | User$CashierArgs<ExtArgs>
-    Registrar?: boolean | User$RegistrarArgs<ExtArgs>
     AIChat?: boolean | User$AIChatArgs<ExtArgs>
-    Notification?: boolean | User$NotificationArgs<ExtArgs>
-    Report?: boolean | User$ReportArgs<ExtArgs>
     ActivityLog?: boolean | User$ActivityLogArgs<ExtArgs>
+    Cashier?: boolean | User$CashierArgs<ExtArgs>
+    Faculty?: boolean | User$FacultyArgs<ExtArgs>
+    Notification?: boolean | User$NotificationArgs<ExtArgs>
+    Registrar?: boolean | User$RegistrarArgs<ExtArgs>
+    Report?: boolean | User$ReportArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -2536,13 +2536,13 @@ export namespace Prisma {
 
   export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"UserID" | "FirstName" | "LastName" | "Email" | "Photo" | "PasswordHash" | "Role" | "Status" | "DateCreated" | "DateModified" | "LastLogin", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    Faculty?: boolean | User$FacultyArgs<ExtArgs>
-    Cashier?: boolean | User$CashierArgs<ExtArgs>
-    Registrar?: boolean | User$RegistrarArgs<ExtArgs>
     AIChat?: boolean | User$AIChatArgs<ExtArgs>
-    Notification?: boolean | User$NotificationArgs<ExtArgs>
-    Report?: boolean | User$ReportArgs<ExtArgs>
     ActivityLog?: boolean | User$ActivityLogArgs<ExtArgs>
+    Cashier?: boolean | User$CashierArgs<ExtArgs>
+    Faculty?: boolean | User$FacultyArgs<ExtArgs>
+    Notification?: boolean | User$NotificationArgs<ExtArgs>
+    Registrar?: boolean | User$RegistrarArgs<ExtArgs>
+    Report?: boolean | User$ReportArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -2551,13 +2551,13 @@ export namespace Prisma {
   export type $UserPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "User"
     objects: {
-      Faculty: Prisma.$FacultyPayload<ExtArgs> | null
-      Cashier: Prisma.$CashierPayload<ExtArgs> | null
-      Registrar: Prisma.$RegistrarPayload<ExtArgs> | null
       AIChat: Prisma.$AIChatPayload<ExtArgs>[]
-      Notification: Prisma.$NotificationPayload<ExtArgs>[]
-      Report: Prisma.$ReportPayload<ExtArgs>[]
       ActivityLog: Prisma.$ActivityLogPayload<ExtArgs>[]
+      Cashier: Prisma.$CashierPayload<ExtArgs> | null
+      Faculty: Prisma.$FacultyPayload<ExtArgs> | null
+      Notification: Prisma.$NotificationPayload<ExtArgs>[]
+      Registrar: Prisma.$RegistrarPayload<ExtArgs> | null
+      Report: Prisma.$ReportPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       UserID: number
@@ -2965,13 +2965,13 @@ export namespace Prisma {
    */
   export interface Prisma__UserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    Faculty<T extends User$FacultyArgs<ExtArgs> = {}>(args?: Subset<T, User$FacultyArgs<ExtArgs>>): Prisma__FacultyClient<$Result.GetResult<Prisma.$FacultyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-    Cashier<T extends User$CashierArgs<ExtArgs> = {}>(args?: Subset<T, User$CashierArgs<ExtArgs>>): Prisma__CashierClient<$Result.GetResult<Prisma.$CashierPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-    Registrar<T extends User$RegistrarArgs<ExtArgs> = {}>(args?: Subset<T, User$RegistrarArgs<ExtArgs>>): Prisma__RegistrarClient<$Result.GetResult<Prisma.$RegistrarPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     AIChat<T extends User$AIChatArgs<ExtArgs> = {}>(args?: Subset<T, User$AIChatArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AIChatPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    Notification<T extends User$NotificationArgs<ExtArgs> = {}>(args?: Subset<T, User$NotificationArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    Report<T extends User$ReportArgs<ExtArgs> = {}>(args?: Subset<T, User$ReportArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     ActivityLog<T extends User$ActivityLogArgs<ExtArgs> = {}>(args?: Subset<T, User$ActivityLogArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ActivityLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    Cashier<T extends User$CashierArgs<ExtArgs> = {}>(args?: Subset<T, User$CashierArgs<ExtArgs>>): Prisma__CashierClient<$Result.GetResult<Prisma.$CashierPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    Faculty<T extends User$FacultyArgs<ExtArgs> = {}>(args?: Subset<T, User$FacultyArgs<ExtArgs>>): Prisma__FacultyClient<$Result.GetResult<Prisma.$FacultyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    Notification<T extends User$NotificationArgs<ExtArgs> = {}>(args?: Subset<T, User$NotificationArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    Registrar<T extends User$RegistrarArgs<ExtArgs> = {}>(args?: Subset<T, User$RegistrarArgs<ExtArgs>>): Prisma__RegistrarClient<$Result.GetResult<Prisma.$RegistrarPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    Report<T extends User$ReportArgs<ExtArgs> = {}>(args?: Subset<T, User$ReportArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3400,22 +3400,51 @@ export namespace Prisma {
   }
 
   /**
-   * User.Faculty
+   * User.AIChat
    */
-  export type User$FacultyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type User$AIChatArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Faculty
+     * Select specific fields to fetch from the AIChat
      */
-    select?: FacultySelect<ExtArgs> | null
+    select?: AIChatSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Faculty
+     * Omit specific fields from the AIChat
      */
-    omit?: FacultyOmit<ExtArgs> | null
+    omit?: AIChatOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: FacultyInclude<ExtArgs> | null
-    where?: FacultyWhereInput
+    include?: AIChatInclude<ExtArgs> | null
+    where?: AIChatWhereInput
+    orderBy?: AIChatOrderByWithRelationInput | AIChatOrderByWithRelationInput[]
+    cursor?: AIChatWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: AIChatScalarFieldEnum | AIChatScalarFieldEnum[]
+  }
+
+  /**
+   * User.ActivityLog
+   */
+  export type User$ActivityLogArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ActivityLog
+     */
+    select?: ActivityLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ActivityLog
+     */
+    omit?: ActivityLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ActivityLogInclude<ExtArgs> | null
+    where?: ActivityLogWhereInput
+    orderBy?: ActivityLogOrderByWithRelationInput | ActivityLogOrderByWithRelationInput[]
+    cursor?: ActivityLogWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ActivityLogScalarFieldEnum | ActivityLogScalarFieldEnum[]
   }
 
   /**
@@ -3438,46 +3467,22 @@ export namespace Prisma {
   }
 
   /**
-   * User.Registrar
+   * User.Faculty
    */
-  export type User$RegistrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type User$FacultyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the Registrar
+     * Select specific fields to fetch from the Faculty
      */
-    select?: RegistrarSelect<ExtArgs> | null
+    select?: FacultySelect<ExtArgs> | null
     /**
-     * Omit specific fields from the Registrar
+     * Omit specific fields from the Faculty
      */
-    omit?: RegistrarOmit<ExtArgs> | null
+    omit?: FacultyOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: RegistrarInclude<ExtArgs> | null
-    where?: RegistrarWhereInput
-  }
-
-  /**
-   * User.AIChat
-   */
-  export type User$AIChatArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the AIChat
-     */
-    select?: AIChatSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the AIChat
-     */
-    omit?: AIChatOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: AIChatInclude<ExtArgs> | null
-    where?: AIChatWhereInput
-    orderBy?: AIChatOrderByWithRelationInput | AIChatOrderByWithRelationInput[]
-    cursor?: AIChatWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: AIChatScalarFieldEnum | AIChatScalarFieldEnum[]
+    include?: FacultyInclude<ExtArgs> | null
+    where?: FacultyWhereInput
   }
 
   /**
@@ -3505,6 +3510,25 @@ export namespace Prisma {
   }
 
   /**
+   * User.Registrar
+   */
+  export type User$RegistrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Registrar
+     */
+    select?: RegistrarSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Registrar
+     */
+    omit?: RegistrarOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: RegistrarInclude<ExtArgs> | null
+    where?: RegistrarWhereInput
+  }
+
+  /**
    * User.Report
    */
   export type User$ReportArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3526,30 +3550,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ReportScalarFieldEnum | ReportScalarFieldEnum[]
-  }
-
-  /**
-   * User.ActivityLog
-   */
-  export type User$ActivityLogArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ActivityLog
-     */
-    select?: ActivityLogSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the ActivityLog
-     */
-    omit?: ActivityLogOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ActivityLogInclude<ExtArgs> | null
-    where?: ActivityLogWhereInput
-    orderBy?: ActivityLogOrderByWithRelationInput | ActivityLogOrderByWithRelationInput[]
-    cursor?: ActivityLogWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: ActivityLogScalarFieldEnum | ActivityLogScalarFieldEnum[]
   }
 
   /**
@@ -3829,10 +3829,10 @@ export namespace Prisma {
     Position?: boolean
     DepartmentID?: boolean
     ContractID?: boolean
-    User?: boolean | UserDefaultArgs<ExtArgs>
-    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
-    Contract?: boolean | Faculty$ContractArgs<ExtArgs>
     Documents?: boolean | Faculty$DocumentsArgs<ExtArgs>
+    Contract?: boolean | Faculty$ContractArgs<ExtArgs>
+    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
+    User?: boolean | UserDefaultArgs<ExtArgs>
     Schedules?: boolean | Faculty$SchedulesArgs<ExtArgs>
     _count?: boolean | FacultyCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["faculty"]>
@@ -3849,9 +3849,9 @@ export namespace Prisma {
     Position?: boolean
     DepartmentID?: boolean
     ContractID?: boolean
-    User?: boolean | UserDefaultArgs<ExtArgs>
-    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
     Contract?: boolean | Faculty$ContractArgs<ExtArgs>
+    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
+    User?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["faculty"]>
 
   export type FacultySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -3866,9 +3866,9 @@ export namespace Prisma {
     Position?: boolean
     DepartmentID?: boolean
     ContractID?: boolean
-    User?: boolean | UserDefaultArgs<ExtArgs>
-    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
     Contract?: boolean | Faculty$ContractArgs<ExtArgs>
+    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
+    User?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["faculty"]>
 
   export type FacultySelectScalar = {
@@ -3887,31 +3887,31 @@ export namespace Prisma {
 
   export type FacultyOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"FacultyID" | "UserID" | "DateOfBirth" | "Phone" | "Address" | "EmploymentStatus" | "HireDate" | "ResignationDate" | "Position" | "DepartmentID" | "ContractID", ExtArgs["result"]["faculty"]>
   export type FacultyInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    User?: boolean | UserDefaultArgs<ExtArgs>
-    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
-    Contract?: boolean | Faculty$ContractArgs<ExtArgs>
     Documents?: boolean | Faculty$DocumentsArgs<ExtArgs>
+    Contract?: boolean | Faculty$ContractArgs<ExtArgs>
+    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
+    User?: boolean | UserDefaultArgs<ExtArgs>
     Schedules?: boolean | Faculty$SchedulesArgs<ExtArgs>
     _count?: boolean | FacultyCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type FacultyIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    User?: boolean | UserDefaultArgs<ExtArgs>
-    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
     Contract?: boolean | Faculty$ContractArgs<ExtArgs>
+    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
+    User?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type FacultyIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    User?: boolean | UserDefaultArgs<ExtArgs>
-    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
     Contract?: boolean | Faculty$ContractArgs<ExtArgs>
+    Department?: boolean | DepartmentDefaultArgs<ExtArgs>
+    User?: boolean | UserDefaultArgs<ExtArgs>
   }
 
   export type $FacultyPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Faculty"
     objects: {
-      User: Prisma.$UserPayload<ExtArgs>
-      Department: Prisma.$DepartmentPayload<ExtArgs>
-      Contract: Prisma.$ContractPayload<ExtArgs> | null
       Documents: Prisma.$DocumentPayload<ExtArgs>[]
+      Contract: Prisma.$ContractPayload<ExtArgs> | null
+      Department: Prisma.$DepartmentPayload<ExtArgs>
+      User: Prisma.$UserPayload<ExtArgs>
       Schedules: Prisma.$SchedulePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
@@ -4320,10 +4320,10 @@ export namespace Prisma {
    */
   export interface Prisma__FacultyClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    User<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    Department<T extends DepartmentDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DepartmentDefaultArgs<ExtArgs>>): Prisma__DepartmentClient<$Result.GetResult<Prisma.$DepartmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    Contract<T extends Faculty$ContractArgs<ExtArgs> = {}>(args?: Subset<T, Faculty$ContractArgs<ExtArgs>>): Prisma__ContractClient<$Result.GetResult<Prisma.$ContractPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     Documents<T extends Faculty$DocumentsArgs<ExtArgs> = {}>(args?: Subset<T, Faculty$DocumentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    Contract<T extends Faculty$ContractArgs<ExtArgs> = {}>(args?: Subset<T, Faculty$ContractArgs<ExtArgs>>): Prisma__ContractClient<$Result.GetResult<Prisma.$ContractPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    Department<T extends DepartmentDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DepartmentDefaultArgs<ExtArgs>>): Prisma__DepartmentClient<$Result.GetResult<Prisma.$DepartmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    User<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     Schedules<T extends Faculty$SchedulesArgs<ExtArgs> = {}>(args?: Subset<T, Faculty$SchedulesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -4761,25 +4761,6 @@ export namespace Prisma {
   }
 
   /**
-   * Faculty.Contract
-   */
-  export type Faculty$ContractArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Contract
-     */
-    select?: ContractSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the Contract
-     */
-    omit?: ContractOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ContractInclude<ExtArgs> | null
-    where?: ContractWhereInput
-  }
-
-  /**
    * Faculty.Documents
    */
   export type Faculty$DocumentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4801,6 +4782,25 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: DocumentScalarFieldEnum | DocumentScalarFieldEnum[]
+  }
+
+  /**
+   * Faculty.Contract
+   */
+  export type Faculty$ContractArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Contract
+     */
+    select?: ContractSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Contract
+     */
+    omit?: ContractOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ContractInclude<ExtArgs> | null
+    where?: ContractWhereInput
   }
 
   /**
@@ -8283,8 +8283,8 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
-    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
     DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["document"]>
 
   export type DocumentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -8293,8 +8293,8 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
-    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
     DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["document"]>
 
   export type DocumentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -8303,8 +8303,8 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
-    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
     DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["document"]>
 
   export type DocumentSelectScalar = {
@@ -8317,23 +8317,23 @@ export namespace Prisma {
 
   export type DocumentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"DocumentID" | "FacultyID" | "DocumentTypeID" | "UploadDate" | "SubmissionStatus", ExtArgs["result"]["document"]>
   export type DocumentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
     DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
   }
   export type DocumentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
     DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
   }
   export type DocumentIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
     DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
   }
 
   export type $DocumentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Document"
     objects: {
-      Faculty: Prisma.$FacultyPayload<ExtArgs>
       DocumentType: Prisma.$DocumentTypePayload<ExtArgs>
+      Faculty: Prisma.$FacultyPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       DocumentID: number
@@ -8735,8 +8735,8 @@ export namespace Prisma {
    */
   export interface Prisma__DocumentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    Faculty<T extends FacultyDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FacultyDefaultArgs<ExtArgs>>): Prisma__FacultyClient<$Result.GetResult<Prisma.$FacultyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     DocumentType<T extends DocumentTypeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DocumentTypeDefaultArgs<ExtArgs>>): Prisma__DocumentTypeClient<$Result.GetResult<Prisma.$DocumentTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    Faculty<T extends FacultyDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FacultyDefaultArgs<ExtArgs>>): Prisma__FacultyClient<$Result.GetResult<Prisma.$FacultyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -17282,13 +17282,13 @@ export namespace Prisma {
     DateCreated?: DateTimeFilter<"User"> | Date | string
     DateModified?: DateTimeNullableFilter<"User"> | Date | string | null
     LastLogin?: DateTimeNullableFilter<"User"> | Date | string | null
-    Faculty?: XOR<FacultyNullableScalarRelationFilter, FacultyWhereInput> | null
-    Cashier?: XOR<CashierNullableScalarRelationFilter, CashierWhereInput> | null
-    Registrar?: XOR<RegistrarNullableScalarRelationFilter, RegistrarWhereInput> | null
     AIChat?: AIChatListRelationFilter
-    Notification?: NotificationListRelationFilter
-    Report?: ReportListRelationFilter
     ActivityLog?: ActivityLogListRelationFilter
+    Cashier?: XOR<CashierNullableScalarRelationFilter, CashierWhereInput> | null
+    Faculty?: XOR<FacultyNullableScalarRelationFilter, FacultyWhereInput> | null
+    Notification?: NotificationListRelationFilter
+    Registrar?: XOR<RegistrarNullableScalarRelationFilter, RegistrarWhereInput> | null
+    Report?: ReportListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -17303,13 +17303,13 @@ export namespace Prisma {
     DateCreated?: SortOrder
     DateModified?: SortOrderInput | SortOrder
     LastLogin?: SortOrderInput | SortOrder
-    Faculty?: FacultyOrderByWithRelationInput
-    Cashier?: CashierOrderByWithRelationInput
-    Registrar?: RegistrarOrderByWithRelationInput
     AIChat?: AIChatOrderByRelationAggregateInput
-    Notification?: NotificationOrderByRelationAggregateInput
-    Report?: ReportOrderByRelationAggregateInput
     ActivityLog?: ActivityLogOrderByRelationAggregateInput
+    Cashier?: CashierOrderByWithRelationInput
+    Faculty?: FacultyOrderByWithRelationInput
+    Notification?: NotificationOrderByRelationAggregateInput
+    Registrar?: RegistrarOrderByWithRelationInput
+    Report?: ReportOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -17327,13 +17327,13 @@ export namespace Prisma {
     DateCreated?: DateTimeFilter<"User"> | Date | string
     DateModified?: DateTimeNullableFilter<"User"> | Date | string | null
     LastLogin?: DateTimeNullableFilter<"User"> | Date | string | null
-    Faculty?: XOR<FacultyNullableScalarRelationFilter, FacultyWhereInput> | null
-    Cashier?: XOR<CashierNullableScalarRelationFilter, CashierWhereInput> | null
-    Registrar?: XOR<RegistrarNullableScalarRelationFilter, RegistrarWhereInput> | null
     AIChat?: AIChatListRelationFilter
-    Notification?: NotificationListRelationFilter
-    Report?: ReportListRelationFilter
     ActivityLog?: ActivityLogListRelationFilter
+    Cashier?: XOR<CashierNullableScalarRelationFilter, CashierWhereInput> | null
+    Faculty?: XOR<FacultyNullableScalarRelationFilter, FacultyWhereInput> | null
+    Notification?: NotificationListRelationFilter
+    Registrar?: XOR<RegistrarNullableScalarRelationFilter, RegistrarWhereInput> | null
+    Report?: ReportListRelationFilter
   }, "UserID" | "Email">
 
   export type UserOrderByWithAggregationInput = {
@@ -17387,10 +17387,10 @@ export namespace Prisma {
     Position?: StringFilter<"Faculty"> | string
     DepartmentID?: IntFilter<"Faculty"> | number
     ContractID?: IntNullableFilter<"Faculty"> | number | null
-    User?: XOR<UserScalarRelationFilter, UserWhereInput>
-    Department?: XOR<DepartmentScalarRelationFilter, DepartmentWhereInput>
-    Contract?: XOR<ContractNullableScalarRelationFilter, ContractWhereInput> | null
     Documents?: DocumentListRelationFilter
+    Contract?: XOR<ContractNullableScalarRelationFilter, ContractWhereInput> | null
+    Department?: XOR<DepartmentScalarRelationFilter, DepartmentWhereInput>
+    User?: XOR<UserScalarRelationFilter, UserWhereInput>
     Schedules?: ScheduleListRelationFilter
   }
 
@@ -17406,10 +17406,10 @@ export namespace Prisma {
     Position?: SortOrder
     DepartmentID?: SortOrder
     ContractID?: SortOrderInput | SortOrder
-    User?: UserOrderByWithRelationInput
-    Department?: DepartmentOrderByWithRelationInput
-    Contract?: ContractOrderByWithRelationInput
     Documents?: DocumentOrderByRelationAggregateInput
+    Contract?: ContractOrderByWithRelationInput
+    Department?: DepartmentOrderByWithRelationInput
+    User?: UserOrderByWithRelationInput
     Schedules?: ScheduleOrderByRelationAggregateInput
   }
 
@@ -17428,10 +17428,10 @@ export namespace Prisma {
     Position?: StringFilter<"Faculty"> | string
     DepartmentID?: IntFilter<"Faculty"> | number
     ContractID?: IntNullableFilter<"Faculty"> | number | null
-    User?: XOR<UserScalarRelationFilter, UserWhereInput>
-    Department?: XOR<DepartmentScalarRelationFilter, DepartmentWhereInput>
-    Contract?: XOR<ContractNullableScalarRelationFilter, ContractWhereInput> | null
     Documents?: DocumentListRelationFilter
+    Contract?: XOR<ContractNullableScalarRelationFilter, ContractWhereInput> | null
+    Department?: XOR<DepartmentScalarRelationFilter, DepartmentWhereInput>
+    User?: XOR<UserScalarRelationFilter, UserWhereInput>
     Schedules?: ScheduleListRelationFilter
   }, "FacultyID" | "UserID">
 
@@ -17626,8 +17626,8 @@ export namespace Prisma {
     DocumentTypeID?: IntFilter<"Document"> | number
     UploadDate?: DateTimeFilter<"Document"> | Date | string
     SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
-    Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
     DocumentType?: XOR<DocumentTypeScalarRelationFilter, DocumentTypeWhereInput>
+    Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
   }
 
   export type DocumentOrderByWithRelationInput = {
@@ -17636,8 +17636,8 @@ export namespace Prisma {
     DocumentTypeID?: SortOrder
     UploadDate?: SortOrder
     SubmissionStatus?: SortOrder
-    Faculty?: FacultyOrderByWithRelationInput
     DocumentType?: DocumentTypeOrderByWithRelationInput
+    Faculty?: FacultyOrderByWithRelationInput
   }
 
   export type DocumentWhereUniqueInput = Prisma.AtLeast<{
@@ -17649,8 +17649,8 @@ export namespace Prisma {
     DocumentTypeID?: IntFilter<"Document"> | number
     UploadDate?: DateTimeFilter<"Document"> | Date | string
     SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
-    Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
     DocumentType?: XOR<DocumentTypeScalarRelationFilter, DocumentTypeWhereInput>
+    Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
   }, "DocumentID">
 
   export type DocumentOrderByWithAggregationInput = {
@@ -18097,13 +18097,13 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Cashier?: CashierCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
     AIChat?: AIChatCreateNestedManyWithoutUserInput
-    Notification?: NotificationCreateNestedManyWithoutUserInput
-    Report?: ReportCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
+    Notification?: NotificationCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
+    Report?: ReportCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -18118,13 +18118,13 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
     AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
-    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
-    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
+    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
+    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -18138,13 +18138,13 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUpdateManyWithoutUserNestedInput
-    Report?: ReportUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
+    Report?: ReportUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -18159,13 +18159,13 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
-    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
+    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -18217,10 +18217,10 @@ export namespace Prisma {
     HireDate: Date | string
     ResignationDate?: Date | string | null
     Position: string
-    User: UserCreateNestedOneWithoutFacultyInput
-    Department: DepartmentCreateNestedOneWithoutFacultyInput
-    Contract?: ContractCreateNestedOneWithoutFacultyInput
     Documents?: DocumentCreateNestedManyWithoutFacultyInput
+    Contract?: ContractCreateNestedOneWithoutFacultyInput
+    Department: DepartmentCreateNestedOneWithoutFacultyInput
+    User: UserCreateNestedOneWithoutFacultyInput
     Schedules?: ScheduleCreateNestedManyWithoutFacultyInput
   }
 
@@ -18248,10 +18248,10 @@ export namespace Prisma {
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     Position?: StringFieldUpdateOperationsInput | string
-    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
-    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
-    Contract?: ContractUpdateOneWithoutFacultyNestedInput
     Documents?: DocumentUpdateManyWithoutFacultyNestedInput
+    Contract?: ContractUpdateOneWithoutFacultyNestedInput
+    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
+    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
     Schedules?: ScheduleUpdateManyWithoutFacultyNestedInput
   }
 
@@ -18438,8 +18438,8 @@ export namespace Prisma {
   export type DocumentCreateInput = {
     UploadDate?: Date | string
     SubmissionStatus: $Enums.SubmissionStatus
-    Faculty: FacultyCreateNestedOneWithoutDocumentsInput
     DocumentType: DocumentTypeCreateNestedOneWithoutDocumentInput
+    Faculty: FacultyCreateNestedOneWithoutDocumentsInput
   }
 
   export type DocumentUncheckedCreateInput = {
@@ -18453,8 +18453,8 @@ export namespace Prisma {
   export type DocumentUpdateInput = {
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
-    Faculty?: FacultyUpdateOneRequiredWithoutDocumentsNestedInput
     DocumentType?: DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput
+    Faculty?: FacultyUpdateOneRequiredWithoutDocumentsNestedInput
   }
 
   export type DocumentUncheckedUpdateInput = {
@@ -18936,9 +18936,16 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
-  export type FacultyNullableScalarRelationFilter = {
-    is?: FacultyWhereInput | null
-    isNot?: FacultyWhereInput | null
+  export type AIChatListRelationFilter = {
+    every?: AIChatWhereInput
+    some?: AIChatWhereInput
+    none?: AIChatWhereInput
+  }
+
+  export type ActivityLogListRelationFilter = {
+    every?: ActivityLogWhereInput
+    some?: ActivityLogWhereInput
+    none?: ActivityLogWhereInput
   }
 
   export type CashierNullableScalarRelationFilter = {
@@ -18946,15 +18953,9 @@ export namespace Prisma {
     isNot?: CashierWhereInput | null
   }
 
-  export type RegistrarNullableScalarRelationFilter = {
-    is?: RegistrarWhereInput | null
-    isNot?: RegistrarWhereInput | null
-  }
-
-  export type AIChatListRelationFilter = {
-    every?: AIChatWhereInput
-    some?: AIChatWhereInput
-    none?: AIChatWhereInput
+  export type FacultyNullableScalarRelationFilter = {
+    is?: FacultyWhereInput | null
+    isNot?: FacultyWhereInput | null
   }
 
   export type NotificationListRelationFilter = {
@@ -18963,16 +18964,15 @@ export namespace Prisma {
     none?: NotificationWhereInput
   }
 
+  export type RegistrarNullableScalarRelationFilter = {
+    is?: RegistrarWhereInput | null
+    isNot?: RegistrarWhereInput | null
+  }
+
   export type ReportListRelationFilter = {
     every?: ReportWhereInput
     some?: ReportWhereInput
     none?: ReportWhereInput
-  }
-
-  export type ActivityLogListRelationFilter = {
-    every?: ActivityLogWhereInput
-    some?: ActivityLogWhereInput
-    none?: ActivityLogWhereInput
   }
 
   export type SortOrderInput = {
@@ -18984,15 +18984,15 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type ActivityLogOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type NotificationOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
   export type ReportOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type ActivityLogOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -19161,14 +19161,10 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
-  export type UserScalarRelationFilter = {
-    is?: UserWhereInput
-    isNot?: UserWhereInput
-  }
-
-  export type DepartmentScalarRelationFilter = {
-    is?: DepartmentWhereInput
-    isNot?: DepartmentWhereInput
+  export type DocumentListRelationFilter = {
+    every?: DocumentWhereInput
+    some?: DocumentWhereInput
+    none?: DocumentWhereInput
   }
 
   export type ContractNullableScalarRelationFilter = {
@@ -19176,10 +19172,14 @@ export namespace Prisma {
     isNot?: ContractWhereInput | null
   }
 
-  export type DocumentListRelationFilter = {
-    every?: DocumentWhereInput
-    some?: DocumentWhereInput
-    none?: DocumentWhereInput
+  export type DepartmentScalarRelationFilter = {
+    is?: DepartmentWhereInput
+    isNot?: DepartmentWhereInput
+  }
+
+  export type UserScalarRelationFilter = {
+    is?: UserWhereInput
+    isNot?: UserWhereInput
   }
 
   export type ScheduleListRelationFilter = {
@@ -19398,14 +19398,14 @@ export namespace Prisma {
     not?: NestedEnumSubmissionStatusFilter<$PrismaModel> | $Enums.SubmissionStatus
   }
 
-  export type FacultyScalarRelationFilter = {
-    is?: FacultyWhereInput
-    isNot?: FacultyWhereInput
-  }
-
   export type DocumentTypeScalarRelationFilter = {
     is?: DocumentTypeWhereInput
     isNot?: DocumentTypeWhereInput
+  }
+
+  export type FacultyScalarRelationFilter = {
+    is?: FacultyWhereInput
+    isNot?: FacultyWhereInput
   }
 
   export type DocumentCountOrderByAggregateInput = {
@@ -19748,43 +19748,11 @@ export namespace Prisma {
     RecordID?: SortOrder
   }
 
-  export type FacultyCreateNestedOneWithoutUserInput = {
-    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
-    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
-    connect?: FacultyWhereUniqueInput
-  }
-
-  export type CashierCreateNestedOneWithoutUserInput = {
-    create?: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
-    connectOrCreate?: CashierCreateOrConnectWithoutUserInput
-    connect?: CashierWhereUniqueInput
-  }
-
-  export type RegistrarCreateNestedOneWithoutUserInput = {
-    create?: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
-    connectOrCreate?: RegistrarCreateOrConnectWithoutUserInput
-    connect?: RegistrarWhereUniqueInput
-  }
-
   export type AIChatCreateNestedManyWithoutUserInput = {
     create?: XOR<AIChatCreateWithoutUserInput, AIChatUncheckedCreateWithoutUserInput> | AIChatCreateWithoutUserInput[] | AIChatUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AIChatCreateOrConnectWithoutUserInput | AIChatCreateOrConnectWithoutUserInput[]
     createMany?: AIChatCreateManyUserInputEnvelope
     connect?: AIChatWhereUniqueInput | AIChatWhereUniqueInput[]
-  }
-
-  export type NotificationCreateNestedManyWithoutUserInput = {
-    create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
-    createMany?: NotificationCreateManyUserInputEnvelope
-    connect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
-  }
-
-  export type ReportCreateNestedManyWithoutUserInput = {
-    create?: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput> | ReportCreateWithoutUserInput[] | ReportUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: ReportCreateOrConnectWithoutUserInput | ReportCreateOrConnectWithoutUserInput[]
-    createMany?: ReportCreateManyUserInputEnvelope
-    connect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
   }
 
   export type ActivityLogCreateNestedManyWithoutUserInput = {
@@ -19794,22 +19762,36 @@ export namespace Prisma {
     connect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
   }
 
-  export type FacultyUncheckedCreateNestedOneWithoutUserInput = {
-    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
-    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
-    connect?: FacultyWhereUniqueInput
-  }
-
-  export type CashierUncheckedCreateNestedOneWithoutUserInput = {
+  export type CashierCreateNestedOneWithoutUserInput = {
     create?: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
     connectOrCreate?: CashierCreateOrConnectWithoutUserInput
     connect?: CashierWhereUniqueInput
   }
 
-  export type RegistrarUncheckedCreateNestedOneWithoutUserInput = {
+  export type FacultyCreateNestedOneWithoutUserInput = {
+    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
+    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
+    connect?: FacultyWhereUniqueInput
+  }
+
+  export type NotificationCreateNestedManyWithoutUserInput = {
+    create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
+    createMany?: NotificationCreateManyUserInputEnvelope
+    connect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
+  }
+
+  export type RegistrarCreateNestedOneWithoutUserInput = {
     create?: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
     connectOrCreate?: RegistrarCreateOrConnectWithoutUserInput
     connect?: RegistrarWhereUniqueInput
+  }
+
+  export type ReportCreateNestedManyWithoutUserInput = {
+    create?: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput> | ReportCreateWithoutUserInput[] | ReportUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ReportCreateOrConnectWithoutUserInput | ReportCreateOrConnectWithoutUserInput[]
+    createMany?: ReportCreateManyUserInputEnvelope
+    connect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
   }
 
   export type AIChatUncheckedCreateNestedManyWithoutUserInput = {
@@ -19819,6 +19801,25 @@ export namespace Prisma {
     connect?: AIChatWhereUniqueInput | AIChatWhereUniqueInput[]
   }
 
+  export type ActivityLogUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<ActivityLogCreateWithoutUserInput, ActivityLogUncheckedCreateWithoutUserInput> | ActivityLogCreateWithoutUserInput[] | ActivityLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ActivityLogCreateOrConnectWithoutUserInput | ActivityLogCreateOrConnectWithoutUserInput[]
+    createMany?: ActivityLogCreateManyUserInputEnvelope
+    connect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
+  }
+
+  export type CashierUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
+    connectOrCreate?: CashierCreateOrConnectWithoutUserInput
+    connect?: CashierWhereUniqueInput
+  }
+
+  export type FacultyUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
+    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
+    connect?: FacultyWhereUniqueInput
+  }
+
   export type NotificationUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
     connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
@@ -19826,18 +19827,17 @@ export namespace Prisma {
     connect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
   }
 
+  export type RegistrarUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
+    connectOrCreate?: RegistrarCreateOrConnectWithoutUserInput
+    connect?: RegistrarWhereUniqueInput
+  }
+
   export type ReportUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput> | ReportCreateWithoutUserInput[] | ReportUncheckedCreateWithoutUserInput[]
     connectOrCreate?: ReportCreateOrConnectWithoutUserInput | ReportCreateOrConnectWithoutUserInput[]
     createMany?: ReportCreateManyUserInputEnvelope
     connect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
-  }
-
-  export type ActivityLogUncheckedCreateNestedManyWithoutUserInput = {
-    create?: XOR<ActivityLogCreateWithoutUserInput, ActivityLogUncheckedCreateWithoutUserInput> | ActivityLogCreateWithoutUserInput[] | ActivityLogUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: ActivityLogCreateOrConnectWithoutUserInput | ActivityLogCreateOrConnectWithoutUserInput[]
-    createMany?: ActivityLogCreateManyUserInputEnvelope
-    connect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -19860,36 +19860,6 @@ export namespace Prisma {
     set?: Date | string | null
   }
 
-  export type FacultyUpdateOneWithoutUserNestedInput = {
-    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
-    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
-    upsert?: FacultyUpsertWithoutUserInput
-    disconnect?: FacultyWhereInput | boolean
-    delete?: FacultyWhereInput | boolean
-    connect?: FacultyWhereUniqueInput
-    update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutUserInput, FacultyUpdateWithoutUserInput>, FacultyUncheckedUpdateWithoutUserInput>
-  }
-
-  export type CashierUpdateOneWithoutUserNestedInput = {
-    create?: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
-    connectOrCreate?: CashierCreateOrConnectWithoutUserInput
-    upsert?: CashierUpsertWithoutUserInput
-    disconnect?: CashierWhereInput | boolean
-    delete?: CashierWhereInput | boolean
-    connect?: CashierWhereUniqueInput
-    update?: XOR<XOR<CashierUpdateToOneWithWhereWithoutUserInput, CashierUpdateWithoutUserInput>, CashierUncheckedUpdateWithoutUserInput>
-  }
-
-  export type RegistrarUpdateOneWithoutUserNestedInput = {
-    create?: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
-    connectOrCreate?: RegistrarCreateOrConnectWithoutUserInput
-    upsert?: RegistrarUpsertWithoutUserInput
-    disconnect?: RegistrarWhereInput | boolean
-    delete?: RegistrarWhereInput | boolean
-    connect?: RegistrarWhereUniqueInput
-    update?: XOR<XOR<RegistrarUpdateToOneWithWhereWithoutUserInput, RegistrarUpdateWithoutUserInput>, RegistrarUncheckedUpdateWithoutUserInput>
-  }
-
   export type AIChatUpdateManyWithoutUserNestedInput = {
     create?: XOR<AIChatCreateWithoutUserInput, AIChatUncheckedCreateWithoutUserInput> | AIChatCreateWithoutUserInput[] | AIChatUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AIChatCreateOrConnectWithoutUserInput | AIChatCreateOrConnectWithoutUserInput[]
@@ -19902,34 +19872,6 @@ export namespace Prisma {
     update?: AIChatUpdateWithWhereUniqueWithoutUserInput | AIChatUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: AIChatUpdateManyWithWhereWithoutUserInput | AIChatUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: AIChatScalarWhereInput | AIChatScalarWhereInput[]
-  }
-
-  export type NotificationUpdateManyWithoutUserNestedInput = {
-    create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
-    upsert?: NotificationUpsertWithWhereUniqueWithoutUserInput | NotificationUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: NotificationCreateManyUserInputEnvelope
-    set?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
-    disconnect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
-    delete?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
-    connect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
-    update?: NotificationUpdateWithWhereUniqueWithoutUserInput | NotificationUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: NotificationUpdateManyWithWhereWithoutUserInput | NotificationUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
-  }
-
-  export type ReportUpdateManyWithoutUserNestedInput = {
-    create?: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput> | ReportCreateWithoutUserInput[] | ReportUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: ReportCreateOrConnectWithoutUserInput | ReportCreateOrConnectWithoutUserInput[]
-    upsert?: ReportUpsertWithWhereUniqueWithoutUserInput | ReportUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: ReportCreateManyUserInputEnvelope
-    set?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
-    disconnect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
-    delete?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
-    connect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
-    update?: ReportUpdateWithWhereUniqueWithoutUserInput | ReportUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: ReportUpdateManyWithWhereWithoutUserInput | ReportUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: ReportScalarWhereInput | ReportScalarWhereInput[]
   }
 
   export type ActivityLogUpdateManyWithoutUserNestedInput = {
@@ -19946,25 +19888,7 @@ export namespace Prisma {
     deleteMany?: ActivityLogScalarWhereInput | ActivityLogScalarWhereInput[]
   }
 
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-  }
-
-  export type FacultyUncheckedUpdateOneWithoutUserNestedInput = {
-    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
-    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
-    upsert?: FacultyUpsertWithoutUserInput
-    disconnect?: FacultyWhereInput | boolean
-    delete?: FacultyWhereInput | boolean
-    connect?: FacultyWhereUniqueInput
-    update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutUserInput, FacultyUpdateWithoutUserInput>, FacultyUncheckedUpdateWithoutUserInput>
-  }
-
-  export type CashierUncheckedUpdateOneWithoutUserNestedInput = {
+  export type CashierUpdateOneWithoutUserNestedInput = {
     create?: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
     connectOrCreate?: CashierCreateOrConnectWithoutUserInput
     upsert?: CashierUpsertWithoutUserInput
@@ -19974,7 +19898,31 @@ export namespace Prisma {
     update?: XOR<XOR<CashierUpdateToOneWithWhereWithoutUserInput, CashierUpdateWithoutUserInput>, CashierUncheckedUpdateWithoutUserInput>
   }
 
-  export type RegistrarUncheckedUpdateOneWithoutUserNestedInput = {
+  export type FacultyUpdateOneWithoutUserNestedInput = {
+    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
+    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
+    upsert?: FacultyUpsertWithoutUserInput
+    disconnect?: FacultyWhereInput | boolean
+    delete?: FacultyWhereInput | boolean
+    connect?: FacultyWhereUniqueInput
+    update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutUserInput, FacultyUpdateWithoutUserInput>, FacultyUncheckedUpdateWithoutUserInput>
+  }
+
+  export type NotificationUpdateManyWithoutUserNestedInput = {
+    create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
+    upsert?: NotificationUpsertWithWhereUniqueWithoutUserInput | NotificationUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: NotificationCreateManyUserInputEnvelope
+    set?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
+    disconnect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
+    delete?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
+    connect?: NotificationWhereUniqueInput | NotificationWhereUniqueInput[]
+    update?: NotificationUpdateWithWhereUniqueWithoutUserInput | NotificationUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: NotificationUpdateManyWithWhereWithoutUserInput | NotificationUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
+  }
+
+  export type RegistrarUpdateOneWithoutUserNestedInput = {
     create?: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
     connectOrCreate?: RegistrarCreateOrConnectWithoutUserInput
     upsert?: RegistrarUpsertWithoutUserInput
@@ -19982,6 +19930,28 @@ export namespace Prisma {
     delete?: RegistrarWhereInput | boolean
     connect?: RegistrarWhereUniqueInput
     update?: XOR<XOR<RegistrarUpdateToOneWithWhereWithoutUserInput, RegistrarUpdateWithoutUserInput>, RegistrarUncheckedUpdateWithoutUserInput>
+  }
+
+  export type ReportUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput> | ReportCreateWithoutUserInput[] | ReportUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ReportCreateOrConnectWithoutUserInput | ReportCreateOrConnectWithoutUserInput[]
+    upsert?: ReportUpsertWithWhereUniqueWithoutUserInput | ReportUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ReportCreateManyUserInputEnvelope
+    set?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
+    disconnect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
+    delete?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
+    connect?: ReportWhereUniqueInput | ReportWhereUniqueInput[]
+    update?: ReportUpdateWithWhereUniqueWithoutUserInput | ReportUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ReportUpdateManyWithWhereWithoutUserInput | ReportUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ReportScalarWhereInput | ReportScalarWhereInput[]
+  }
+
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
   }
 
   export type AIChatUncheckedUpdateManyWithoutUserNestedInput = {
@@ -19998,6 +19968,40 @@ export namespace Prisma {
     deleteMany?: AIChatScalarWhereInput | AIChatScalarWhereInput[]
   }
 
+  export type ActivityLogUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ActivityLogCreateWithoutUserInput, ActivityLogUncheckedCreateWithoutUserInput> | ActivityLogCreateWithoutUserInput[] | ActivityLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ActivityLogCreateOrConnectWithoutUserInput | ActivityLogCreateOrConnectWithoutUserInput[]
+    upsert?: ActivityLogUpsertWithWhereUniqueWithoutUserInput | ActivityLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ActivityLogCreateManyUserInputEnvelope
+    set?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
+    disconnect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
+    delete?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
+    connect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
+    update?: ActivityLogUpdateWithWhereUniqueWithoutUserInput | ActivityLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ActivityLogUpdateManyWithWhereWithoutUserInput | ActivityLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ActivityLogScalarWhereInput | ActivityLogScalarWhereInput[]
+  }
+
+  export type CashierUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
+    connectOrCreate?: CashierCreateOrConnectWithoutUserInput
+    upsert?: CashierUpsertWithoutUserInput
+    disconnect?: CashierWhereInput | boolean
+    delete?: CashierWhereInput | boolean
+    connect?: CashierWhereUniqueInput
+    update?: XOR<XOR<CashierUpdateToOneWithWhereWithoutUserInput, CashierUpdateWithoutUserInput>, CashierUncheckedUpdateWithoutUserInput>
+  }
+
+  export type FacultyUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
+    connectOrCreate?: FacultyCreateOrConnectWithoutUserInput
+    upsert?: FacultyUpsertWithoutUserInput
+    disconnect?: FacultyWhereInput | boolean
+    delete?: FacultyWhereInput | boolean
+    connect?: FacultyWhereUniqueInput
+    update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutUserInput, FacultyUpdateWithoutUserInput>, FacultyUncheckedUpdateWithoutUserInput>
+  }
+
   export type NotificationUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
     connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
@@ -20010,6 +20014,16 @@ export namespace Prisma {
     update?: NotificationUpdateWithWhereUniqueWithoutUserInput | NotificationUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: NotificationUpdateManyWithWhereWithoutUserInput | NotificationUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
+  }
+
+  export type RegistrarUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
+    connectOrCreate?: RegistrarCreateOrConnectWithoutUserInput
+    upsert?: RegistrarUpsertWithoutUserInput
+    disconnect?: RegistrarWhereInput | boolean
+    delete?: RegistrarWhereInput | boolean
+    connect?: RegistrarWhereUniqueInput
+    update?: XOR<XOR<RegistrarUpdateToOneWithWhereWithoutUserInput, RegistrarUpdateWithoutUserInput>, RegistrarUncheckedUpdateWithoutUserInput>
   }
 
   export type ReportUncheckedUpdateManyWithoutUserNestedInput = {
@@ -20026,30 +20040,11 @@ export namespace Prisma {
     deleteMany?: ReportScalarWhereInput | ReportScalarWhereInput[]
   }
 
-  export type ActivityLogUncheckedUpdateManyWithoutUserNestedInput = {
-    create?: XOR<ActivityLogCreateWithoutUserInput, ActivityLogUncheckedCreateWithoutUserInput> | ActivityLogCreateWithoutUserInput[] | ActivityLogUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: ActivityLogCreateOrConnectWithoutUserInput | ActivityLogCreateOrConnectWithoutUserInput[]
-    upsert?: ActivityLogUpsertWithWhereUniqueWithoutUserInput | ActivityLogUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: ActivityLogCreateManyUserInputEnvelope
-    set?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
-    disconnect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
-    delete?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
-    connect?: ActivityLogWhereUniqueInput | ActivityLogWhereUniqueInput[]
-    update?: ActivityLogUpdateWithWhereUniqueWithoutUserInput | ActivityLogUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: ActivityLogUpdateManyWithWhereWithoutUserInput | ActivityLogUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: ActivityLogScalarWhereInput | ActivityLogScalarWhereInput[]
-  }
-
-  export type UserCreateNestedOneWithoutFacultyInput = {
-    create?: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
-    connectOrCreate?: UserCreateOrConnectWithoutFacultyInput
-    connect?: UserWhereUniqueInput
-  }
-
-  export type DepartmentCreateNestedOneWithoutFacultyInput = {
-    create?: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
-    connectOrCreate?: DepartmentCreateOrConnectWithoutFacultyInput
-    connect?: DepartmentWhereUniqueInput
+  export type DocumentCreateNestedManyWithoutFacultyInput = {
+    create?: XOR<DocumentCreateWithoutFacultyInput, DocumentUncheckedCreateWithoutFacultyInput> | DocumentCreateWithoutFacultyInput[] | DocumentUncheckedCreateWithoutFacultyInput[]
+    connectOrCreate?: DocumentCreateOrConnectWithoutFacultyInput | DocumentCreateOrConnectWithoutFacultyInput[]
+    createMany?: DocumentCreateManyFacultyInputEnvelope
+    connect?: DocumentWhereUniqueInput | DocumentWhereUniqueInput[]
   }
 
   export type ContractCreateNestedOneWithoutFacultyInput = {
@@ -20058,11 +20053,16 @@ export namespace Prisma {
     connect?: ContractWhereUniqueInput
   }
 
-  export type DocumentCreateNestedManyWithoutFacultyInput = {
-    create?: XOR<DocumentCreateWithoutFacultyInput, DocumentUncheckedCreateWithoutFacultyInput> | DocumentCreateWithoutFacultyInput[] | DocumentUncheckedCreateWithoutFacultyInput[]
-    connectOrCreate?: DocumentCreateOrConnectWithoutFacultyInput | DocumentCreateOrConnectWithoutFacultyInput[]
-    createMany?: DocumentCreateManyFacultyInputEnvelope
-    connect?: DocumentWhereUniqueInput | DocumentWhereUniqueInput[]
+  export type DepartmentCreateNestedOneWithoutFacultyInput = {
+    create?: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
+    connectOrCreate?: DepartmentCreateOrConnectWithoutFacultyInput
+    connect?: DepartmentWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutFacultyInput = {
+    create?: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFacultyInput
+    connect?: UserWhereUniqueInput
   }
 
   export type ScheduleCreateNestedManyWithoutFacultyInput = {
@@ -20094,32 +20094,6 @@ export namespace Prisma {
     set?: $Enums.EmploymentStatus
   }
 
-  export type UserUpdateOneRequiredWithoutFacultyNestedInput = {
-    create?: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
-    connectOrCreate?: UserCreateOrConnectWithoutFacultyInput
-    upsert?: UserUpsertWithoutFacultyInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFacultyInput, UserUpdateWithoutFacultyInput>, UserUncheckedUpdateWithoutFacultyInput>
-  }
-
-  export type DepartmentUpdateOneRequiredWithoutFacultyNestedInput = {
-    create?: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
-    connectOrCreate?: DepartmentCreateOrConnectWithoutFacultyInput
-    upsert?: DepartmentUpsertWithoutFacultyInput
-    connect?: DepartmentWhereUniqueInput
-    update?: XOR<XOR<DepartmentUpdateToOneWithWhereWithoutFacultyInput, DepartmentUpdateWithoutFacultyInput>, DepartmentUncheckedUpdateWithoutFacultyInput>
-  }
-
-  export type ContractUpdateOneWithoutFacultyNestedInput = {
-    create?: XOR<ContractCreateWithoutFacultyInput, ContractUncheckedCreateWithoutFacultyInput>
-    connectOrCreate?: ContractCreateOrConnectWithoutFacultyInput
-    upsert?: ContractUpsertWithoutFacultyInput
-    disconnect?: ContractWhereInput | boolean
-    delete?: ContractWhereInput | boolean
-    connect?: ContractWhereUniqueInput
-    update?: XOR<XOR<ContractUpdateToOneWithWhereWithoutFacultyInput, ContractUpdateWithoutFacultyInput>, ContractUncheckedUpdateWithoutFacultyInput>
-  }
-
   export type DocumentUpdateManyWithoutFacultyNestedInput = {
     create?: XOR<DocumentCreateWithoutFacultyInput, DocumentUncheckedCreateWithoutFacultyInput> | DocumentCreateWithoutFacultyInput[] | DocumentUncheckedCreateWithoutFacultyInput[]
     connectOrCreate?: DocumentCreateOrConnectWithoutFacultyInput | DocumentCreateOrConnectWithoutFacultyInput[]
@@ -20132,6 +20106,32 @@ export namespace Prisma {
     update?: DocumentUpdateWithWhereUniqueWithoutFacultyInput | DocumentUpdateWithWhereUniqueWithoutFacultyInput[]
     updateMany?: DocumentUpdateManyWithWhereWithoutFacultyInput | DocumentUpdateManyWithWhereWithoutFacultyInput[]
     deleteMany?: DocumentScalarWhereInput | DocumentScalarWhereInput[]
+  }
+
+  export type ContractUpdateOneWithoutFacultyNestedInput = {
+    create?: XOR<ContractCreateWithoutFacultyInput, ContractUncheckedCreateWithoutFacultyInput>
+    connectOrCreate?: ContractCreateOrConnectWithoutFacultyInput
+    upsert?: ContractUpsertWithoutFacultyInput
+    disconnect?: ContractWhereInput | boolean
+    delete?: ContractWhereInput | boolean
+    connect?: ContractWhereUniqueInput
+    update?: XOR<XOR<ContractUpdateToOneWithWhereWithoutFacultyInput, ContractUpdateWithoutFacultyInput>, ContractUncheckedUpdateWithoutFacultyInput>
+  }
+
+  export type DepartmentUpdateOneRequiredWithoutFacultyNestedInput = {
+    create?: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
+    connectOrCreate?: DepartmentCreateOrConnectWithoutFacultyInput
+    upsert?: DepartmentUpsertWithoutFacultyInput
+    connect?: DepartmentWhereUniqueInput
+    update?: XOR<XOR<DepartmentUpdateToOneWithWhereWithoutFacultyInput, DepartmentUpdateWithoutFacultyInput>, DepartmentUncheckedUpdateWithoutFacultyInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutFacultyNestedInput = {
+    create?: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFacultyInput
+    upsert?: UserUpsertWithoutFacultyInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFacultyInput, UserUpdateWithoutFacultyInput>, UserUncheckedUpdateWithoutFacultyInput>
   }
 
   export type ScheduleUpdateManyWithoutFacultyNestedInput = {
@@ -20254,28 +20254,20 @@ export namespace Prisma {
     deleteMany?: FacultyScalarWhereInput | FacultyScalarWhereInput[]
   }
 
-  export type FacultyCreateNestedOneWithoutDocumentsInput = {
-    create?: XOR<FacultyCreateWithoutDocumentsInput, FacultyUncheckedCreateWithoutDocumentsInput>
-    connectOrCreate?: FacultyCreateOrConnectWithoutDocumentsInput
-    connect?: FacultyWhereUniqueInput
-  }
-
   export type DocumentTypeCreateNestedOneWithoutDocumentInput = {
     create?: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
     connectOrCreate?: DocumentTypeCreateOrConnectWithoutDocumentInput
     connect?: DocumentTypeWhereUniqueInput
   }
 
-  export type EnumSubmissionStatusFieldUpdateOperationsInput = {
-    set?: $Enums.SubmissionStatus
-  }
-
-  export type FacultyUpdateOneRequiredWithoutDocumentsNestedInput = {
+  export type FacultyCreateNestedOneWithoutDocumentsInput = {
     create?: XOR<FacultyCreateWithoutDocumentsInput, FacultyUncheckedCreateWithoutDocumentsInput>
     connectOrCreate?: FacultyCreateOrConnectWithoutDocumentsInput
-    upsert?: FacultyUpsertWithoutDocumentsInput
     connect?: FacultyWhereUniqueInput
-    update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutDocumentsInput, FacultyUpdateWithoutDocumentsInput>, FacultyUncheckedUpdateWithoutDocumentsInput>
+  }
+
+  export type EnumSubmissionStatusFieldUpdateOperationsInput = {
+    set?: $Enums.SubmissionStatus
   }
 
   export type DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput = {
@@ -20284,6 +20276,14 @@ export namespace Prisma {
     upsert?: DocumentTypeUpsertWithoutDocumentInput
     connect?: DocumentTypeWhereUniqueInput
     update?: XOR<XOR<DocumentTypeUpdateToOneWithWhereWithoutDocumentInput, DocumentTypeUpdateWithoutDocumentInput>, DocumentTypeUncheckedUpdateWithoutDocumentInput>
+  }
+
+  export type FacultyUpdateOneRequiredWithoutDocumentsNestedInput = {
+    create?: XOR<FacultyCreateWithoutDocumentsInput, FacultyUncheckedCreateWithoutDocumentsInput>
+    connectOrCreate?: FacultyCreateOrConnectWithoutDocumentsInput
+    upsert?: FacultyUpsertWithoutDocumentsInput
+    connect?: FacultyWhereUniqueInput
+    update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutDocumentsInput, FacultyUpdateWithoutDocumentsInput>, FacultyUncheckedUpdateWithoutDocumentsInput>
   }
 
   export type DocumentCreateNestedManyWithoutDocumentTypeInput = {
@@ -20757,72 +20757,6 @@ export namespace Prisma {
     _max?: NestedBoolFilter<$PrismaModel>
   }
 
-  export type FacultyCreateWithoutUserInput = {
-    DateOfBirth: Date | string
-    Phone?: string | null
-    Address?: string | null
-    EmploymentStatus: $Enums.EmploymentStatus
-    HireDate: Date | string
-    ResignationDate?: Date | string | null
-    Position: string
-    Department: DepartmentCreateNestedOneWithoutFacultyInput
-    Contract?: ContractCreateNestedOneWithoutFacultyInput
-    Documents?: DocumentCreateNestedManyWithoutFacultyInput
-    Schedules?: ScheduleCreateNestedManyWithoutFacultyInput
-  }
-
-  export type FacultyUncheckedCreateWithoutUserInput = {
-    FacultyID?: number
-    DateOfBirth: Date | string
-    Phone?: string | null
-    Address?: string | null
-    EmploymentStatus: $Enums.EmploymentStatus
-    HireDate: Date | string
-    ResignationDate?: Date | string | null
-    Position: string
-    DepartmentID: number
-    ContractID?: number | null
-    Documents?: DocumentUncheckedCreateNestedManyWithoutFacultyInput
-    Schedules?: ScheduleUncheckedCreateNestedManyWithoutFacultyInput
-  }
-
-  export type FacultyCreateOrConnectWithoutUserInput = {
-    where: FacultyWhereUniqueInput
-    create: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
-  }
-
-  export type CashierCreateWithoutUserInput = {
-    WorkSchedule?: string | null
-    ShiftStart?: Date | string | null
-    ShiftEnd?: Date | string | null
-  }
-
-  export type CashierUncheckedCreateWithoutUserInput = {
-    CashierID?: number
-    WorkSchedule?: string | null
-    ShiftStart?: Date | string | null
-    ShiftEnd?: Date | string | null
-  }
-
-  export type CashierCreateOrConnectWithoutUserInput = {
-    where: CashierWhereUniqueInput
-    create: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
-  }
-
-  export type RegistrarCreateWithoutUserInput = {
-    Schedule?: string | null
-  }
-
-  export type RegistrarUncheckedCreateWithoutUserInput = {
-    RegistrarID?: number
-    Schedule?: string | null
-  }
-
-  export type RegistrarCreateOrConnectWithoutUserInput = {
-    where: RegistrarWhereUniqueInput
-    create: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
-  }
-
   export type AIChatCreateWithoutUserInput = {
     Question: string
     Answer: string
@@ -20843,54 +20777,6 @@ export namespace Prisma {
 
   export type AIChatCreateManyUserInputEnvelope = {
     data: AIChatCreateManyUserInput | AIChatCreateManyUserInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type NotificationCreateWithoutUserInput = {
-    Message: string
-    DateSent?: Date | string
-    Type: string
-    IsRead?: boolean
-  }
-
-  export type NotificationUncheckedCreateWithoutUserInput = {
-    NotificationID?: number
-    Message: string
-    DateSent?: Date | string
-    Type: string
-    IsRead?: boolean
-  }
-
-  export type NotificationCreateOrConnectWithoutUserInput = {
-    where: NotificationWhereUniqueInput
-    create: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput>
-  }
-
-  export type NotificationCreateManyUserInputEnvelope = {
-    data: NotificationCreateManyUserInput | NotificationCreateManyUserInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type ReportCreateWithoutUserInput = {
-    ReportType: string
-    GeneratedDate?: Date | string
-    Details: string
-  }
-
-  export type ReportUncheckedCreateWithoutUserInput = {
-    ReportID?: number
-    ReportType: string
-    GeneratedDate?: Date | string
-    Details: string
-  }
-
-  export type ReportCreateOrConnectWithoutUserInput = {
-    where: ReportWhereUniqueInput
-    create: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput>
-  }
-
-  export type ReportCreateManyUserInputEnvelope = {
-    data: ReportCreateManyUserInput | ReportCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -20923,88 +20809,118 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type FacultyUpsertWithoutUserInput = {
-    update: XOR<FacultyUpdateWithoutUserInput, FacultyUncheckedUpdateWithoutUserInput>
-    create: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
-    where?: FacultyWhereInput
+  export type CashierCreateWithoutUserInput = {
+    WorkSchedule?: string | null
+    ShiftStart?: Date | string | null
+    ShiftEnd?: Date | string | null
   }
 
-  export type FacultyUpdateToOneWithWhereWithoutUserInput = {
-    where?: FacultyWhereInput
-    data: XOR<FacultyUpdateWithoutUserInput, FacultyUncheckedUpdateWithoutUserInput>
+  export type CashierUncheckedCreateWithoutUserInput = {
+    CashierID?: number
+    WorkSchedule?: string | null
+    ShiftStart?: Date | string | null
+    ShiftEnd?: Date | string | null
   }
 
-  export type FacultyUpdateWithoutUserInput = {
-    DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: NullableStringFieldUpdateOperationsInput | string | null
-    Address?: NullableStringFieldUpdateOperationsInput | string | null
-    EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
-    HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Position?: StringFieldUpdateOperationsInput | string
-    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
-    Contract?: ContractUpdateOneWithoutFacultyNestedInput
-    Documents?: DocumentUpdateManyWithoutFacultyNestedInput
-    Schedules?: ScheduleUpdateManyWithoutFacultyNestedInput
-  }
-
-  export type FacultyUncheckedUpdateWithoutUserInput = {
-    FacultyID?: IntFieldUpdateOperationsInput | number
-    DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
-    Phone?: NullableStringFieldUpdateOperationsInput | string | null
-    Address?: NullableStringFieldUpdateOperationsInput | string | null
-    EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
-    HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Position?: StringFieldUpdateOperationsInput | string
-    DepartmentID?: IntFieldUpdateOperationsInput | number
-    ContractID?: NullableIntFieldUpdateOperationsInput | number | null
-    Documents?: DocumentUncheckedUpdateManyWithoutFacultyNestedInput
-    Schedules?: ScheduleUncheckedUpdateManyWithoutFacultyNestedInput
-  }
-
-  export type CashierUpsertWithoutUserInput = {
-    update: XOR<CashierUpdateWithoutUserInput, CashierUncheckedUpdateWithoutUserInput>
+  export type CashierCreateOrConnectWithoutUserInput = {
+    where: CashierWhereUniqueInput
     create: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
-    where?: CashierWhereInput
   }
 
-  export type CashierUpdateToOneWithWhereWithoutUserInput = {
-    where?: CashierWhereInput
-    data: XOR<CashierUpdateWithoutUserInput, CashierUncheckedUpdateWithoutUserInput>
+  export type FacultyCreateWithoutUserInput = {
+    DateOfBirth: Date | string
+    Phone?: string | null
+    Address?: string | null
+    EmploymentStatus: $Enums.EmploymentStatus
+    HireDate: Date | string
+    ResignationDate?: Date | string | null
+    Position: string
+    Documents?: DocumentCreateNestedManyWithoutFacultyInput
+    Contract?: ContractCreateNestedOneWithoutFacultyInput
+    Department: DepartmentCreateNestedOneWithoutFacultyInput
+    Schedules?: ScheduleCreateNestedManyWithoutFacultyInput
   }
 
-  export type CashierUpdateWithoutUserInput = {
-    WorkSchedule?: NullableStringFieldUpdateOperationsInput | string | null
-    ShiftStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    ShiftEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  export type FacultyUncheckedCreateWithoutUserInput = {
+    FacultyID?: number
+    DateOfBirth: Date | string
+    Phone?: string | null
+    Address?: string | null
+    EmploymentStatus: $Enums.EmploymentStatus
+    HireDate: Date | string
+    ResignationDate?: Date | string | null
+    Position: string
+    DepartmentID: number
+    ContractID?: number | null
+    Documents?: DocumentUncheckedCreateNestedManyWithoutFacultyInput
+    Schedules?: ScheduleUncheckedCreateNestedManyWithoutFacultyInput
   }
 
-  export type CashierUncheckedUpdateWithoutUserInput = {
-    CashierID?: IntFieldUpdateOperationsInput | number
-    WorkSchedule?: NullableStringFieldUpdateOperationsInput | string | null
-    ShiftStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    ShiftEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  export type FacultyCreateOrConnectWithoutUserInput = {
+    where: FacultyWhereUniqueInput
+    create: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
   }
 
-  export type RegistrarUpsertWithoutUserInput = {
-    update: XOR<RegistrarUpdateWithoutUserInput, RegistrarUncheckedUpdateWithoutUserInput>
+  export type NotificationCreateWithoutUserInput = {
+    Message: string
+    DateSent?: Date | string
+    Type: string
+    IsRead?: boolean
+  }
+
+  export type NotificationUncheckedCreateWithoutUserInput = {
+    NotificationID?: number
+    Message: string
+    DateSent?: Date | string
+    Type: string
+    IsRead?: boolean
+  }
+
+  export type NotificationCreateOrConnectWithoutUserInput = {
+    where: NotificationWhereUniqueInput
+    create: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput>
+  }
+
+  export type NotificationCreateManyUserInputEnvelope = {
+    data: NotificationCreateManyUserInput | NotificationCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type RegistrarCreateWithoutUserInput = {
+    Schedule?: string | null
+  }
+
+  export type RegistrarUncheckedCreateWithoutUserInput = {
+    RegistrarID?: number
+    Schedule?: string | null
+  }
+
+  export type RegistrarCreateOrConnectWithoutUserInput = {
+    where: RegistrarWhereUniqueInput
     create: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
-    where?: RegistrarWhereInput
   }
 
-  export type RegistrarUpdateToOneWithWhereWithoutUserInput = {
-    where?: RegistrarWhereInput
-    data: XOR<RegistrarUpdateWithoutUserInput, RegistrarUncheckedUpdateWithoutUserInput>
+  export type ReportCreateWithoutUserInput = {
+    ReportType: string
+    GeneratedDate?: Date | string
+    Details: string
   }
 
-  export type RegistrarUpdateWithoutUserInput = {
-    Schedule?: NullableStringFieldUpdateOperationsInput | string | null
+  export type ReportUncheckedCreateWithoutUserInput = {
+    ReportID?: number
+    ReportType: string
+    GeneratedDate?: Date | string
+    Details: string
   }
 
-  export type RegistrarUncheckedUpdateWithoutUserInput = {
-    RegistrarID?: IntFieldUpdateOperationsInput | number
-    Schedule?: NullableStringFieldUpdateOperationsInput | string | null
+  export type ReportCreateOrConnectWithoutUserInput = {
+    where: ReportWhereUniqueInput
+    create: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput>
+  }
+
+  export type ReportCreateManyUserInputEnvelope = {
+    data: ReportCreateManyUserInput | ReportCreateManyUserInput[]
+    skipDuplicates?: boolean
   }
 
   export type AIChatUpsertWithWhereUniqueWithoutUserInput = {
@@ -21032,61 +20948,6 @@ export namespace Prisma {
     Question?: StringFilter<"AIChat"> | string
     Answer?: StringFilter<"AIChat"> | string
     Status?: StringFilter<"AIChat"> | string
-  }
-
-  export type NotificationUpsertWithWhereUniqueWithoutUserInput = {
-    where: NotificationWhereUniqueInput
-    update: XOR<NotificationUpdateWithoutUserInput, NotificationUncheckedUpdateWithoutUserInput>
-    create: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput>
-  }
-
-  export type NotificationUpdateWithWhereUniqueWithoutUserInput = {
-    where: NotificationWhereUniqueInput
-    data: XOR<NotificationUpdateWithoutUserInput, NotificationUncheckedUpdateWithoutUserInput>
-  }
-
-  export type NotificationUpdateManyWithWhereWithoutUserInput = {
-    where: NotificationScalarWhereInput
-    data: XOR<NotificationUpdateManyMutationInput, NotificationUncheckedUpdateManyWithoutUserInput>
-  }
-
-  export type NotificationScalarWhereInput = {
-    AND?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
-    OR?: NotificationScalarWhereInput[]
-    NOT?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
-    NotificationID?: IntFilter<"Notification"> | number
-    UserID?: IntFilter<"Notification"> | number
-    Message?: StringFilter<"Notification"> | string
-    DateSent?: DateTimeFilter<"Notification"> | Date | string
-    Type?: StringFilter<"Notification"> | string
-    IsRead?: BoolFilter<"Notification"> | boolean
-  }
-
-  export type ReportUpsertWithWhereUniqueWithoutUserInput = {
-    where: ReportWhereUniqueInput
-    update: XOR<ReportUpdateWithoutUserInput, ReportUncheckedUpdateWithoutUserInput>
-    create: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput>
-  }
-
-  export type ReportUpdateWithWhereUniqueWithoutUserInput = {
-    where: ReportWhereUniqueInput
-    data: XOR<ReportUpdateWithoutUserInput, ReportUncheckedUpdateWithoutUserInput>
-  }
-
-  export type ReportUpdateManyWithWhereWithoutUserInput = {
-    where: ReportScalarWhereInput
-    data: XOR<ReportUpdateManyMutationInput, ReportUncheckedUpdateManyWithoutUserInput>
-  }
-
-  export type ReportScalarWhereInput = {
-    AND?: ReportScalarWhereInput | ReportScalarWhereInput[]
-    OR?: ReportScalarWhereInput[]
-    NOT?: ReportScalarWhereInput | ReportScalarWhereInput[]
-    ReportID?: IntFilter<"Report"> | number
-    GeneratedBy?: IntFilter<"Report"> | number
-    ReportType?: StringFilter<"Report"> | string
-    GeneratedDate?: DateTimeFilter<"Report"> | Date | string
-    Details?: StringFilter<"Report"> | string
   }
 
   export type ActivityLogUpsertWithWhereUniqueWithoutUserInput = {
@@ -21119,80 +20980,143 @@ export namespace Prisma {
     IPAddress?: StringFilter<"ActivityLog"> | string
   }
 
-  export type UserCreateWithoutFacultyInput = {
-    FirstName: string
-    LastName: string
-    Email: string
-    Photo: string
-    PasswordHash: string
-    Role: $Enums.Role
-    Status?: $Enums.Status
-    DateCreated?: Date | string
-    DateModified?: Date | string | null
-    LastLogin?: Date | string | null
-    Cashier?: CashierCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
-    AIChat?: AIChatCreateNestedManyWithoutUserInput
-    Notification?: NotificationCreateNestedManyWithoutUserInput
-    Report?: ReportCreateNestedManyWithoutUserInput
-    ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+  export type CashierUpsertWithoutUserInput = {
+    update: XOR<CashierUpdateWithoutUserInput, CashierUncheckedUpdateWithoutUserInput>
+    create: XOR<CashierCreateWithoutUserInput, CashierUncheckedCreateWithoutUserInput>
+    where?: CashierWhereInput
   }
 
-  export type UserUncheckedCreateWithoutFacultyInput = {
-    UserID?: number
-    FirstName: string
-    LastName: string
-    Email: string
-    Photo: string
-    PasswordHash: string
-    Role: $Enums.Role
-    Status?: $Enums.Status
-    DateCreated?: Date | string
-    DateModified?: Date | string | null
-    LastLogin?: Date | string | null
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
-    AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
-    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
-    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
-    ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+  export type CashierUpdateToOneWithWhereWithoutUserInput = {
+    where?: CashierWhereInput
+    data: XOR<CashierUpdateWithoutUserInput, CashierUncheckedUpdateWithoutUserInput>
   }
 
-  export type UserCreateOrConnectWithoutFacultyInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
+  export type CashierUpdateWithoutUserInput = {
+    WorkSchedule?: NullableStringFieldUpdateOperationsInput | string | null
+    ShiftStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    ShiftEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
-  export type DepartmentCreateWithoutFacultyInput = {
-    DepartmentName: string
+  export type CashierUncheckedUpdateWithoutUserInput = {
+    CashierID?: IntFieldUpdateOperationsInput | number
+    WorkSchedule?: NullableStringFieldUpdateOperationsInput | string | null
+    ShiftStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    ShiftEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
-  export type DepartmentUncheckedCreateWithoutFacultyInput = {
-    DepartmentID?: number
-    DepartmentName: string
+  export type FacultyUpsertWithoutUserInput = {
+    update: XOR<FacultyUpdateWithoutUserInput, FacultyUncheckedUpdateWithoutUserInput>
+    create: XOR<FacultyCreateWithoutUserInput, FacultyUncheckedCreateWithoutUserInput>
+    where?: FacultyWhereInput
   }
 
-  export type DepartmentCreateOrConnectWithoutFacultyInput = {
-    where: DepartmentWhereUniqueInput
-    create: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
+  export type FacultyUpdateToOneWithWhereWithoutUserInput = {
+    where?: FacultyWhereInput
+    data: XOR<FacultyUpdateWithoutUserInput, FacultyUncheckedUpdateWithoutUserInput>
   }
 
-  export type ContractCreateWithoutFacultyInput = {
-    StartDate: Date | string
-    EndDate: Date | string
-    ContractType: $Enums.ContractType
+  export type FacultyUpdateWithoutUserInput = {
+    DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
+    EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
+    HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    Position?: StringFieldUpdateOperationsInput | string
+    Documents?: DocumentUpdateManyWithoutFacultyNestedInput
+    Contract?: ContractUpdateOneWithoutFacultyNestedInput
+    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
+    Schedules?: ScheduleUpdateManyWithoutFacultyNestedInput
   }
 
-  export type ContractUncheckedCreateWithoutFacultyInput = {
-    ContractID?: number
-    StartDate: Date | string
-    EndDate: Date | string
-    ContractType: $Enums.ContractType
+  export type FacultyUncheckedUpdateWithoutUserInput = {
+    FacultyID?: IntFieldUpdateOperationsInput | number
+    DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
+    Phone?: NullableStringFieldUpdateOperationsInput | string | null
+    Address?: NullableStringFieldUpdateOperationsInput | string | null
+    EmploymentStatus?: EnumEmploymentStatusFieldUpdateOperationsInput | $Enums.EmploymentStatus
+    HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    Position?: StringFieldUpdateOperationsInput | string
+    DepartmentID?: IntFieldUpdateOperationsInput | number
+    ContractID?: NullableIntFieldUpdateOperationsInput | number | null
+    Documents?: DocumentUncheckedUpdateManyWithoutFacultyNestedInput
+    Schedules?: ScheduleUncheckedUpdateManyWithoutFacultyNestedInput
   }
 
-  export type ContractCreateOrConnectWithoutFacultyInput = {
-    where: ContractWhereUniqueInput
-    create: XOR<ContractCreateWithoutFacultyInput, ContractUncheckedCreateWithoutFacultyInput>
+  export type NotificationUpsertWithWhereUniqueWithoutUserInput = {
+    where: NotificationWhereUniqueInput
+    update: XOR<NotificationUpdateWithoutUserInput, NotificationUncheckedUpdateWithoutUserInput>
+    create: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput>
+  }
+
+  export type NotificationUpdateWithWhereUniqueWithoutUserInput = {
+    where: NotificationWhereUniqueInput
+    data: XOR<NotificationUpdateWithoutUserInput, NotificationUncheckedUpdateWithoutUserInput>
+  }
+
+  export type NotificationUpdateManyWithWhereWithoutUserInput = {
+    where: NotificationScalarWhereInput
+    data: XOR<NotificationUpdateManyMutationInput, NotificationUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type NotificationScalarWhereInput = {
+    AND?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
+    OR?: NotificationScalarWhereInput[]
+    NOT?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
+    NotificationID?: IntFilter<"Notification"> | number
+    UserID?: IntFilter<"Notification"> | number
+    Message?: StringFilter<"Notification"> | string
+    DateSent?: DateTimeFilter<"Notification"> | Date | string
+    Type?: StringFilter<"Notification"> | string
+    IsRead?: BoolFilter<"Notification"> | boolean
+  }
+
+  export type RegistrarUpsertWithoutUserInput = {
+    update: XOR<RegistrarUpdateWithoutUserInput, RegistrarUncheckedUpdateWithoutUserInput>
+    create: XOR<RegistrarCreateWithoutUserInput, RegistrarUncheckedCreateWithoutUserInput>
+    where?: RegistrarWhereInput
+  }
+
+  export type RegistrarUpdateToOneWithWhereWithoutUserInput = {
+    where?: RegistrarWhereInput
+    data: XOR<RegistrarUpdateWithoutUserInput, RegistrarUncheckedUpdateWithoutUserInput>
+  }
+
+  export type RegistrarUpdateWithoutUserInput = {
+    Schedule?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type RegistrarUncheckedUpdateWithoutUserInput = {
+    RegistrarID?: IntFieldUpdateOperationsInput | number
+    Schedule?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type ReportUpsertWithWhereUniqueWithoutUserInput = {
+    where: ReportWhereUniqueInput
+    update: XOR<ReportUpdateWithoutUserInput, ReportUncheckedUpdateWithoutUserInput>
+    create: XOR<ReportCreateWithoutUserInput, ReportUncheckedCreateWithoutUserInput>
+  }
+
+  export type ReportUpdateWithWhereUniqueWithoutUserInput = {
+    where: ReportWhereUniqueInput
+    data: XOR<ReportUpdateWithoutUserInput, ReportUncheckedUpdateWithoutUserInput>
+  }
+
+  export type ReportUpdateManyWithWhereWithoutUserInput = {
+    where: ReportScalarWhereInput
+    data: XOR<ReportUpdateManyMutationInput, ReportUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type ReportScalarWhereInput = {
+    AND?: ReportScalarWhereInput | ReportScalarWhereInput[]
+    OR?: ReportScalarWhereInput[]
+    NOT?: ReportScalarWhereInput | ReportScalarWhereInput[]
+    ReportID?: IntFilter<"Report"> | number
+    GeneratedBy?: IntFilter<"Report"> | number
+    ReportType?: StringFilter<"Report"> | string
+    GeneratedDate?: DateTimeFilter<"Report"> | Date | string
+    Details?: StringFilter<"Report"> | string
   }
 
   export type DocumentCreateWithoutFacultyInput = {
@@ -21216,6 +21140,82 @@ export namespace Prisma {
   export type DocumentCreateManyFacultyInputEnvelope = {
     data: DocumentCreateManyFacultyInput | DocumentCreateManyFacultyInput[]
     skipDuplicates?: boolean
+  }
+
+  export type ContractCreateWithoutFacultyInput = {
+    StartDate: Date | string
+    EndDate: Date | string
+    ContractType: $Enums.ContractType
+  }
+
+  export type ContractUncheckedCreateWithoutFacultyInput = {
+    ContractID?: number
+    StartDate: Date | string
+    EndDate: Date | string
+    ContractType: $Enums.ContractType
+  }
+
+  export type ContractCreateOrConnectWithoutFacultyInput = {
+    where: ContractWhereUniqueInput
+    create: XOR<ContractCreateWithoutFacultyInput, ContractUncheckedCreateWithoutFacultyInput>
+  }
+
+  export type DepartmentCreateWithoutFacultyInput = {
+    DepartmentName: string
+  }
+
+  export type DepartmentUncheckedCreateWithoutFacultyInput = {
+    DepartmentID?: number
+    DepartmentName: string
+  }
+
+  export type DepartmentCreateOrConnectWithoutFacultyInput = {
+    where: DepartmentWhereUniqueInput
+    create: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
+  }
+
+  export type UserCreateWithoutFacultyInput = {
+    FirstName: string
+    LastName: string
+    Email: string
+    Photo: string
+    PasswordHash: string
+    Role: $Enums.Role
+    Status?: $Enums.Status
+    DateCreated?: Date | string
+    DateModified?: Date | string | null
+    LastLogin?: Date | string | null
+    AIChat?: AIChatCreateNestedManyWithoutUserInput
+    ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Notification?: NotificationCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
+    Report?: ReportCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutFacultyInput = {
+    UserID?: number
+    FirstName: string
+    LastName: string
+    Email: string
+    Photo: string
+    PasswordHash: string
+    Role: $Enums.Role
+    Status?: $Enums.Status
+    DateCreated?: Date | string
+    DateModified?: Date | string | null
+    LastLogin?: Date | string | null
+    AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
+    ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
+    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutFacultyInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
   }
 
   export type ScheduleCreateWithoutFacultyInput = {
@@ -21245,74 +21245,31 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type UserUpsertWithoutFacultyInput = {
-    update: XOR<UserUpdateWithoutFacultyInput, UserUncheckedUpdateWithoutFacultyInput>
-    create: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
-    where?: UserWhereInput
+  export type DocumentUpsertWithWhereUniqueWithoutFacultyInput = {
+    where: DocumentWhereUniqueInput
+    update: XOR<DocumentUpdateWithoutFacultyInput, DocumentUncheckedUpdateWithoutFacultyInput>
+    create: XOR<DocumentCreateWithoutFacultyInput, DocumentUncheckedCreateWithoutFacultyInput>
   }
 
-  export type UserUpdateToOneWithWhereWithoutFacultyInput = {
-    where?: UserWhereInput
-    data: XOR<UserUpdateWithoutFacultyInput, UserUncheckedUpdateWithoutFacultyInput>
+  export type DocumentUpdateWithWhereUniqueWithoutFacultyInput = {
+    where: DocumentWhereUniqueInput
+    data: XOR<DocumentUpdateWithoutFacultyInput, DocumentUncheckedUpdateWithoutFacultyInput>
   }
 
-  export type UserUpdateWithoutFacultyInput = {
-    FirstName?: StringFieldUpdateOperationsInput | string
-    LastName?: StringFieldUpdateOperationsInput | string
-    Email?: StringFieldUpdateOperationsInput | string
-    Photo?: StringFieldUpdateOperationsInput | string
-    PasswordHash?: StringFieldUpdateOperationsInput | string
-    Role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
-    Status?: EnumStatusFieldUpdateOperationsInput | $Enums.Status
-    DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
-    DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
-    AIChat?: AIChatUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUpdateManyWithoutUserNestedInput
-    Report?: ReportUpdateManyWithoutUserNestedInput
-    ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+  export type DocumentUpdateManyWithWhereWithoutFacultyInput = {
+    where: DocumentScalarWhereInput
+    data: XOR<DocumentUpdateManyMutationInput, DocumentUncheckedUpdateManyWithoutFacultyInput>
   }
 
-  export type UserUncheckedUpdateWithoutFacultyInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
-    FirstName?: StringFieldUpdateOperationsInput | string
-    LastName?: StringFieldUpdateOperationsInput | string
-    Email?: StringFieldUpdateOperationsInput | string
-    Photo?: StringFieldUpdateOperationsInput | string
-    PasswordHash?: StringFieldUpdateOperationsInput | string
-    Role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
-    Status?: EnumStatusFieldUpdateOperationsInput | $Enums.Status
-    DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
-    DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
-    AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
-    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
-    ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
-  }
-
-  export type DepartmentUpsertWithoutFacultyInput = {
-    update: XOR<DepartmentUpdateWithoutFacultyInput, DepartmentUncheckedUpdateWithoutFacultyInput>
-    create: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
-    where?: DepartmentWhereInput
-  }
-
-  export type DepartmentUpdateToOneWithWhereWithoutFacultyInput = {
-    where?: DepartmentWhereInput
-    data: XOR<DepartmentUpdateWithoutFacultyInput, DepartmentUncheckedUpdateWithoutFacultyInput>
-  }
-
-  export type DepartmentUpdateWithoutFacultyInput = {
-    DepartmentName?: StringFieldUpdateOperationsInput | string
-  }
-
-  export type DepartmentUncheckedUpdateWithoutFacultyInput = {
-    DepartmentID?: IntFieldUpdateOperationsInput | number
-    DepartmentName?: StringFieldUpdateOperationsInput | string
+  export type DocumentScalarWhereInput = {
+    AND?: DocumentScalarWhereInput | DocumentScalarWhereInput[]
+    OR?: DocumentScalarWhereInput[]
+    NOT?: DocumentScalarWhereInput | DocumentScalarWhereInput[]
+    DocumentID?: IntFilter<"Document"> | number
+    FacultyID?: IntFilter<"Document"> | number
+    DocumentTypeID?: IntFilter<"Document"> | number
+    UploadDate?: DateTimeFilter<"Document"> | Date | string
+    SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
   }
 
   export type ContractUpsertWithoutFacultyInput = {
@@ -21339,31 +21296,74 @@ export namespace Prisma {
     ContractType?: EnumContractTypeFieldUpdateOperationsInput | $Enums.ContractType
   }
 
-  export type DocumentUpsertWithWhereUniqueWithoutFacultyInput = {
-    where: DocumentWhereUniqueInput
-    update: XOR<DocumentUpdateWithoutFacultyInput, DocumentUncheckedUpdateWithoutFacultyInput>
-    create: XOR<DocumentCreateWithoutFacultyInput, DocumentUncheckedCreateWithoutFacultyInput>
+  export type DepartmentUpsertWithoutFacultyInput = {
+    update: XOR<DepartmentUpdateWithoutFacultyInput, DepartmentUncheckedUpdateWithoutFacultyInput>
+    create: XOR<DepartmentCreateWithoutFacultyInput, DepartmentUncheckedCreateWithoutFacultyInput>
+    where?: DepartmentWhereInput
   }
 
-  export type DocumentUpdateWithWhereUniqueWithoutFacultyInput = {
-    where: DocumentWhereUniqueInput
-    data: XOR<DocumentUpdateWithoutFacultyInput, DocumentUncheckedUpdateWithoutFacultyInput>
+  export type DepartmentUpdateToOneWithWhereWithoutFacultyInput = {
+    where?: DepartmentWhereInput
+    data: XOR<DepartmentUpdateWithoutFacultyInput, DepartmentUncheckedUpdateWithoutFacultyInput>
   }
 
-  export type DocumentUpdateManyWithWhereWithoutFacultyInput = {
-    where: DocumentScalarWhereInput
-    data: XOR<DocumentUpdateManyMutationInput, DocumentUncheckedUpdateManyWithoutFacultyInput>
+  export type DepartmentUpdateWithoutFacultyInput = {
+    DepartmentName?: StringFieldUpdateOperationsInput | string
   }
 
-  export type DocumentScalarWhereInput = {
-    AND?: DocumentScalarWhereInput | DocumentScalarWhereInput[]
-    OR?: DocumentScalarWhereInput[]
-    NOT?: DocumentScalarWhereInput | DocumentScalarWhereInput[]
-    DocumentID?: IntFilter<"Document"> | number
-    FacultyID?: IntFilter<"Document"> | number
-    DocumentTypeID?: IntFilter<"Document"> | number
-    UploadDate?: DateTimeFilter<"Document"> | Date | string
-    SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
+  export type DepartmentUncheckedUpdateWithoutFacultyInput = {
+    DepartmentID?: IntFieldUpdateOperationsInput | number
+    DepartmentName?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type UserUpsertWithoutFacultyInput = {
+    update: XOR<UserUpdateWithoutFacultyInput, UserUncheckedUpdateWithoutFacultyInput>
+    create: XOR<UserCreateWithoutFacultyInput, UserUncheckedCreateWithoutFacultyInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutFacultyInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutFacultyInput, UserUncheckedUpdateWithoutFacultyInput>
+  }
+
+  export type UserUpdateWithoutFacultyInput = {
+    FirstName?: StringFieldUpdateOperationsInput | string
+    LastName?: StringFieldUpdateOperationsInput | string
+    Email?: StringFieldUpdateOperationsInput | string
+    Photo?: StringFieldUpdateOperationsInput | string
+    PasswordHash?: StringFieldUpdateOperationsInput | string
+    Role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    Status?: EnumStatusFieldUpdateOperationsInput | $Enums.Status
+    DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
+    DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    AIChat?: AIChatUpdateManyWithoutUserNestedInput
+    ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
+    Report?: ReportUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutFacultyInput = {
+    UserID?: IntFieldUpdateOperationsInput | number
+    FirstName?: StringFieldUpdateOperationsInput | string
+    LastName?: StringFieldUpdateOperationsInput | string
+    Email?: StringFieldUpdateOperationsInput | string
+    Photo?: StringFieldUpdateOperationsInput | string
+    PasswordHash?: StringFieldUpdateOperationsInput | string
+    Role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    Status?: EnumStatusFieldUpdateOperationsInput | $Enums.Status
+    DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
+    DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
+    ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
+    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type ScheduleUpsertWithWhereUniqueWithoutFacultyInput = {
@@ -21406,12 +21406,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
     AIChat?: AIChatCreateNestedManyWithoutUserInput
-    Notification?: NotificationCreateNestedManyWithoutUserInput
-    Report?: ReportCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
+    Notification?: NotificationCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
+    Report?: ReportCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutCashierInput = {
@@ -21426,12 +21426,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
     AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
-    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
-    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
+    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
+    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutCashierInput = {
@@ -21461,12 +21461,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUpdateManyWithoutUserNestedInput
-    Report?: ReportUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
+    Report?: ReportUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCashierInput = {
@@ -21481,12 +21481,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
-    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
+    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutRegistrarInput = {
@@ -21500,12 +21500,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Cashier?: CashierCreateNestedOneWithoutUserInput
     AIChat?: AIChatCreateNestedManyWithoutUserInput
+    ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
     Notification?: NotificationCreateNestedManyWithoutUserInput
     Report?: ReportCreateNestedManyWithoutUserInput
-    ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutRegistrarInput = {
@@ -21520,12 +21520,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
     AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
+    ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
     Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
     Report?: ReportUncheckedCreateNestedManyWithoutUserInput
-    ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutRegistrarInput = {
@@ -21555,12 +21555,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUpdateManyWithoutUserNestedInput
+    ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
     Notification?: NotificationUpdateManyWithoutUserNestedInput
     Report?: ReportUpdateManyWithoutUserNestedInput
-    ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutRegistrarInput = {
@@ -21575,12 +21575,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
+    ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
     Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
-    ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type FacultyCreateWithoutDepartmentInput = {
@@ -21591,9 +21591,9 @@ export namespace Prisma {
     HireDate: Date | string
     ResignationDate?: Date | string | null
     Position: string
-    User: UserCreateNestedOneWithoutFacultyInput
-    Contract?: ContractCreateNestedOneWithoutFacultyInput
     Documents?: DocumentCreateNestedManyWithoutFacultyInput
+    Contract?: ContractCreateNestedOneWithoutFacultyInput
+    User: UserCreateNestedOneWithoutFacultyInput
     Schedules?: ScheduleCreateNestedManyWithoutFacultyInput
   }
 
@@ -21655,6 +21655,20 @@ export namespace Prisma {
     ContractID?: IntNullableFilter<"Faculty"> | number | null
   }
 
+  export type DocumentTypeCreateWithoutDocumentInput = {
+    DocumentTypeName: string
+  }
+
+  export type DocumentTypeUncheckedCreateWithoutDocumentInput = {
+    DocumentTypeID?: number
+    DocumentTypeName: string
+  }
+
+  export type DocumentTypeCreateOrConnectWithoutDocumentInput = {
+    where: DocumentTypeWhereUniqueInput
+    create: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
+  }
+
   export type FacultyCreateWithoutDocumentsInput = {
     DateOfBirth: Date | string
     Phone?: string | null
@@ -21663,9 +21677,9 @@ export namespace Prisma {
     HireDate: Date | string
     ResignationDate?: Date | string | null
     Position: string
-    User: UserCreateNestedOneWithoutFacultyInput
-    Department: DepartmentCreateNestedOneWithoutFacultyInput
     Contract?: ContractCreateNestedOneWithoutFacultyInput
+    Department: DepartmentCreateNestedOneWithoutFacultyInput
+    User: UserCreateNestedOneWithoutFacultyInput
     Schedules?: ScheduleCreateNestedManyWithoutFacultyInput
   }
 
@@ -21689,18 +21703,24 @@ export namespace Prisma {
     create: XOR<FacultyCreateWithoutDocumentsInput, FacultyUncheckedCreateWithoutDocumentsInput>
   }
 
-  export type DocumentTypeCreateWithoutDocumentInput = {
-    DocumentTypeName: string
-  }
-
-  export type DocumentTypeUncheckedCreateWithoutDocumentInput = {
-    DocumentTypeID?: number
-    DocumentTypeName: string
-  }
-
-  export type DocumentTypeCreateOrConnectWithoutDocumentInput = {
-    where: DocumentTypeWhereUniqueInput
+  export type DocumentTypeUpsertWithoutDocumentInput = {
+    update: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
     create: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
+    where?: DocumentTypeWhereInput
+  }
+
+  export type DocumentTypeUpdateToOneWithWhereWithoutDocumentInput = {
+    where?: DocumentTypeWhereInput
+    data: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
+  }
+
+  export type DocumentTypeUpdateWithoutDocumentInput = {
+    DocumentTypeName?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type DocumentTypeUncheckedUpdateWithoutDocumentInput = {
+    DocumentTypeID?: IntFieldUpdateOperationsInput | number
+    DocumentTypeName?: StringFieldUpdateOperationsInput | string
   }
 
   export type FacultyUpsertWithoutDocumentsInput = {
@@ -21722,9 +21742,9 @@ export namespace Prisma {
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     Position?: StringFieldUpdateOperationsInput | string
-    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
-    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
     Contract?: ContractUpdateOneWithoutFacultyNestedInput
+    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
+    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
     Schedules?: ScheduleUpdateManyWithoutFacultyNestedInput
   }
 
@@ -21741,26 +21761,6 @@ export namespace Prisma {
     DepartmentID?: IntFieldUpdateOperationsInput | number
     ContractID?: NullableIntFieldUpdateOperationsInput | number | null
     Schedules?: ScheduleUncheckedUpdateManyWithoutFacultyNestedInput
-  }
-
-  export type DocumentTypeUpsertWithoutDocumentInput = {
-    update: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
-    create: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
-    where?: DocumentTypeWhereInput
-  }
-
-  export type DocumentTypeUpdateToOneWithWhereWithoutDocumentInput = {
-    where?: DocumentTypeWhereInput
-    data: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
-  }
-
-  export type DocumentTypeUpdateWithoutDocumentInput = {
-    DocumentTypeName?: StringFieldUpdateOperationsInput | string
-  }
-
-  export type DocumentTypeUncheckedUpdateWithoutDocumentInput = {
-    DocumentTypeID?: IntFieldUpdateOperationsInput | number
-    DocumentTypeName?: StringFieldUpdateOperationsInput | string
   }
 
   export type DocumentCreateWithoutDocumentTypeInput = {
@@ -21810,9 +21810,9 @@ export namespace Prisma {
     HireDate: Date | string
     ResignationDate?: Date | string | null
     Position: string
-    User: UserCreateNestedOneWithoutFacultyInput
-    Department: DepartmentCreateNestedOneWithoutFacultyInput
     Documents?: DocumentCreateNestedManyWithoutFacultyInput
+    Department: DepartmentCreateNestedOneWithoutFacultyInput
+    User: UserCreateNestedOneWithoutFacultyInput
     Schedules?: ScheduleCreateNestedManyWithoutFacultyInput
   }
 
@@ -21865,10 +21865,10 @@ export namespace Prisma {
     HireDate: Date | string
     ResignationDate?: Date | string | null
     Position: string
-    User: UserCreateNestedOneWithoutFacultyInput
-    Department: DepartmentCreateNestedOneWithoutFacultyInput
-    Contract?: ContractCreateNestedOneWithoutFacultyInput
     Documents?: DocumentCreateNestedManyWithoutFacultyInput
+    Contract?: ContractCreateNestedOneWithoutFacultyInput
+    Department: DepartmentCreateNestedOneWithoutFacultyInput
+    User: UserCreateNestedOneWithoutFacultyInput
   }
 
   export type FacultyUncheckedCreateWithoutSchedulesInput = {
@@ -21910,10 +21910,10 @@ export namespace Prisma {
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     Position?: StringFieldUpdateOperationsInput | string
-    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
-    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
-    Contract?: ContractUpdateOneWithoutFacultyNestedInput
     Documents?: DocumentUpdateManyWithoutFacultyNestedInput
+    Contract?: ContractUpdateOneWithoutFacultyNestedInput
+    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
+    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
   }
 
   export type FacultyUncheckedUpdateWithoutSchedulesInput = {
@@ -21942,12 +21942,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Cashier?: CashierCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
-    Notification?: NotificationCreateNestedManyWithoutUserInput
-    Report?: ReportCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
+    Notification?: NotificationCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
+    Report?: ReportCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAIChatInput = {
@@ -21962,12 +21962,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
-    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
-    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
+    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
+    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAIChatInput = {
@@ -21997,12 +21997,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
-    Notification?: NotificationUpdateManyWithoutUserNestedInput
-    Report?: ReportUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
+    Report?: ReportUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAIChatInput = {
@@ -22017,12 +22017,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
-    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
-    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
+    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutReportInput = {
@@ -22036,12 +22036,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Cashier?: CashierCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
     AIChat?: AIChatCreateNestedManyWithoutUserInput
-    Notification?: NotificationCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
+    Notification?: NotificationCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutReportInput = {
@@ -22056,12 +22056,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
     AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
-    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
+    Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutReportInput = {
@@ -22091,12 +22091,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReportInput = {
@@ -22111,12 +22111,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
-    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
+    Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateWithoutNotificationInput = {
@@ -22130,12 +22130,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Cashier?: CashierCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
     AIChat?: AIChatCreateNestedManyWithoutUserInput
-    Report?: ReportCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
+    Report?: ReportCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutNotificationInput = {
@@ -22150,12 +22150,12 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
     AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
-    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
     ActivityLog?: ActivityLogUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
+    Report?: ReportUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutNotificationInput = {
@@ -22185,12 +22185,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUpdateManyWithoutUserNestedInput
-    Report?: ReportUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
+    Report?: ReportUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutNotificationInput = {
@@ -22205,12 +22205,12 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
-    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
     ActivityLog?: ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
+    Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutActivityLogInput = {
@@ -22224,11 +22224,11 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyCreateNestedOneWithoutUserInput
-    Cashier?: CashierCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarCreateNestedOneWithoutUserInput
     AIChat?: AIChatCreateNestedManyWithoutUserInput
+    Cashier?: CashierCreateNestedOneWithoutUserInput
+    Faculty?: FacultyCreateNestedOneWithoutUserInput
     Notification?: NotificationCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarCreateNestedOneWithoutUserInput
     Report?: ReportCreateNestedManyWithoutUserInput
   }
 
@@ -22244,11 +22244,11 @@ export namespace Prisma {
     DateCreated?: Date | string
     DateModified?: Date | string | null
     LastLogin?: Date | string | null
-    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
-    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
-    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
     AIChat?: AIChatUncheckedCreateNestedManyWithoutUserInput
+    Cashier?: CashierUncheckedCreateNestedOneWithoutUserInput
+    Faculty?: FacultyUncheckedCreateNestedOneWithoutUserInput
     Notification?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    Registrar?: RegistrarUncheckedCreateNestedOneWithoutUserInput
     Report?: ReportUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -22279,11 +22279,11 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUpdateOneWithoutUserNestedInput
     Notification?: NotificationUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUpdateOneWithoutUserNestedInput
     Report?: ReportUpdateManyWithoutUserNestedInput
   }
 
@@ -22299,11 +22299,11 @@ export namespace Prisma {
     DateCreated?: DateTimeFieldUpdateOperationsInput | Date | string
     DateModified?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     LastLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
-    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
-    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
     AIChat?: AIChatUncheckedUpdateManyWithoutUserNestedInput
+    Cashier?: CashierUncheckedUpdateOneWithoutUserNestedInput
+    Faculty?: FacultyUncheckedUpdateOneWithoutUserNestedInput
     Notification?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    Registrar?: RegistrarUncheckedUpdateOneWithoutUserNestedInput
     Report?: ReportUncheckedUpdateManyWithoutUserNestedInput
   }
 
@@ -22312,6 +22312,16 @@ export namespace Prisma {
     Question: string
     Answer: string
     Status: string
+  }
+
+  export type ActivityLogCreateManyUserInput = {
+    LogID?: number
+    ActionType: string
+    EntityAffected: string
+    RecordID?: number | null
+    ActionDetails: string
+    Timestamp?: Date | string
+    IPAddress: string
   }
 
   export type NotificationCreateManyUserInput = {
@@ -22327,16 +22337,6 @@ export namespace Prisma {
     ReportType: string
     GeneratedDate?: Date | string
     Details: string
-  }
-
-  export type ActivityLogCreateManyUserInput = {
-    LogID?: number
-    ActionType: string
-    EntityAffected: string
-    RecordID?: number | null
-    ActionDetails: string
-    Timestamp?: Date | string
-    IPAddress: string
   }
 
   export type AIChatUpdateWithoutUserInput = {
@@ -22357,6 +22357,35 @@ export namespace Prisma {
     Question?: StringFieldUpdateOperationsInput | string
     Answer?: StringFieldUpdateOperationsInput | string
     Status?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ActivityLogUpdateWithoutUserInput = {
+    ActionType?: StringFieldUpdateOperationsInput | string
+    EntityAffected?: StringFieldUpdateOperationsInput | string
+    RecordID?: NullableIntFieldUpdateOperationsInput | number | null
+    ActionDetails?: StringFieldUpdateOperationsInput | string
+    Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    IPAddress?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ActivityLogUncheckedUpdateWithoutUserInput = {
+    LogID?: IntFieldUpdateOperationsInput | number
+    ActionType?: StringFieldUpdateOperationsInput | string
+    EntityAffected?: StringFieldUpdateOperationsInput | string
+    RecordID?: NullableIntFieldUpdateOperationsInput | number | null
+    ActionDetails?: StringFieldUpdateOperationsInput | string
+    Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    IPAddress?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ActivityLogUncheckedUpdateManyWithoutUserInput = {
+    LogID?: IntFieldUpdateOperationsInput | number
+    ActionType?: StringFieldUpdateOperationsInput | string
+    EntityAffected?: StringFieldUpdateOperationsInput | string
+    RecordID?: NullableIntFieldUpdateOperationsInput | number | null
+    ActionDetails?: StringFieldUpdateOperationsInput | string
+    Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
+    IPAddress?: StringFieldUpdateOperationsInput | string
   }
 
   export type NotificationUpdateWithoutUserInput = {
@@ -22400,35 +22429,6 @@ export namespace Prisma {
     ReportType?: StringFieldUpdateOperationsInput | string
     GeneratedDate?: DateTimeFieldUpdateOperationsInput | Date | string
     Details?: StringFieldUpdateOperationsInput | string
-  }
-
-  export type ActivityLogUpdateWithoutUserInput = {
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
-    RecordID?: NullableIntFieldUpdateOperationsInput | number | null
-    ActionDetails?: StringFieldUpdateOperationsInput | string
-    Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
-  }
-
-  export type ActivityLogUncheckedUpdateWithoutUserInput = {
-    LogID?: IntFieldUpdateOperationsInput | number
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
-    RecordID?: NullableIntFieldUpdateOperationsInput | number | null
-    ActionDetails?: StringFieldUpdateOperationsInput | string
-    Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
-  }
-
-  export type ActivityLogUncheckedUpdateManyWithoutUserInput = {
-    LogID?: IntFieldUpdateOperationsInput | number
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
-    RecordID?: NullableIntFieldUpdateOperationsInput | number | null
-    ActionDetails?: StringFieldUpdateOperationsInput | string
-    Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
   }
 
   export type DocumentCreateManyFacultyInput = {
@@ -22514,9 +22514,9 @@ export namespace Prisma {
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     Position?: StringFieldUpdateOperationsInput | string
-    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
-    Contract?: ContractUpdateOneWithoutFacultyNestedInput
     Documents?: DocumentUpdateManyWithoutFacultyNestedInput
+    Contract?: ContractUpdateOneWithoutFacultyNestedInput
+    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
     Schedules?: ScheduleUpdateManyWithoutFacultyNestedInput
   }
 
@@ -22596,9 +22596,9 @@ export namespace Prisma {
     HireDate?: DateTimeFieldUpdateOperationsInput | Date | string
     ResignationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     Position?: StringFieldUpdateOperationsInput | string
-    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
-    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
     Documents?: DocumentUpdateManyWithoutFacultyNestedInput
+    Department?: DepartmentUpdateOneRequiredWithoutFacultyNestedInput
+    User?: UserUpdateOneRequiredWithoutFacultyNestedInput
     Schedules?: ScheduleUpdateManyWithoutFacultyNestedInput
   }
 
