@@ -1,6 +1,6 @@
 "use client";
 import Head from 'next/head';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
@@ -16,9 +16,47 @@ export default function Dashboard() {
   const [isEditProfileVisible, setEditProfileVisible] = useState(false); // State for Edit Profile Modal
   const [phoneNumber, setPhoneNumber] = useState(''); // Editable phone number
   const [address, setAddress] = useState(''); // Editable address
+  const [isNotificationsVisible, setNotificationsVisible] = useState(false); // State for Notifications Popup
+  const [activeTab, setActiveTab] = useState('all'); // State for active tab in notifications
+  const [isChatbotVisible, setChatbotVisible] = useState(false); // State for Chatbot Popup
+  const [chatMessages, setChatMessages] = useState<string[]>([]); // State for chatbot messages
+  const [chatInput, setChatInput] = useState(''); // State for chatbot input
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
+
+  const chatbotRef = useRef<HTMLDivElement | null>(null); // Ref for chatbot popup
+  const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 }); // State for chatbot position
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    const chatbot = chatbotRef.current;
+    if (!chatbot) return;
+
+    const offsetX = e.clientX - chatbot.getBoundingClientRect().left;
+    const offsetY = e.clientY - chatbot.getBoundingClientRect().top;
+
+    const handleDrag = (moveEvent: MouseEvent) => {
+      setChatbotPosition({
+        x: moveEvent.clientX - offsetX,
+        y: moveEvent.clientY - offsetY,
+      });
+    };
+
+    const handleDragEnd = () => {
+      document.removeEventListener('mousemove', handleDrag);
+      document.removeEventListener('mouseup', handleDragEnd);
+    };
+
+    document.addEventListener('mousemove', handleDrag);
+    document.addEventListener('mouseup', handleDragEnd);
+  };
+
+  const handleSendMessage = (message: string) => {
+    if (message.trim()) {
+      setChatMessages([...chatMessages, message]); // Add message to chat
+      setChatInput(''); // Clear input
+    }
+  };
 
   // Redirect to admin layout if user is an admin
   useEffect(() => {
@@ -170,6 +208,7 @@ export default function Dashboard() {
                     href="#"
                     className="p-2 rounded-full hover:bg-gray-200 transition"
                     title="Comments"
+                    onClick={() => setChatbotVisible(!isChatbotVisible)} // Toggle Chatbot Popup
                   >
                     <i className="fas fa-comments text-black text-lg"></i>
                   </a>
@@ -177,6 +216,7 @@ export default function Dashboard() {
                     href="#"
                     className="p-2 rounded-full hover:bg-gray-200 transition"
                     title="Notifications"
+                    onClick={() => setNotificationsVisible(!isNotificationsVisible)} // Toggle Notifications Popup
                   >
                     <i className="fas fa-bell text-black text-lg"></i>
                   </a>
@@ -201,6 +241,151 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* Notifications Popup */}
+          {isNotificationsVisible && (
+            <div className="absolute top-16 right-4 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200">
+              <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
+                
+              </div>
+              <div className="flex border-b">
+                <button
+                  className={`flex-1 p-2 text-center ${activeTab === 'all' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={`flex-1 p-2 text-center ${activeTab === 'unread' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab('unread')}
+                >
+                  Unread
+                </button>
+              </div>
+              <ul className="max-h-72 overflow-y-auto divide-y divide-gray-200">
+                {activeTab === 'all' && (
+                  <>
+                    <li className="p-4 hover:bg-gray-50">
+                      <p className="text-sm text-gray-700">
+                        Jane Smith just sent a request: <strong>“URGENT!! - leave of absence due to family emergency”.</strong>
+                      </p>
+                      <span className="text-xs text-gray-500">11h ago</span>
+                    </li>
+                    <li className="p-4 hover:bg-gray-50">
+                      <p className="text-sm text-gray-700">
+                        Doc Anne just sent a request: <strong>“Request for change in class schedule”.</strong>
+                      </p>
+                      <span className="text-xs text-gray-500">22h ago</span>
+                    </li>
+                    <li className="p-4 hover:bg-gray-50">
+                      <p className="text-sm text-gray-700">
+                        Zayne Ghaz has sent you a request to change their password.
+                      </p>
+                      <span className="text-xs text-gray-500">1d ago</span>
+                    </li>
+                    {/* Add more notifications for "All" */}
+                  </>
+                )}
+                {activeTab === 'unread' && (
+                  <>
+                    <li className="p-4 hover:bg-gray-50">
+                      <p className="text-sm text-gray-700">
+                        Jane Smith just sent a request: <strong>“URGENT!! - leave of absence due to family emergency”.</strong>
+                      </p>
+                      <span className="text-xs text-gray-500">11h ago</span>
+                    </li>
+                    {/* Add more notifications for "Unread" */}
+                  </>
+                )}
+              </ul>
+              <div className="p-4 bg-gray-100 text-center">
+                <button
+                  className="text-red-600 font-semibold hover:underline"
+                  onClick={() => setNotificationsVisible(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Chatbot Popup */}
+          {isChatbotVisible && (
+            <div
+              ref={chatbotRef}
+              className="fixed bg-white shadow-lg rounded-lg z-50 border border-gray-200"
+              style={{
+                width: 320,
+                height: 400,
+                top: chatbotPosition.y,
+                left: chatbotPosition.x,
+              }}
+            >
+              <div
+                className="p-4 bg-[#800000] text-white flex items-center justify-between rounded-t-lg cursor-move"
+                onMouseDown={handleDragStart} // Enable dragging
+              >
+                <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
+                <button
+                  className="text-white hover:text-gray-300"
+                  onClick={() => setChatbotVisible(false)} // Close Chatbot Popup
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <div className="flex flex-col h-[calc(100%-48px)]">
+                <div className="p-4 space-y-4 overflow-y-auto flex-1">
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-100 text-gray-800 p-2 rounded-lg shadow-md text-sm"
+                    >
+                      {message}
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4">
+                  <h4 className="text-sm font-bold text-gray-700 mb-2">Suggested chat prompts</h4>
+                  <ul className="space-y-2">
+                    <li
+                      className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
+                      onClick={() => handleSendMessage("How do I request a change in my teaching schedule?")}
+                    >
+                      How do I request a change in my teaching schedule?
+                    </li>
+                    <li
+                      className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
+                      onClick={() => handleSendMessage("How do I add a new faculty profile?")}
+                    >
+                      How do I add a new faculty profile?
+                    </li>
+                    <li
+                      className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
+                      onClick={() => handleSendMessage("Where is the campus located?")}
+                    >
+                      Where is the campus located?
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-4 border-t flex items-center space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Write a question..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none"
+                  />
+                  <button
+                    className="px-4 py-2 bg-[#800000] text-white rounded hover:bg-red-700"
+                    onClick={() => handleSendMessage(chatInput)} // Send input message
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto p-4">
