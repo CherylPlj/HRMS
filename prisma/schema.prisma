@@ -10,7 +10,7 @@ datasource db {
 }
 
 model User {
-  UserID       Int            @id @default(autoincrement())
+  UserID       String         @id
   FirstName    String
   LastName     String
   Email        String         @unique
@@ -32,7 +32,7 @@ model User {
 
 model Faculty {
   FacultyID        Int              @id @default(autoincrement())
-  UserID           Int              @unique
+  UserID           String           @unique
   DateOfBirth      DateTime
   Phone            String?
   Address          String?
@@ -51,7 +51,7 @@ model Faculty {
 
 model Cashier {
   CashierID    Int       @id @default(autoincrement())
-  UserID       Int       @unique
+  UserID       String    @unique
   WorkSchedule String?
   ShiftStart   DateTime?
   ShiftEnd     DateTime?
@@ -60,7 +60,7 @@ model Cashier {
 
 model Registrar {
   RegistrarID Int     @id @default(autoincrement())
-  UserID      Int     @unique
+  UserID      String  @unique
   Schedule    String?
   User        User    @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
 }
@@ -108,7 +108,7 @@ model Schedule {
 
 model AIChat {
   ChatID   Int    @id @default(autoincrement())
-  UserID   Int
+  UserID   String
   Question String
   Answer   String
   Status   String
@@ -117,7 +117,7 @@ model AIChat {
 
 model Report {
   ReportID      Int      @id @default(autoincrement())
-  GeneratedBy   Int
+  GeneratedBy   String
   ReportType    String
   GeneratedDate DateTime @default(now())
   Details       String
@@ -126,7 +126,7 @@ model Report {
 
 model Notification {
   NotificationID Int      @id @default(autoincrement())
-  UserID         Int
+  UserID         String
   Message        String
   DateSent       DateTime @default(now())
   Type           String
@@ -136,7 +136,7 @@ model Notification {
 
 model ActivityLog {
   LogID          Int      @id @default(autoincrement())
-  UserID         Int?
+  UserID         String
   ActionType     String
   EntityAffected String
   RecordID       Int?

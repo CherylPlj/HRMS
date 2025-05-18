@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs"; // Import ClerkProvider
 import { Geist, Geist_Mono, Poppins } from "next/font/google";
@@ -25,9 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider> {/* Add ClerkProvider here */}
-      <html lang="en">
-        <body className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable}`}>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body suppressHydrationWarning className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable}`}>
           {children}
         </body>
       </html>

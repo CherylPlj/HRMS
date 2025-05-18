@@ -2347,22 +2347,12 @@ export namespace Prisma {
 
   export type AggregateUser = {
     _count: UserCountAggregateOutputType | null
-    _avg: UserAvgAggregateOutputType | null
-    _sum: UserSumAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
   }
 
-  export type UserAvgAggregateOutputType = {
-    UserID: number | null
-  }
-
-  export type UserSumAggregateOutputType = {
-    UserID: number | null
-  }
-
   export type UserMinAggregateOutputType = {
-    UserID: number | null
+    UserID: string | null
     FirstName: string | null
     LastName: string | null
     Email: string | null
@@ -2376,7 +2366,7 @@ export namespace Prisma {
   }
 
   export type UserMaxAggregateOutputType = {
-    UserID: number | null
+    UserID: string | null
     FirstName: string | null
     LastName: string | null
     Email: string | null
@@ -2404,14 +2394,6 @@ export namespace Prisma {
     _all: number
   }
 
-
-  export type UserAvgAggregateInputType = {
-    UserID?: true
-  }
-
-  export type UserSumAggregateInputType = {
-    UserID?: true
-  }
 
   export type UserMinAggregateInputType = {
     UserID?: true
@@ -2494,18 +2476,6 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
-     * Select which fields to average
-    **/
-    _avg?: UserAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: UserSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
      * Select which fields to find the minimum value
     **/
     _min?: UserMinAggregateInputType
@@ -2536,14 +2506,12 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: UserCountAggregateInputType | true
-    _avg?: UserAvgAggregateInputType
-    _sum?: UserSumAggregateInputType
     _min?: UserMinAggregateInputType
     _max?: UserMaxAggregateInputType
   }
 
   export type UserGroupByOutputType = {
-    UserID: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -2555,8 +2523,6 @@ export namespace Prisma {
     DateModified: Date | null
     LastLogin: Date | null
     _count: UserCountAggregateOutputType | null
-    _avg: UserAvgAggregateOutputType | null
-    _sum: UserSumAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
   }
@@ -2665,7 +2631,7 @@ export namespace Prisma {
       Report: Prisma.$ReportPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
-      UserID: number
+      UserID: string
       FirstName: string
       LastName: string
       Email: string
@@ -3106,7 +3072,7 @@ export namespace Prisma {
    * Fields of the User model
    */
   interface UserFieldRefs {
-    readonly UserID: FieldRef<"User", 'Int'>
+    readonly UserID: FieldRef<"User", 'String'>
     readonly FirstName: FieldRef<"User", 'String'>
     readonly LastName: FieldRef<"User", 'String'>
     readonly Email: FieldRef<"User", 'String'>
@@ -3690,21 +3656,19 @@ export namespace Prisma {
 
   export type FacultyAvgAggregateOutputType = {
     FacultyID: number | null
-    UserID: number | null
     DepartmentID: number | null
     ContractID: number | null
   }
 
   export type FacultySumAggregateOutputType = {
     FacultyID: number | null
-    UserID: number | null
     DepartmentID: number | null
     ContractID: number | null
   }
 
   export type FacultyMinAggregateOutputType = {
     FacultyID: number | null
-    UserID: number | null
+    UserID: string | null
     DateOfBirth: Date | null
     Phone: string | null
     Address: string | null
@@ -3718,7 +3682,7 @@ export namespace Prisma {
 
   export type FacultyMaxAggregateOutputType = {
     FacultyID: number | null
-    UserID: number | null
+    UserID: string | null
     DateOfBirth: Date | null
     Phone: string | null
     Address: string | null
@@ -3748,14 +3712,12 @@ export namespace Prisma {
 
   export type FacultyAvgAggregateInputType = {
     FacultyID?: true
-    UserID?: true
     DepartmentID?: true
     ContractID?: true
   }
 
   export type FacultySumAggregateInputType = {
     FacultyID?: true
-    UserID?: true
     DepartmentID?: true
     ContractID?: true
   }
@@ -3891,7 +3853,7 @@ export namespace Prisma {
 
   export type FacultyGroupByOutputType = {
     FacultyID: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date
     Phone: string | null
     Address: string | null
@@ -4021,7 +3983,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       FacultyID: number
-      UserID: number
+      UserID: string
       DateOfBirth: Date
       Phone: string | null
       Address: string | null
@@ -4460,7 +4422,7 @@ export namespace Prisma {
    */
   interface FacultyFieldRefs {
     readonly FacultyID: FieldRef<"Faculty", 'Int'>
-    readonly UserID: FieldRef<"Faculty", 'Int'>
+    readonly UserID: FieldRef<"Faculty", 'String'>
     readonly DateOfBirth: FieldRef<"Faculty", 'DateTime'>
     readonly Phone: FieldRef<"Faculty", 'String'>
     readonly Address: FieldRef<"Faculty", 'String'>
@@ -4965,17 +4927,15 @@ export namespace Prisma {
 
   export type CashierAvgAggregateOutputType = {
     CashierID: number | null
-    UserID: number | null
   }
 
   export type CashierSumAggregateOutputType = {
     CashierID: number | null
-    UserID: number | null
   }
 
   export type CashierMinAggregateOutputType = {
     CashierID: number | null
-    UserID: number | null
+    UserID: string | null
     WorkSchedule: string | null
     ShiftStart: Date | null
     ShiftEnd: Date | null
@@ -4983,7 +4943,7 @@ export namespace Prisma {
 
   export type CashierMaxAggregateOutputType = {
     CashierID: number | null
-    UserID: number | null
+    UserID: string | null
     WorkSchedule: string | null
     ShiftStart: Date | null
     ShiftEnd: Date | null
@@ -5001,12 +4961,10 @@ export namespace Prisma {
 
   export type CashierAvgAggregateInputType = {
     CashierID?: true
-    UserID?: true
   }
 
   export type CashierSumAggregateInputType = {
     CashierID?: true
-    UserID?: true
   }
 
   export type CashierMinAggregateInputType = {
@@ -5122,7 +5080,7 @@ export namespace Prisma {
 
   export type CashierGroupByOutputType = {
     CashierID: number
-    UserID: number
+    UserID: string
     WorkSchedule: string | null
     ShiftStart: Date | null
     ShiftEnd: Date | null
@@ -5200,7 +5158,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       CashierID: number
-      UserID: number
+      UserID: string
       WorkSchedule: string | null
       ShiftStart: Date | null
       ShiftEnd: Date | null
@@ -5629,7 +5587,7 @@ export namespace Prisma {
    */
   interface CashierFieldRefs {
     readonly CashierID: FieldRef<"Cashier", 'Int'>
-    readonly UserID: FieldRef<"Cashier", 'Int'>
+    readonly UserID: FieldRef<"Cashier", 'String'>
     readonly WorkSchedule: FieldRef<"Cashier", 'String'>
     readonly ShiftStart: FieldRef<"Cashier", 'DateTime'>
     readonly ShiftEnd: FieldRef<"Cashier", 'DateTime'>
@@ -6061,23 +6019,21 @@ export namespace Prisma {
 
   export type RegistrarAvgAggregateOutputType = {
     RegistrarID: number | null
-    UserID: number | null
   }
 
   export type RegistrarSumAggregateOutputType = {
     RegistrarID: number | null
-    UserID: number | null
   }
 
   export type RegistrarMinAggregateOutputType = {
     RegistrarID: number | null
-    UserID: number | null
+    UserID: string | null
     Schedule: string | null
   }
 
   export type RegistrarMaxAggregateOutputType = {
     RegistrarID: number | null
-    UserID: number | null
+    UserID: string | null
     Schedule: string | null
   }
 
@@ -6091,12 +6047,10 @@ export namespace Prisma {
 
   export type RegistrarAvgAggregateInputType = {
     RegistrarID?: true
-    UserID?: true
   }
 
   export type RegistrarSumAggregateInputType = {
     RegistrarID?: true
-    UserID?: true
   }
 
   export type RegistrarMinAggregateInputType = {
@@ -6206,7 +6160,7 @@ export namespace Prisma {
 
   export type RegistrarGroupByOutputType = {
     RegistrarID: number
-    UserID: number
+    UserID: string
     Schedule: string | null
     _count: RegistrarCountAggregateOutputType | null
     _avg: RegistrarAvgAggregateOutputType | null
@@ -6274,7 +6228,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       RegistrarID: number
-      UserID: number
+      UserID: string
       Schedule: string | null
     }, ExtArgs["result"]["registrar"]>
     composites: {}
@@ -6701,7 +6655,7 @@ export namespace Prisma {
    */
   interface RegistrarFieldRefs {
     readonly RegistrarID: FieldRef<"Registrar", 'Int'>
-    readonly UserID: FieldRef<"Registrar", 'Int'>
+    readonly UserID: FieldRef<"Registrar", 'String'>
     readonly Schedule: FieldRef<"Registrar", 'String'>
   }
     
@@ -12582,17 +12536,15 @@ export namespace Prisma {
 
   export type AIChatAvgAggregateOutputType = {
     ChatID: number | null
-    UserID: number | null
   }
 
   export type AIChatSumAggregateOutputType = {
     ChatID: number | null
-    UserID: number | null
   }
 
   export type AIChatMinAggregateOutputType = {
     ChatID: number | null
-    UserID: number | null
+    UserID: string | null
     Question: string | null
     Answer: string | null
     Status: string | null
@@ -12600,7 +12552,7 @@ export namespace Prisma {
 
   export type AIChatMaxAggregateOutputType = {
     ChatID: number | null
-    UserID: number | null
+    UserID: string | null
     Question: string | null
     Answer: string | null
     Status: string | null
@@ -12618,12 +12570,10 @@ export namespace Prisma {
 
   export type AIChatAvgAggregateInputType = {
     ChatID?: true
-    UserID?: true
   }
 
   export type AIChatSumAggregateInputType = {
     ChatID?: true
-    UserID?: true
   }
 
   export type AIChatMinAggregateInputType = {
@@ -12739,7 +12689,7 @@ export namespace Prisma {
 
   export type AIChatGroupByOutputType = {
     ChatID: number
-    UserID: number
+    UserID: string
     Question: string
     Answer: string
     Status: string
@@ -12817,7 +12767,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       ChatID: number
-      UserID: number
+      UserID: string
       Question: string
       Answer: string
       Status: string
@@ -13246,7 +13196,7 @@ export namespace Prisma {
    */
   interface AIChatFieldRefs {
     readonly ChatID: FieldRef<"AIChat", 'Int'>
-    readonly UserID: FieldRef<"AIChat", 'Int'>
+    readonly UserID: FieldRef<"AIChat", 'String'>
     readonly Question: FieldRef<"AIChat", 'String'>
     readonly Answer: FieldRef<"AIChat", 'String'>
     readonly Status: FieldRef<"AIChat", 'String'>
@@ -13678,17 +13628,15 @@ export namespace Prisma {
 
   export type ReportAvgAggregateOutputType = {
     ReportID: number | null
-    GeneratedBy: number | null
   }
 
   export type ReportSumAggregateOutputType = {
     ReportID: number | null
-    GeneratedBy: number | null
   }
 
   export type ReportMinAggregateOutputType = {
     ReportID: number | null
-    GeneratedBy: number | null
+    GeneratedBy: string | null
     ReportType: string | null
     GeneratedDate: Date | null
     Details: string | null
@@ -13696,7 +13644,7 @@ export namespace Prisma {
 
   export type ReportMaxAggregateOutputType = {
     ReportID: number | null
-    GeneratedBy: number | null
+    GeneratedBy: string | null
     ReportType: string | null
     GeneratedDate: Date | null
     Details: string | null
@@ -13714,12 +13662,10 @@ export namespace Prisma {
 
   export type ReportAvgAggregateInputType = {
     ReportID?: true
-    GeneratedBy?: true
   }
 
   export type ReportSumAggregateInputType = {
     ReportID?: true
-    GeneratedBy?: true
   }
 
   export type ReportMinAggregateInputType = {
@@ -13835,7 +13781,7 @@ export namespace Prisma {
 
   export type ReportGroupByOutputType = {
     ReportID: number
-    GeneratedBy: number
+    GeneratedBy: string
     ReportType: string
     GeneratedDate: Date
     Details: string
@@ -13913,7 +13859,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       ReportID: number
-      GeneratedBy: number
+      GeneratedBy: string
       ReportType: string
       GeneratedDate: Date
       Details: string
@@ -14342,7 +14288,7 @@ export namespace Prisma {
    */
   interface ReportFieldRefs {
     readonly ReportID: FieldRef<"Report", 'Int'>
-    readonly GeneratedBy: FieldRef<"Report", 'Int'>
+    readonly GeneratedBy: FieldRef<"Report", 'String'>
     readonly ReportType: FieldRef<"Report", 'String'>
     readonly GeneratedDate: FieldRef<"Report", 'DateTime'>
     readonly Details: FieldRef<"Report", 'String'>
@@ -14774,17 +14720,15 @@ export namespace Prisma {
 
   export type NotificationAvgAggregateOutputType = {
     NotificationID: number | null
-    UserID: number | null
   }
 
   export type NotificationSumAggregateOutputType = {
     NotificationID: number | null
-    UserID: number | null
   }
 
   export type NotificationMinAggregateOutputType = {
     NotificationID: number | null
-    UserID: number | null
+    UserID: string | null
     Message: string | null
     DateSent: Date | null
     Type: string | null
@@ -14793,7 +14737,7 @@ export namespace Prisma {
 
   export type NotificationMaxAggregateOutputType = {
     NotificationID: number | null
-    UserID: number | null
+    UserID: string | null
     Message: string | null
     DateSent: Date | null
     Type: string | null
@@ -14813,12 +14757,10 @@ export namespace Prisma {
 
   export type NotificationAvgAggregateInputType = {
     NotificationID?: true
-    UserID?: true
   }
 
   export type NotificationSumAggregateInputType = {
     NotificationID?: true
-    UserID?: true
   }
 
   export type NotificationMinAggregateInputType = {
@@ -14937,7 +14879,7 @@ export namespace Prisma {
 
   export type NotificationGroupByOutputType = {
     NotificationID: number
-    UserID: number
+    UserID: string
     Message: string
     DateSent: Date
     Type: string
@@ -15020,7 +14962,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       NotificationID: number
-      UserID: number
+      UserID: string
       Message: string
       DateSent: Date
       Type: string
@@ -15450,7 +15392,7 @@ export namespace Prisma {
    */
   interface NotificationFieldRefs {
     readonly NotificationID: FieldRef<"Notification", 'Int'>
-    readonly UserID: FieldRef<"Notification", 'Int'>
+    readonly UserID: FieldRef<"Notification", 'String'>
     readonly Message: FieldRef<"Notification", 'String'>
     readonly DateSent: FieldRef<"Notification", 'DateTime'>
     readonly Type: FieldRef<"Notification", 'String'>
@@ -15883,19 +15825,17 @@ export namespace Prisma {
 
   export type ActivityLogAvgAggregateOutputType = {
     LogID: number | null
-    UserID: number | null
     RecordID: number | null
   }
 
   export type ActivityLogSumAggregateOutputType = {
     LogID: number | null
-    UserID: number | null
     RecordID: number | null
   }
 
   export type ActivityLogMinAggregateOutputType = {
     LogID: number | null
-    UserID: number | null
+    UserID: string | null
     ActionType: string | null
     EntityAffected: string | null
     RecordID: number | null
@@ -15906,7 +15846,7 @@ export namespace Prisma {
 
   export type ActivityLogMaxAggregateOutputType = {
     LogID: number | null
-    UserID: number | null
+    UserID: string | null
     ActionType: string | null
     EntityAffected: string | null
     RecordID: number | null
@@ -15930,13 +15870,11 @@ export namespace Prisma {
 
   export type ActivityLogAvgAggregateInputType = {
     LogID?: true
-    UserID?: true
     RecordID?: true
   }
 
   export type ActivityLogSumAggregateInputType = {
     LogID?: true
-    UserID?: true
     RecordID?: true
   }
 
@@ -16062,7 +16000,7 @@ export namespace Prisma {
 
   export type ActivityLogGroupByOutputType = {
     LogID: number
-    UserID: number | null
+    UserID: string
     ActionType: string
     EntityAffected: string
     RecordID: number | null
@@ -16155,7 +16093,7 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       LogID: number
-      UserID: number | null
+      UserID: string
       ActionType: string
       EntityAffected: string
       RecordID: number | null
@@ -16587,7 +16525,7 @@ export namespace Prisma {
    */
   interface ActivityLogFieldRefs {
     readonly LogID: FieldRef<"ActivityLog", 'Int'>
-    readonly UserID: FieldRef<"ActivityLog", 'Int'>
+    readonly UserID: FieldRef<"ActivityLog", 'String'>
     readonly ActionType: FieldRef<"ActivityLog", 'String'>
     readonly EntityAffected: FieldRef<"ActivityLog", 'String'>
     readonly RecordID: FieldRef<"ActivityLog", 'Int'>
@@ -17053,7 +16991,7 @@ export namespace Prisma {
     date: Date | null
     timeIn: Date | null
     timeOut: Date | null
-    status: $Enums.AttendanceStatus | null
+    status: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -17064,7 +17002,7 @@ export namespace Prisma {
     date: Date | null
     timeIn: Date | null
     timeOut: Date | null
-    status: $Enums.AttendanceStatus | null
+    status: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -17216,7 +17154,7 @@ export namespace Prisma {
     date: Date
     timeIn: Date | null
     timeOut: Date | null
-    status: $Enums.AttendanceStatus
+    status: string
     createdAt: Date
     updatedAt: Date
     _count: AttendanceCountAggregateOutputType | null
@@ -17295,7 +17233,7 @@ export namespace Prisma {
       date: Date
       timeIn: Date | null
       timeOut: Date | null
-      status: $Enums.AttendanceStatus
+      status: string
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["attendance"]>
@@ -17726,7 +17664,7 @@ export namespace Prisma {
     readonly date: FieldRef<"Attendance", 'DateTime'>
     readonly timeIn: FieldRef<"Attendance", 'DateTime'>
     readonly timeOut: FieldRef<"Attendance", 'DateTime'>
-    readonly status: FieldRef<"Attendance", 'AttendanceStatus'>
+    readonly status: FieldRef<"Attendance", 'String'>
     readonly createdAt: FieldRef<"Attendance", 'DateTime'>
     readonly updatedAt: FieldRef<"Attendance", 'DateTime'>
   }
@@ -18305,20 +18243,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'Int'
-   */
-  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int[]'
-   */
-  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-    
-
-
-  /**
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
@@ -18371,6 +18295,20 @@ export namespace Prisma {
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int'
+   */
+  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int[]'
+   */
+  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -18438,20 +18376,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'AttendanceStatus'
-   */
-  export type EnumAttendanceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttendanceStatus'>
-    
-
-
-  /**
-   * Reference to a field of type 'AttendanceStatus[]'
-   */
-  export type ListEnumAttendanceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttendanceStatus[]'>
-    
-
-
-  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -18472,7 +18396,7 @@ export namespace Prisma {
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
-    UserID?: IntFilter<"User"> | number
+    UserID?: StringFilter<"User"> | string
     FirstName?: StringFilter<"User"> | string
     LastName?: StringFilter<"User"> | string
     Email?: StringFilter<"User"> | string
@@ -18514,7 +18438,7 @@ export namespace Prisma {
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
-    UserID?: number
+    UserID?: string
     Email?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
@@ -18550,17 +18474,15 @@ export namespace Prisma {
     DateModified?: SortOrderInput | SortOrder
     LastLogin?: SortOrderInput | SortOrder
     _count?: UserCountOrderByAggregateInput
-    _avg?: UserAvgOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
     _min?: UserMinOrderByAggregateInput
-    _sum?: UserSumOrderByAggregateInput
   }
 
   export type UserScalarWhereWithAggregatesInput = {
     AND?: UserScalarWhereWithAggregatesInput | UserScalarWhereWithAggregatesInput[]
     OR?: UserScalarWhereWithAggregatesInput[]
     NOT?: UserScalarWhereWithAggregatesInput | UserScalarWhereWithAggregatesInput[]
-    UserID?: IntWithAggregatesFilter<"User"> | number
+    UserID?: StringWithAggregatesFilter<"User"> | string
     FirstName?: StringWithAggregatesFilter<"User"> | string
     LastName?: StringWithAggregatesFilter<"User"> | string
     Email?: StringWithAggregatesFilter<"User"> | string
@@ -18578,7 +18500,7 @@ export namespace Prisma {
     OR?: FacultyWhereInput[]
     NOT?: FacultyWhereInput | FacultyWhereInput[]
     FacultyID?: IntFilter<"Faculty"> | number
-    UserID?: IntFilter<"Faculty"> | number
+    UserID?: StringFilter<"Faculty"> | string
     DateOfBirth?: DateTimeFilter<"Faculty"> | Date | string
     Phone?: StringNullableFilter<"Faculty"> | string | null
     Address?: StringNullableFilter<"Faculty"> | string | null
@@ -18616,7 +18538,7 @@ export namespace Prisma {
 
   export type FacultyWhereUniqueInput = Prisma.AtLeast<{
     FacultyID?: number
-    UserID?: number
+    UserID?: string
     AND?: FacultyWhereInput | FacultyWhereInput[]
     OR?: FacultyWhereInput[]
     NOT?: FacultyWhereInput | FacultyWhereInput[]
@@ -18660,7 +18582,7 @@ export namespace Prisma {
     OR?: FacultyScalarWhereWithAggregatesInput[]
     NOT?: FacultyScalarWhereWithAggregatesInput | FacultyScalarWhereWithAggregatesInput[]
     FacultyID?: IntWithAggregatesFilter<"Faculty"> | number
-    UserID?: IntWithAggregatesFilter<"Faculty"> | number
+    UserID?: StringWithAggregatesFilter<"Faculty"> | string
     DateOfBirth?: DateTimeWithAggregatesFilter<"Faculty"> | Date | string
     Phone?: StringNullableWithAggregatesFilter<"Faculty"> | string | null
     Address?: StringNullableWithAggregatesFilter<"Faculty"> | string | null
@@ -18677,7 +18599,7 @@ export namespace Prisma {
     OR?: CashierWhereInput[]
     NOT?: CashierWhereInput | CashierWhereInput[]
     CashierID?: IntFilter<"Cashier"> | number
-    UserID?: IntFilter<"Cashier"> | number
+    UserID?: StringFilter<"Cashier"> | string
     WorkSchedule?: StringNullableFilter<"Cashier"> | string | null
     ShiftStart?: DateTimeNullableFilter<"Cashier"> | Date | string | null
     ShiftEnd?: DateTimeNullableFilter<"Cashier"> | Date | string | null
@@ -18695,7 +18617,7 @@ export namespace Prisma {
 
   export type CashierWhereUniqueInput = Prisma.AtLeast<{
     CashierID?: number
-    UserID?: number
+    UserID?: string
     AND?: CashierWhereInput | CashierWhereInput[]
     OR?: CashierWhereInput[]
     NOT?: CashierWhereInput | CashierWhereInput[]
@@ -18723,7 +18645,7 @@ export namespace Prisma {
     OR?: CashierScalarWhereWithAggregatesInput[]
     NOT?: CashierScalarWhereWithAggregatesInput | CashierScalarWhereWithAggregatesInput[]
     CashierID?: IntWithAggregatesFilter<"Cashier"> | number
-    UserID?: IntWithAggregatesFilter<"Cashier"> | number
+    UserID?: StringWithAggregatesFilter<"Cashier"> | string
     WorkSchedule?: StringNullableWithAggregatesFilter<"Cashier"> | string | null
     ShiftStart?: DateTimeNullableWithAggregatesFilter<"Cashier"> | Date | string | null
     ShiftEnd?: DateTimeNullableWithAggregatesFilter<"Cashier"> | Date | string | null
@@ -18734,7 +18656,7 @@ export namespace Prisma {
     OR?: RegistrarWhereInput[]
     NOT?: RegistrarWhereInput | RegistrarWhereInput[]
     RegistrarID?: IntFilter<"Registrar"> | number
-    UserID?: IntFilter<"Registrar"> | number
+    UserID?: StringFilter<"Registrar"> | string
     Schedule?: StringNullableFilter<"Registrar"> | string | null
     User?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
@@ -18748,7 +18670,7 @@ export namespace Prisma {
 
   export type RegistrarWhereUniqueInput = Prisma.AtLeast<{
     RegistrarID?: number
-    UserID?: number
+    UserID?: string
     AND?: RegistrarWhereInput | RegistrarWhereInput[]
     OR?: RegistrarWhereInput[]
     NOT?: RegistrarWhereInput | RegistrarWhereInput[]
@@ -18772,7 +18694,7 @@ export namespace Prisma {
     OR?: RegistrarScalarWhereWithAggregatesInput[]
     NOT?: RegistrarScalarWhereWithAggregatesInput | RegistrarScalarWhereWithAggregatesInput[]
     RegistrarID?: IntWithAggregatesFilter<"Registrar"> | number
-    UserID?: IntWithAggregatesFilter<"Registrar"> | number
+    UserID?: StringWithAggregatesFilter<"Registrar"> | string
     Schedule?: StringNullableWithAggregatesFilter<"Registrar"> | string | null
   }
 
@@ -19044,7 +18966,7 @@ export namespace Prisma {
     OR?: AIChatWhereInput[]
     NOT?: AIChatWhereInput | AIChatWhereInput[]
     ChatID?: IntFilter<"AIChat"> | number
-    UserID?: IntFilter<"AIChat"> | number
+    UserID?: StringFilter<"AIChat"> | string
     Question?: StringFilter<"AIChat"> | string
     Answer?: StringFilter<"AIChat"> | string
     Status?: StringFilter<"AIChat"> | string
@@ -19065,7 +18987,7 @@ export namespace Prisma {
     AND?: AIChatWhereInput | AIChatWhereInput[]
     OR?: AIChatWhereInput[]
     NOT?: AIChatWhereInput | AIChatWhereInput[]
-    UserID?: IntFilter<"AIChat"> | number
+    UserID?: StringFilter<"AIChat"> | string
     Question?: StringFilter<"AIChat"> | string
     Answer?: StringFilter<"AIChat"> | string
     Status?: StringFilter<"AIChat"> | string
@@ -19090,7 +19012,7 @@ export namespace Prisma {
     OR?: AIChatScalarWhereWithAggregatesInput[]
     NOT?: AIChatScalarWhereWithAggregatesInput | AIChatScalarWhereWithAggregatesInput[]
     ChatID?: IntWithAggregatesFilter<"AIChat"> | number
-    UserID?: IntWithAggregatesFilter<"AIChat"> | number
+    UserID?: StringWithAggregatesFilter<"AIChat"> | string
     Question?: StringWithAggregatesFilter<"AIChat"> | string
     Answer?: StringWithAggregatesFilter<"AIChat"> | string
     Status?: StringWithAggregatesFilter<"AIChat"> | string
@@ -19101,7 +19023,7 @@ export namespace Prisma {
     OR?: ReportWhereInput[]
     NOT?: ReportWhereInput | ReportWhereInput[]
     ReportID?: IntFilter<"Report"> | number
-    GeneratedBy?: IntFilter<"Report"> | number
+    GeneratedBy?: StringFilter<"Report"> | string
     ReportType?: StringFilter<"Report"> | string
     GeneratedDate?: DateTimeFilter<"Report"> | Date | string
     Details?: StringFilter<"Report"> | string
@@ -19122,7 +19044,7 @@ export namespace Prisma {
     AND?: ReportWhereInput | ReportWhereInput[]
     OR?: ReportWhereInput[]
     NOT?: ReportWhereInput | ReportWhereInput[]
-    GeneratedBy?: IntFilter<"Report"> | number
+    GeneratedBy?: StringFilter<"Report"> | string
     ReportType?: StringFilter<"Report"> | string
     GeneratedDate?: DateTimeFilter<"Report"> | Date | string
     Details?: StringFilter<"Report"> | string
@@ -19147,7 +19069,7 @@ export namespace Prisma {
     OR?: ReportScalarWhereWithAggregatesInput[]
     NOT?: ReportScalarWhereWithAggregatesInput | ReportScalarWhereWithAggregatesInput[]
     ReportID?: IntWithAggregatesFilter<"Report"> | number
-    GeneratedBy?: IntWithAggregatesFilter<"Report"> | number
+    GeneratedBy?: StringWithAggregatesFilter<"Report"> | string
     ReportType?: StringWithAggregatesFilter<"Report"> | string
     GeneratedDate?: DateTimeWithAggregatesFilter<"Report"> | Date | string
     Details?: StringWithAggregatesFilter<"Report"> | string
@@ -19158,7 +19080,7 @@ export namespace Prisma {
     OR?: NotificationWhereInput[]
     NOT?: NotificationWhereInput | NotificationWhereInput[]
     NotificationID?: IntFilter<"Notification"> | number
-    UserID?: IntFilter<"Notification"> | number
+    UserID?: StringFilter<"Notification"> | string
     Message?: StringFilter<"Notification"> | string
     DateSent?: DateTimeFilter<"Notification"> | Date | string
     Type?: StringFilter<"Notification"> | string
@@ -19181,7 +19103,7 @@ export namespace Prisma {
     AND?: NotificationWhereInput | NotificationWhereInput[]
     OR?: NotificationWhereInput[]
     NOT?: NotificationWhereInput | NotificationWhereInput[]
-    UserID?: IntFilter<"Notification"> | number
+    UserID?: StringFilter<"Notification"> | string
     Message?: StringFilter<"Notification"> | string
     DateSent?: DateTimeFilter<"Notification"> | Date | string
     Type?: StringFilter<"Notification"> | string
@@ -19208,7 +19130,7 @@ export namespace Prisma {
     OR?: NotificationScalarWhereWithAggregatesInput[]
     NOT?: NotificationScalarWhereWithAggregatesInput | NotificationScalarWhereWithAggregatesInput[]
     NotificationID?: IntWithAggregatesFilter<"Notification"> | number
-    UserID?: IntWithAggregatesFilter<"Notification"> | number
+    UserID?: StringWithAggregatesFilter<"Notification"> | string
     Message?: StringWithAggregatesFilter<"Notification"> | string
     DateSent?: DateTimeWithAggregatesFilter<"Notification"> | Date | string
     Type?: StringWithAggregatesFilter<"Notification"> | string
@@ -19220,7 +19142,7 @@ export namespace Prisma {
     OR?: ActivityLogWhereInput[]
     NOT?: ActivityLogWhereInput | ActivityLogWhereInput[]
     LogID?: IntFilter<"ActivityLog"> | number
-    UserID?: IntNullableFilter<"ActivityLog"> | number | null
+    UserID?: StringFilter<"ActivityLog"> | string
     ActionType?: StringFilter<"ActivityLog"> | string
     EntityAffected?: StringFilter<"ActivityLog"> | string
     RecordID?: IntNullableFilter<"ActivityLog"> | number | null
@@ -19232,7 +19154,7 @@ export namespace Prisma {
 
   export type ActivityLogOrderByWithRelationInput = {
     LogID?: SortOrder
-    UserID?: SortOrderInput | SortOrder
+    UserID?: SortOrder
     ActionType?: SortOrder
     EntityAffected?: SortOrder
     RecordID?: SortOrderInput | SortOrder
@@ -19247,7 +19169,7 @@ export namespace Prisma {
     AND?: ActivityLogWhereInput | ActivityLogWhereInput[]
     OR?: ActivityLogWhereInput[]
     NOT?: ActivityLogWhereInput | ActivityLogWhereInput[]
-    UserID?: IntNullableFilter<"ActivityLog"> | number | null
+    UserID?: StringFilter<"ActivityLog"> | string
     ActionType?: StringFilter<"ActivityLog"> | string
     EntityAffected?: StringFilter<"ActivityLog"> | string
     RecordID?: IntNullableFilter<"ActivityLog"> | number | null
@@ -19259,7 +19181,7 @@ export namespace Prisma {
 
   export type ActivityLogOrderByWithAggregationInput = {
     LogID?: SortOrder
-    UserID?: SortOrderInput | SortOrder
+    UserID?: SortOrder
     ActionType?: SortOrder
     EntityAffected?: SortOrder
     RecordID?: SortOrderInput | SortOrder
@@ -19278,7 +19200,7 @@ export namespace Prisma {
     OR?: ActivityLogScalarWhereWithAggregatesInput[]
     NOT?: ActivityLogScalarWhereWithAggregatesInput | ActivityLogScalarWhereWithAggregatesInput[]
     LogID?: IntWithAggregatesFilter<"ActivityLog"> | number
-    UserID?: IntNullableWithAggregatesFilter<"ActivityLog"> | number | null
+    UserID?: StringWithAggregatesFilter<"ActivityLog"> | string
     ActionType?: StringWithAggregatesFilter<"ActivityLog"> | string
     EntityAffected?: StringWithAggregatesFilter<"ActivityLog"> | string
     RecordID?: IntNullableWithAggregatesFilter<"ActivityLog"> | number | null
@@ -19296,7 +19218,7 @@ export namespace Prisma {
     date?: DateTimeFilter<"Attendance"> | Date | string
     timeIn?: DateTimeNullableFilter<"Attendance"> | Date | string | null
     timeOut?: DateTimeNullableFilter<"Attendance"> | Date | string | null
-    status?: EnumAttendanceStatusFilter<"Attendance"> | $Enums.AttendanceStatus
+    status?: StringFilter<"Attendance"> | string
     createdAt?: DateTimeFilter<"Attendance"> | Date | string
     updatedAt?: DateTimeFilter<"Attendance"> | Date | string
   }
@@ -19321,7 +19243,7 @@ export namespace Prisma {
     date?: DateTimeFilter<"Attendance"> | Date | string
     timeIn?: DateTimeNullableFilter<"Attendance"> | Date | string | null
     timeOut?: DateTimeNullableFilter<"Attendance"> | Date | string | null
-    status?: EnumAttendanceStatusFilter<"Attendance"> | $Enums.AttendanceStatus
+    status?: StringFilter<"Attendance"> | string
     createdAt?: DateTimeFilter<"Attendance"> | Date | string
     updatedAt?: DateTimeFilter<"Attendance"> | Date | string
   }, "id">
@@ -19351,12 +19273,13 @@ export namespace Prisma {
     date?: DateTimeWithAggregatesFilter<"Attendance"> | Date | string
     timeIn?: DateTimeNullableWithAggregatesFilter<"Attendance"> | Date | string | null
     timeOut?: DateTimeNullableWithAggregatesFilter<"Attendance"> | Date | string | null
-    status?: EnumAttendanceStatusWithAggregatesFilter<"Attendance"> | $Enums.AttendanceStatus
+    status?: StringWithAggregatesFilter<"Attendance"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Attendance"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Attendance"> | Date | string
   }
 
   export type UserCreateInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -19377,7 +19300,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -19398,6 +19321,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -19418,7 +19342,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -19439,7 +19363,7 @@ export namespace Prisma {
   }
 
   export type UserCreateManyInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -19453,6 +19377,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateManyMutationInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -19466,7 +19391,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateManyInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -19496,7 +19421,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedCreateInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -19527,7 +19452,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19543,7 +19468,7 @@ export namespace Prisma {
 
   export type FacultyCreateManyInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -19567,7 +19492,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateManyInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19588,7 +19513,7 @@ export namespace Prisma {
 
   export type CashierUncheckedCreateInput = {
     CashierID?: number
-    UserID: number
+    UserID: string
     WorkSchedule?: string | null
     ShiftStart?: Date | string | null
     ShiftEnd?: Date | string | null
@@ -19603,7 +19528,7 @@ export namespace Prisma {
 
   export type CashierUncheckedUpdateInput = {
     CashierID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     WorkSchedule?: NullableStringFieldUpdateOperationsInput | string | null
     ShiftStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     ShiftEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -19611,7 +19536,7 @@ export namespace Prisma {
 
   export type CashierCreateManyInput = {
     CashierID?: number
-    UserID: number
+    UserID: string
     WorkSchedule?: string | null
     ShiftStart?: Date | string | null
     ShiftEnd?: Date | string | null
@@ -19625,7 +19550,7 @@ export namespace Prisma {
 
   export type CashierUncheckedUpdateManyInput = {
     CashierID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     WorkSchedule?: NullableStringFieldUpdateOperationsInput | string | null
     ShiftStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     ShiftEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -19638,7 +19563,7 @@ export namespace Prisma {
 
   export type RegistrarUncheckedCreateInput = {
     RegistrarID?: number
-    UserID: number
+    UserID: string
     Schedule?: string | null
   }
 
@@ -19649,13 +19574,13 @@ export namespace Prisma {
 
   export type RegistrarUncheckedUpdateInput = {
     RegistrarID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     Schedule?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type RegistrarCreateManyInput = {
     RegistrarID?: number
-    UserID: number
+    UserID: string
     Schedule?: string | null
   }
 
@@ -19665,7 +19590,7 @@ export namespace Prisma {
 
   export type RegistrarUncheckedUpdateManyInput = {
     RegistrarID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     Schedule?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -19917,7 +19842,7 @@ export namespace Prisma {
 
   export type AIChatUncheckedCreateInput = {
     ChatID?: number
-    UserID: number
+    UserID: string
     Question: string
     Answer: string
     Status: string
@@ -19932,7 +19857,7 @@ export namespace Prisma {
 
   export type AIChatUncheckedUpdateInput = {
     ChatID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     Question?: StringFieldUpdateOperationsInput | string
     Answer?: StringFieldUpdateOperationsInput | string
     Status?: StringFieldUpdateOperationsInput | string
@@ -19940,7 +19865,7 @@ export namespace Prisma {
 
   export type AIChatCreateManyInput = {
     ChatID?: number
-    UserID: number
+    UserID: string
     Question: string
     Answer: string
     Status: string
@@ -19954,7 +19879,7 @@ export namespace Prisma {
 
   export type AIChatUncheckedUpdateManyInput = {
     ChatID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     Question?: StringFieldUpdateOperationsInput | string
     Answer?: StringFieldUpdateOperationsInput | string
     Status?: StringFieldUpdateOperationsInput | string
@@ -19969,7 +19894,7 @@ export namespace Prisma {
 
   export type ReportUncheckedCreateInput = {
     ReportID?: number
-    GeneratedBy: number
+    GeneratedBy: string
     ReportType: string
     GeneratedDate?: Date | string
     Details: string
@@ -19984,7 +19909,7 @@ export namespace Prisma {
 
   export type ReportUncheckedUpdateInput = {
     ReportID?: IntFieldUpdateOperationsInput | number
-    GeneratedBy?: IntFieldUpdateOperationsInput | number
+    GeneratedBy?: StringFieldUpdateOperationsInput | string
     ReportType?: StringFieldUpdateOperationsInput | string
     GeneratedDate?: DateTimeFieldUpdateOperationsInput | Date | string
     Details?: StringFieldUpdateOperationsInput | string
@@ -19992,7 +19917,7 @@ export namespace Prisma {
 
   export type ReportCreateManyInput = {
     ReportID?: number
-    GeneratedBy: number
+    GeneratedBy: string
     ReportType: string
     GeneratedDate?: Date | string
     Details: string
@@ -20006,7 +19931,7 @@ export namespace Prisma {
 
   export type ReportUncheckedUpdateManyInput = {
     ReportID?: IntFieldUpdateOperationsInput | number
-    GeneratedBy?: IntFieldUpdateOperationsInput | number
+    GeneratedBy?: StringFieldUpdateOperationsInput | string
     ReportType?: StringFieldUpdateOperationsInput | string
     GeneratedDate?: DateTimeFieldUpdateOperationsInput | Date | string
     Details?: StringFieldUpdateOperationsInput | string
@@ -20022,7 +19947,7 @@ export namespace Prisma {
 
   export type NotificationUncheckedCreateInput = {
     NotificationID?: number
-    UserID: number
+    UserID: string
     Message: string
     DateSent?: Date | string
     Type: string
@@ -20039,7 +19964,7 @@ export namespace Prisma {
 
   export type NotificationUncheckedUpdateInput = {
     NotificationID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     Message?: StringFieldUpdateOperationsInput | string
     DateSent?: DateTimeFieldUpdateOperationsInput | Date | string
     Type?: StringFieldUpdateOperationsInput | string
@@ -20048,7 +19973,7 @@ export namespace Prisma {
 
   export type NotificationCreateManyInput = {
     NotificationID?: number
-    UserID: number
+    UserID: string
     Message: string
     DateSent?: Date | string
     Type: string
@@ -20064,7 +19989,7 @@ export namespace Prisma {
 
   export type NotificationUncheckedUpdateManyInput = {
     NotificationID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     Message?: StringFieldUpdateOperationsInput | string
     DateSent?: DateTimeFieldUpdateOperationsInput | Date | string
     Type?: StringFieldUpdateOperationsInput | string
@@ -20083,7 +20008,7 @@ export namespace Prisma {
 
   export type ActivityLogUncheckedCreateInput = {
     LogID?: number
-    UserID?: number | null
+    UserID: string
     ActionType: string
     EntityAffected: string
     RecordID?: number | null
@@ -20104,7 +20029,7 @@ export namespace Prisma {
 
   export type ActivityLogUncheckedUpdateInput = {
     LogID?: IntFieldUpdateOperationsInput | number
-    UserID?: NullableIntFieldUpdateOperationsInput | number | null
+    UserID?: StringFieldUpdateOperationsInput | string
     ActionType?: StringFieldUpdateOperationsInput | string
     EntityAffected?: StringFieldUpdateOperationsInput | string
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
@@ -20115,7 +20040,7 @@ export namespace Prisma {
 
   export type ActivityLogCreateManyInput = {
     LogID?: number
-    UserID?: number | null
+    UserID: string
     ActionType: string
     EntityAffected: string
     RecordID?: number | null
@@ -20135,7 +20060,7 @@ export namespace Prisma {
 
   export type ActivityLogUncheckedUpdateManyInput = {
     LogID?: IntFieldUpdateOperationsInput | number
-    UserID?: NullableIntFieldUpdateOperationsInput | number | null
+    UserID?: StringFieldUpdateOperationsInput | string
     ActionType?: StringFieldUpdateOperationsInput | string
     EntityAffected?: StringFieldUpdateOperationsInput | string
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
@@ -20149,7 +20074,7 @@ export namespace Prisma {
     date?: Date | string
     timeIn?: Date | string | null
     timeOut?: Date | string | null
-    status: $Enums.AttendanceStatus
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20160,7 +20085,7 @@ export namespace Prisma {
     date?: Date | string
     timeIn?: Date | string | null
     timeOut?: Date | string | null
-    status: $Enums.AttendanceStatus
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20170,7 +20095,7 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     timeIn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     timeOut?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    status?: EnumAttendanceStatusFieldUpdateOperationsInput | $Enums.AttendanceStatus
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -20181,7 +20106,7 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     timeIn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     timeOut?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    status?: EnumAttendanceStatusFieldUpdateOperationsInput | $Enums.AttendanceStatus
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -20192,7 +20117,7 @@ export namespace Prisma {
     date?: Date | string
     timeIn?: Date | string | null
     timeOut?: Date | string | null
-    status: $Enums.AttendanceStatus
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20202,7 +20127,7 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     timeIn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     timeOut?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    status?: EnumAttendanceStatusFieldUpdateOperationsInput | $Enums.AttendanceStatus
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -20213,20 +20138,9 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     timeIn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     timeOut?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    status?: EnumAttendanceStatusFieldUpdateOperationsInput | $Enums.AttendanceStatus
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -20354,10 +20268,6 @@ export namespace Prisma {
     LastLogin?: SortOrder
   }
 
-  export type UserAvgOrderByAggregateInput = {
-    UserID?: SortOrder
-  }
-
   export type UserMaxOrderByAggregateInput = {
     UserID?: SortOrder
     FirstName?: SortOrder
@@ -20384,26 +20294,6 @@ export namespace Prisma {
     DateCreated?: SortOrder
     DateModified?: SortOrder
     LastLogin?: SortOrder
-  }
-
-  export type UserSumOrderByAggregateInput = {
-    UserID?: SortOrder
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -20470,6 +20360,17 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type StringNullableFilter<$PrismaModel = never> = {
@@ -20556,7 +20457,6 @@ export namespace Prisma {
 
   export type FacultyAvgOrderByAggregateInput = {
     FacultyID?: SortOrder
-    UserID?: SortOrder
     DepartmentID?: SortOrder
     ContractID?: SortOrder
   }
@@ -20591,9 +20491,24 @@ export namespace Prisma {
 
   export type FacultySumOrderByAggregateInput = {
     FacultyID?: SortOrder
-    UserID?: SortOrder
     DepartmentID?: SortOrder
     ContractID?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -20650,7 +20565,6 @@ export namespace Prisma {
 
   export type CashierAvgOrderByAggregateInput = {
     CashierID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type CashierMaxOrderByAggregateInput = {
@@ -20671,7 +20585,6 @@ export namespace Prisma {
 
   export type CashierSumOrderByAggregateInput = {
     CashierID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type RegistrarCountOrderByAggregateInput = {
@@ -20682,7 +20595,6 @@ export namespace Prisma {
 
   export type RegistrarAvgOrderByAggregateInput = {
     RegistrarID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type RegistrarMaxOrderByAggregateInput = {
@@ -20699,7 +20611,6 @@ export namespace Prisma {
 
   export type RegistrarSumOrderByAggregateInput = {
     RegistrarID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type FacultyListRelationFilter = {
@@ -20934,7 +20845,6 @@ export namespace Prisma {
 
   export type AIChatAvgOrderByAggregateInput = {
     ChatID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type AIChatMaxOrderByAggregateInput = {
@@ -20955,7 +20865,6 @@ export namespace Prisma {
 
   export type AIChatSumOrderByAggregateInput = {
     ChatID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type ReportCountOrderByAggregateInput = {
@@ -20968,7 +20877,6 @@ export namespace Prisma {
 
   export type ReportAvgOrderByAggregateInput = {
     ReportID?: SortOrder
-    GeneratedBy?: SortOrder
   }
 
   export type ReportMaxOrderByAggregateInput = {
@@ -20989,7 +20897,6 @@ export namespace Prisma {
 
   export type ReportSumOrderByAggregateInput = {
     ReportID?: SortOrder
-    GeneratedBy?: SortOrder
   }
 
   export type BoolFilter<$PrismaModel = never> = {
@@ -21008,7 +20915,6 @@ export namespace Prisma {
 
   export type NotificationAvgOrderByAggregateInput = {
     NotificationID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type NotificationMaxOrderByAggregateInput = {
@@ -21031,7 +20937,6 @@ export namespace Prisma {
 
   export type NotificationSumOrderByAggregateInput = {
     NotificationID?: SortOrder
-    UserID?: SortOrder
   }
 
   export type BoolWithAggregatesFilter<$PrismaModel = never> = {
@@ -21060,7 +20965,6 @@ export namespace Prisma {
 
   export type ActivityLogAvgOrderByAggregateInput = {
     LogID?: SortOrder
-    UserID?: SortOrder
     RecordID?: SortOrder
   }
 
@@ -21088,15 +20992,7 @@ export namespace Prisma {
 
   export type ActivityLogSumOrderByAggregateInput = {
     LogID?: SortOrder
-    UserID?: SortOrder
     RecordID?: SortOrder
-  }
-
-  export type EnumAttendanceStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.AttendanceStatus | EnumAttendanceStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumAttendanceStatusFilter<$PrismaModel> | $Enums.AttendanceStatus
   }
 
   export type AttendanceCountOrderByAggregateInput = {
@@ -21138,16 +21034,6 @@ export namespace Prisma {
 
   export type AttendanceSumOrderByAggregateInput = {
     id?: SortOrder
-  }
-
-  export type EnumAttendanceStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.AttendanceStatus | EnumAttendanceStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumAttendanceStatusWithAggregatesFilter<$PrismaModel> | $Enums.AttendanceStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumAttendanceStatusFilter<$PrismaModel>
-    _max?: NestedEnumAttendanceStatusFilter<$PrismaModel>
   }
 
   export type AIChatCreateNestedManyWithoutUserInput = {
@@ -21348,14 +21234,6 @@ export namespace Prisma {
     deleteMany?: ReportScalarWhereInput | ReportScalarWhereInput[]
   }
 
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-  }
-
   export type AIChatUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<AIChatCreateWithoutUserInput, AIChatUncheckedCreateWithoutUserInput> | AIChatCreateWithoutUserInput[] | AIChatUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AIChatCreateOrConnectWithoutUserInput | AIChatCreateOrConnectWithoutUserInput[]
@@ -21548,6 +21426,14 @@ export namespace Prisma {
     update?: ScheduleUpdateWithWhereUniqueWithoutFacultyInput | ScheduleUpdateWithWhereUniqueWithoutFacultyInput[]
     updateMany?: ScheduleUpdateManyWithWhereWithoutFacultyInput | ScheduleUpdateManyWithWhereWithoutFacultyInput[]
     deleteMany?: ScheduleScalarWhereInput | ScheduleScalarWhereInput[]
+  }
+
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
   }
 
   export type NullableIntFieldUpdateOperationsInput = {
@@ -21856,21 +21742,6 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutActivityLogInput, UserUpdateWithoutActivityLogInput>, UserUncheckedUpdateWithoutActivityLogInput>
   }
 
-  export type EnumAttendanceStatusFieldUpdateOperationsInput = {
-    set?: $Enums.AttendanceStatus
-  }
-
-  export type NestedIntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
-  }
-
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -21921,33 +21792,6 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
-  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
-  }
-
-  export type NestedFloatFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatFilter<$PrismaModel> | number
-  }
-
   export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -21963,6 +21807,17 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type NestedIntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type NestedEnumRoleWithAggregatesFilter<$PrismaModel = never> = {
@@ -22043,6 +21898,33 @@ export namespace Prisma {
     in?: $Enums.EmploymentStatus[] | ListEnumEmploymentStatusFieldRefInput<$PrismaModel>
     notIn?: $Enums.EmploymentStatus[] | ListEnumEmploymentStatusFieldRefInput<$PrismaModel>
     not?: NestedEnumEmploymentStatusFilter<$PrismaModel> | $Enums.EmploymentStatus
+  }
+
+  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -22161,23 +22043,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedBoolFilter<$PrismaModel>
     _max?: NestedBoolFilter<$PrismaModel>
-  }
-
-  export type NestedEnumAttendanceStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.AttendanceStatus | EnumAttendanceStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumAttendanceStatusFilter<$PrismaModel> | $Enums.AttendanceStatus
-  }
-
-  export type NestedEnumAttendanceStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.AttendanceStatus | EnumAttendanceStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AttendanceStatus[] | ListEnumAttendanceStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumAttendanceStatusWithAggregatesFilter<$PrismaModel> | $Enums.AttendanceStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumAttendanceStatusFilter<$PrismaModel>
-    _max?: NestedEnumAttendanceStatusFilter<$PrismaModel>
   }
 
   export type AIChatCreateWithoutUserInput = {
@@ -22367,7 +22232,7 @@ export namespace Prisma {
     OR?: AIChatScalarWhereInput[]
     NOT?: AIChatScalarWhereInput | AIChatScalarWhereInput[]
     ChatID?: IntFilter<"AIChat"> | number
-    UserID?: IntFilter<"AIChat"> | number
+    UserID?: StringFilter<"AIChat"> | string
     Question?: StringFilter<"AIChat"> | string
     Answer?: StringFilter<"AIChat"> | string
     Status?: StringFilter<"AIChat"> | string
@@ -22394,7 +22259,7 @@ export namespace Prisma {
     OR?: ActivityLogScalarWhereInput[]
     NOT?: ActivityLogScalarWhereInput | ActivityLogScalarWhereInput[]
     LogID?: IntFilter<"ActivityLog"> | number
-    UserID?: IntNullableFilter<"ActivityLog"> | number | null
+    UserID?: StringFilter<"ActivityLog"> | string
     ActionType?: StringFilter<"ActivityLog"> | string
     EntityAffected?: StringFilter<"ActivityLog"> | string
     RecordID?: IntNullableFilter<"ActivityLog"> | number | null
@@ -22488,7 +22353,7 @@ export namespace Prisma {
     OR?: NotificationScalarWhereInput[]
     NOT?: NotificationScalarWhereInput | NotificationScalarWhereInput[]
     NotificationID?: IntFilter<"Notification"> | number
-    UserID?: IntFilter<"Notification"> | number
+    UserID?: StringFilter<"Notification"> | string
     Message?: StringFilter<"Notification"> | string
     DateSent?: DateTimeFilter<"Notification"> | Date | string
     Type?: StringFilter<"Notification"> | string
@@ -22536,7 +22401,7 @@ export namespace Prisma {
     OR?: ReportScalarWhereInput[]
     NOT?: ReportScalarWhereInput | ReportScalarWhereInput[]
     ReportID?: IntFilter<"Report"> | number
-    GeneratedBy?: IntFilter<"Report"> | number
+    GeneratedBy?: StringFilter<"Report"> | string
     ReportType?: StringFilter<"Report"> | string
     GeneratedDate?: DateTimeFilter<"Report"> | Date | string
     Details?: StringFilter<"Report"> | string
@@ -22598,6 +22463,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutFacultyInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -22617,7 +22483,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutFacultyInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -22751,6 +22617,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutFacultyInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -22770,7 +22637,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutFacultyInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -22819,6 +22686,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutCashierInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -22838,7 +22706,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutCashierInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -22874,6 +22742,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutCashierInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -22893,7 +22762,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutCashierInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -22913,6 +22782,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutRegistrarInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -22932,7 +22802,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutRegistrarInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -22968,6 +22838,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutRegistrarInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -22987,7 +22858,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutRegistrarInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23022,7 +22893,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedCreateWithoutDepartmentInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -23066,7 +22937,7 @@ export namespace Prisma {
     OR?: FacultyScalarWhereInput[]
     NOT?: FacultyScalarWhereInput | FacultyScalarWhereInput[]
     FacultyID?: IntFilter<"Faculty"> | number
-    UserID?: IntFilter<"Faculty"> | number
+    UserID?: StringFilter<"Faculty"> | string
     DateOfBirth?: DateTimeFilter<"Faculty"> | Date | string
     Phone?: StringNullableFilter<"Faculty"> | string | null
     Address?: StringNullableFilter<"Faculty"> | string | null
@@ -23108,7 +22979,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedCreateWithoutDocumentsInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -23173,7 +23044,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateWithoutDocumentsInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23241,7 +23112,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedCreateWithoutContractInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -23296,7 +23167,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedCreateWithoutSchedulesInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -23341,7 +23212,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateWithoutSchedulesInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23355,6 +23226,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutAIChatInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23374,7 +23246,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutAIChatInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23410,6 +23282,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutAIChatInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23429,7 +23302,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutAIChatInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23449,6 +23322,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutReportInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23468,7 +23342,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutReportInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23504,6 +23378,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutReportInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23523,7 +23398,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutReportInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23543,6 +23418,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutNotificationInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23562,7 +23438,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutNotificationInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23598,6 +23474,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutNotificationInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23617,7 +23494,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutNotificationInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23637,6 +23514,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutActivityLogInput = {
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23656,7 +23534,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutActivityLogInput = {
-    UserID?: number
+    UserID: string
     FirstName: string
     LastName: string
     Email: string
@@ -23692,6 +23570,7 @@ export namespace Prisma {
   }
 
   export type UserUpdateWithoutActivityLogInput = {
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23711,7 +23590,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedUpdateWithoutActivityLogInput = {
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     FirstName?: StringFieldUpdateOperationsInput | string
     LastName?: StringFieldUpdateOperationsInput | string
     Email?: StringFieldUpdateOperationsInput | string
@@ -23918,7 +23797,7 @@ export namespace Prisma {
 
   export type FacultyCreateManyDepartmentInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -23945,7 +23824,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateWithoutDepartmentInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23960,7 +23839,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateManyWithoutDepartmentInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -24000,7 +23879,7 @@ export namespace Prisma {
 
   export type FacultyCreateManyContractInput = {
     FacultyID?: number
-    UserID: number
+    UserID: string
     DateOfBirth: Date | string
     Phone?: string | null
     Address?: string | null
@@ -24027,7 +23906,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateWithoutContractInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null
@@ -24042,7 +23921,7 @@ export namespace Prisma {
 
   export type FacultyUncheckedUpdateManyWithoutContractInput = {
     FacultyID?: IntFieldUpdateOperationsInput | number
-    UserID?: IntFieldUpdateOperationsInput | number
+    UserID?: StringFieldUpdateOperationsInput | string
     DateOfBirth?: DateTimeFieldUpdateOperationsInput | Date | string
     Phone?: NullableStringFieldUpdateOperationsInput | string | null
     Address?: NullableStringFieldUpdateOperationsInput | string | null

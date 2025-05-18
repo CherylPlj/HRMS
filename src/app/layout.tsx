@@ -26,7 +26,7 @@ export default function RootLayout({
   console.log("Supabase ANON KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   return (
-    <html lang="en" className={poppins.className}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Move external links and scripts to <head> */}
         <link
@@ -35,7 +35,9 @@ export default function RootLayout({
         />
         <script src="https://cdn.tailwindcss.com"></script>
       </head>
-      <body>{children}</body>
+      <body suppressHydrationWarning className={poppins.className}>
+        {children}
+      </body>
     </html>
   );
 }

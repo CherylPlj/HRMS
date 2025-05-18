@@ -12,16 +12,26 @@ export async function POST(req: Request) {
 
   const userId = body.id; // Clerk user ID
   const email = body.email_addresses?.[0]?.email_address || "";
-  const fullName = body.first_name + " " + body.last_name;
-  const role = body.public_metadata?.role || "faculty"; // Customize default role
-  const department = body.public_metadata?.department || null;
+  const firstName = body.first_name;
+  const lastName = body.last_name;
+  const role = body.public_metadata?.role || "Faculty"; // Customize default role
+  const now = new Date().toISOString();
 
-  const { error } = await supabase.from("users").upsert({
-    id: userId,
-    full_name: fullName,
-    email,
-    role,
-    department,
+  // Generate a temporary password hash
+  const tempPasswordHash = Buffer.from(Math.random().toString()).toString('base64');
+
+  const { error } = await supabase.from("User").upsert({
+    UserID: parseInt(userId),
+    FirstName: firstName,
+    LastName: lastName,
+    Email: email.toLowerCase(),
+    Photo: '', // Default empty string
+    PasswordHash: tempPasswordHash,
+    Role: role,
+    Status: 'Active',
+    DateCreated: now,
+    DateModified: null,
+    LastLogin: null
   });
 
   if (error) {

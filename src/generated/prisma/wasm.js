@@ -296,13 +296,6 @@ exports.DayOfWeek = exports.$Enums.DayOfWeek = {
   Sunday: 'Sunday'
 };
 
-exports.AttendanceStatus = exports.$Enums.AttendanceStatus = {
-  PRESENT: 'PRESENT',
-  ABSENT: 'ABSENT',
-  LATE: 'LATE',
-  NOT_RECORDED: 'NOT_RECORDED'
-};
-
 exports.Prisma.ModelName = {
   User: 'User',
   Faculty: 'Faculty',
