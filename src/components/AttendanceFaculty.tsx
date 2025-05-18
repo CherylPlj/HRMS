@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -11,18 +10,10 @@ import {
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// Initialize Supabase client
-const supabase = createClient(
-  "https://vuhouoajmawlcgxkrnid.supabase.co", // Replace with your Supabase URL
-  "happythumbs02" // Replace with your Supabase anon key
-);
-
 const AttendanceFaculty: React.FC = () => {
   const [attendance, setAttendance] = useState<any>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Example attendance summary data
   const [attendanceSummary, setAttendanceSummary] = useState({
     present: 0,
     absent: 0,
@@ -32,48 +23,17 @@ const AttendanceFaculty: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-
       try {
-        // Fetch attendance data (latest record for a specific faculty)
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from("Attendance") // Replace with your attendance table name
-          .select("*")
-          .eq("faculty_id", "123-4567-FA") // Replace with dynamic faculty ID
-          .order("date", { ascending: false })
-          .limit(1);
+        // Call your backend API route
+        const res = await fetch('/api/facultyattendance?faculty_id=123-4567-FA');
+        const data = await res.json();
 
-        if (attendanceError) {
-          console.error("Error fetching attendance:", attendanceError);
-        } else {
-          setAttendance(attendanceData?.[0]);
-        }
-
-        // Fetch attendance summary (e.g., present, absent, late counts)
-        const { data: summaryData, error: summaryError } = await supabase
-          .from("AttendanceSummary") // Replace with your summary table name
-          .select("present, absent, late")
-          .eq("faculty_id", "123-4567-FA"); // Replace with dynamic faculty ID
-
-        if (summaryError) {
-          console.error("Error fetching attendance summary:", summaryError);
-        } else if (summaryData?.[0]) {
-          setAttendanceSummary(summaryData[0]);
-        }
-
-        // Fetch schedule data
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from("Schedule") // Replace with your schedule table name
-          .select("*");
-
-        if (scheduleError) {
-          console.error("Error fetching schedule:", scheduleError);
-        } else {
-          setSchedule(scheduleData || []);
-        }
+        setAttendance(data.attendance);
+        setAttendanceSummary(data.attendanceSummary);
+        setSchedule(data.schedule);
       } catch (error) {
         console.error("Unexpected error:", error);
       }
-
       setLoading(false);
     };
 
