@@ -5,6 +5,7 @@ export interface AttendanceRecord {
   timeIn: string | null;
   timeOut: string | null;
   status: 'PRESENT' | 'ABSENT' | 'LATE' | 'NOT_RECORDED';
+  ipAddress?: string;
 }
 
 export interface AttendanceSummary {
@@ -20,12 +21,13 @@ export interface Schedule {
   subject: string;
   classSection: string;
   day: string;
-  time: string;
+  timeIn: string;
+  timeOut: string;
+  status: string;
 }
 
 export interface Employee {
   id: string;
   name: string;
   department: string;
-  role: string;
 } 

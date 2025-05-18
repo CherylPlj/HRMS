@@ -8,6 +8,7 @@ import DocumentsFaculty from '@/components/DocumentsFaculty';
 import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import { useRouter } from 'next/navigation'; // <-- Add this
+import { AttendanceProvider } from '@/contexts/AttendanceContext';
 
 
 export default function Dashboard() {
@@ -89,7 +90,7 @@ export default function Dashboard() {
   };
 
   return (
-    <>
+    <AttendanceProvider>
       <Head>
         <title>Faculty Dashboard</title>
         <script src="https://cdn.tailwindcss.com"></script>
@@ -405,7 +406,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </>
+    </AttendanceProvider>
   );
 }
 

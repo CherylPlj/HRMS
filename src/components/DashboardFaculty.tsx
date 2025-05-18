@@ -5,8 +5,10 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendarAlt } from "react-icons/fa";
 import Head from 'next/head';
+import { useAttendance } from '../contexts/AttendanceContext';
 
-export default function DashboardContent() {
+export default function DashboardFaculty() {
+  const { currentRecord, currentTime, currentDate, summary } = useAttendance();
   const [dateRange, setDateRange] = useState([new Date("2025-02-01"), new Date("2025-03-20")]);
 
   const handleDateChange = (dates: [any, any]) => {
@@ -15,11 +17,13 @@ export default function DashboardContent() {
   };
 
   const pieData = {
-    labels: ["Present", "Absent", "Late"],
+    labels: ['Present', 'Absent', 'Late'],
     datasets: [
       {
-        data: [70, 20, 10],
-        backgroundColor: ["#4CAF50", "#F44336", "#FFC107"],
+        data: [summary.present, summary.absent, summary.late],
+        backgroundColor: ['#4CAF50', '#f44336', '#FFC107'],
+        borderColor: ['#43A047', '#E53935', '#FFB300'],
+        borderWidth: 1,
       },
     ],
   };
@@ -67,19 +71,21 @@ export default function DashboardContent() {
             <div className="space-y-2">
               <p>
                 <span className="font-bold text-black">Status:</span>{" "}
-                <span className="text-[#800000] font-bold">CHECK-IN</span>
+                <span className="text-[#800000] font-bold">
+                  {currentRecord?.timeOut ? 'CHECKED OUT' : currentRecord?.timeIn ? 'CHECKED IN' : 'NOT CHECKED IN'}
+                </span>
               </p>
               <p>
                 <span className="font-bold text-black">Date:</span>{" "}
-                <span className="text-[#800000]">03/24/2025</span>
+                <span className="text-[#800000]">{currentDate}</span>
               </p>
               <p>
                 <span className="font-bold text-black">Time:</span>{" "}
-                <span className="text-[#800000]">8:05 AM</span>
+                <span className="text-[#800000]">{currentTime}</span>
               </p>
               <p>
                 <span className="font-bold text-black">IP Address:</span>{" "}
-                <span className="text-[#800000]">---.---.---.-- (school-based)</span>
+                <span className="text-[#800000]">{currentRecord?.ipAddress || '---.---.---.-- (not recorded)'}</span>
               </p>
             </div>
           </div>
@@ -95,28 +101,40 @@ export default function DashboardContent() {
           </div>
 
           {/* Schedule of the Day */}
-          <div className="bg-white shadow-md p-6 rounded-lg w-300 h-60 flex flex-col justify-center">
+          <div className="bg-white shadow-md p-6 rounded-lg col-span-2">
             <h2 className="text-xl text-black font-bold mb-4">Schedule of the Day</h2>
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border-b p-2 text-gray-600">Subject</th>
-                  <th className="border-b p-2 text-gray-600">Day</th>
-                  <th className="border-b p-2 text-gray-600">Section</th>
-                  <th className="border-b p-2 text-gray-600">Start Time</th>
-                  <th className="border-b p-2 text-gray-600">End Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="p-2 text-black">Art Appreciation</td>
-                  <td className="p-2 text-black">Thursday</td>
-                  <td className="p-2 text-black">ARTES 12A</td>
-                  <td className="p-2 text-black">9:00 AM</td>
-                  <td className="p-2 text-black">11:30 AM</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-auto">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-4 py-2 text-left">Subject</th>
+                    <th className="px-4 py-2 text-left">Time</th>
+                    <th className="px-4 py-2 text-left">Section</th>
+                    <th className="px-4 py-2 text-left">Room</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border px-4 py-2">Mathematics</td>
+                    <td className="border px-4 py-2">8:00 AM - 9:00 AM</td>
+                    <td className="border px-4 py-2">Grade 7 - Einstein</td>
+                    <td className="border px-4 py-2">Room 101</td>
+                  </tr>
+                  <tr>
+                    <td className="border px-4 py-2">Science</td>
+                    <td className="border px-4 py-2">9:15 AM - 10:15 AM</td>
+                    <td className="border px-4 py-2">Grade 8 - Newton</td>
+                    <td className="border px-4 py-2">Laboratory 1</td>
+                  </tr>
+                  <tr>
+                    <td className="border px-4 py-2">Mathematics</td>
+                    <td className="border px-4 py-2">10:30 AM - 11:30 AM</td>
+                    <td className="border px-4 py-2">Grade 9 - Pythagoras</td>
+                    <td className="border px-4 py-2">Room 103</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

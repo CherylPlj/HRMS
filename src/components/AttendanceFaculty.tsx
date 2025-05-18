@@ -1,78 +1,85 @@
 import React, { useEffect, useState } from 'react';
-import { Pie } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
 import { AttendanceRecord, AttendanceSummary, Schedule } from '../types/attendance';
 import { attendanceService } from '../services/attendanceService';
 import { toast } from 'react-toastify';
-
-// Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
+import { useAttendance } from '../contexts/AttendanceContext';
 
 const EMPLOYEE_ID = '123-4567-FA'; // This should come from auth context in a real app
 
 const AttendanceFaculty: React.FC = () => {
-  const [currentRecord, setCurrentRecord] = useState<AttendanceRecord | null>(null);
+  const { currentRecord, setCurrentRecord, currentTime, currentDate, setSummary } = useAttendance();
   const [schedule, setSchedule] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<AttendanceSummary>({
-    present: 0,
-    absent: 0,
-    late: 0,
-    total: 0
-  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const getCurrentDateTime = () => {
-    const now = new Date();
-    const time = now.toLocaleTimeString();
-    const date = now.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    return { time, date };
-  };
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleTimeIn = async () => {
+    if (isProcessing) return;
+    
     try {
+      setIsProcessing(true);
+      console.log('Attempting to mark time in for employee:', EMPLOYEE_ID);
       const record = await attendanceService.markTimeIn(EMPLOYEE_ID);
-      setCurrentRecord(record);
+      console.log('Time in response:', record);
+      
+      setCurrentRecord({
+        ...record,
+        ipAddress: '---.---.---.-- (school-based)'
+      });
+      
+      await fetchAttendanceData();
       toast.success('Time in marked successfully!');
     } catch (error) {
-      toast.error('Failed to mark time in. Please try again.');
       console.error('Time in error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to mark time in. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleTimeOut = async () => {
+    if (isProcessing) return;
+    
     try {
+      setIsProcessing(true);
+      console.log('Attempting to mark time out for employee:', EMPLOYEE_ID);
       const record = await attendanceService.markTimeOut(EMPLOYEE_ID);
-      setCurrentRecord(record);
+      console.log('Time out response:', record);
+      
+      setCurrentRecord({
+        ...record,
+        ipAddress: '---.---.---.-- (school-based)'
+      });
+      
+      await fetchAttendanceData();
       toast.success('Time out marked successfully!');
     } catch (error) {
-      toast.error('Failed to mark time out. Please try again.');
       console.error('Time out error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to mark time out. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const fetchAttendanceData = async () => {
-    setLoading(true);
     try {
+      console.log('Fetching attendance data for employee:', EMPLOYEE_ID);
       const [summaryData, scheduleData] = await Promise.all([
         attendanceService.getAttendanceSummary(EMPLOYEE_ID),
         attendanceService.getSchedule(EMPLOYEE_ID)
       ]);
+      console.log('Fetched summary data:', summaryData);
+      console.log('Fetched schedule data:', scheduleData);
 
       setSummary(summaryData);
       setSchedule(scheduleData);
     } catch (error) {
-      toast.error('Failed to fetch attendance data');
       console.error('Data fetch error:', error);
+      toast.error('Failed to fetch attendance data');
     } finally {
       setLoading(false);
     }
@@ -82,6 +89,10 @@ const AttendanceFaculty: React.FC = () => {
     fetchAttendanceData();
   }, []);
 
+  if (!mounted) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -90,50 +101,39 @@ const AttendanceFaculty: React.FC = () => {
     );
   }
 
-  const pieData = {
-    labels: ['Present', 'Absent', 'Late'],
-    datasets: [
-      {
-        data: [summary.present, summary.absent, summary.late],
-        backgroundColor: ['#4CAF50', '#F44336', '#FFC107'],
-        hoverBackgroundColor: ['#45A049', '#E53935', '#FFB300'],
-      },
-    ],
-  };
-
   return (
     <div className="min-h-screen flex font-sans text-gray-900">
       <main className="flex-1 flex flex-col bg-white mx-auto rounded-md shadow-md">
-        <section className="border border-[#800000] rounded-md mx-6 my-4 p-4 flex flex-col md:flex-row md:space-x-6">
+        <section className="border border-[#800000] rounded-md mx-6 my-4 p-4">
           {/* Time In/Out and details */}
-          <div className="flex flex-col space-y-4 md:w-1/2">
+          <div className="flex flex-col space-y-4">
             <div className="space-y-3">
               <div className="text-sm font-semibold text-gray-700">
-                <div>Current Time: <span className="text-[#800000]">{getCurrentDateTime().time}</span></div>
-                <div>Current Date: <span className="text-[#800000]">{getCurrentDateTime().date}</span></div>
+                <div>Current Time: <span className="text-[#800000]">{currentTime}</span></div>
+                <div>Current Date: <span className="text-[#800000]">{currentDate}</span></div>
               </div>
               <div className="flex space-x-4">
                 <button
                   className={`${
-                    currentRecord?.timeIn 
+                    currentRecord?.timeIn || isProcessing
                       ? 'bg-gray-400 cursor-not-allowed' 
                       : 'bg-[#800000] hover:bg-[#a00000]'
                   } text-white rounded-md px-6 py-3 text-sm font-bold shadow-md transition-all`}
                   onClick={handleTimeIn}
-                  disabled={!!currentRecord?.timeIn}
+                  disabled={!!currentRecord?.timeIn || isProcessing}
                 >
-                  ⏱️ Time In
+                  {isProcessing ? 'Processing...' : ' Time In'}
                 </button>
                 <button
                   className={`${
-                    !currentRecord?.timeIn || currentRecord?.timeOut
+                    !currentRecord?.timeIn || currentRecord?.timeOut || isProcessing
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-[#800000] hover:bg-[#a00000]'
                   } text-white rounded-md px-6 py-3 text-sm font-bold shadow-md transition-all`}
                   onClick={handleTimeOut}
-                  disabled={!currentRecord?.timeIn || !!currentRecord?.timeOut}
+                  disabled={!currentRecord?.timeIn || !!currentRecord?.timeOut || isProcessing}
                 >
-                  🕓 Time Out
+                  {isProcessing ? 'Processing...' : ' Time Out'}
                 </button>
               </div>
               <div className="mt-4 p-4 bg-gray-50 rounded-md">
@@ -168,16 +168,6 @@ const AttendanceFaculty: React.FC = () => {
               View Attendance History
             </button>
           </div>
-
-          {/* Pie chart */}
-          <div className="md:w-1/2 flex flex-col items-center justify-center mt-6 md:mt-0">
-            <h3 className="text-sm font-semibold text-[#800000] mb-4">
-              Attendance Summary
-            </h3>
-            <div className="w-64 h-64">
-              <Pie data={pieData} />
-            </div>
-          </div>
         </section>
 
         {/* Schedule Table */}
@@ -198,23 +188,19 @@ const AttendanceFaculty: React.FC = () => {
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="bg-gray-100 text-gray-700 font-semibold">
-                  <th className="border border-gray-300 px-2 py-1 text-left">ID</th>
-                  <th className="border border-gray-300 px-2 py-1 text-left">Name</th>
-                  <th className="border border-gray-300 px-2 py-1 text-left">Subject</th>
-                  <th className="border border-gray-300 px-2 py-1 text-left">Class & Section</th>
-                  <th className="border border-gray-300 px-2 py-1 text-left">Day</th>
-                  <th className="border border-gray-300 px-2 py-1 text-left">Time</th>
+                  <th className="p-2 border">Day</th>
+                  <th className="p-2 border">Time In</th>
+                  <th className="p-2 border">Time Out</th>
+                  <th className="p-2 border">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {schedule.map((row) => (
-                  <tr key={row.id} className="even:bg-white odd:bg-gray-50">
-                    <td className="border border-gray-300 px-2 py-1">{row.id}</td>
-                    <td className="border border-gray-300 px-2 py-1">{row.name}</td>
-                    <td className="border border-gray-300 px-2 py-1">{row.subject}</td>
-                    <td className="border border-gray-300 px-2 py-1">{row.classSection}</td>
-                    <td className="border border-gray-300 px-2 py-1">{row.day}</td>
-                    <td className="border border-gray-300 px-2 py-1">{row.time}</td>
+                {schedule.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="p-2 border">{item.day}</td>
+                    <td className="p-2 border">{item.timeIn}</td>
+                    <td className="p-2 border">{item.timeOut}</td>
+                    <td className="p-2 border">{item.status}</td>
                   </tr>
                 ))}
               </tbody>

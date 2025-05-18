@@ -146,6 +146,17 @@ model ActivityLog {
   User           User?    @relation(fields: [UserID], references: [UserID])
 }
 
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  employeeId String
+  date       DateTime         @default(now())
+  timeIn     DateTime?
+  timeOut    DateTime?
+  status     AttendanceStatus
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+}
+
 enum Role {
   Admin
   Faculty
@@ -182,4 +193,11 @@ enum DayOfWeek {
   Friday
   Saturday
   Sunday
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  NOT_RECORDED
 }
