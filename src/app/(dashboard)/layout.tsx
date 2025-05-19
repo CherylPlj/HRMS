@@ -1,6 +1,6 @@
 'use client';
 
-import type { Metadata } from "next";
+// import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs"; // Import ClerkProvider
 import { Geist, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";

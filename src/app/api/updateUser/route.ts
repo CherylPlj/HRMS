@@ -18,7 +18,7 @@ export async function PUT(request: Request) {
 
     // Update user in Clerk if name or email changed
     if (firstName || lastName || email) {
-      const updateData: any = {};
+      const updateData: { firstName?: string; lastName?: string; emailAddress?: string[] } = {};
       if (firstName) updateData.firstName = firstName;
       if (lastName) updateData.lastName = lastName;
       if (email) updateData.emailAddress = [email];
@@ -27,7 +27,7 @@ export async function PUT(request: Request) {
     }
 
     // Update user in Supabase
-    const updateData: any = {
+    const updateData: { [key: string]: unknown } = {
       DateModified: new Date().toISOString()
     };
     if (role) updateData.Role = role;
@@ -69,10 +69,10 @@ export async function PUT(request: Request) {
       ]);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating user:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update user' },
+      { error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : 'Failed to update user' },
       { status: 500 }
     );
   }

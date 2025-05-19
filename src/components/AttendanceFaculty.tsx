@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AttendanceRecord, AttendanceSummary, Schedule } from '../types/attendance';
+import {  Schedule } from '../types/attendance';
 import { attendanceService } from '../services/attendanceService';
 import { toast } from 'react-toastify';
 import { useAttendance } from '../contexts/AttendanceContext';
@@ -137,7 +137,7 @@ const AttendanceFaculty: React.FC = () => {
                 </button>
               </div>
               <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                <h3 className="text-sm font-semibold text-[#800000] mb-2">Today's Attendance Record</h3>
+                <h3 className="text-sm font-semibold text-[#800000] mb-2">Today&apos;s Attendance Record</h3>
                 <div className="text-xs space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date:</span>

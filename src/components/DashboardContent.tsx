@@ -16,6 +16,7 @@ export default function DashboardContent() {
     regular: 0,
     probationary: 0,
   });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeUsers, setActiveUsers] = useState({
     faculty: 0,
     admin: 0,

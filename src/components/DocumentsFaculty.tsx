@@ -54,8 +54,17 @@ const DocumentsFaculty: React.FC = () => {
 
                   {/* Document Name with Checkbox */}
                   <td className="p-3 gap-2 text-black">
-                    <input type="checkbox" checked readOnly className="h-4 w-4" />
-                    <span>{doc.name}</span>
+                    <input
+                      id={`checkbox-${doc.id}`}
+                      type="checkbox"
+                      checked
+                      readOnly
+                      className="h-4 w-4"
+                      aria-label={`Select ${doc.name}`}
+                    />
+                    <label htmlFor={`checkbox-${doc.id}`} className="ml-2 cursor-pointer">
+                      {doc.name}
+                    </label>
                   </td>
 
                   {/* File Uploaded */}

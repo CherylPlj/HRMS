@@ -7,7 +7,9 @@ const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 const VALID_ROLES = ['Admin', 'Faculty', 'Cashier', 'Registrar'] as const;
 type Role = typeof VALID_ROLES[number];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const VALID_STATUS = ['Active', 'Inactive'] as const;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Status = typeof VALID_STATUS[number];
 
 export async function POST(request: Request) {
@@ -207,14 +209,14 @@ export async function POST(request: Request) {
       message: 'Faculty invitation sent successfully. User will be created upon accepting the invitation.',
       user: { ...createdUser, PasswordHash: '[REDACTED]' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in createUser API:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Failed to create user',
-        details: error.stack
+        error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : 'Failed to create user',
+        details: typeof error === 'object' && error !== null && 'stack' in error ? (error as { stack?: string }).stack : undefined
       },
-      { status: error.status || 500 }
+      { status: typeof error === 'object' && error !== null && 'status' in error ? (error as { status?: number }).status || 500 : 500 }
     );
   }
 }

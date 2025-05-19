@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Search, Filter, Trash2 } from 'lucide-react';
-import { FaCalendarAlt } from 'react-icons/fa';
-import Head from 'next/head';
-import { BsFillPersonPlusFill } from 'react-icons/bs';
-import { MdDownload } from 'react-icons/md';    
-import { AiOutlineEdit } from 'react-icons/ai';
-import { BiTrash } from 'react-icons/bi';
-import { BsFillPersonFill } from 'react-icons/bs';
-import { BsFillPersonCheckFill } from 'react-icons/bs';
+import { Search } from 'lucide-react';
+// import { FaCalendarAlt } from 'react-icons/fa';
+// import Head from 'next/head';
+// import { BsFillPersonPlusFill } from 'react-icons/bs';
+// import { MdDownload } from 'react-icons/md';    
+// import { AiOutlineEdit } from 'react-icons/ai';
+// import { BiTrash } from 'react-icons/bi';
+// import { BsFillPersonFill } from 'react-icons/bs';
+// import { BsFillPersonCheckFill } from 'react-icons/bs';
 
 
 
@@ -52,24 +52,24 @@ const AttendanceContent: React.FC = () => {
                 <div className="space-y-6">
                     <div className="flex space-x-4">
                         <div className="flex-1 pb-6">
-                            <label className="block mb-1 font-semibold">Name</label>
-                            <select className="w-full border border-gray-300 rounded p-2">
+                            <label htmlFor='Name' className="block mb-1 font-semibold">Name</label>
+                            <select id="Name" className="w-full border border-gray-300 rounded p-2">
                                 <option value="">Select Name</option>
                                 <option value="John Doe">John Doe</option>
                                 <option value="Jane Smith">Jane Smith</option>
                             </select>
                         </div>
                         <div className="flex-1 pb-6">
-                            <label className="block mb-1 font-semibold">Class and Section</label>
-                            <select className="w-full border border-gray-300 rounded p-2">
+                            <label htmlFor='Class' className="block mb-1 font-semibold">Class and Section</label>
+                            <select id="Class" className="w-full border border-gray-300 rounded p-2">
                                 <option value="">Select Class & Section</option>
                                 <option value="Grade 9 - A">Grade 9 - A</option>
                                 <option value="Grade 10 - B">Grade 10 - B</option>
                             </select>
                         </div>
                         <div className="flex-1 pb-6">
-                            <label className="block mb-1 font-semibold">Subject</label>
-                            <select className="w-full border border-gray-300 rounded p-2">
+                            <label htmlFor="Subject" className="block mb-1 font-semibold">Subject</label>
+                            <select id="Subject" className="w-full border border-gray-300 rounded p-2">
                                 <option value="">Select Subject</option>
                                 <option value="Mathematics">Mathematics</option>
                                 <option value="Science">Science</option>
@@ -85,7 +85,7 @@ const AttendanceContent: React.FC = () => {
                                 <div key={day} className="flex items-center space-x-2">
                                     <input type="checkbox" id={day + (isEdit ? 'edit' : '')} className="h-4 w-4" />
                                     <label htmlFor={day + (isEdit ? 'edit' : '')} className="w-24">{day}</label>
-                                    <input type="time" className="border border-gray-300 rounded p-1 w-32" />
+                                    <input id={day + (isEdit ? 'edit' : '')} type="time" className="border border-gray-300 rounded p-1 w-32" />
                                 </div>
                             ))}
                         </div>
@@ -94,7 +94,7 @@ const AttendanceContent: React.FC = () => {
                                 <div key={day} className="flex items-center space-x-2">
                                     <input type="checkbox" id={day + (isEdit ? 'edit' : '')} className="h-4 w-4" />
                                     <label htmlFor={day + (isEdit ? 'edit' : '')} className="w-24">{day}</label>
-                                    <input type="time" className="border border-gray-300 rounded p-1 w-32" />
+                                    <input id={day + (isEdit ? 'edit' : '')} type="time" className="border border-gray-300 rounded p-1 w-32" />
                                 </div>
                             ))}
                         </div>

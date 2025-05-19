@@ -27,7 +27,7 @@ export async function GET() {
     }
 
     return NextResponse.json(facultyData || []);
-  } catch (error: any) {
+  } catch (error: string | unknown) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred' },

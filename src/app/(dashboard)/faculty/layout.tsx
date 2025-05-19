@@ -1,6 +1,6 @@
 "use client";
 import Head from 'next/head';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardFaculty from '@/components/DashboardFaculty';
 import PersonalData from '@/components/PersonalData';
@@ -93,7 +93,7 @@ export default function Dashboard() {
     <AttendanceProvider>
       <Head>
         <title>Faculty Dashboard</title>
-        <script src="https://cdn.tailwindcss.com"></script>
+        {/* <script src="https://cdn.tailwindcss.com"></script> */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
@@ -271,6 +271,7 @@ export default function Dashboard() {
           <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
             <button
+              title='Close'
               className="text-gray-500 hover:text-gray-700"
               onClick={() => setNotificationsVisible(false)}
             >
@@ -296,13 +297,13 @@ export default function Dashboard() {
               <>
                 <li className="p-4 hover:bg-gray-50">
                   <p className="text-sm text-gray-700">
-                    Jane Smith just sent a request: <strong>"URGENT!! - leave of absence due to family emergency".</strong>
+                    Jane Smith just sent a request: <strong>&quot;URGENT!! - leave of absence due to family emergency&quot;.</strong>
                   </p>
                   <span className="text-xs text-gray-500">11h ago</span>
                 </li>
                 <li className="p-4 hover:bg-gray-50">
                   <p className="text-sm text-gray-700">
-                    Doc Anne just sent a request: <strong>"Request for change in class schedule".</strong>
+                    Doc Anne just sent a request: <strong>&quot;Request for change in class schedule&quot;.</strong>
                   </p>
                   <span className="text-xs text-gray-500">22h ago</span>
                 </li>
@@ -318,7 +319,7 @@ export default function Dashboard() {
               <>
                 <li className="p-4 hover:bg-gray-50">
                   <p className="text-sm text-gray-700">
-                    Jane Smith just sent a request: <strong>"URGENT!! - leave of absence due to family emergency".</strong>
+                    Jane Smith just sent a request: <strong>&quot;URGENT!! - leave of absence due to family emergency&quot;.</strong>
                   </p>
                   <span className="text-xs text-gray-500">11h ago</span>
                 </li>
@@ -334,8 +335,8 @@ export default function Dashboard() {
           ref={chatbotRef}
           className="fixed bg-white shadow-lg rounded-lg z-50 border border-gray-200"
           style={{
-            width: 320,
-            height: 400,
+            width: 350,
+            height: 420,
             top: chatbotPosition.y,
             left: chatbotPosition.x,
           }}
@@ -346,6 +347,7 @@ export default function Dashboard() {
           >
             <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
             <button
+              title='Close'
               className="text-white hover:text-gray-300"
               onClick={() => setChatbotVisible(false)}
             >

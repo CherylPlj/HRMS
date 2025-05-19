@@ -49,10 +49,10 @@ export async function GET() {
 
     console.log('Users fetched successfully:', usersData.length);
     return NextResponse.json(usersData);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unexpected error in getUsers:', error);
     return NextResponse.json(
-      { error: error.message || 'An unexpected error occurred' },
+      { error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : 'An unexpected error occurred' },
       { status: 500 }
     );
   }

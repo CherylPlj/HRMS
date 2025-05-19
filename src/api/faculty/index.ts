@@ -10,7 +10,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const faculty = await prisma.faculty.findMany();
       res.status(200).json(faculty);
-    } catch (error) {
+    } 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    catch (error) {
       res.status(500).json({ error: 'Failed to fetch faculty data' });
     }
   } else {

@@ -1,5 +1,6 @@
 "use client";
 import Head from 'next/head';
+import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardContent from '@/components/DashboardContent';
@@ -115,7 +116,7 @@ export default function Dashboard() {
     <>
       <Head>
         <title>Dashboard</title>
-        <script src="https://cdn.tailwindcss.com"></script>
+        {/* <script src="https://cdn.tailwindcss.com"></script> */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
@@ -124,12 +125,14 @@ export default function Dashboard() {
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
         {/* Sidebar */}
         <div className="bg-[#800000] text-white w-20 p-4 flex flex-col items-center">
-          <div className="mb-4">
-            <img
+            <Image
               src="/sjsfilogo.png"
               alt="Logo"
+              width={40}
+              height={40}
               className="w-10 h-10 mx-auto mb-6"
             />
+          
             <nav className="space-y-6">
               <a
                 href="#"
@@ -328,6 +331,7 @@ export default function Dashboard() {
               >
                 <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
                 <button
+                  title='Close Chatbot'
                   className="text-white hover:text-gray-300"
                   onClick={() => setChatbotVisible(false)} // Close Chatbot Popup
                 >
@@ -392,7 +396,7 @@ export default function Dashboard() {
             {renderContent()}
           </div>
         </div>
-      </div>
+      {/* </div> */}
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalVisible && (

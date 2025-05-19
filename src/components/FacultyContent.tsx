@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaTrash, FaPen, FaDownload, FaPlus, FaFile, FaFilter } from 'react-icons/fa';
+import { FaTrash, FaPen, FaDownload, FaPlus, FaFile } from 'react-icons/fa';
 import { Search, Filter } from 'lucide-react';
 
 interface Faculty {
@@ -81,11 +81,13 @@ const FacultyContent: React.FC = () => {
       const data = await response.json();
       setFacultyList(data);
       setNotification(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching faculty:', error);
       setNotification({
         type: 'error',
-        message: error.message || 'Failed to load faculty data'
+        message: (error && typeof error === 'object' && 'message' in error)
+          ? (error as { message?: string }).message || 'Failed to load faculty data'
+          : 'Failed to load faculty data'
       });
     } finally {
       setLoading(false);
@@ -155,11 +157,13 @@ const FacultyContent: React.FC = () => {
         type: 'success',
         message: 'Faculty invitation sent successfully! The faculty member will receive an email to complete their registration.'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating faculty:', error);
       setNotification({
         type: 'error',
-        message: error.message || 'Failed to create faculty member'
+        message: (error && typeof error === 'object' && 'message' in error)
+          ? (error as { message?: string }).message || 'Failed to create faculty member'
+          : 'Failed to create faculty member'
       });
     } finally {
       setLoading(false);
@@ -170,17 +174,17 @@ const FacultyContent: React.FC = () => {
     setIsFacultyModalOpen(true); // Open the Add Faculty modal
   };
 
-  const handleCloseFacultyModal = () => {
-    setIsFacultyModalOpen(false); // Close the Add Faculty modal
-  };
+  // const handleCloseFacultyModal = () => {
+  //   setIsFacultyModalOpen(false); // Close the Add Faculty modal
+  // };
 
   const handleOpenDocumentModal = () => {
     setIsDocumentModalOpen(true); // Open the Add Document modal
   };
 
-  const handleCloseDocumentModal = () => {
-    setIsDocumentModalOpen(false); // Close the Add Document modal
-  };
+  // const handleCloseDocumentModal = () => {
+  //   setIsDocumentModalOpen(false); // Close the Add Document modal
+  // };
 
   return (
     <div className="p-6">
@@ -244,7 +248,7 @@ const FacultyContent: React.FC = () => {
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
-          <button className="p-2 border rounded-lg">
+          <button className="p-2 border rounded-lg" title="Filter">
             <Filter className="h-5 w-5 text-gray-600" />
           </button>
         </div>
@@ -314,13 +318,13 @@ const FacultyContent: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button className="text-indigo-600 hover:text-indigo-900">
+                      <button title="Edit"className="text-indigo-600 hover:text-indigo-900">
                         <FaPen />
                       </button>
-                      <button className="text-red-600 hover:text-red-900">
+                      <button title="Delete" className="text-red-600 hover:text-red-900">
                         <FaTrash />
                       </button>
-                      <button className="text-green-600 hover:text-green-900">
+                      <button title="Download" className="text-green-600 hover:text-green-900">
                         <FaDownload />
                       </button>
                     </div>
@@ -340,8 +344,10 @@ const FacultyContent: React.FC = () => {
             <form onSubmit={handleAddFaculty}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">First Name</label>
+                  <label htmlFor="FirstName"className="block text-sm font-medium text-gray-700">First Name</label>
                   <input
+                    id='FirstName'
+                    title="First Name"
                     type="text"
                     value={newFaculty.first_name}
                     onChange={(e) => setNewFaculty({...newFaculty, first_name: e.target.value})}
@@ -350,8 +356,10 @@ const FacultyContent: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                  <label htmlFor="LastName" className="block text-sm font-medium text-gray-700">Last Name</label>
                   <input
+                    title='Last Name'
+                    id='LastName'
                     type="text"
                     value={newFaculty.last_name}
                     onChange={(e) => setNewFaculty({...newFaculty, last_name: e.target.value})}
@@ -360,8 +368,9 @@ const FacultyContent: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label htmlFor="Email" className="block text-sm font-medium text-gray-700">Email</label>
                   <input
+                    id="Email"
                     type="email"
                     value={newFaculty.email}
                     onChange={(e) => setNewFaculty({...newFaculty, email: e.target.value})}
@@ -370,8 +379,10 @@ const FacultyContent: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Position</label>
+                  <label htmlFor='Position' className="block text-sm font-medium text-gray-700">Position</label>
                   <input
+                    id='Position'
+                    title='Position'
                     type="text"
                     value={newFaculty.position}
                     onChange={(e) => setNewFaculty({...newFaculty, position: e.target.value})}
@@ -380,8 +391,10 @@ const FacultyContent: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Department</label>
+                  <label htmlFor='Department' className="block text-sm font-medium text-gray-700">Department</label>
                   <select
+                    id='Department'
+                    title='Department'
                     value={newFaculty.department_id}
                     onChange={(e) => setNewFaculty({...newFaculty, department_id: parseInt(e.target.value)})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -392,8 +405,10 @@ const FacultyContent: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Employment Status</label>
+                  <label htmlFor='EmploymentStatus' className="block text-sm font-medium text-gray-700">Employment Status</label>
                   <select
+                    id='EmploymentStatus'
+                    title='Employment Status'
                     value={newFaculty.employment_status}
                     onChange={(e) => setNewFaculty({...newFaculty, employment_status: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -405,8 +420,10 @@ const FacultyContent: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Hire Date</label>
+                  <label htmlFor='HireDate' className="block text-sm font-medium text-gray-700">Hire Date</label>
                   <input
+                    id='HireDate'
+                    title='Hire Date'
                     type="date"
                     value={newFaculty.hire_date}
                     onChange={(e) => setNewFaculty({...newFaculty, hire_date: e.target.value})}

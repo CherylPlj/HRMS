@@ -3,7 +3,7 @@ import { Pie } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaCalendarAlt } from "react-icons/fa";
+// import { FaCalendarAlt } from "react-icons/fa";
 import Head from 'next/head';
 import { useAttendance } from '../contexts/AttendanceContext';
 
@@ -11,9 +11,9 @@ export default function DashboardFaculty() {
   const { currentRecord, currentTime, currentDate, summary } = useAttendance();
   const [dateRange, setDateRange] = useState([new Date("2025-02-01"), new Date("2025-03-20")]);
 
-  const handleDateChange = (dates: [any, any]) => {
+  const handleDateChange = (dates: [unknown, unknown]) => {
     const [start, end] = dates;
-    setDateRange([start, end]);
+    setDateRange([start as Date, end as Date]);
   };
 
   const pieData = {
@@ -32,7 +32,7 @@ export default function DashboardFaculty() {
     <>
       <Head>
         <title>Dashboard</title>
-        <script src="https://cdn.tailwindcss.com"></script>
+        {/* <script src="https://cdn.tailwindcss.com"></script> */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"

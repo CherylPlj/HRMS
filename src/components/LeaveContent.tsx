@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { ExternalLink, Trash2, Download } from 'lucide-react';
 
+type Leave = {
+    employeeName: string;
+    // Add other properties as needed
+};
+
 const LeaveContent: React.FC = () => {
     const [isViewingLogs, setIsViewingLogs] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedLeave, setSelectedLeave] = useState<any>(null);
+    const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
 
-    const toggleView = () => setIsViewingLogs(!isViewingLogs);
-    const openDeleteModal = (leave: any) => {
+    // const toggleView = () => setIsViewingLogs(!isViewingLogs);
+    const openDeleteModal = (leave: Leave) => {
         setSelectedLeave(leave);
         setIsModalOpen(true);
     };

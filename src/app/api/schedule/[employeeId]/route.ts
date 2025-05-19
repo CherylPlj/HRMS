@@ -3,10 +3,12 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { employeeId: string } }
-) {
+  { params }: { params: Promise<{ employeeId: string }> }
+): Promise<NextResponse> {
   try {
-    const employeeId = params.employeeId;
+    // const employeeId = params.employeeId;
+    const { employeeId } = await params;
+
 
     // Get faculty ID from the employee ID (which is the UserID)
     const faculty = await prisma.faculty.findFirst({

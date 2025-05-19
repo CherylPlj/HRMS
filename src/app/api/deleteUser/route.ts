@@ -27,6 +27,7 @@ export async function DELETE(request: Request) {
     }
 
     // Delete faculty record if exists
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { error: facultyError } = await supabase
       .from('faculty')
       .delete()
@@ -47,10 +48,10 @@ export async function DELETE(request: Request) {
     await clerk.users.deleteUser(userId.toString());
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting user:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete user' },
+      { error: (error instanceof Error ? error.message : 'Failed to delete user') },
       { status: 500 }
     );
   }

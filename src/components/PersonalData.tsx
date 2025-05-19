@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { FaDownload, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaDownload, FaEdit } from 'react-icons/fa';
 import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 
@@ -185,7 +185,7 @@ const PersonalData: React.FC = () => {
         setFacultyDetails(transformedData);
         setEditedDetails(transformedData);
         setNotification(null);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Unexpected error:', error);
         setNotification({
           type: 'error',
@@ -313,7 +313,7 @@ const PersonalData: React.FC = () => {
         type: 'success',
         message: 'Changes saved successfully!'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Save error:', error);
       setNotification({
         type: 'error',
