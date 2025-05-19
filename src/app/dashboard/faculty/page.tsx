@@ -1,4 +1,4 @@
-// app/faculty/page.tsx
+// app/dashboard/faculty/page.tsx
 "use client";
 
 export default function FacultyPage() {

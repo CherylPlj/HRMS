@@ -180,7 +180,7 @@ export default function Dashboard() {
                 <span className="text-[10px]">Users</span>
               </a>
             </nav>
-          </div>
+          {/* </div> */}
           <a
             href="#"
             className={`flex flex-col items-center mt-auto ${activeButton === 'logout' ? 'text-[#ffd700]' : 'text-white'}`}
@@ -396,7 +396,7 @@ export default function Dashboard() {
             {renderContent()}
           </div>
         </div>
-      {/* </div> */}
+      </div>
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalVisible && (

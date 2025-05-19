@@ -1,3 +1,5 @@
+// app/page.tsx
+
 'use client';
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
@@ -6,11 +8,11 @@ export default function Home() {
   const router = useRouter();
 
   const navigateToFaculty = () => {
-    router.push('/loginf'); // Corrected path with leading slash
+    router.push('/dashboard/loginf'); // Corrected path with leading slash
   };
   
   const navigateToAdmin = () => {
-    router.push('/login'); // Corrected path with leading slash
+    router.push('/dashboard/login'); // Corrected path with leading slash
   };
   
   return (
