@@ -7,12 +7,22 @@ export default async function FacultyLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  
+
+  // Check role
+  const role =
+    typeof session.sessionClaims?.metadata === "object" &&
+    session.sessionClaims?.metadata !== null &&
+    "role" in session.sessionClaims.metadata
+      ? (session.sessionClaims.metadata as { role?: string }).role
+      : undefined;
+
   // Check if user is authenticated and has faculty role
-  if (!session.userId || !session.sessionClaims?.metadata?.role || session.sessionClaims.metadata.role !== "Faculty") {
+  // if (!session.userId || !session.sessionClaims?.metadata?.role || session.sessionClaims.metadata.role !== "Faculty") {
+  //   redirect("/sign-in");
+  // }
+  if (!session.userId || !role || role !== "Faculty") {
     redirect("/sign-in");
   }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 
 type AttendanceRecord = {
@@ -6,11 +6,14 @@ type AttendanceRecord = {
 };
 
 export async function GET(
-  request: Request,
-  { params }: { params: { employeeId: string } }
-) {
+  request: NextRequest,
+  // { params }: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
+
+): Promise<NextResponse> {
   try {
-    const { employeeId } = params;
+    // const { employeeId } = params;
+    const { employeeId } = await params;
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -41,4 +44,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

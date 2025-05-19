@@ -36,7 +36,7 @@ interface User {
   FirstName: string;
   LastName: string;
   Email: string;
-  Photo: string;
+  Photo: string | File;
   Role: string;
   Status: string;
   DateCreated: string;
@@ -70,6 +70,8 @@ interface UserFormData {
 
 interface UserWithPasswordReset extends User {
   resetPassword?: boolean;
+  Photo: string | File;
+  isChecked?: boolean; // For reset password checkbox state
 }
 
 // Add interface for notifications
@@ -84,7 +86,7 @@ interface NewUser {
   Email: string;
   Role: string;
   Status: string;
-  Photo: string;
+  Photo: File | string;
 }
 
 const UsersContent: React.FC = () => {
@@ -581,7 +583,13 @@ const UsersContent: React.FC = () => {
                   {/* Filters */}
                   <div className="flex flex-col space-y-2 md:flex-row md:items-end md:space-x-4 md:space-y-0">
                       <div className="flex-1">
+                          <label htmlFor="roleSelect" className="text-sm font-medium" title="Role">
+                              {/* Role */}
+                          </label>
                           <select
+                              id="roleSelect"
+                              title="Role"
+                              aria-label="Role"
                               value={selectedRole}
                               onChange={(e) => setSelectedRole(e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded"
@@ -594,7 +602,7 @@ const UsersContent: React.FC = () => {
                           </select>
                       </div>
                       <div>
-                          <button className="flex items-center px-3 py-2 border border-gray-300 rounded hover:bg-gray-100">
+                          <button title="Date" className="flex items-center px-3 py-2 border border-gray-300 rounded hover:bg-gray-100">
                               <Calendar className="w-4 h-4 mr-2" />
                               Select Date
                           </button>
@@ -630,7 +638,7 @@ const UsersContent: React.FC = () => {
                     <td className="p-2">{user.UserID}</td>
                                   <td className="p-2">
                       <img 
-                        src={user.Photo || '/manprofileavatar.png'} 
+                        src={typeof user.Photo === 'string' && user.Photo ? user.Photo : '/manprofileavatar.png'} 
                         alt='profile' 
                         className="w-10 h-10 rounded-full object-cover" 
                       />
@@ -641,13 +649,14 @@ const UsersContent: React.FC = () => {
                     <td className="p-2">{user.DateCreated || 'N/A'}</td>
                     <td className="p-2">{user.LastLogin || 'N/A'}</td>
                                   <td className="p-2">
-                      <button 
+                      <button
                         className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" 
                         onClick={() => openEditModal(user)}
                       >
                         Edit
                       </button>
-                      <button 
+                      <button
+                        title="Delete"
                         className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2" 
                         onClick={() => openDeleteModal(user)}
                       >
@@ -668,6 +677,7 @@ const UsersContent: React.FC = () => {
                   <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl relative">
                       {/* Close Icon */}
                       <button
+                          title="Close"
                           onClick={closeModals}
                           className="absolute top-4 right-4 text-gray-500 hover:text-black"
                       >
@@ -678,327 +688,383 @@ const UsersContent: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Left Column */}
-                          <div className="flex flex-col space-y-2">
-                              <label className="text-sm font-medium">
-                                  First Name <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                  type="text"
-                                  placeholder="Enter first name"
-                                  value={newUser.FirstName}
-                                  onChange={(e) => setNewUser({ ...newUser, FirstName: e.target.value })}
-                                  className="p-2 border border-gray-300 rounded"
-                              />
-
-                              <label className="text-sm font-medium">
-                                  Email <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                  type="email"
-                                  placeholder="Enter email"
-                                  value={newUser.Email}
-                                  onChange={(e) => setNewUser({ ...newUser, Email: e.target.value })}
-                                  className="p-2 border border-gray-300 rounded"
-                              />
-
-                              <label className="text-sm font-medium">
-                                  Role <span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                  value={newUser.Role}
-                                  onChange={(e) => setNewUser({ ...newUser, Role: e.target.value })}
-                                  className="p-2 border border-gray-300 rounded"
-                              >
-                                  <option value="">Select Role</option>
-                                  {roleOptions.map(option => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                              </select>
-                          </div>
-
-                          {/* Right Column */}
-                          <div className="flex flex-col space-y-2">
-                              <label className="text-sm font-medium">
-                                    Last Name <span className="text-red-500">*</span>
-                              </label>
-                                <input
-                                        type="text"
-                                        placeholder="Enter last name"
-                                        value={newUser.LastName}
-                                        onChange={(e) => setNewUser({ ...newUser, LastName: e.target.value })}
-                                        className="p-2 border border-gray-300 rounded"
-                                />
-
-                              <label className="text-sm font-medium">
-                                  Status <span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                  value={selectedUser?.Status || ''}
-                                  onChange={(e) => handleUserUpdate('Status', e.target.value)}
-                                  className="p-2 border border-gray-300 rounded"
-                              >
-                                  <option value="">Select Status</option>
-                                  <option value="Active">Active</option>
-                                  <option value="Inactive">Inactive</option>
-                              </select>
-
-                              <label className="text-sm font-medium">
-                                Photo <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                  type="file"
-                                  accept="image/png, image/jpeg"
-                                  onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                    if (file && selectedUser) {
-                      handleUserUpdate('Photo', URL.createObjectURL(file));
-                                      }
-                                  }}
-                                  className="p-2 border border-gray-300 rounded"
-                              />
-                          </div>
-                      </div>
-
-                      <div className="flex justify-end mt-6">
-                          <button
-                              onClick={handleAddUser}
-                              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-800"
-                          >
-                              <Save className="w-4 h-4" />
-                              <span>Save Edit</span>
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          )}
-
-          {/* Confirm Add User Modal */}
-          {showConfirmModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                      <h2 className="text-xl font-bold mb-4">Confirm New User</h2>
-            <p><strong>First Name:</strong> {newUser.FirstName}</p>
-            <p><strong>Last Name:</strong> {newUser.LastName}</p>
-            <p><strong>Email:</strong> {newUser.Email}</p>
-            <p><strong>Role:</strong> {newUser.Role}</p>
-            <p><strong>Status:</strong> {newUser.Status}</p>
-                      <p>
-                          <strong>Photo:</strong>{' '}
-              {newUser.Photo ? (
-                'uploaded' //newUser.Photo.name // Display the filename of the uploaded photo
-                          ) : (
-                              'No photo uploaded'
-                          )}
-                      </p>
-
-                      <div className="flex justify-end mt-4 space-x-4">
-                          <button
-                              onClick={handleConfirmAdd}
-                              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                          >
-                              Confirm
-                          </button>
-                          <button
-                              onClick={() => setShowConfirmModal(false)}
-                              className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
-                          >
-                              Cancel
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          )}
-
-          {/* Edit User Modal */}
-          {isEditModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl relative">
-                      <button
-                          onClick={closeModals}
-                          className="absolute top-4 right-4 text-gray-500 hover:text-black"
-                      >
-                          <X className="w-5 h-5" />
-                      </button>
-
-                      <h2 className="text-xl font-bold mb-4">Edit User</h2>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Left Column */}
-                          <div className="flex flex-col space-y-2">
-                              <label className="text-sm font-medium">
-                                  First Name <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                  type="text"
-                                  value={selectedUser?.FirstName}
-                                  readOnly
-                                  className="p-2 border border-gray-300 rounded"
-                              />
-
-                              <label className="text-sm font-medium">
-                                  Email <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                  type="email"
-                                  value={selectedUser?.Email || ''}
-                                  onChange={(e) => handleUserUpdate('Email', e.target.value)}
-                                  className="p-2 border border-gray-300 rounded"
-                              />
-
-                              <label className="text-sm font-medium">
-                                  Role <span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                  value={selectedUser?.Role || ''}
-                                  onChange={(e) => handleUserUpdate('Role', e.target.value)}
-                                  className="p-2 border border-gray-300 rounded"
-                              >
-                                  <option value="">Select Role</option>
-                                  {roleOptions.map(option => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                              </select>
-                          </div>
-
-                          {/* Right Column */}
-                          <div className="flex flex-col space-y-2">
-                            <label className="text-sm font-medium">
-                              Last Name <span className="text-red-500">*</span>
+                        <div className="flex flex-col space-y-2">
+                            <label htmlFor="firstName" className="text-sm font-medium" title="firstName">
+                                First Name <span className="text-red-500">*</span>
                             </label>
-                              <input
-                                      type="text"
-                                      value={selectedUser?.LastName || ''}
-                                      readOnly
-                                      className="p-2 border border-gray-300 rounded"
-                              />
+                            <input
+                                id="firstName"
+                                type="text"
+                                title="First Name"
+                                aria-label="First Name"
+                                placeholder="Enter first name"
+                                value={newUser.FirstName}
+                                onChange={(e) => setNewUser({ ...newUser, FirstName: e.target.value })}
+                                className="p-2 border border-gray-300 rounded"
+                            />
 
-                              <label className="text-sm font-medium">
-                                  Status <span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                  value={selectedUser?.Status || ''}
-                                  onChange={(e) => handleUserUpdate('Status', e.target.value)}
-                                  className="p-2 border border-gray-300 rounded"
-                              >
-                                  <option value="">Select Status</option>
-                                  <option value="Active">Active</option>
-                                  <option value="Inactive">Inactive</option>
-                              </select>
+                            <label htmlFor="email" className="text-sm font-medium">
+                                Email <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                title="Email Address"
+                                aria-label="Email"
+                                placeholder="Enter email"
+                                value={newUser.Email}
+                                onChange={(e) => setNewUser({ ...newUser, Email: e.target.value })}
+                                className="p-2 border border-gray-300 rounded"
+                            />
 
-                              <label className="text-sm font-medium">
+                            <label htmlFor="roleSelect" className="text-sm font-medium">
+                                Role <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                id="roleSelect"
+                                aria-label="Role"
+                                title="Role"
+                                value={newUser.Role}
+                                onChange={(e) => setNewUser({ ...newUser, Role: e.target.value })}
+                                className="p-2 border border-gray-300 rounded"
+                            >
+                                <option value="">Select Role</option>
+                                <option value="admin">Admin</option>
+                                <option value="faculty">Faculty</option>
+                                <option value="registrar">Registrar</option>
+                                <option value="cashier">Cashier</option>
+                            </select>
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="flex flex-col space-y-2">
+                            <label htmlFor="lastName" className="text-sm font-medium">
+                                Last Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                id="lastName"
+                                type="text"
+                                title="Last Name"
+                                aria-label="Last Name"
+                                placeholder="Enter last name"
+                                value={newUser.LastName}
+                                onChange={(e) => setNewUser({ ...newUser, LastName: e.target.value })}
+                                className="p-2 border border-gray-300 rounded"
+                            />
+
+                            <label htmlFor="Status" className="text-sm font-medium">
+                                Status <span className="text-red-500">*</span>
+                            </label>
+                            <select title="Status" id="Status"
+                                aria-label="Status"
+                                value={selectedUser?.Status}
+                                onChange={(e) =>
+                                    setSelectedUser(prev =>
+                                        prev ? { ...prev, Status: e.target.value } : prev
+                                    )
+                                }
+                                className="p-2 border border-gray-300 rounded"
+                            >
+                                <option value="">Select Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+
+                            <label htmlFor="photoUpload" className="text-sm font-medium">
                                 Photo <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                  type="file"
-                                  accept="image/png, image/jpeg"
-                                  onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                    if (file && selectedUser) {
-                      handleUserUpdate('Photo', URL.createObjectURL(file));
-                                      }
-                                  }}
-                                  className="p-2 border border-gray-300 rounded"
-                              />
+                            </label>
+                            <input
+                                id="photoUpload"
+                                type="file"
+                                accept="image/png, image/jpeg"
+                                title="Upload Photo"
+                                aria-label="Upload Photo"
+                                placeholder="Choose a photo"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        setNewUser(prev => ({ ...prev, Photo: file }));
+                                    }
+                                }}
+                                className="p-2 border border-gray-300 rounded"
+                            />
+                        </div>
+                    </div>
 
-                              {/* Checkbox */}
-                              <div className="flex items-center space-x-2 mt-4">
-                                  <input
-                                      type="checkbox"
-                                      checked={selectedUser?.resetPassword || false}
-                                      onChange={(e) => {
-                                        if (selectedUser) {
-                                          setSelectedUser({
-                                            ...selectedUser,
-                                            resetPassword: e.target.checked
-                                          });
-                                        }
-                                      }}
-                                      className="w-5 h-5"
-                                  />
-                                  <label className="text-sm font-medium">
-                                      Reset Password
-                                  </label>
-                              </div>
-                          </div>
-                      </div>
+                    <div className="flex justify-end mt-6">
+                        <button
+                            title="Save"
+                            onClick={handleAddUser}
+                            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-800"
+                        >
+                            <Save className="w-4 h-4" />
+                            <span>Save New User</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
-                      <div className="flex justify-end mt-6">
-                          <button
-                              onClick={handleEditUser}
-                              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-800"
-                          >
-                              <Save className="w-4 h-4" />
-                              <span>Save Edit</span>
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          )}
+        {/* Confirm Add User Modal */}
+        {showConfirmModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                    <h2 className="text-xl font-bold mb-4">Confirm New User</h2>
+                    <p><strong>First Name:</strong> {newUser.FirstName}</p>
+                    <p><strong>Last Name:</strong> {newUser.LastName}</p>
+                    <p><strong>Email:</strong> {newUser.Email}</p>
+                    <p><strong>Role:</strong> {newUser.Role}</p>
+                    <p><strong>Status:</strong> {newUser.Status}</p>
+                    <p>
+                        <strong>Photo:</strong>{' '}
+                        {newUser.Photo ? (
+                            'uploaded' //newUser.photo.name // Display the filename of the uploaded photo
+                        ) : (
+                            'No photo uploaded'
+                        )}
+                    </p>
 
-          {showConfirmEditModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                      <h2 className="text-xl font-bold mb-4">Confirm Edit</h2>
-            <p><strong>First Name:</strong> {selectedUser?.FirstName}</p>
-            <p><strong>Last Name:</strong> {selectedUser?.LastName}</p>
-            <p><strong>Email:</strong> {selectedUser?.Email}</p>
-            <p><strong>Role:</strong> {selectedUser?.Role}</p>
-            <p><strong>Status:</strong> {selectedUser?.Status}</p>
-            <p><strong>Photo:</strong> {selectedUser?.Photo}</p>
-                      
-                      {/* Reset Password Status */}
-            <p><strong>Reset Password:</strong> {selectedUser?.resetPassword ? 'Yes' : 'No'}</p>
+                    <div className="flex justify-end mt-4 space-x-4">
+                        <button
+                            title="Confirm"
+                            onClick={handleConfirmAdd}
+                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                        >
+                            Confirm
+                        </button>
+                        <button
+                            title="Cancel"
+                            onClick={() => setShowConfirmModal(false)}
+                            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
-                      <div className="flex justify-end mt-4 space-x-4">
-                          <button
-                              onClick={handleConfirmEdit}
-                              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                          >
-                              Confirm
-                          </button>
-                          <button
-                              onClick={() => setShowConfirmEditModal(false)}
-                              className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
-                          >
-                              Cancel
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          )}
-               
-          {/* Delete User Modal */}
-          {isDeleteModalOpen && selectedUser && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                  <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
-                      <h2 className="text-2xl font-bold mb-4 text-[#800000]">Confirm Delete</h2>
-                      <p className="mb-6 text-gray-700">
-              Are you sure you want to delete <strong>{selectedUser.FirstName} {selectedUser.LastName}</strong>?
-                      </p>
-                      <div className="flex justify-center space-x-4">
-                          <button
-                              onClick={() => { console.log('User deleted'); closeModals(); }}
-                              className="bg-red-600 hover:bg-[#800000] text-white px-4 py-2 rounded"
-                          >
-                              Yes, Delete
-                          </button>
-                          <button
-                              onClick={closeModals}
-                              className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
-                          >
-                              Cancel
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          )}
+{isEditModalOpen && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl relative">
+            {/* Close Icon */}
+            <button
+                title="Close"
+                onClick={closeModals}
+                className="absolute top-4 right-4 text-gray-500 hover:text-black"
+            >
+                <X className="w-5 h-5" />
+            </button>
 
-      </div>
-  );
+            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left Column */}
+                <div className="flex flex-col space-y-2">
+                    <label htmlFor="firstName" className="text-sm font-medium">
+                        First Name
+                    </label>
+                    <input
+                        id="firstName"
+                        type="text"
+                        value={selectedUser?.FirstName}
+                        readOnly
+                        title="First Name"
+                        className="p-2 border border-gray-300 rounded"
+                    />
+
+                    <label htmlFor="email" className="text-sm font-medium">
+                        Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="email"
+                        title="email"
+                        aria-label="Email"
+                        type="email"
+                        value={selectedUser?.Email}
+                        onChange={(e) => selectedUser && setSelectedUser({ ...selectedUser, Email: e.target.value })}
+                        className="p-2 border border-gray-300 rounded"
+                    />
+
+                    <label htmlFor='roleSelect' className="text-sm font-medium">
+                        Role <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="roleSelect"
+                        title="Role"
+                        aria-label="Role"
+                        value={selectedUser?.Role}
+                        onChange={(e) => selectedUser && setSelectedUser(prev => prev ? { ...prev, Role: e.target.value } : prev)}
+                        className="p-2 border border-gray-300 rounded"
+                    >
+                        <option value="">Select Role</option>
+                        <option value="admin">Admin</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="registrar">Registrar</option>
+                        <option value="cashier">Cashier</option>
+                    </select>
+                </div>
+
+                {/* Right Column */}
+                <div className="flex flex-col space-y-2">
+                    <label htmlFor='lastName' className="text-sm font-medium">
+                        Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="lastName"
+                        title="lastName"
+                        aria-label="Last Name"
+                        type="text"
+                        value={selectedUser?.LastName}
+                        readOnly
+                        className="p-2 border border-gray-300 rounded"
+                    />
+
+                    <label htmlFor='Status' className="text-sm font-medium">
+                        Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="Status"
+                        title="Status"
+                        aria-label="Status"
+                        value={selectedUser?.Status}
+                        onChange={(e) =>
+                            setSelectedUser(prev =>
+                                prev ? { ...prev, Status: e.target.value } : prev
+                            )
+                        }
+                        className="p-2 border border-gray-300 rounded"
+                    >
+                        <option value="">Select Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+
+                    <label htmlFor="photoUpload" className="text-sm font-medium">
+                        Photo <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="photoUpload"
+                        title="UploadPhoto"
+                        aria-label="Upload Photo"
+                        type="file"
+                        accept="image/png, image/jpeg"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                setSelectedUser(prev => prev ? { ...prev, Photo: file } : prev);
+                            }
+                        }}
+                        className="p-2 border border-gray-300 rounded"
+                    />
+
+                    {/* Checkbox */}
+                    <div className="flex items-center space-x-2 mt-4">
+                        <input
+                            title="ResetPassword"
+                            type="checkbox"
+                            checked={selectedUser?.isChecked || false}
+                            onChange={(e) =>
+                                setSelectedUser(prev =>
+                                    prev
+                                        ? { ...prev, isChecked: e.target.checked }
+                                        : prev
+                                )
+                            }
+                            className="w-5 h-5"
+                        />
+                        <label className="text-sm font-medium">
+                            Reset Password
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+                <button
+                    onClick={handleEditUser}
+                    className="bg-[#800000] text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-800"
+                >
+                    <Save className="w-4 h-4" />
+                    <span>Save Edit</span>
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+
+{/* Confirm Edit */}
+        {showConfirmEditModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                    <h2 className="text-xl font-bold mb-4">Confirm Edit</h2>
+                    <p><strong>First Name:</strong> {selectedUser?.FirstName}</p>
+                    <p><strong>Last Name:</strong> {selectedUser?.LastName}</p>
+                    <p><strong>Email:</strong> {selectedUser?.Email}</p>
+                    <p><strong>Role:</strong> {selectedUser?.Role}</p>
+                    <p><strong>Status:</strong> {selectedUser?.Status}</p>
+                    <p>
+                      <strong>Photo:</strong>{' '}
+                      {typeof selectedUser?.Photo === 'string'
+                        ? selectedUser.Photo
+                        : selectedUser?.Photo instanceof File
+                          ? selectedUser.Photo.name
+                          : ''}
+                    </p>
+                    
+                    {/* Reset Password Status */}
+                    <p><strong>Reset Password:</strong> {selectedUser?.isChecked ? 'Yes' : 'No'}</p>
+
+                    <div className="flex justify-end mt-4 space-x-4">
+                        <button
+                            title="Confirm"
+                            onClick={handleConfirmEdit}
+                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                        >
+                            Confirm
+                        </button>
+                        <button
+                            title="Cancel"
+                            onClick={() => setShowConfirmEditModal(false)}
+                            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+            
+        {/* Delete User Modal */}
+        {isDeleteModalOpen && selectedUser && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
+                    <h2 className="text-2xl font-bold mb-4 text-[#800000]">Confirm Delete</h2>
+                    <p className="mb-6 text-gray-700">
+                        Are you sure you want to delete <strong>{selectedUser.LastName}</strong>?
+                    </p>
+                    <div className="flex justify-center space-x-4">
+                        <button
+                            title="Delete"
+                            onClick={() => { console.log('User deleted'); closeModals(); }}
+                            className="bg-red-600 hover:bg-[#800000] text-white px-4 py-2 rounded"
+                        >
+                            Yes, Delete
+                        </button>
+                        <button
+                            title="Cancel"
+                            onClick={closeModals}
+                            className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+    </div>
+);
 };
 
 export default UsersContent;

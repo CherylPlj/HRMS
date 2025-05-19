@@ -222,8 +222,10 @@ const LeaveRequestFaculty: React.FC = () => {
                         <div className="space-y-6">
                             <div className="flex space-x-4">
                                 <div className="flex-1 pb-6">
-                                    <label className="block mb-1 font-semibold">Leave Type <span className="text-[#800000]">*</span></label>
+                                    <label htmlFor="LeaveType" className="block mb-1 font-semibold">Leave Type <span className="text-[#800000]">*</span></label>
                                     <select
+                                        id="LeaveType"
+                                        title="LeaveType"
                                         value={leaveType}
                                         onChange={(e) => setLeaveType(e.target.value)}
                                         className="w-full border border-gray-300 rounded p-2"
@@ -260,8 +262,10 @@ const LeaveRequestFaculty: React.FC = () => {
                             </div>
 
                             <div className="mb-4">
-                                <label className="block mb-1 font-semibold">Supporting Document</label>
+                                <label htmlFor="File" className="block mb-1 font-semibold">Supporting Document</label>
                                 <input
+                                    id="File"
+                                    title="File"
                                     type="file"
                                     onChange={handleFileChange}
                                     className="border p-2 rounded w-full"
@@ -271,8 +275,10 @@ const LeaveRequestFaculty: React.FC = () => {
                             </div>
 
                             <div className="mb-4">
-                                <label className="block mb-1 font-semibold">Reason <span className="text-[#800000]">*</span></label>
+                                <label htmlFor="Reason" className="block mb-1 font-semibold">Reason <span className="text-[#800000]">*</span></label>
                                 <textarea
+                                    id="Reason"
+                                    title="Reason"
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
                                     className="border p-2 rounded w-full"
@@ -284,6 +290,7 @@ const LeaveRequestFaculty: React.FC = () => {
 
                         <div className="flex justify-end mt-8">
                             <button
+                                title="Cancel"
                                 onClick={handleAddLeaveRequest}
                                 className="bg-[#800000] hover:bg-red-800 text-white px-6 py-2 rounded"
                                 disabled={isLoading}
