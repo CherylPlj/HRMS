@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   { params }: { params: { employeeId: string } }
-): Promise<NextResponse> {
+) {
   try {
-    // const employeeId = params.employeeId;
-    const { employeeId } = params;
+    const employeeId = params.employeeId;
 
 
     // Get faculty ID from the employee ID (which is the UserID)
@@ -52,4 +52,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}
