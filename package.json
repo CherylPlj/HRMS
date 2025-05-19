@@ -3,10 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "generate": "prisma generate",
-    "postinstall": "prisma generate",
+    "prepare": "prisma generate",
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build ",
     "start": "next start",
     "lint": "next lint",
     "test": "react-scripts test",

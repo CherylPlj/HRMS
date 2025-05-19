@@ -3,11 +3,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ employeeId: string }> }
+  { params }: { params: { employeeId: string } }
 ): Promise<NextResponse> {
   try {
     // const employeeId = params.employeeId;
-    const { employeeId } = await params;
+    const { employeeId } = params;
 
 
     // Get faculty ID from the employee ID (which is the UserID)
