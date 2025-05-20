@@ -70,7 +70,7 @@ export default function Home() {
             >
                 Administrator
             </button>
-         </div>
+        </div>
         </div>
       </div>
     </>

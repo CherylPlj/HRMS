@@ -6,7 +6,7 @@ export async function GET() {
     console.log('Fetching users from API route...');
     
     const { data: usersData, error: usersError } = await supabaseAdmin
-      .from('users')
+      .from('User')
       .select(`
         UserID,
         FirstName,
@@ -18,11 +18,11 @@ export async function GET() {
         DateCreated,
         DateModified,
         LastLogin,
-        faculty (
+        Faculty (
           FacultyID,
           DepartmentID,
-          department:departments (
-            Name
+          Department (
+            DepartmentName
           )
         )
       `);
@@ -56,4 +56,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

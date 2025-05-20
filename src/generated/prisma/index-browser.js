@@ -120,6 +120,12 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserIDSequenceScalarFieldEnum = {
+  id: 'id',
+  year: 'year',
+  lastCount: 'lastCount'
+};
+
 exports.Prisma.UserScalarFieldEnum = {
   UserID: 'UserID',
   FirstName: 'FirstName',
@@ -127,7 +133,6 @@ exports.Prisma.UserScalarFieldEnum = {
   Email: 'Email',
   Photo: 'Photo',
   PasswordHash: 'PasswordHash',
-  Role: 'Role',
   Status: 'Status',
   DateCreated: 'DateCreated',
   DateModified: 'DateModified',
@@ -244,6 +249,16 @@ exports.Prisma.AttendanceScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.RoleScalarFieldEnum = {
+  id: 'id',
+  name: 'name'
+};
+
+exports.Prisma.UserRoleScalarFieldEnum = {
+  userId: 'userId',
+  roleId: 'roleId'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -258,13 +273,6 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-exports.Role = exports.$Enums.Role = {
-  Admin: 'Admin',
-  Faculty: 'Faculty',
-  Cashier: 'Cashier',
-  Registrar: 'Registrar'
-};
-
 exports.Status = exports.$Enums.Status = {
   Active: 'Active',
   Inactive: 'Inactive'
@@ -297,6 +305,7 @@ exports.DayOfWeek = exports.$Enums.DayOfWeek = {
 };
 
 exports.Prisma.ModelName = {
+  UserIDSequence: 'UserIDSequence',
   User: 'User',
   Faculty: 'Faculty',
   Cashier: 'Cashier',
@@ -310,7 +319,9 @@ exports.Prisma.ModelName = {
   Report: 'Report',
   Notification: 'Notification',
   ActivityLog: 'ActivityLog',
-  Attendance: 'Attendance'
+  Attendance: 'Attendance',
+  Role: 'Role',
+  UserRole: 'UserRole'
 };
 
 /**

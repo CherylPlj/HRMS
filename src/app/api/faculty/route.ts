@@ -4,17 +4,17 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 export async function GET() {
   try {
     const { data: facultyData, error } = await supabaseAdmin
-      .from('faculty')
+      .from('Faculty')
       .select(`
         *,
-        user:users (
-          first_name,
-          last_name,
-          email,
-          photo
+        User (
+          FirstName,
+          LastName,
+          Email,
+          Photo
         ),
-        department:departments (
-          name
+        Department (
+          DepartmentName
         )
       `);
 
@@ -26,6 +26,13 @@ export async function GET() {
       );
     }
 
+    if (!facultyData || facultyData.length === 0) {
+      return NextResponse.json(
+        { message: 'No faculty records found', data: [] },
+        { status: 200 }
+      );
+    }
+
     return NextResponse.json(facultyData || []);
   } catch (error: string | unknown) {
     console.error('Unexpected error:', error);
@@ -34,4 +41,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

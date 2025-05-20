@@ -9,29 +9,35 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model UserIDSequence {
+  id        Int    @id @default(autoincrement())
+  year      Int
+  lastCount Int
+}
+
 model User {
   UserID       String         @id
   FirstName    String
   LastName     String
   Email        String         @unique
-  Photo        String
+  Photo        String?
   PasswordHash String
-  Role         Role
+  Role         UserRole[]
   Status       Status         @default(Active)
   DateCreated  DateTime       @default(now())
-  DateModified DateTime?
+  DateModified DateTime?      @default(now()) @updatedAt
   LastLogin    DateTime?
   AIChat       AIChat[]
   ActivityLog  ActivityLog[]
-  Cashier      Cashier?
-  Faculty      Faculty?
+  Cashier      Cashier?       @relation("UserCashier")
+  Faculty      Faculty?       @relation("UserFaculty")
   Notification Notification[]
-  Registrar    Registrar?
-  Report       Report[]
+  Registrar    Registrar?     @relation("UserRegistrar")
+  Report       Report[]     
 }
 
 model Faculty {
-  FacultyID        Int              @id @default(autoincrement())
+  FacultyID        Int              @id
   UserID           String           @unique
   DateOfBirth      DateTime
   Phone            String?
@@ -45,7 +51,7 @@ model Faculty {
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
   Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
-  User             User             @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
+  User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Cascade)
   Schedules        Schedule[]
 }
 
@@ -55,14 +61,14 @@ model Cashier {
   WorkSchedule String?
   ShiftStart   DateTime?
   ShiftEnd     DateTime?
-  User         User      @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
+  User         User      @relation("UserCashier", fields: [UserID], references: [UserID], onDelete: Cascade)
 }
 
 model Registrar {
   RegistrarID Int     @id @default(autoincrement())
   UserID      String  @unique
   Schedule    String?
-  User        User    @relation(fields: [UserID], references: [UserID], onDelete: Cascade)
+  User        User    @relation("UserRegistrar", fields: [UserID], references: [UserID], onDelete: Cascade)
 }
 
 model Department {
@@ -157,11 +163,21 @@ model Attendance {
   updatedAt  DateTime @updatedAt
 }
 
-enum Role {
-  Admin
-  Faculty
-  Cashier
-  Registrar
+model Role {
+  id    Int         @id @default(autoincrement())
+  name  String      @unique
+  users UserRole[]
+}
+
+// This model is used to create a many-to-many relationship between User and Role
+model UserRole {
+  userId String
+  roleId Int
+
+  user   User @relation(fields: [userId], references: [UserID], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
 }
 
 enum Status {

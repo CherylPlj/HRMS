@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const faculty = await prisma.faculty.findMany();
+      const faculty = await prisma.Faculty.findMany();
       res.status(200).json(faculty);
     } 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

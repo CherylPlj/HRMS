@@ -26,8 +26,8 @@ interface SupabaseUser {
   Faculty: {
     FacultyID: number;
     DepartmentID: number;
-    department: {
-      Name: string;
+    Department: {
+      DepartmentName: string;
     } | null;
   } | null;
 }
@@ -43,11 +43,11 @@ interface User {
   DateCreated: string;
   DateModified: string | null;
   LastLogin: string | null;
-  faculty?: {
+  Faculty?: {
     FacultyID: number;
     DepartmentID: number;
-    department: {
-      Name: string;
+    Department: {
+      DepartmentName: string;
     };
   };
 }
@@ -123,6 +123,8 @@ const UsersContent: React.FC = () => {
     try {
       setLoading(true);
       console.log('Fetching users...');
+      setNotification(null);
+
       
       const { data: usersData, error: usersError } = await supabase
         .from('User')
@@ -137,11 +139,11 @@ const UsersContent: React.FC = () => {
           DateCreated,
           DateModified,
           LastLogin,
-          Faculty:faculty (
+          Faculty (
             FacultyID,
             DepartmentID,
-            department:departments (
-              Name
+            Department (
+              DepartmentName
             )
           )
         `);
@@ -186,13 +188,13 @@ const UsersContent: React.FC = () => {
           DateCreated: rawUser.DateCreated,
           DateModified: rawUser.DateModified,
           LastLogin: rawUser.LastLogin,
-          faculty: facultyObj
+          Faculty: facultyObj
             ? {
                 FacultyID: facultyObj.FacultyID,
                 DepartmentID: facultyObj.DepartmentID,
-                department: facultyObj.department
-                  ? { Name: Array.isArray(facultyObj.department) ? (facultyObj.department as { Name: string }[])[0]?.Name || 'Unknown' : (facultyObj.department as { Name: string }).Name }
-                  : { Name: 'Unknown' }
+                Department: facultyObj.Department
+                  ? { DepartmentName: Array.isArray(facultyObj.Department) ? (facultyObj.Department as { DepartmentName: string }[])[0]?.DepartmentName || 'Unknown' : (facultyObj.Department as { DepartmentName: string }).DepartmentName }
+                  : { DepartmentName: 'Unknown' }
               }
             : undefined
         };
@@ -288,8 +290,8 @@ const UsersContent: React.FC = () => {
         FirstName: '',
         LastName: '',
         Email: '',
-        Role: 'Faculty',
-        Status: 'Active',
+        Role: '',
+        Status: '',
         Photo: ''
       });
       setAddModalOpen(false);
