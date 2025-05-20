@@ -310,7 +310,7 @@ const AttendanceContent: React.FC = () => {
 
 
                     {/* Big Container for Schedule */}
-                    <div className="bg-white border-2 border-[#800000] p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
+                    <div className="bg-white border-2  p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
                         {/* Search Bar */}
                         <div className="mb-4">
                             <input
