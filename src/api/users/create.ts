@@ -3,7 +3,9 @@ import { generateUserId } from '@/lib/generateUserId';
 
 const prisma = new PrismaClient();
 
-export default async function handler(req, res) {
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') return res.status(405).end();
 
     const { firstName, lastName, email, roles, hireDate } = req.body;
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
             LastName: lastName,
             Email: email,
             Roles: {
-            create: roleRecords.map(r => ({
+            create: roleRecords.map((r: { id: number }) => ({
                 role: {
                 connect: { id: r.id }
                 }

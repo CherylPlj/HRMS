@@ -9,7 +9,6 @@ const VALID_ROLES = ['Admin', 'Faculty', 'Cashier', 'Registrar'] as const;
 type Role = typeof VALID_ROLES[number];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const VALID_STATUS = ['Active', 'Inactive'] as const;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Status = typeof VALID_STATUS[number];
 
 export async function POST(request: Request) {
