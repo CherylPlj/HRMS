@@ -5,40 +5,40 @@ import { FaTrash, FaPen, FaDownload, FaPlus, FaFile } from 'react-icons/fa';
 import { Search, Filter } from 'lucide-react';
 
 interface Faculty {
-  faculty_id: number;
-  user_id: string;
-  date_of_birth: string;
-  phone: string | null;
-  address: string | null;
-  employment_status: string;
-  hire_date: string;
-  resignation_date: string | null;
-  position: string;
-  department_id: number;
-  contract_id: number | null;
-  user: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    photo: string;
+  FacultyId: number;
+  UserId: string;
+  DateOfBirth: string;
+  Phone: string | null;
+  Address: string | null;
+  EmploymentStatus: string;
+  HireDate: string;
+  Resignation_Date: string | null;
+  Position: string;
+  DepartmentId: number;
+  ContractId: number | null;
+  User: {
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    Photo: string;
   };
-  department: {
-    name: string;
+  Department: {
+    DepartmentName: string;
   };
 }
 
 interface NewFaculty {
-  first_name: string;
-  last_name: string;
-  email: string;
-  position: string;
-  department_id: number;
-  employment_status: string;
-  hire_date: string;
-  date_of_birth: string;
-  phone: string | null;
-  address: string | null;
-  photo: string;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  Position: string;
+  DepartmentId: number;
+  EmploymentStatus: string;
+  HireDate: string;
+  DateOfBirth: string;
+  Phone: string | null;
+  Address: string | null;
+  Photo: string;
 }
 
 interface Notification {
@@ -54,17 +54,17 @@ const FacultyContent: React.FC = () => {
   const [facultyList, setFacultyList] = useState<Faculty[]>([]);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [newFaculty, setNewFaculty] = useState<NewFaculty>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    position: '',
-    department_id: 1,
-    employment_status: 'Regular',
-    hire_date: new Date().toISOString().split('T')[0],
-    date_of_birth: new Date().toISOString().split('T')[0],
-    phone: null,
-    address: null,
-    photo: ''
+    FirstName: '',
+    LastName: '',
+    Email: '',
+    Position: '',
+    DepartmentId: 1,
+    EmploymentStatus: 'Regular',
+    HireDate: new Date().toISOString().split('T')[0],
+    DateOfBirth: new Date().toISOString().split('T')[0],
+    Phone: null,
+    Address: null,
+    Photo: ''
   });
 
   // Fetch faculty data from the API endpoint
@@ -111,19 +111,19 @@ const FacultyContent: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firstName: newFaculty.first_name,
-          lastName: newFaculty.last_name,
-          email: newFaculty.email,
+          firstName: newFaculty.FirstName,
+          lastName: newFaculty.LastName,
+          Email: newFaculty.Email,
           role: 'Faculty',
           // Additional faculty-specific fields
           facultyData: {
-            position: newFaculty.position,
-            department_id: newFaculty.department_id,
-            employment_status: newFaculty.employment_status,
-            hire_date: newFaculty.hire_date,
-            date_of_birth: newFaculty.date_of_birth,
-            phone: newFaculty.phone,
-            address: newFaculty.address
+            Position: newFaculty.Position,
+            DepartmentId: newFaculty.DepartmentId,
+            EmploymentStatus: newFaculty.EmploymentStatus,
+            HireDate: newFaculty.HireDate,
+            DateOfBirth: newFaculty.DateOfBirth,
+            Phone: newFaculty.Phone,
+            Address: newFaculty.Address
           }
         }),
       });
@@ -136,17 +136,17 @@ const FacultyContent: React.FC = () => {
 
       // Reset form and close modal
       setNewFaculty({
-        first_name: '',
-        last_name: '',
-        email: '',
-        position: '',
-        department_id: 1,
-        employment_status: 'Regular',
-        hire_date: new Date().toISOString().split('T')[0],
-        date_of_birth: new Date().toISOString().split('T')[0],
-        phone: null,
-        address: null,
-        photo: ''
+        FirstName: '',
+        LastName: '',
+        Email: '',
+        Position: '',
+        DepartmentId: 1,
+        EmploymentStatus: 'Regular',
+        HireDate: new Date().toISOString().split('T')[0],
+        DateOfBirth: new Date().toISOString().split('T')[0],
+        Phone: null,
+        Address: null,
+        Photo: ''
       });
       setIsFacultyModalOpen(false);
 
@@ -155,7 +155,7 @@ const FacultyContent: React.FC = () => {
 
       setNotification({
         type: 'success',
-        message: 'Faculty invitation sent successfully! The faculty member will receive an email to complete their registration.'
+        message: 'Faculty invitation sent successfully! The faculty member will receive an Email to complete their registration.'
       });
     } catch (error: unknown) {
       console.error('Error creating faculty:', error);
@@ -280,40 +280,40 @@ const FacultyContent: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {facultyList.map((faculty) => (
-                <tr key={faculty.faculty_id}>
+              {facultyList.map((Faculty) => (
+                <tr key={Faculty.FacultyId}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-full"
-                          src={faculty.user.photo || '/default-avatar.png'}
-                          alt={`${faculty.user.first_name} ${faculty.user.last_name}`}
+                          src={Faculty.User.Photo || '/default-avatar.png'}
+                          alt={`${Faculty.User.FirstName} ${Faculty.User.LastName}`}
                         />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {faculty.user.first_name} {faculty.user.last_name}
+                          {Faculty.User.FirstName} {Faculty.User.LastName}
                         </div>
-                        <div className="text-sm text-gray-500">{faculty.user.email}</div>
+                        <div className="text-sm text-gray-500">{Faculty.User.Email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {faculty.position}
+                    {Faculty.Position}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {faculty.department.name}
+                    {Faculty.Department.DepartmentName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      faculty.employment_status === 'Regular'
+                      Faculty.EmploymentStatus === 'Regular'
                         ? 'bg-green-100 text-green-800'
-                        : faculty.employment_status === 'Probationary'
+                        : Faculty.EmploymentStatus === 'Probationary'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {faculty.employment_status}
+                      {Faculty.EmploymentStatus}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -349,8 +349,8 @@ const FacultyContent: React.FC = () => {
                     id='FirstName'
                     title="First Name"
                     type="text"
-                    value={newFaculty.first_name}
-                    onChange={(e) => setNewFaculty({...newFaculty, first_name: e.target.value})}
+                    value={newFaculty.FirstName}
+                    onChange={(e) => setNewFaculty({...newFaculty, FirstName: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
@@ -361,8 +361,8 @@ const FacultyContent: React.FC = () => {
                     title='Last Name'
                     id='LastName'
                     type="text"
-                    value={newFaculty.last_name}
-                    onChange={(e) => setNewFaculty({...newFaculty, last_name: e.target.value})}
+                    value={newFaculty.LastName}
+                    onChange={(e) => setNewFaculty({...newFaculty, LastName: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
@@ -372,8 +372,8 @@ const FacultyContent: React.FC = () => {
                   <input
                     id="Email"
                     type="email"
-                    value={newFaculty.email}
-                    onChange={(e) => setNewFaculty({...newFaculty, email: e.target.value})}
+                    value={newFaculty.Email}
+                    onChange={(e) => setNewFaculty({...newFaculty, Email: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
@@ -384,8 +384,8 @@ const FacultyContent: React.FC = () => {
                     id='Position'
                     title='Position'
                     type="text"
-                    value={newFaculty.position}
-                    onChange={(e) => setNewFaculty({...newFaculty, position: e.target.value})}
+                    value={newFaculty.Position}
+                    onChange={(e) => setNewFaculty({...newFaculty, Position: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
@@ -395,8 +395,8 @@ const FacultyContent: React.FC = () => {
                   <select
                     id='Department'
                     title='Department'
-                    value={newFaculty.department_id}
-                    onChange={(e) => setNewFaculty({...newFaculty, department_id: parseInt(e.target.value)})}
+                    value={newFaculty.DepartmentId}
+                    onChange={(e) => setNewFaculty({...newFaculty, DepartmentId: parseInt(e.target.value)})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   >
@@ -409,8 +409,8 @@ const FacultyContent: React.FC = () => {
                   <select
                     id='EmploymentStatus'
                     title='Employment Status'
-                    value={newFaculty.employment_status}
-                    onChange={(e) => setNewFaculty({...newFaculty, employment_status: e.target.value})}
+                    value={newFaculty.EmploymentStatus}
+                    onChange={(e) => setNewFaculty({...newFaculty, EmploymentStatus: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   >
@@ -425,8 +425,8 @@ const FacultyContent: React.FC = () => {
                     id='HireDate'
                     title='Hire Date'
                     type="date"
-                    value={newFaculty.hire_date}
-                    onChange={(e) => setNewFaculty({...newFaculty, hire_date: e.target.value})}
+                    value={newFaculty.HireDate}
+                    onChange={(e) => setNewFaculty({...newFaculty, HireDate: e.target.value})}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
