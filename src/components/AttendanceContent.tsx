@@ -180,7 +180,7 @@ const AttendanceContent: React.FC = () => {
 {/* Attendance Content */}
             {activeTab === 'attendance' && (
                 <div>
-                    <div className="bg-white border-2 border-[#800000] p-4 rounded-lg h-[75vh] flex items-start justify-center">
+                    <div className="bg-white border-2 p-4 rounded-lg h-[75vh] flex items-start justify-center">
                     <main className="flex-1 p-6">
                         {/* <div className="border border-[#8B0000] rounded-sm p-4"> */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">

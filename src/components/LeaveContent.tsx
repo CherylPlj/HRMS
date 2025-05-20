@@ -61,7 +61,7 @@ const LeaveContent: React.FC = () => {
 
 
             {/* Full-screen Red Box */}
-            <div className="bg-white border-2 border-[#800000] p-4 rounded-lg h-[75vh]  overflow-auto">
+            <div className="bg-white border-2 p-4 rounded-lg h-[75vh]  overflow-auto">
                 <div>
                     {/* Placeholder Table or Content */}
                     <div className="flex-1 overflow-auto">
