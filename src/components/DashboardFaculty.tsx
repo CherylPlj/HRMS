@@ -1,139 +1,249 @@
-import React, { useState } from "react";
-import { Pie } from "react-chartjs-2";
+import React, { useState, useEffect } from "react";
+import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 // import { FaCalendarAlt } from "react-icons/fa";
 import Head from 'next/head';
 import { useAttendance } from '../contexts/AttendanceContext';
+import { attendanceService } from '../services/attendanceService';
+
+const EMPLOYEE_ID = '123-4567-FA'; // This should come from auth context in a real app
 
 export default function DashboardFaculty() {
   const { currentRecord, currentTime, currentDate, summary } = useAttendance();
-  const [dateRange, setDateRange] = useState([new Date("2025-02-01"), new Date("2025-03-20")]);
+  const [dateRange, setDateRange] = useState<[Date, Date]>([
+    new Date(new Date().setDate(new Date().getDate() - 30)),
+    new Date()
+  ]);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleDateChange = (dates: [unknown, unknown]) => {
-    const [start, end] = dates;
-    setDateRange([start as Date, end as Date]);
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [dateRange]);
+
+  const fetchAttendanceData = async () => {
+    try {
+      setLoading(true);
+      const data = await attendanceService.getAttendanceHistory(
+        EMPLOYEE_ID,
+        dateRange[0].toISOString(),
+        dateRange[1].toISOString()
+      );
+      setAttendanceData(data);
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const pieData = {
-    labels: ['Present', 'Absent', 'Late'],
+  const handleDateChange = (dates: [Date | null, Date | null]) => {
+    if (dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+    }
+  };
+
+  const lineData = {
+    labels: attendanceData.map(d => new Date(d.date).toLocaleDateString()),
     datasets: [
       {
-        data: [summary.present, summary.absent, summary.late],
-        backgroundColor: ['#4CAF50', '#f44336', '#FFC107'],
-        borderColor: ['#43A047', '#E53935', '#FFB300'],
-        borderWidth: 1,
+        label: 'Time In',
+        data: attendanceData.map(d => d.timeIn ? new Date(d.timeIn).getHours() + new Date(d.timeIn).getMinutes() / 60 : null),
+        borderColor: '#4CAF50',
+        tension: 0.1,
+        fill: false
       },
-    ],
+      {
+        label: 'Time Out',
+        data: attendanceData.map(d => d.timeOut ? new Date(d.timeOut).getHours() + new Date(d.timeOut).getMinutes() / 60 : null),
+        borderColor: '#f44336',
+        tension: 0.1,
+        fill: false
+      }
+    ]
+  };
+
+  const lineOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Attendance Timeline'
+      }
+    },
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: 'Hour of Day'
+        },
+        min: 6,
+        max: 20
+      }
+    }
   };
 
   return (
     <>
       <Head>
-        <title>Dashboard</title>
+        <title>Faculty Dashboard</title>
         {/* <script src="https://cdn.tailwindcss.com"></script> */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
         />
       </Head>
-      <div className="p-6 bg-gray-100 min-h-screen w-full flex flex-col">
-        {/* Date Picker */}
-        <div className="flex justify-end mb-6">
-          <div className="flex items-center bg-[#800000] text-white px-4 py-2 rounded cursor-pointer">
-            {/* <FaCalendarAlt className="mr-2" /> */}
-            <i className="fas fa-calendar-alt mr-2"></i> {/* Replaced FaCalendarAlt */}
-            <DatePicker
-              selected={dateRange[0]}
-              onChange={handleDateChange}
-              startDate={dateRange[0]}
-              endDate={dateRange[1]}
-              selectsRange
-              dateFormat="yyyy-MM-dd"
-              customInput={
-                <button className="flex items-center bg-[#800000] text-white px-4 py-2 rounded">
-                  {dateRange[0]
-                    ? `${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`
-                    : "Select Date Range"}
-                </button>
-              }
-              className="bg-[#800000] text-white outline-none cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          {/* Check-In and Check-Out Monitoring */}
-          <div className="bg-white shadow-md p-6 rounded-lg w-full h-90 flex flex-col justify-center">
-            <h2 className="text-xl text-black font-bold mb-4">Check-In and Check-Out Monitoring</h2>
-            <div className="space-y-2">
-              <p>
-                <span className="font-bold text-black">Status:</span>{" "}
-                <span className="text-[#800000] font-bold">
-                  {currentRecord?.timeOut ? 'CHECKED OUT' : currentRecord?.timeIn ? 'CHECKED IN' : 'NOT CHECKED IN'}
-                </span>
-              </p>
-              <p>
-                <span className="font-bold text-black">Date:</span>{" "}
-                <span className="text-[#800000]">{currentDate}</span>
-              </p>
-              <p>
-                <span className="font-bold text-black">Time:</span>{" "}
-                <span className="text-[#800000]">{currentTime}</span>
-              </p>
-              <p>
-                <span className="font-bold text-black">IP Address:</span>{" "}
-                <span className="text-[#800000]">{currentRecord?.ipAddress || '---.---.---.-- (not recorded)'}</span>
-              </p>
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Top Bar with Date Picker */}
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="text-2xl font-semibold text-gray-800">Dashboard</div>
+              <div className="h-6 w-px bg-gray-200"></div>
+              <div className="text-sm text-gray-500">{currentDate}</div>
+            </div>
+            <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2">
+              <i className="fas fa-calendar-alt text-gray-400 mr-2"></i>
+              <DatePicker
+                selected={dateRange[0]}
+                onChange={handleDateChange}
+                startDate={dateRange[0]}
+                endDate={dateRange[1]}
+                selectsRange
+                dateFormat="yyyy-MM-dd"
+                maxDate={new Date()}
+                className="border-none focus:ring-0 text-sm"
+                customInput={
+                  <input
+                    className="border-none focus:ring-0 text-sm w-48"
+                    value={`${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`}
+                    readOnly
+                  />
+                }
+              />
             </div>
           </div>
 
-          {/* Attendance */}
-          <div className="bg-white shadow-md p-6 rounded-lg w-100 h-90 flex flex-col justify-center">
-            <h2 className="text-xl text-black font-bold mb-4">Attendance</h2>
-            <div className="flex justify-center items-center">
-              <div className="w-60 h-60">
-                <Pie data={pieData} />
+          {/* Status Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Current Status</p>
+                  <p className={`text-2xl font-bold mt-2 ${
+                    currentRecord?.timeOut ? 'text-green-600' : 
+                    currentRecord?.timeIn ? 'text-blue-600' : 
+                    'text-red-600'
+                  }`}>
+                    {currentRecord?.timeOut ? 'CHECKED OUT' : currentRecord?.timeIn ? 'CHECKED IN' : 'NOT CHECKED IN'}
+                  </p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-50">
+                  <i className={`fas ${
+                    currentRecord?.timeOut ? 'fa-sign-out-alt text-green-600' : 
+                    currentRecord?.timeIn ? 'fa-sign-in-alt text-blue-600' : 
+                    'fa-clock text-red-600'
+                  } text-xl`}></i>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Current Date</p>
+                  <p className="text-2xl font-bold mt-2 text-gray-900">{currentDate}</p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-50">
+                  <i className="fas fa-calendar-day text-[#800000] text-xl"></i>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Current Time</p>
+                  <p className="text-2xl font-bold mt-2 text-gray-900">{currentTime}</p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-50">
+                  <i className="fas fa-clock text-[#800000] text-xl"></i>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Schedule of the Day */}
-          <div className="bg-white shadow-md p-6 rounded-lg col-span-2">
-            <h2 className="text-xl text-black font-bold mb-4">Schedule of the Day</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-auto">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-4 py-2 text-left">Subject</th>
-                    <th className="px-4 py-2 text-left">Time</th>
-                    <th className="px-4 py-2 text-left">Section</th>
-                    <th className="px-4 py-2 text-left">Room</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border px-4 py-2">Mathematics</td>
-                    <td className="border px-4 py-2">8:00 AM - 9:00 AM</td>
-                    <td className="border px-4 py-2">Grade 7 - Einstein</td>
-                    <td className="border px-4 py-2">Room 101</td>
-                  </tr>
-                  <tr>
-                    <td className="border px-4 py-2">Science</td>
-                    <td className="border px-4 py-2">9:15 AM - 10:15 AM</td>
-                    <td className="border px-4 py-2">Grade 8 - Newton</td>
-                    <td className="border px-4 py-2">Laboratory 1</td>
-                  </tr>
-                  <tr>
-                    <td className="border px-4 py-2">Mathematics</td>
-                    <td className="border px-4 py-2">10:30 AM - 11:30 AM</td>
-                    <td className="border px-4 py-2">Grade 9 - Pythagoras</td>
-                    <td className="border px-4 py-2">Room 103</td>
-                  </tr>
-                </tbody>
-              </table>
+          {/* Main Dashboard Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Attendance Timeline */}
+            <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">Attendance Timeline</h2>
+                <button 
+                  onClick={fetchAttendanceData}
+                  className="text-sm text-[#800000] hover:text-[#600000] transition-colors"
+                >
+                  <i className="fas fa-sync-alt mr-1"></i>
+                  Refresh
+                </button>
+              </div>
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]"></div>
+                </div>
+              ) : (
+                <div className="h-96">
+                  <Line data={lineData} options={lineOptions} />
+                </div>
+              )}
+            </div>
+
+            {/* Recent Attendance Records */}
+            <div className="lg:col-span-1 bg-white rounded-xl p-6 border border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent Records</h2>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {attendanceData.slice(0, 5).map((record, index) => (
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(record.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            record.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
+                            record.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
+                            record.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {record.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
