@@ -54,6 +54,39 @@ const PersonalData: React.FC = () => {
   const [editedDetails, setEditedDetails] = useState<FacultyDetails | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
 
+  const syncClerkDataWithFaculty = async (userData: any) => {
+    if (!userData || !facultyDetails?.FacultyID) return;
+
+    try {
+      const updateData = {
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        email: userData.emailAddresses[0]?.emailAddress
+      };
+
+      const { error: updateError } = await supabase
+        .from('faculty')
+        .update(updateData)
+        .eq('faculty_id', facultyDetails.FacultyID);
+
+      if (updateError) {
+        console.error('Error syncing Clerk data:', updateError);
+        setNotification({
+          type: 'error',
+          message: 'Failed to sync user data. Please try again later.'
+        });
+      }
+    } catch (error) {
+      console.error('Error in syncClerkDataWithFaculty:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user && facultyDetails) {
+      syncClerkDataWithFaculty(user);
+    }
+  }, [user, facultyDetails]);
+
   useEffect(() => {
     const fetchFacultyDetails = async () => {
       if (!user) {
@@ -96,7 +129,8 @@ const PersonalData: React.FC = () => {
               resignation_date: null,
               position: publicMetadata.facultyData.position,
               department_id: publicMetadata.facultyData.department_id,
-              contract_id: null
+              contract_id: null,
+              emergency_contact: null
             };
 
             const { data: newFacultyData, error: createError } = await supabase
@@ -185,6 +219,52 @@ const PersonalData: React.FC = () => {
         setFacultyDetails(transformedData);
         setEditedDetails(transformedData);
         setNotification(null);
+
+        // Set up real-time subscription for updates
+        const subscription = supabase
+          .channel('faculty_changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'faculty',
+              filter: `user_id=eq.${userData.id}`
+            },
+            async (payload) => {
+              console.log('Real-time update received:', payload);
+              // Refetch the data to ensure we have the latest
+              const { data: updatedData, error: updateError } = await supabase
+                .from('faculty')
+                .select(`
+                  *,
+                  departments (
+                    name
+                  )
+                `)
+                .eq('user_id', userData.id)
+                .single();
+
+              if (!updateError && updatedData) {
+                const transformedUpdatedData: FacultyDetails = {
+                  ...updatedData,
+                  department_name: updatedData.departments?.name || 'Unknown Department'
+                };
+                setFacultyDetails(transformedUpdatedData);
+                setEditedDetails(transformedUpdatedData);
+                setNotification({
+                  type: 'success',
+                  message: 'Your profile has been updated.'
+                });
+              }
+            }
+          )
+          .subscribe();
+
+        // Cleanup subscription on unmount
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error: unknown) {
         console.error('Unexpected error:', error);
         setNotification({

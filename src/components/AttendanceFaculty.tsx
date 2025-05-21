@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {  Schedule } from '../types/attendance';
+import { Schedule, AttendanceRecord } from '../types/attendance';
 import { attendanceService } from '../services/attendanceService';
 import { toast } from 'react-toastify';
 import { useAttendance } from '../contexts/AttendanceContext';
@@ -17,10 +17,59 @@ const AttendanceFaculty: React.FC = () => {
     setMounted(true);
   }, []);
 
+  const confirmAction = (action: 'time-in' | 'time-out'): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const message = action === 'time-in' 
+        ? 'Are you sure you want to mark your time in?' 
+        : 'Are you sure you want to mark your time out?';
+      
+      if (window.confirm(message)) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+  };
+
+  const validateTimeIn = (record: AttendanceRecord | null): boolean => {
+    if (!record) return true;
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const recordDate = new Date(record.date);
+    
+    // Check if there's already a time-in record for today
+    if (recordDate.getTime() === today.getTime() && record.timeIn) {
+      toast.error('You have already marked your time in for today');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const validateTimeOut = (record: AttendanceRecord | null): boolean => {
+    if (!record) {
+      toast.error('Please mark your time in first');
+      return false;
+    }
+    
+    if (record.timeOut) {
+      toast.error('You have already marked your time out for today');
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleTimeIn = async () => {
     if (isProcessing) return;
     
     try {
+      const confirmed = await confirmAction('time-in');
+      if (!confirmed) return;
+      
+      if (!validateTimeIn(currentRecord)) return;
+      
       setIsProcessing(true);
       console.log('Attempting to mark time in for employee:', EMPLOYEE_ID);
       const record = await attendanceService.markTimeIn(EMPLOYEE_ID);
@@ -45,6 +94,11 @@ const AttendanceFaculty: React.FC = () => {
     if (isProcessing) return;
     
     try {
+      const confirmed = await confirmAction('time-out');
+      if (!confirmed) return;
+      
+      if (!validateTimeOut(currentRecord)) return;
+      
       setIsProcessing(true);
       console.log('Attempting to mark time out for employee:', EMPLOYEE_ID);
       const record = await attendanceService.markTimeOut(EMPLOYEE_ID);
@@ -102,126 +156,151 @@ const AttendanceFaculty: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex font-sans text-gray-900">
-      <main className="flex-1 flex flex-col bg-white mx-auto rounded-md shadow-md">
-        <section className="border border-[#800000] rounded-md mx-6 my-4 p-4">
-          {/* Time In/Out and details */}
-          <div className="flex flex-col space-y-4">
-            <div className="space-y-3">
-              <div className="text-sm font-semibold text-gray-700">
-                <div>Current Time: <span className="text-[#800000]">{currentTime}</span></div>
-                <div>Current Date: <span className="text-[#800000]">{currentDate}</span></div>
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div>
+              <p className="text-sm text-gray-500">Track your daily attendance and schedule</p>
+            </div>
+            <div className="mt-4 sm:mt-0 text-right">
+              <div className="text-sm font-medium text-gray-700">
+                <div>Current Time: <span className="text-[#800000] font-semibold">{currentTime}</span></div>
+                <div>Current Date: <span className="text-[#800000] font-semibold">{currentDate}</span></div>
               </div>
-              <div className="flex space-x-4">
+            </div>
+          </div>
+
+          {/* Time In/Out Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Mark Attendance</h2>
+              <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  className={`${
+                  className={`flex-1 ${
                     currentRecord?.timeIn || isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-[#800000] hover:bg-[#a00000]'
-                  } text-white rounded-md px-6 py-3 text-sm font-bold shadow-md transition-all`}
+                      ? 'bg-gray-300 cursor-not-allowed' 
+                      : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
+                  } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeIn}
                   disabled={!!currentRecord?.timeIn || isProcessing}
                 >
-                  {isProcessing ? 'Processing...' : ' Time In'}
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : 'Time In'}
                 </button>
                 <button
-                  className={`${
+                  className={`flex-1 ${
                     !currentRecord?.timeIn || currentRecord?.timeOut || isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-[#800000] hover:bg-[#a00000]'
-                  } text-white rounded-md px-6 py-3 text-sm font-bold shadow-md transition-all`}
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
+                  } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeOut}
                   disabled={!currentRecord?.timeIn || !!currentRecord?.timeOut || isProcessing}
                 >
-                  {isProcessing ? 'Processing...' : ' Time Out'}
-                </button>
-              </div>
-              <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                <h3 className="text-sm font-semibold text-[#800000] mb-2">Today&apos;s Attendance Record</h3>
-                <div className="text-xs space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Date:</span>
-                    <span className="font-medium">{currentRecord?.date || 'Not recorded'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Time In:</span>
-                    <span className="font-medium">{currentRecord?.timeIn || 'Not recorded'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Time Out:</span>
-                    <span className="font-medium">{currentRecord?.timeOut || 'Not recorded'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status:</span>
-                    <span className={`font-medium ${getStatusColor(currentRecord?.status)}`}>
-                      {currentRecord?.status || 'NOT_RECORDED'}
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
                     </span>
-                  </div>
-                </div>
+                  ) : 'Time Out'}
+                </button>
               </div>
             </div>
 
-            <button 
-              onClick={() => {/* Implement history view */}}
-              className="text-xs text-[#800000] font-semibold hover:underline text-left"
-            >
-              View Attendance History
-            </button>
+            {/* Today's Record Card */}
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Record</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
+                  <span className="text-gray-600">Date</span>
+                  <span className="font-medium">{currentRecord?.date || 'Not recorded'}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
+                  <span className="text-gray-600">Time In</span>
+                  <span className="font-medium">{currentRecord?.timeIn || 'Not recorded'}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
+                  <span className="text-gray-600">Time Out</span>
+                  <span className="font-medium">{currentRecord?.timeOut || 'Not recorded'}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
+                  <span className="text-gray-600">Status</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(currentRecord?.status)}`}>
+                    {currentRecord?.status || 'NOT_RECORDED'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
 
-        {/* Schedule Table */}
-        <section className="mx-6 mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-[#800000] font-semibold text-sm">
-              Schedule
-            </h2>
+        {/* Schedule Section */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
             <button 
               onClick={() => {/* Implement download */}}
-              className="bg-[#800000] text-white text-xs font-semibold rounded-md px-3 py-1 flex items-center space-x-1"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
             >
-              <i className="fas fa-download text-xs" />
-              <span>Download</span>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download Schedule
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr className="bg-gray-100 text-gray-700 font-semibold">
-                  <th className="p-2 border">Day</th>
-                  <th className="p-2 border">Time In</th>
-                  <th className="p-2 border">Time Out</th>
-                  <th className="p-2 border">Status</th>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {schedule.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="p-2 border">{item.day}</td>
-                    <td className="p-2 border">{item.timeIn}</td>
-                    <td className="p-2 border">{item.timeOut}</td>
-                    <td className="p-2 border">{item.status}</td>
+                  <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.day}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeIn}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeOut}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(item.status)}`}>
+                        {item.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
   );
 };
 
-const getStatusColor = (status: string | undefined) => {
+const getStatusBadgeColor = (status: string | undefined) => {
   switch (status) {
     case 'PRESENT':
-      return 'text-green-600';
+      return 'bg-green-100 text-green-800';
     case 'ABSENT':
-      return 'text-red-600';
+      return 'bg-red-100 text-red-800';
     case 'LATE':
-      return 'text-yellow-600';
+      return 'bg-yellow-100 text-yellow-800';
     default:
-      return 'text-gray-600';
+      return 'bg-gray-100 text-gray-800';
   }
 };
 

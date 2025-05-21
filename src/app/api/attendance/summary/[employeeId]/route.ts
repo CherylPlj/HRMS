@@ -22,9 +22,9 @@ export async function GET(
     const { data: records, error } = await supabase
       .from('Attendance')
       .select('*')
-      .eq('EmployeeId', EmployeeId)
-      .gte('Date', StartOfMonth.toISOString())
-      .lte('Date', EndOfMonth.toISOString());
+      .eq('employeeId', EmployeeId)
+      .gte('date', StartOfMonth.toISOString())
+      .lte('date', EndOfMonth.toISOString());
 
     if (error) throw error;
 
