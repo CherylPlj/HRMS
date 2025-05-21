@@ -17325,13 +17325,13 @@ export namespace Prisma {
 
   export type ActivityLogGroupByOutputType = {
     LogID: number
-    UserID: string
-    ActionType: string
-    EntityAffected: string
+    UserID: string | null
+    ActionType: string | null
+    EntityAffected: string | null
     RecordID: number | null
     ActionDetails: string
     Timestamp: Date
-    IPAddress: string
+    IPAddress: string | null
     _count: ActivityLogCountAggregateOutputType | null
     _avg: ActivityLogAvgAggregateOutputType | null
     _sum: ActivityLogSumAggregateOutputType | null
@@ -17418,13 +17418,13 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       LogID: number
-      UserID: string
-      ActionType: string
-      EntityAffected: string
+      UserID: string | null
+      ActionType: string | null
+      EntityAffected: string | null
       RecordID: number | null
       ActionDetails: string
       Timestamp: Date
-      IPAddress: string
+      IPAddress: string | null
     }, ExtArgs["result"]["activityLog"]>
     composites: {}
   }
@@ -22645,25 +22645,25 @@ export namespace Prisma {
     OR?: ActivityLogWhereInput[]
     NOT?: ActivityLogWhereInput | ActivityLogWhereInput[]
     LogID?: IntFilter<"ActivityLog"> | number
-    UserID?: StringFilter<"ActivityLog"> | string
-    ActionType?: StringFilter<"ActivityLog"> | string
-    EntityAffected?: StringFilter<"ActivityLog"> | string
+    UserID?: StringNullableFilter<"ActivityLog"> | string | null
+    ActionType?: StringNullableFilter<"ActivityLog"> | string | null
+    EntityAffected?: StringNullableFilter<"ActivityLog"> | string | null
     RecordID?: IntNullableFilter<"ActivityLog"> | number | null
     ActionDetails?: StringFilter<"ActivityLog"> | string
     Timestamp?: DateTimeFilter<"ActivityLog"> | Date | string
-    IPAddress?: StringFilter<"ActivityLog"> | string
+    IPAddress?: StringNullableFilter<"ActivityLog"> | string | null
     User?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
   }
 
   export type ActivityLogOrderByWithRelationInput = {
     LogID?: SortOrder
-    UserID?: SortOrder
-    ActionType?: SortOrder
-    EntityAffected?: SortOrder
+    UserID?: SortOrderInput | SortOrder
+    ActionType?: SortOrderInput | SortOrder
+    EntityAffected?: SortOrderInput | SortOrder
     RecordID?: SortOrderInput | SortOrder
     ActionDetails?: SortOrder
     Timestamp?: SortOrder
-    IPAddress?: SortOrder
+    IPAddress?: SortOrderInput | SortOrder
     User?: UserOrderByWithRelationInput
   }
 
@@ -22672,25 +22672,25 @@ export namespace Prisma {
     AND?: ActivityLogWhereInput | ActivityLogWhereInput[]
     OR?: ActivityLogWhereInput[]
     NOT?: ActivityLogWhereInput | ActivityLogWhereInput[]
-    UserID?: StringFilter<"ActivityLog"> | string
-    ActionType?: StringFilter<"ActivityLog"> | string
-    EntityAffected?: StringFilter<"ActivityLog"> | string
+    UserID?: StringNullableFilter<"ActivityLog"> | string | null
+    ActionType?: StringNullableFilter<"ActivityLog"> | string | null
+    EntityAffected?: StringNullableFilter<"ActivityLog"> | string | null
     RecordID?: IntNullableFilter<"ActivityLog"> | number | null
     ActionDetails?: StringFilter<"ActivityLog"> | string
     Timestamp?: DateTimeFilter<"ActivityLog"> | Date | string
-    IPAddress?: StringFilter<"ActivityLog"> | string
+    IPAddress?: StringNullableFilter<"ActivityLog"> | string | null
     User?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
   }, "LogID">
 
   export type ActivityLogOrderByWithAggregationInput = {
     LogID?: SortOrder
-    UserID?: SortOrder
-    ActionType?: SortOrder
-    EntityAffected?: SortOrder
+    UserID?: SortOrderInput | SortOrder
+    ActionType?: SortOrderInput | SortOrder
+    EntityAffected?: SortOrderInput | SortOrder
     RecordID?: SortOrderInput | SortOrder
     ActionDetails?: SortOrder
     Timestamp?: SortOrder
-    IPAddress?: SortOrder
+    IPAddress?: SortOrderInput | SortOrder
     _count?: ActivityLogCountOrderByAggregateInput
     _avg?: ActivityLogAvgOrderByAggregateInput
     _max?: ActivityLogMaxOrderByAggregateInput
@@ -22703,13 +22703,13 @@ export namespace Prisma {
     OR?: ActivityLogScalarWhereWithAggregatesInput[]
     NOT?: ActivityLogScalarWhereWithAggregatesInput | ActivityLogScalarWhereWithAggregatesInput[]
     LogID?: IntWithAggregatesFilter<"ActivityLog"> | number
-    UserID?: StringWithAggregatesFilter<"ActivityLog"> | string
-    ActionType?: StringWithAggregatesFilter<"ActivityLog"> | string
-    EntityAffected?: StringWithAggregatesFilter<"ActivityLog"> | string
+    UserID?: StringNullableWithAggregatesFilter<"ActivityLog"> | string | null
+    ActionType?: StringNullableWithAggregatesFilter<"ActivityLog"> | string | null
+    EntityAffected?: StringNullableWithAggregatesFilter<"ActivityLog"> | string | null
     RecordID?: IntNullableWithAggregatesFilter<"ActivityLog"> | number | null
     ActionDetails?: StringWithAggregatesFilter<"ActivityLog"> | string
     Timestamp?: DateTimeWithAggregatesFilter<"ActivityLog"> | Date | string
-    IPAddress?: StringWithAggregatesFilter<"ActivityLog"> | string
+    IPAddress?: StringNullableWithAggregatesFilter<"ActivityLog"> | string | null
   }
 
   export type AttendanceWhereInput = {
@@ -23627,76 +23627,76 @@ export namespace Prisma {
   }
 
   export type ActivityLogCreateInput = {
-    ActionType: string
-    EntityAffected: string
+    ActionType?: string | null
+    EntityAffected?: string | null
     RecordID?: number | null
     ActionDetails: string
     Timestamp?: Date | string
-    IPAddress: string
+    IPAddress?: string | null
     User?: UserCreateNestedOneWithoutActivityLogInput
   }
 
   export type ActivityLogUncheckedCreateInput = {
     LogID?: number
-    UserID: string
-    ActionType: string
-    EntityAffected: string
+    UserID?: string | null
+    ActionType?: string | null
+    EntityAffected?: string | null
     RecordID?: number | null
     ActionDetails: string
     Timestamp?: Date | string
-    IPAddress: string
+    IPAddress?: string | null
   }
 
   export type ActivityLogUpdateInput = {
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
     User?: UserUpdateOneWithoutActivityLogNestedInput
   }
 
   export type ActivityLogUncheckedUpdateInput = {
     LogID?: IntFieldUpdateOperationsInput | number
-    UserID?: StringFieldUpdateOperationsInput | string
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    UserID?: NullableStringFieldUpdateOperationsInput | string | null
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ActivityLogCreateManyInput = {
     LogID?: number
-    UserID: string
-    ActionType: string
-    EntityAffected: string
+    UserID?: string | null
+    ActionType?: string | null
+    EntityAffected?: string | null
     RecordID?: number | null
     ActionDetails: string
     Timestamp?: Date | string
-    IPAddress: string
+    IPAddress?: string | null
   }
 
   export type ActivityLogUpdateManyMutationInput = {
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ActivityLogUncheckedUpdateManyInput = {
     LogID?: IntFieldUpdateOperationsInput | number
-    UserID?: StringFieldUpdateOperationsInput | string
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    UserID?: NullableStringFieldUpdateOperationsInput | string | null
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type AttendanceCreateInput = {
@@ -25954,22 +25954,22 @@ export namespace Prisma {
   }
 
   export type ActivityLogCreateWithoutUserInput = {
-    ActionType: string
-    EntityAffected: string
+    ActionType?: string | null
+    EntityAffected?: string | null
     RecordID?: number | null
     ActionDetails: string
     Timestamp?: Date | string
-    IPAddress: string
+    IPAddress?: string | null
   }
 
   export type ActivityLogUncheckedCreateWithoutUserInput = {
     LogID?: number
-    ActionType: string
-    EntityAffected: string
+    ActionType?: string | null
+    EntityAffected?: string | null
     RecordID?: number | null
     ActionDetails: string
     Timestamp?: Date | string
-    IPAddress: string
+    IPAddress?: string | null
   }
 
   export type ActivityLogCreateOrConnectWithoutUserInput = {
@@ -26169,13 +26169,13 @@ export namespace Prisma {
     OR?: ActivityLogScalarWhereInput[]
     NOT?: ActivityLogScalarWhereInput | ActivityLogScalarWhereInput[]
     LogID?: IntFilter<"ActivityLog"> | number
-    UserID?: StringFilter<"ActivityLog"> | string
-    ActionType?: StringFilter<"ActivityLog"> | string
-    EntityAffected?: StringFilter<"ActivityLog"> | string
+    UserID?: StringNullableFilter<"ActivityLog"> | string | null
+    ActionType?: StringNullableFilter<"ActivityLog"> | string | null
+    EntityAffected?: StringNullableFilter<"ActivityLog"> | string | null
     RecordID?: IntNullableFilter<"ActivityLog"> | number | null
     ActionDetails?: StringFilter<"ActivityLog"> | string
     Timestamp?: DateTimeFilter<"ActivityLog"> | Date | string
-    IPAddress?: StringFilter<"ActivityLog"> | string
+    IPAddress?: StringNullableFilter<"ActivityLog"> | string | null
   }
 
   export type CashierUpsertWithoutUserInput = {
@@ -27703,12 +27703,12 @@ export namespace Prisma {
 
   export type ActivityLogCreateManyUserInput = {
     LogID?: number
-    ActionType: string
-    EntityAffected: string
+    ActionType?: string | null
+    EntityAffected?: string | null
     RecordID?: number | null
     ActionDetails: string
     Timestamp?: Date | string
-    IPAddress: string
+    IPAddress?: string | null
   }
 
   export type NotificationCreateManyUserInput = {
@@ -27759,32 +27759,32 @@ export namespace Prisma {
   }
 
   export type ActivityLogUpdateWithoutUserInput = {
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ActivityLogUncheckedUpdateWithoutUserInput = {
     LogID?: IntFieldUpdateOperationsInput | number
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ActivityLogUncheckedUpdateManyWithoutUserInput = {
     LogID?: IntFieldUpdateOperationsInput | number
-    ActionType?: StringFieldUpdateOperationsInput | string
-    EntityAffected?: StringFieldUpdateOperationsInput | string
+    ActionType?: NullableStringFieldUpdateOperationsInput | string | null
+    EntityAffected?: NullableStringFieldUpdateOperationsInput | string | null
     RecordID?: NullableIntFieldUpdateOperationsInput | number | null
     ActionDetails?: StringFieldUpdateOperationsInput | string
     Timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
-    IPAddress?: StringFieldUpdateOperationsInput | string
+    IPAddress?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type NotificationUpdateWithoutUserInput = {

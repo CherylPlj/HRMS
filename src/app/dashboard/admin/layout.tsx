@@ -141,7 +141,7 @@ export default function Dashboard() {
                 onClick={() => handleButtonClick('dashboard')}
               >
                 <i className="fas fa-tachometer-alt text-xl"></i>
-                <span className="text-[10px]">Home</span>
+                <span className="text-[10px]">Dashboard</span>
               </a>
               <a
                 href="#"
