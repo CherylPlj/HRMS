@@ -53,11 +53,17 @@ interface User {
 }
 
 interface ActivityLog {
-  id: string;
-  userId: string;
-  action: string;
-  timestamp: string;
-  details: string;
+  LogId: string;
+  UserId: string;
+  ActionType: string;
+  EntityAffected: string;
+  ActionDetails:  string;
+  Timestamp: string;
+  IPAddress: string;
+  User?: {
+    FirstName: string;
+    LastName: string;
+  } | null;
 }
 
 // interface UserFormData {
@@ -134,11 +140,15 @@ const UsersContent: React.FC = () => {
           LastName,
           Email,
           Photo,
-          Role,
           Status,
           DateCreated,
           DateModified,
           LastLogin,
+          UserRole (
+            role:Role (
+              name
+            )
+          ),
           Faculty (
             FacultyID,
             DepartmentID,
@@ -183,7 +193,19 @@ const UsersContent: React.FC = () => {
           LastName: rawUser.LastName,
           Email: rawUser.Email,
           Photo: rawUser.Photo || '',
-          Role: rawUser.Role,
+          // Role: rawUser.Role,
+          Role: rawUser.UserRole && rawUser.UserRole.length > 0
+          ? rawUser.UserRole
+              .map((ur: unknown) => {
+                const userRole = ur as { role: { name: string }[] | { name: string } | null | undefined };
+                if (Array.isArray(userRole.role)) {
+                  return userRole.role.map((r: unknown) => (r as { name: string }).name).join(', ');
+                } else {
+                  return userRole.role?.name || '';
+                }
+              })
+              .join(', ')
+          : '',
           Status: rawUser.Status,
           DateCreated: rawUser.DateCreated,
           DateModified: rawUser.DateModified,
@@ -221,9 +243,15 @@ const UsersContent: React.FC = () => {
       try {
         setLoading(true);
         const { data: logsData, error: logsError } = await supabase
-          .from('activity_logs')
-          .select('*')
-          .order('timestamp', { ascending: false });
+          .from('ActivityLog')
+          .select(`
+            *,
+            User (
+              FirstName,
+              LastName
+            )
+          `)
+          .order('Timestamp', { ascending: false });
 
         if (logsError) {
           throw logsError;
@@ -405,21 +433,27 @@ const UsersContent: React.FC = () => {
   const downloadLogs = async () => {
     try {
       const { data: logs, error } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .order('timestamp', { ascending: false });
+        .from('ActivityLog')
+        .select(`
+          *,
+          User (
+            FirstName,
+            LastName
+          )
+        `)
+        .order('Timestamp', { ascending: false });
 
       if (error) {
         throw error;
       }
 
       const csvContent = [
-        ['Timestamp', 'User ID', 'Action', 'Details'].join(','),
+        ['Timestamp', 'User Name', 'Action', 'Details'].join(','),
         ...logs.map(log => [
-          log.timestamp,
-          log.user_id,
-          log.action,
-          log.details
+          log.Timestamp,
+          `${log.User ? log.User.FirstName + ' ' + log.User.LastName : 'System'}`,
+          log.ActionType,
+          log.ActionDetails
         ].join(','))
       ].join('\n');
 
@@ -601,10 +635,42 @@ const UsersContent: React.FC = () => {
               {/* Placeholder Table or Content */}
               <div className="flex-1 overflow-auto">
                   {isViewingLogs ? (
+                    activityLogs.length === 0 ? (
                       <p className="text-gray-500 text-center mt-10">
-                          Activity logs list content here...
+                          Activity logs list content here. No Activity Logs at the moment.
                       </p>
-                  ) : (
+                ) : (
+                  // Render your activity logs table or content here
+                  // <p className="text-gray-500 text-center mt-10">
+                  //   {/* Replace this with actual logs rendering */}
+                  //   Activity logs go here.
+                  // </p>
+                  <table className="table-auto w-full text-left">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="p-2">#</th>
+                        <th className="p-2">Timestamp</th>
+                        <th className="p-2">Done By</th>
+                        <th className="p-2">Action</th>
+                        <th className="p-2">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityLogs.map((log, index) => (
+                        <tr key={log.LogId || index}>
+                          <td className="p-2">{index + 1}</td>
+                          <td className="p-2">{new Date(log.Timestamp).toLocaleString()}</td>
+                          <td className="p-2">
+                            {log.User ? `${log.User.FirstName} ${log.User.LastName}` : 'System'}
+                            </td>
+                          <td className="p-2">{log.ActionType}</td>
+                          <td className="p-2">{log.ActionDetails}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  )
+                ) : (
                       <table className="table-auto w-full text-left">
                           <thead>
                               <tr className="bg-gray-100">
@@ -655,7 +721,7 @@ const UsersContent: React.FC = () => {
                 ))}
                           </tbody>
                       </table>
-                  )}
+              )}
               </div>
           </div>
 

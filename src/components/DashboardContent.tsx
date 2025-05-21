@@ -18,7 +18,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
 
 export default function DashboardContent() {
-  const { user: _user } = useUser(); // Prefix with underscore to indicate intentionally unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { user: user } = useUser(); // Prefix with underscore to indicate intentionally unused
   const [dateRange, setDateRange] = useState<[Date, Date]>([
     new Date(new Date().setDate(1)), // First day of current month
     new Date(), // Today

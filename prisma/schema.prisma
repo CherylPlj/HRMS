@@ -33,7 +33,7 @@ model User {
   Faculty      Faculty?       @relation("UserFaculty")
   Notification Notification[]
   Registrar    Registrar?     @relation("UserRegistrar")
-  Report       Report[]     
+  Report       Report[]
 }
 
 model Faculty {
@@ -142,13 +142,13 @@ model Notification {
 
 model ActivityLog {
   LogID          Int      @id @default(autoincrement())
-  UserID         String
-  ActionType     String
-  EntityAffected String
+  UserID         String?
+  ActionType     String?
+  EntityAffected String?
   RecordID       Int?
   ActionDetails  String
   Timestamp      DateTime @default(now())
-  IPAddress      String
+  IPAddress      String?
   User           User?    @relation(fields: [UserID], references: [UserID])
 }
 
