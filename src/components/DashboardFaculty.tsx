@@ -104,8 +104,6 @@ export default function DashboardFaculty() {
           {/* Top Bar with Date Picker */}
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center space-x-4">
-              <div className="text-2xl font-semibold text-gray-800">Dashboard</div>
-              <div className="h-6 w-px bg-gray-200"></div>
               <div className="text-sm text-gray-500">{currentDate}</div>
             </div>
             <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2">
