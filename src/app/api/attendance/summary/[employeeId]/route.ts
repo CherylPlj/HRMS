@@ -7,24 +7,24 @@ type AttendanceRecord = {
 
 export async function GET(
   request: NextRequest,
-  // { params }: { params: { employeeId: string } }
-  { params }: { params: Promise<{ employeeId: string }> }
+  // { params }: { params: { EmployeeId: string } }
+  { params }: { params: Promise<{ EmployeeId: string }> }
 
 ): Promise<NextResponse> {
   try {
-    // const { employeeId } = params;
-    const { employeeId } = await params;
+    // const { EmployeeId } = params;
+    const { EmployeeId } = await params;
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const StartOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const EndOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Get all attendance records for the current month
     const { data: records, error } = await supabase
-      .from('attendance')
+      .from('Attendance')
       .select('*')
-      .eq('employeeId', employeeId)
-      .gte('date', startOfMonth.toISOString())
-      .lte('date', endOfMonth.toISOString());
+      .eq('EmployeeId', EmployeeId)
+      .gte('Date', StartOfMonth.toISOString())
+      .lte('Date', EndOfMonth.toISOString());
 
     if (error) throw error;
 
