@@ -27,7 +27,7 @@ CREATE POLICY "Faculty can view their own schedule"
 ON "Schedule"
 FOR SELECT
 TO authenticated
-USING (auth.uid()::text = "FacultyID"::text);
+USING (auth.uid()::text = "facultyId"::text);
 
 -- Grant necessary permissions to authenticated users
 GRANT SELECT, INSERT, UPDATE ON "Attendance" TO authenticated;

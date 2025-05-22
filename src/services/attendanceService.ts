@@ -111,6 +111,26 @@ class AttendanceService {
       throw error;
     }
   }
+
+  async getTodayRecord(employeeId: string): Promise<AttendanceRecord | null> {
+    try {
+      console.log('Fetching today\'s record for employee:', employeeId);
+      const response = await fetch(`${this.baseUrl}/attendance/today/${employeeId}`);
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Failed to fetch today\'s record:', data);
+        throw new Error(data.error || 'Failed to fetch today\'s record');
+      }
+      
+      console.log('Today\'s record fetched successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching today\'s record:', error);
+      throw error;
+    }
+  }
 }
 
 export const attendanceService = new AttendanceService(); 

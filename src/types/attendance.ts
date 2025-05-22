@@ -6,6 +6,8 @@ export interface AttendanceRecord {
   timeOut: string | null;
   status: 'PRESENT' | 'ABSENT' | 'LATE' | 'NOT_RECORDED';
   ipAddress?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AttendanceSummary {

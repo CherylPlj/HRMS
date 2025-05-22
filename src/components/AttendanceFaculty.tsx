@@ -122,15 +122,18 @@ const AttendanceFaculty: React.FC = () => {
   const fetchAttendanceData = async () => {
     try {
       console.log('Fetching attendance data for employee:', EMPLOYEE_ID);
-      const [summaryData, scheduleData] = await Promise.all([
+      const [summaryData, scheduleData, todayRecord] = await Promise.all([
         attendanceService.getAttendanceSummary(EMPLOYEE_ID),
-        attendanceService.getSchedule(EMPLOYEE_ID)
+        attendanceService.getSchedule(EMPLOYEE_ID),
+        attendanceService.getTodayRecord(EMPLOYEE_ID)
       ]);
       console.log('Fetched summary data:', summaryData);
       console.log('Fetched schedule data:', scheduleData);
+      console.log('Fetched today\'s record:', todayRecord);
 
       setSummary(summaryData);
       setSchedule(scheduleData);
+      setCurrentRecord(todayRecord);
     } catch (error) {
       console.error('Data fetch error:', error);
       toast.error('Failed to fetch attendance data');
