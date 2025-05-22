@@ -11,12 +11,20 @@ import { attendanceService } from '../services/attendanceService';
 const EMPLOYEE_ID = '123-4567-FA'; // This should come from auth context in a real app
 
 export default function DashboardFaculty() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { currentRecord, currentTime, currentDate, summary } = useAttendance();
   const [dateRange, setDateRange] = useState<[Date, Date]>([
     new Date(new Date().setDate(new Date().getDate() - 30)),
     new Date()
   ]);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  type AttendanceRecord = {
+    date: string;
+    timeIn?: string;
+    timeOut?: string;
+    status?: string;
+  };
+  
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +39,16 @@ export default function DashboardFaculty() {
         dateRange[0].toISOString(),
         dateRange[1].toISOString()
       );
-      setAttendanceData(data);
+      // Convert nulls to undefined for timeIn and timeOut
+      const mappedData = data.map((record: unknown) => {
+        const rec = record as AttendanceRecord;
+        return {
+          ...rec,
+          timeIn: rec.timeIn ?? undefined,
+          timeOut: rec.timeOut ?? undefined,
+        };
+      });
+      setAttendanceData(mappedData);
     } catch (error) {
       console.error('Error fetching attendance data:', error);
     } finally {
@@ -88,12 +105,12 @@ export default function DashboardFaculty() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
-            const value = context.raw;
-            if (value === null) return 'Not recorded';
+          label: function(tooltipItem: import("chart.js").TooltipItem<"line">) {
+            const value = tooltipItem.raw as number | null;
+            if (value === null || value === undefined) return 'Not recorded';
             const hours = Math.floor(value);
             const minutes = Math.round((value - hours) * 60);
-            return `${context.dataset.label}: ${hours}:${minutes.toString().padStart(2, '0')}`;
+            return `${tooltipItem.dataset.label}: ${hours}:${minutes.toString().padStart(2, '0')}`;
           }
         }
       }
@@ -107,7 +124,7 @@ export default function DashboardFaculty() {
         min: 6,
         max: 20,
         ticks: {
-          callback: function(value: any) {
+          callback: function(value: unknown) {
             return `${value}:00`;
           }
         }
@@ -151,6 +168,7 @@ export default function DashboardFaculty() {
                 className="border-none focus:ring-0 text-sm"
                 customInput={
                   <input
+                    title='Select date range'
                     className="border-none focus:ring-0 text-sm w-48"
                     value={`${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`}
                     readOnly

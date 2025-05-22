@@ -223,7 +223,7 @@ const AttendanceFaculty: React.FC = () => {
 
             {/* Today's Record Card */}
             <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Record</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Record</h2>
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
                   <span className="text-gray-600">Date</span>

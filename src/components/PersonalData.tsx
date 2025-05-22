@@ -54,7 +54,13 @@ const PersonalData: React.FC = () => {
   const [editedDetails, setEditedDetails] = useState<FacultyDetails | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
 
-  const syncClerkDataWithFaculty = async (userData: any) => {
+  interface ClerkUserData {
+    firstName: string;
+    lastName: string;
+    emailAddresses: { emailAddress: string }[];
+  }
+
+  const syncClerkDataWithFaculty = async (userData: ClerkUserData) => {
     if (!userData || !facultyDetails?.FacultyID) return;
 
     try {
@@ -83,7 +89,13 @@ const PersonalData: React.FC = () => {
 
   useEffect(() => {
     if (user && facultyDetails) {
-      syncClerkDataWithFaculty(user);
+      if (user) {
+        syncClerkDataWithFaculty({
+          firstName: user.firstName ?? '',
+          lastName: user.lastName ?? '',
+          emailAddresses: user.emailAddresses
+        });
+      }
     }
   }, [user, facultyDetails]);
 

@@ -3,10 +3,13 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  // { params }: { params: { employeeId: string } }
+  // context: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
+
 ): Promise<NextResponse> {
   try {
-    const { employeeId } = params;
+    const { employeeId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { employeeId } = params;
+    const { employeeId } = await params;
     console.log('Fetching schedule for employee:', employeeId);
 
     // Get the faculty's schedule for the current week
