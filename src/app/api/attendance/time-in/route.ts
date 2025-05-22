@@ -14,8 +14,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get current time in UTC
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Convert to Philippines time (UTC+8)
+    const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    const today = new Date(phTime.getFullYear(), phTime.getMonth(), phTime.getDate());
+    
+    console.log('Current UTC time:', now.toISOString());
+    console.log('Philippines time:', phTime.toISOString());
     console.log('Checking for existing record on:', today.toISOString());
 
     // Check if there's already a record for today
@@ -47,6 +54,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Determine status based on Philippines time
+    const timeIn = phTime.getHours() + (phTime.getMinutes() / 60);
+    const status = timeIn >= 8 && timeIn <= 8.5 ? 'PRESENT' : 'LATE';
+    console.log(`Philippines time in: ${timeIn}, Status: ${status}`);
+
     // Create new attendance record
     console.log('Creating new attendance record');
     const { data: attendance, error: insertError } = await supabase
@@ -54,9 +66,9 @@ export async function POST(request: Request) {
       .insert([
         {
           employeeId,
-          date: now.toISOString(),
-          timeIn: now.toISOString(),
-          status: 'PRESENT',
+          date: today.toISOString(),
+          timeIn: phTime.toISOString(),
+          status,
           createdAt: now.toISOString(),
           updatedAt: now.toISOString()
         },
