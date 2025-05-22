@@ -50,17 +50,27 @@ export default function DashboardFaculty() {
     datasets: [
       {
         label: 'Time In',
-        data: attendanceData.map(d => d.timeIn ? new Date(d.timeIn).getHours() + new Date(d.timeIn).getMinutes() / 60 : null),
+        data: attendanceData.map(d => {
+          if (!d.timeIn) return null;
+          const time = new Date(d.timeIn);
+          return time.getHours() + (time.getMinutes() / 60);
+        }),
         borderColor: '#4CAF50',
+        backgroundColor: 'rgba(76, 175, 80, 0.1)',
         tension: 0.1,
-        fill: false
+        fill: true
       },
       {
         label: 'Time Out',
-        data: attendanceData.map(d => d.timeOut ? new Date(d.timeOut).getHours() + new Date(d.timeOut).getMinutes() / 60 : null),
+        data: attendanceData.map(d => {
+          if (!d.timeOut) return null;
+          const time = new Date(d.timeOut);
+          return time.getHours() + (time.getMinutes() / 60);
+        }),
         borderColor: '#f44336',
+        backgroundColor: 'rgba(244, 67, 54, 0.1)',
         tension: 0.1,
-        fill: false
+        fill: true
       }
     ]
   };
@@ -75,6 +85,17 @@ export default function DashboardFaculty() {
       title: {
         display: true,
         text: 'Attendance Timeline'
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            const value = context.raw;
+            if (value === null) return 'Not recorded';
+            const hours = Math.floor(value);
+            const minutes = Math.round((value - hours) * 60);
+            return `${context.dataset.label}: ${hours}:${minutes.toString().padStart(2, '0')}`;
+          }
+        }
       }
     },
     scales: {
@@ -84,7 +105,18 @@ export default function DashboardFaculty() {
           text: 'Hour of Day'
         },
         min: 6,
-        max: 20
+        max: 20,
+        ticks: {
+          callback: function(value: any) {
+            return `${value}:00`;
+          }
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Date'
+        }
       }
     }
   };
