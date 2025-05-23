@@ -33,6 +33,7 @@ interface PublicMetadata {
   facultyData?: {
     Position: string;
     DepartmentID: number;
+    DepartmentName: string;
     EmploymentStatus: string;
     HireDate: string;
     ResignationDate?: string;
@@ -57,9 +58,9 @@ const PersonalData: React.FC = () => {
   const [notification, setNotification] = useState<Notification | null>(null);
 
   interface ClerkUserData {
-    FirstName: string;
-    LastName: string;
-    EmailAddresses: { emailAddress: string }[];
+    firstName: string;
+    lastName: string;
+    emailAddresses: { emailAddress: string }[];
   }
 
   const syncClerkDataWithFaculty = async (userData: ClerkUserData) => {
@@ -67,15 +68,15 @@ const PersonalData: React.FC = () => {
 
     try {
       const updateData = {
-        FirstName: userData.FirstName,
-        LastName: userData.LastName,
-        Email: userData.EmailAddresses[0]?.emailAddress
+        FirstName: userData.firstName,
+        LastName: userData.lastName,
+        Email: userData.emailAddresses[0]?.emailAddress
       };
 
       const { error: updateError } = await supabase
-        .from('Faculty')
+        .from('User')
         .update(updateData)
-        .eq('FacultyID', facultyDetails.FacultyID);
+        .eq('UserID', facultyDetails.UserID);
 
       if (updateError) {
         console.error('Error syncing Clerk data:', updateError);
@@ -93,9 +94,9 @@ const PersonalData: React.FC = () => {
     if (user && facultyDetails) {
       if (user) {
         syncClerkDataWithFaculty({
-          FirstName: user.firstName ?? '',
-          LastName: user.lastName ?? '',
-          EmailAddresses: user.emailAddresses
+          firstName: user.firstName ?? '',
+          lastName: user.lastName ?? '',
+          emailAddresses: user.emailAddresses
         });
       }
     }
@@ -443,6 +444,7 @@ const PersonalData: React.FC = () => {
         <h1 className="text-2xl text-black font-bold">Personal Data</h1>
         <div className="flex space-x-2">
           <button 
+            title='Download your personal data'
             onClick={handleDownload}
             disabled={!facultyDetails || loading}
             className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -452,6 +454,7 @@ const PersonalData: React.FC = () => {
           {isEditing ? (
             <>
               <button
+                title='Save your changes'
                 onClick={handleSave}
                 className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
                 disabled={loading}
@@ -459,6 +462,7 @@ const PersonalData: React.FC = () => {
                 {loading ? 'Saving...' : 'Save'}
               </button>
               <button
+                title='Cancel editing'
                 onClick={() => {
                   setEditedDetails(facultyDetails);
                   setIsEditing(false);
@@ -472,6 +476,7 @@ const PersonalData: React.FC = () => {
             </>
           ) : (
             <button
+              title='Edit your personal data'
               onClick={handleEdit}
               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800 disabled:opacity-50"
               disabled={!facultyDetails || loading}
