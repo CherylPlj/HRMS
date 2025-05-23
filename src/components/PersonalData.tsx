@@ -17,27 +17,29 @@ interface FacultyDetails {
   DateOfBirth: string;
   Phone: string | null;
   Address: string | null;
-  Employment: string;
+  EmploymentStatus: string;
   HireDate: string;
   ResignationDate: string | null;
   Position: string;
   Department: number;
-  department_name?: string;
+  DepartmentName?: string;
   ContractID: number | null;
   EmergencyContact?: string | null;
 }
 
 interface PublicMetadata {
-  department?: string;
-  role?: string;
+  Department?: string;
+  Role?: string;
   facultyData?: {
-    position: string;
-    department_id: number;
-    employment_status: string;
-    hire_date: string;
-    date_of_birth: string;
-    phone?: string;
-    address?: string;
+    Position: string;
+    DepartmentID: number;
+    EmploymentStatus: string;
+    HireDate: string;
+    ResignationDate?: string;
+    DateOfBirth: string;
+    Phone?: string;
+    Address?: string;
+    EmergencyContact?: string;
   };
 }
 
@@ -55,9 +57,9 @@ const PersonalData: React.FC = () => {
   const [notification, setNotification] = useState<Notification | null>(null);
 
   interface ClerkUserData {
-    firstName: string;
-    lastName: string;
-    emailAddresses: { emailAddress: string }[];
+    FirstName: string;
+    LastName: string;
+    EmailAddresses: { emailAddress: string }[];
   }
 
   const syncClerkDataWithFaculty = async (userData: ClerkUserData) => {
@@ -65,15 +67,15 @@ const PersonalData: React.FC = () => {
 
     try {
       const updateData = {
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        email: userData.emailAddresses[0]?.emailAddress
+        FirstName: userData.FirstName,
+        LastName: userData.LastName,
+        Email: userData.EmailAddresses[0]?.emailAddress
       };
 
       const { error: updateError } = await supabase
-        .from('faculty')
+        .from('Faculty')
         .update(updateData)
-        .eq('faculty_id', facultyDetails.FacultyID);
+        .eq('FacultyID', facultyDetails.FacultyID);
 
       if (updateError) {
         console.error('Error syncing Clerk data:', updateError);
@@ -91,9 +93,9 @@ const PersonalData: React.FC = () => {
     if (user && facultyDetails) {
       if (user) {
         syncClerkDataWithFaculty({
-          firstName: user.firstName ?? '',
-          lastName: user.lastName ?? '',
-          emailAddresses: user.emailAddresses
+          FirstName: user.firstName ?? '',
+          LastName: user.lastName ?? '',
+          EmailAddresses: user.emailAddresses
         });
       }
     }
@@ -120,38 +122,38 @@ const PersonalData: React.FC = () => {
 
         // Get user data
         const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, email')
-          .eq('email', userEmail)
+          .from('User')
+          .select('UserID, Email')
+          .eq('Email', userEmail)
           .single();
 
         if (userError) {
           console.error('User lookup error:', userError);
           
           // Check if this is a new faculty member from invitation
-          if (publicMetadata?.role === 'Faculty' && publicMetadata.facultyData) {
+          if (publicMetadata?.Role === 'Faculty' && publicMetadata.facultyData) {
             // Create faculty record using invitation metadata
             const facultyData = {
-              user_id: user.id,
-              date_of_birth: new Date(publicMetadata.facultyData.date_of_birth).toISOString(),
-              phone: publicMetadata.facultyData.phone || null,
-              address: publicMetadata.facultyData.address || null,
-              employment_status: publicMetadata.facultyData.employment_status,
-              hire_date: new Date(publicMetadata.facultyData.hire_date).toISOString(),
-              resignation_date: null,
-              position: publicMetadata.facultyData.position,
-              department_id: publicMetadata.facultyData.department_id,
-              contract_id: null,
-              emergency_contact: null
+              UserID: user.id,
+              DateOfBirth: new Date(publicMetadata.facultyData.DateOfBirth).toISOString(),
+              Phone: publicMetadata.facultyData.Phone || null,
+              Address: publicMetadata.facultyData.Address || null,
+              EmploymentStatus: publicMetadata.facultyData.EmploymentStatus,
+              HireDate: new Date(publicMetadata.facultyData.HireDate).toISOString(),
+              ResignationDate: publicMetadata.facultyData.ResignationDate || null,
+              Position: publicMetadata.facultyData.Position,
+              DepartmentID: publicMetadata.facultyData.DepartmentID,
+              ContractID: null,
+              EmergencyContact: null
             };
 
             const { data: newFacultyData, error: createError } = await supabase
-              .from('faculty')
+              .from('Faculty')
               .insert([facultyData])
               .select(`
                 *,
-                departments (
-                  name
+                Department (
+                  DepartmentName
                 )
               `)
               .single();
@@ -167,7 +169,7 @@ const PersonalData: React.FC = () => {
             if (newFacultyData) {
               const transformedData: FacultyDetails = {
                 ...newFacultyData,
-                department_name: newFacultyData.departments?.name || 'Unknown Department'
+                DepartmentName: newFacultyData.Department?.DepartmentName || 'Unknown Department'
               };
               setFacultyDetails(transformedData);
               setEditedDetails(transformedData);
@@ -196,14 +198,14 @@ const PersonalData: React.FC = () => {
 
         // Get faculty data with department name
         const { data: facultyData, error: facultyError } = await supabase
-          .from('faculty')
+          .from('Faculty')
           .select(`
             *,
-            departments (
-              name
+            Department (
+              DepartmentName
             )
           `)
-          .eq('user_id', userData.id)
+          .eq('UserID', userData.UserID)
           .single();
 
         if (facultyError) {
@@ -225,7 +227,7 @@ const PersonalData: React.FC = () => {
 
         const transformedData: FacultyDetails = {
           ...facultyData,
-          department_name: facultyData.departments?.name || 'Unknown Department'
+          DepartmentName: facultyData.Department?.DepartmentName || 'Unknown Department'
         };
 
         setFacultyDetails(transformedData);
@@ -240,27 +242,27 @@ const PersonalData: React.FC = () => {
             {
               event: '*',
               schema: 'public',
-              table: 'faculty',
-              filter: `user_id=eq.${userData.id}`
+              table: 'Faculty',
+              filter: `UserID=eq.${userData.UserID}`
             },
             async (payload) => {
               console.log('Real-time update received:', payload);
               // Refetch the data to ensure we have the latest
               const { data: updatedData, error: updateError } = await supabase
-                .from('faculty')
+                .from('Faculty')
                 .select(`
                   *,
-                  departments (
-                    name
+                  Department (
+                    DepartmentName
                   )
                 `)
-                .eq('user_id', userData.id)
+                .eq('UserID', userData.UserID)
                 .single();
 
               if (!updateError && updatedData) {
                 const transformedUpdatedData: FacultyDetails = {
                   ...updatedData,
-                  department_name: updatedData.departments?.name || 'Unknown Department'
+                  DepartmentName: updatedData.Department?.DepartmentName || 'Unknown Department'
                 };
                 setFacultyDetails(transformedUpdatedData);
                 setEditedDetails(transformedUpdatedData);
@@ -306,8 +308,8 @@ const PersonalData: React.FC = () => {
       "Employment Information": {
         "Faculty ID": facultyDetails.FacultyID,
         "Position": facultyDetails.Position,
-        "Department": facultyDetails.department_name,
-        "Employment Status": facultyDetails.Employment,
+        "Department": facultyDetails.DepartmentName,
+        "Employment Status": facultyDetails.EmploymentStatus,
         "Hire Date": facultyDetails.HireDate,
         "Years of Service": calculateYearsOfService(),
         "Resignation Date": facultyDetails.ResignationDate || 'Not Applicable'
@@ -359,19 +361,19 @@ const PersonalData: React.FC = () => {
       }
 
       const updateData = {
-        phone: editedDetails.Phone,
-        address: editedDetails.Address,
-        emergency_contact: editedDetails.EmergencyContact
+        Phone: editedDetails.Phone,
+        Address: editedDetails.Address,
+        EmergencyContact: editedDetails.EmergencyContact
       };
 
       const { data, error: updateError } = await supabase
-        .from('faculty')
+        .from('Faculty')
         .update(updateData)
-        .eq('faculty_id', facultyDetails.FacultyID)
+        .eq('FacultyID', facultyDetails.FacultyID)
         .select(`
           *,
-          departments (
-            name
+          Department (
+            DepartmentName
           )
         `)
         .single();
@@ -395,7 +397,7 @@ const PersonalData: React.FC = () => {
 
       const transformedData: FacultyDetails = {
         ...data,
-        department_name: data.departments?.name || 'Unknown Department'
+        DepartmentName: data.Department?.DepartmentName || 'Unknown Department'
       };
 
       setFacultyDetails(transformedData);
@@ -590,7 +592,7 @@ const PersonalData: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Employment Status</label>
               <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
-                {facultyDetails?.Employment || 'Not set'}
+                {facultyDetails?.EmploymentStatus || 'Not set'}
               </div>
             </div>
             <div className="mb-4 grid grid-cols-2 gap-4">
@@ -610,7 +612,7 @@ const PersonalData: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Department</label>
               <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
-                {facultyDetails?.department_name || 'Not set'}
+                {facultyDetails?.DepartmentName || 'Not set'}
               </div>
             </div>
           </div>

@@ -42,6 +42,7 @@ model Faculty {
   DateOfBirth      DateTime
   Phone            String?
   Address          String?
+  EmergencyContact String?
   EmploymentStatus EmploymentStatus
   HireDate         DateTime
   ResignationDate  DateTime?
@@ -50,7 +51,7 @@ model Faculty {
   ContractID       Int?
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
-  Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
+  Department       Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Cascade)
   Schedules        Schedule[]
 }

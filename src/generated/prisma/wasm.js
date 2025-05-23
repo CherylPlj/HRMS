@@ -145,6 +145,7 @@ exports.Prisma.FacultyScalarFieldEnum = {
   DateOfBirth: 'DateOfBirth',
   Phone: 'Phone',
   Address: 'Address',
+  EmergencyContact: 'EmergencyContact',
   EmploymentStatus: 'EmploymentStatus',
   HireDate: 'HireDate',
   ResignationDate: 'ResignationDate',
