@@ -39,13 +39,13 @@ model User {
 model Faculty {
   FacultyID        Int              @id
   UserID           String           @unique
-  DateOfBirth      DateTime
+  DateOfBirth      DateTime         @db.Date
   Phone            String?
   Address          String?
   EmergencyContact String?
   EmploymentStatus EmploymentStatus
-  HireDate         DateTime
-  ResignationDate  DateTime?
+  HireDate         DateTime         @db.Date
+  ResignationDate  DateTime?        @db.Date
   Position         String
   DepartmentID     Int
   ContractID       Int?
