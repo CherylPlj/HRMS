@@ -10,6 +10,11 @@ import LeaveContent from '@/components/LeaveContent';
 import UsersContent from '@/components/UsersContent';
 import { useRouter } from 'next/navigation';
 
+interface ChatMessage {
+  type: 'user' | 'ai';
+  content: string;
+}
+
 export default function Dashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -20,14 +25,33 @@ export default function Dashboard() {
   const [isNotificationsVisible, setNotificationsVisible] = useState(false); // State for Notifications Popup
   const [activeTab, setActiveTab] = useState('all'); // State for active tab in notifications
   const [isChatbotVisible, setChatbotVisible] = useState(false); // State for Chatbot Popup
-  const [chatMessages, setChatMessages] = useState<string[]>([]); // State for chatbot messages
-  const [chatInput, setChatInput] = useState(''); // State for chatbot input
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
 
-  const chatbotRef = useRef<HTMLDivElement | null>(null); // Ref for chatbot popup
-  const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 }); // State for chatbot position
+  const chatbotRef = useRef<HTMLDivElement | null>(null);
+  const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
+  const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
+
+  // Function to position chatbot below the chat icon
+  const positionChatbot = () => {
+    if (chatButtonRef.current) {
+      const buttonRect = chatButtonRef.current.getBoundingClientRect();
+      setChatbotPosition({
+        x: buttonRect.left - 150, // Offset to center the chatbot
+        y: buttonRect.bottom + 10 // 10px gap below the button
+      });
+    }
+  };
+
+  // Update position when chatbot becomes visible
+  useEffect(() => {
+    if (isChatbotVisible) {
+      positionChatbot();
+    }
+  }, [isChatbotVisible]);
 
   const handleDragStart = (e: React.MouseEvent) => {
     const chatbot = chatbotRef.current;
@@ -52,10 +76,37 @@ export default function Dashboard() {
     document.addEventListener('mouseup', handleDragEnd);
   };
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = async (message: string) => {
     if (message.trim()) {
-      setChatMessages([...chatMessages, message]); // Add message to chat
-      setChatInput(''); // Clear input
+      // Add user message to chat
+      setChatMessages(prev => [...prev, { type: 'user', content: message }]);
+      setChatInput('');
+
+      try {
+        // Send message to API
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.details || data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        // Add AI response to chat
+        setChatMessages(prev => [...prev, { type: 'ai', content: data.response }]);
+      } catch (error: unknown) {
+        console.error('Error sending message:', error);
+        setChatMessages(prev => [...prev, { 
+          type: 'ai', 
+          content: `Error: ${error instanceof Error ? error.message : 'Failed to get response. Please try again.'}`
+        }]);
+      }
     }
   };
 
@@ -209,6 +260,7 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-4">
                   <a
                     href="#"
+                    ref={chatButtonRef}
                     className="p-2 rounded-full hover:bg-gray-200 transition"
                     title="Comments"
                     onClick={() => setChatbotVisible(!isChatbotVisible)} // Toggle Chatbot Popup
@@ -271,13 +323,13 @@ export default function Dashboard() {
                   <>
                     <li className="p-4 hover:bg-gray-50">
                       <p className="text-sm text-gray-700">
-                        Jane Smith just sent a request: <strong>“URGENT!! - leave of absence due to family emergency”.</strong>
+                        Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
                       </p>
                       <span className="text-xs text-gray-500">11h ago</span>
                     </li>
                     <li className="p-4 hover:bg-gray-50">
                       <p className="text-sm text-gray-700">
-                        Doc Anne just sent a request: <strong>“Request for change in class schedule”.</strong>
+                        Doc Anne just sent a request: <strong>&ldquo;Request for change in class schedule&rdquo;.</strong>
                       </p>
                       <span className="text-xs text-gray-500">22h ago</span>
                     </li>
@@ -294,7 +346,7 @@ export default function Dashboard() {
                   <>
                     <li className="p-4 hover:bg-gray-50">
                       <p className="text-sm text-gray-700">
-                        Jane Smith just sent a request: <strong>“URGENT!! - leave of absence due to family emergency”.</strong>
+                        Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
                       </p>
                       <span className="text-xs text-gray-500">11h ago</span>
                     </li>
@@ -319,21 +371,21 @@ export default function Dashboard() {
               ref={chatbotRef}
               className="fixed bg-white shadow-lg rounded-lg z-50 border border-gray-200"
               style={{
-                width: 320,
-                height: 400,
+                width: 350,
+                height: 420,
                 top: chatbotPosition.y,
                 left: chatbotPosition.x,
               }}
             >
               <div
                 className="p-4 bg-[#800000] text-white flex items-center justify-between rounded-t-lg cursor-move"
-                onMouseDown={handleDragStart} // Enable dragging
+                onMouseDown={handleDragStart}
               >
                 <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
                 <button
-                  title='Close Chatbot'
+                  title='Close'
                   className="text-white hover:text-gray-300"
-                  onClick={() => setChatbotVisible(false)} // Close Chatbot Popup
+                  onClick={() => setChatbotVisible(false)}
                 >
                   <i className="fas fa-times"></i>
                 </button>
@@ -343,9 +395,15 @@ export default function Dashboard() {
                   {chatMessages.map((message, index) => (
                     <div
                       key={index}
-                      className="bg-gray-100 text-gray-800 p-2 rounded-lg shadow-md text-sm"
+                      className={`${
+                        message.type === 'user' 
+                          ? 'bg-[#800000] text-white ml-auto' 
+                          : 'bg-gray-100 text-gray-800'
+                      } p-2 rounded-lg shadow-md text-sm max-w-[80%] ${
+                        message.type === 'user' ? 'ml-auto' : 'mr-auto'
+                      }`}
                     >
-                      {message}
+                      {message.content}
                     </div>
                   ))}
                 </div>
@@ -354,38 +412,40 @@ export default function Dashboard() {
                   <ul className="space-y-2">
                     <li
                       className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                      onClick={() => handleSendMessage("How do I request a change in my teaching schedule?")}
+                      onClick={() => handleSendMessage("How do I manage faculty schedules?")}
                     >
-                      How do I request a change in my teaching schedule?
+                      How do I manage faculty schedules?
                     </li>
                     <li
                       className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                      onClick={() => handleSendMessage("How do I add a new faculty profile?")}
+                      onClick={() => handleSendMessage("How do I add a new faculty member?")}
                     >
-                      How do I add a new faculty profile?
+                      How do I add a new faculty member?
                     </li>
                     <li
                       className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                      onClick={() => handleSendMessage("Where is the campus located?")}
+                      onClick={() => handleSendMessage("How do I approve leave requests?")}
                     >
-                      Where is the campus located?
+                      How do I approve leave requests?
                     </li>
                   </ul>
                 </div>
-                <div className="p-4 border-t flex items-center space-x-2">
-                  <input
-                    type="text"
-                    placeholder="Write a question..."
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none"
-                  />
-                  <button
-                    className="px-4 py-2 bg-[#800000] text-white rounded hover:bg-red-700"
-                    onClick={() => handleSendMessage(chatInput)} // Send input message
-                  >
-                    Send
-                  </button>
+                <div className="p-3 border-t">
+                  <div className="flex items-center space-x-2 px-1">
+                    <input
+                      type="text"
+                      placeholder="Write a question..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                    />
+                    <button
+                      className="px-3 py-2 bg-[#800000] text-white rounded hover:bg-red-700 text-sm whitespace-nowrap"
+                      onClick={() => handleSendMessage(chatInput)}
+                    >
+                      Send
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

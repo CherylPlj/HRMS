@@ -1,6 +1,6 @@
 "use client";
 import Head from 'next/head';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardFaculty from '@/components/DashboardFaculty';
 import PersonalData from '@/components/PersonalData';
@@ -10,6 +10,10 @@ import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import { useRouter } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
 
+interface ChatMessage {
+  type: 'user' | 'ai';
+  content: string;
+}
 
 export default function Dashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
@@ -17,14 +21,33 @@ export default function Dashboard() {
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [isChatbotVisible, setChatbotVisible] = useState(false);
-  const [chatMessages, setChatMessages] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
 
   const chatbotRef = useRef<HTMLDivElement | null>(null);
+  const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
   const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
+
+  // Function to position chatbot below the chat icon
+  const positionChatbot = () => {
+    if (chatButtonRef.current) {
+      const buttonRect = chatButtonRef.current.getBoundingClientRect();
+      setChatbotPosition({
+        x: buttonRect.left - 150, // Offset to center the chatbot
+        y: buttonRect.bottom + 10 // 10px gap below the button
+      });
+    }
+  };
+
+  // Update position when chatbot becomes visible
+  useEffect(() => {
+    if (isChatbotVisible) {
+      positionChatbot();
+    }
+  }, [isChatbotVisible]);
 
   const handleDragStart = (e: React.MouseEvent) => {
     const chatbot = chatbotRef.current;
@@ -49,10 +72,37 @@ export default function Dashboard() {
     document.addEventListener('mouseup', handleDragEnd);
   };
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = async (message: string) => {
     if (message.trim()) {
-      setChatMessages([...chatMessages, message]);
+      // Add user message to chat
+      setChatMessages(prev => [...prev, { type: 'user', content: message }]);
       setChatInput('');
+
+      try {
+        // Send message to API
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.details || data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        // Add AI response to chat
+        setChatMessages(prev => [...prev, { type: 'ai', content: data.response }]);
+      } catch (error: unknown) {
+        console.error('Error sending message:', error);
+        setChatMessages(prev => [...prev, { 
+          type: 'ai', 
+          content: `Error: ${error instanceof Error ? error.message : 'Failed to get response. Please try again.'}`
+        }]);
+      }
     }
   };
 
@@ -193,6 +243,7 @@ export default function Dashboard() {
                 {/* Icons Section */}
                 <div className="flex items-center space-x-4">
                   <a
+                    ref={chatButtonRef}
                     href="#"
                     className="p-2 rounded-full hover:bg-gray-200 transition"
                     title="Comments"
@@ -329,7 +380,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Add Chatbot Popup */}
+      {/* Chatbot Popup */}
       {isChatbotVisible && (
         <div
           ref={chatbotRef}
@@ -359,9 +410,15 @@ export default function Dashboard() {
               {chatMessages.map((message, index) => (
                 <div
                   key={index}
-                  className="bg-gray-100 text-gray-800 p-2 rounded-lg shadow-md text-sm"
+                  className={`${
+                    message.type === 'user' 
+                      ? 'bg-[#800000] text-white ml-auto' 
+                      : 'bg-gray-100 text-gray-800'
+                  } p-2 rounded-lg shadow-md text-sm max-w-[80%] ${
+                    message.type === 'user' ? 'ml-auto' : 'mr-auto'
+                  }`}
                 >
-                  {message}
+                  {message.content}
                 </div>
               ))}
             </div>
