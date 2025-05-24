@@ -54,6 +54,7 @@ model Faculty {
   Department       Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Cascade)
   Schedules        Schedule[]
+  Leaves           Leave[]
 }
 
 model Cashier {
@@ -217,4 +218,30 @@ enum AttendanceStatus {
   ABSENT
   LATE
   NOT_RECORDED
+}
+
+enum LeaveStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+enum LeaveType {
+  Sick
+  Vacation
+  Emergency
+}
+
+model Leave {
+  LeaveID     Int         @id @default(autoincrement())
+  FacultyID   Int
+  LeaveType   LeaveType
+  StartDate   DateTime
+  EndDate     DateTime
+  Reason      String
+  Status      LeaveStatus @default(Pending)
+  DocumentUrl String?
+  CreatedAt   DateTime    @default(now())
+  UpdatedAt   DateTime    @updatedAt
+  Faculty     Faculty     @relation(fields: [FacultyID], references: [FacultyID])
 }

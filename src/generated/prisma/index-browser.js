@@ -260,6 +260,19 @@ exports.Prisma.UserRoleScalarFieldEnum = {
   roleId: 'roleId'
 };
 
+exports.Prisma.LeaveScalarFieldEnum = {
+  LeaveID: 'LeaveID',
+  FacultyID: 'FacultyID',
+  LeaveType: 'LeaveType',
+  StartDate: 'StartDate',
+  EndDate: 'EndDate',
+  Reason: 'Reason',
+  Status: 'Status',
+  DocumentUrl: 'DocumentUrl',
+  CreatedAt: 'CreatedAt',
+  UpdatedAt: 'UpdatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -305,6 +318,18 @@ exports.DayOfWeek = exports.$Enums.DayOfWeek = {
   Sunday: 'Sunday'
 };
 
+exports.LeaveType = exports.$Enums.LeaveType = {
+  Sick: 'Sick',
+  Vacation: 'Vacation',
+  Emergency: 'Emergency'
+};
+
+exports.LeaveStatus = exports.$Enums.LeaveStatus = {
+  Pending: 'Pending',
+  Approved: 'Approved',
+  Rejected: 'Rejected'
+};
+
 exports.Prisma.ModelName = {
   UserIDSequence: 'UserIDSequence',
   User: 'User',
@@ -322,7 +347,8 @@ exports.Prisma.ModelName = {
   ActivityLog: 'ActivityLog',
   Attendance: 'Attendance',
   Role: 'Role',
-  UserRole: 'UserRole'
+  UserRole: 'UserRole',
+  Leave: 'Leave'
 };
 
 /**

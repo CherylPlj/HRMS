@@ -4,15 +4,15 @@ import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "../lib/supabaseClient";
 
 interface LeaveRequest {
-    id: string;
-    faculty_id: string;
-    leave_type: string;
-    start_date: Date;
-    end_date: Date;
-    reason: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    document_url?: string;
-    created_at: Date;
+    LeaveID: string;
+    FacultyID: string;
+    LeaveType: string;
+    StartDate: Date;
+    EndDate: Date;
+    Reason: string;
+    Status: 'Pending' | 'Approved' | 'Rejected';
+    DocumentUrl?: string;
+    CreatedAt: Date;
 }
 
 const LeaveRequestFaculty: React.FC = () => {
@@ -35,16 +35,25 @@ const LeaveRequestFaculty: React.FC = () => {
         try {
             setIsLoading(true);
             const { data, error } = await supabase
-                .from('leave_requests')
+                .from('Leave')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('CreatedAt', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error:', error);
+                throw error;
+            }
 
-            setLeaveRequests(data || []);
+            if (!data) {
+                console.warn('No data returned');
+                setLeaveRequests([]);
+                return;
+            }
+
+            setLeaveRequests(data);
         } catch (err) {
             console.error('Error fetching leave requests:', err);
-            setError('Failed to fetch leave requests');
+            setError(err instanceof Error ? err.message : 'Failed to fetch leave requests');
         } finally {
             setIsLoading(false);
         }
@@ -96,16 +105,16 @@ const LeaveRequestFaculty: React.FC = () => {
 
             // Create leave request
             const { error } = await supabase
-                .from('leave_requests')
+                .from('Leave')
                 .insert([
                     {
-                        faculty_id: user.id,
-                        leave_type: leaveType,
-                        start_date: startDate.toISOString(),
-                        end_date: endDate.toISOString(),
+                        FacultyID: user.id,
+                        LeaveType: leaveType,
+                        StartDate: startDate.toISOString(),
+                        EndDate: endDate.toISOString(),
                         reason,
-                        status: 'Pending',
-                        document_url: fileUrl,
+                        Status: 'Pending',
+                        DocumentUrl: fileUrl,
                     }
                 ])
                 .select();
@@ -182,21 +191,21 @@ const LeaveRequestFaculty: React.FC = () => {
                     </thead>
                     <tbody>
                         {leaveRequests.map((request) => (
-                            <tr key={request.id}>
-                                <td className="px-4 py-2 border-b">{request.leave_type}</td>
-                                <td className="px-4 py-2 border-b">{new Date(request.start_date).toLocaleDateString()}</td>
-                                <td className="px-4 py-2 border-b">{new Date(request.end_date).toLocaleDateString()}</td>
+                            <tr key={request.LeaveID}>
+                                <td className="px-4 py-2 border-b">{request.LeaveType}</td>
+                                <td className="px-4 py-2 border-b">{new Date(request.StartDate).toLocaleDateString()}</td>
+                                <td className="px-4 py-2 border-b">{new Date(request.EndDate).toLocaleDateString()}</td>
                                 <td className="px-4 py-2 border-b">
-                                    {Math.ceil((new Date(request.end_date).getTime() - new Date(request.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
+                                    {Math.ceil((new Date(request.EndDate).getTime() - new Date(request.StartDate).getTime()) / (1000 * 60 * 60 * 24))} days
                                 </td>
-                                <td className="px-4 py-2 border-b">{new Date(request.created_at).toLocaleDateString()}</td>
+                                <td className="px-4 py-2 border-b">{new Date(request.CreatedAt).toLocaleDateString()}</td>
                                 <td className="px-4 py-2 border-b">
                                     <span className={`px-2 py-1 rounded-full text-xs ${
-                                        request.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                        request.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                                        request.Status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                        request.Status === 'Rejected' ? 'bg-red-100 text-red-800' :
                                         'bg-yellow-100 text-yellow-800'
                                     }`}>
-                                        {request.status}
+                                        {request.Status}
                                     </span>
                                 </td>
                             </tr>
