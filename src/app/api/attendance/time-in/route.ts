@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
     // Determine status based on Philippines time
     const timeIn = phTime.getHours() + (phTime.getMinutes() / 60);
-    const status = timeIn >= 8 && timeIn <= 8.5 ? 'PRESENT' : 'LATE';
+    const status = timeIn <= 8.516 ? 'PRESENT' : 'LATE'; // 8:31 AM = 8.516 hours
     console.log(`Philippines time in: ${timeIn}, Status: ${status}`);
 
     // Create new attendance record

@@ -14,8 +14,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get current time in UTC
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Convert to Philippines time (UTC+8)
+    const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    const today = new Date(phTime.getFullYear(), phTime.getMonth(), phTime.getDate());
+
+    console.log('Current UTC time:', now.toISOString());
+    console.log('Philippines time:', phTime.toISOString());
+    console.log('Checking for existing record on:', today.toISOString());
 
     // Find today's attendance record
     const { data: existingRecord, error: fetchError } = await supabase
@@ -62,7 +70,7 @@ export async function POST(request: Request) {
     const { data: attendance, error: updateError } = await supabase
       .from('Attendance')
       .update({ 
-        timeOut: now.toISOString(),
+        timeOut: phTime.toISOString(),
         updatedAt: now.toISOString()
       })
       .eq('id', existingRecord.id)
