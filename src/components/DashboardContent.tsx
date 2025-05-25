@@ -211,6 +211,7 @@ export default function DashboardContent() {
               LastName
             )
           `)
+          .eq('UserID', user?.id)
           .order("Timestamp", { ascending: false })
           .limit(5);
 
@@ -222,8 +223,10 @@ export default function DashboardContent() {
       }
     };
 
-    fetchLogs();
-  }, []);
+    if (user?.id) {
+      fetchLogs();
+    }
+  }, [user?.id]);
 
   const departmentData = {
     labels: Object.keys(departmentStats),
