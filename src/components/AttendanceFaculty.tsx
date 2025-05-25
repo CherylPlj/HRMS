@@ -53,6 +53,16 @@ const AttendanceFaculty: React.FC = () => {
       return false;
     }
     
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const recordDate = new Date(record.date);
+    
+    // Check if the record is for today
+    if (recordDate.getTime() !== today.getTime()) {
+      toast.error('Cannot mark time out for a different day');
+      return false;
+    }
+    
     if (record.timeOut) {
       toast.error('You have already marked your time out for today');
       return false;
@@ -68,8 +78,6 @@ const AttendanceFaculty: React.FC = () => {
       const confirmed = await confirmAction('time-in');
       if (!confirmed) return;
       
-      if (!validateTimeIn(currentRecord)) return;
-      
       setIsProcessing(true);
       console.log('Attempting to mark time in for employee:', EMPLOYEE_ID);
       const record = await attendanceService.markTimeIn(EMPLOYEE_ID);
@@ -84,7 +92,11 @@ const AttendanceFaculty: React.FC = () => {
       toast.success('Time in marked successfully!');
     } catch (error) {
       console.error('Time in error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to mark time in. Please try again.');
+      if (error instanceof Error && error.message.includes('already recorded')) {
+        toast.error('You have already marked your time in for today');
+      } else {
+        toast.error('Failed to mark time in. Please try again.');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -96,8 +108,6 @@ const AttendanceFaculty: React.FC = () => {
     try {
       const confirmed = await confirmAction('time-out');
       if (!confirmed) return;
-      
-      if (!validateTimeOut(currentRecord)) return;
       
       setIsProcessing(true);
       console.log('Attempting to mark time out for employee:', EMPLOYEE_ID);
@@ -113,7 +123,17 @@ const AttendanceFaculty: React.FC = () => {
       toast.success('Time out marked successfully!');
     } catch (error) {
       console.error('Time out error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to mark time out. Please try again.');
+      if (error instanceof Error) {
+        if (error.message.includes('already recorded')) {
+          toast.error('You have already marked your time out for today');
+        } else if (error.message.includes('No time-in record')) {
+          toast.error('Please mark your time in first');
+        } else {
+          toast.error('Failed to mark time out. Please try again.');
+        }
+      } else {
+        toast.error('Failed to mark time out. Please try again.');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -182,12 +202,12 @@ const AttendanceFaculty: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   className={`flex-1 ${
-                    currentRecord?.timeIn || isProcessing
+                    (currentRecord?.timeIn && currentRecord.date && new Date(currentRecord.date).toDateString() === new Date().toDateString()) || isProcessing
                       ? 'bg-gray-300 cursor-not-allowed' 
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeIn}
-                  disabled={!!currentRecord?.timeIn || isProcessing}
+                  disabled={Boolean((currentRecord?.timeIn && currentRecord.date && new Date(currentRecord.date).toDateString() === new Date().toDateString()) || isProcessing)}
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center">
@@ -201,12 +221,20 @@ const AttendanceFaculty: React.FC = () => {
                 </button>
                 <button
                   className={`flex-1 ${
-                    !currentRecord?.timeIn || currentRecord?.timeOut || isProcessing
+                    !currentRecord?.timeIn || 
+                    currentRecord?.timeOut || 
+                    !currentRecord?.date ||
+                    new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
+                    isProcessing
                       ? 'bg-gray-300 cursor-not-allowed'
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeOut}
-                  disabled={!currentRecord?.timeIn || !!currentRecord?.timeOut || isProcessing}
+                  disabled={Boolean(!currentRecord?.timeIn || 
+                    currentRecord?.timeOut || 
+                    !currentRecord?.date ||
+                    new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
+                    isProcessing)}
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center">
