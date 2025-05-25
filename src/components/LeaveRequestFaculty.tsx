@@ -177,47 +177,63 @@ const LeaveRequestFaculty: React.FC = () => {
             )}
 
             {/* Leave Request Table */}
-            <div className="mt-6 bg-white shadow-lg p-4 rounded-lg">
-                <table className="min-w-full text-sm">
-                    <thead>
-                        <tr>
-                            <th className="px-4 py-2 border-b">Leave Type</th>
-                            <th className="px-4 py-2 border-b">Start Date</th>
-                            <th className="px-4 py-2 border-b">End Date</th>
-                            <th className="px-4 py-2 border-b">Duration</th>
-                            <th className="px-4 py-2 border-b">Applied Date</th>
-                            <th className="px-4 py-2 border-b">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {leaveRequests.map((request) => (
-                            <tr key={request.LeaveID}>
-                                <td className="px-4 py-2 border-b">{request.LeaveType}</td>
-                                <td className="px-4 py-2 border-b">{new Date(request.StartDate).toLocaleDateString()}</td>
-                                <td className="px-4 py-2 border-b">{new Date(request.EndDate).toLocaleDateString()}</td>
-                                <td className="px-4 py-2 border-b">
-                                    {Math.ceil((new Date(request.EndDate).getTime() - new Date(request.StartDate).getTime()) / (1000 * 60 * 60 * 24))} days
-                                </td>
-                                <td className="px-4 py-2 border-b">{new Date(request.CreatedAt).toLocaleDateString()}</td>
-                                <td className="px-4 py-2 border-b">
-                                    <span className={`px-2 py-1 rounded-full text-xs ${
-                                        request.Status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                        request.Status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                                        'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                        {request.Status}
-                                    </span>
-                                </td>
+            <div className="mt-6 bg-white shadow-lg rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                                        Loading...
+                                    </td>
+                                </tr>
+                            ) : leaveRequests.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                                        No leave requests found
+                                    </td>
+                                </tr>
+                            ) : (
+                                leaveRequests.map((request) => (
+                                    <tr key={request.LeaveID} className="hover:bg-gray-50 transition-colors duration-200">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{request.LeaveType}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(request.StartDate).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(request.EndDate).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {Math.ceil((new Date(request.EndDate).getTime() - new Date(request.StartDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(request.CreatedAt).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                request.Status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                                request.Status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                                                'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                                {request.Status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Modal for New Leave Request */}
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50">
-                    <div className="bg-white rounded-lg shadow-lg w-1/2 p-6 relative">
+                <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50 z-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-[#800000]">New Leave Request</h2>
                             <button 
@@ -229,15 +245,14 @@ const LeaveRequestFaculty: React.FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <div className="flex space-x-4">
-                                <div className="flex-1 pb-6">
-                                    <label htmlFor="LeaveType" className="block mb-1 font-semibold">Leave Type <span className="text-[#800000]">*</span></label>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label htmlFor="LeaveType" className="block mb-1 font-semibold text-sm text-gray-700">Leave Type <span className="text-[#800000]">*</span></label>
                                     <select
                                         id="LeaveType"
-                                        title="LeaveType"
                                         value={leaveType}
                                         onChange={(e) => setLeaveType(e.target.value)}
-                                        className="w-full border border-gray-300 rounded p-2"
+                                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                                         disabled={isLoading}
                                     >
                                         <option value="">Select Leave Type</option>
@@ -246,23 +261,23 @@ const LeaveRequestFaculty: React.FC = () => {
                                         <option value="Emergency">Emergency</option>
                                     </select>
                                 </div>
-                                <div className="flex-1 pb-6">
-                                    <label className="block mb-1 font-semibold">Start Date <span className="text-[#800000]">*</span></label>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-sm text-gray-700">Start Date <span className="text-[#800000]">*</span></label>
                                     <DatePicker
                                         selected={startDate}
                                         onChange={(date: Date | null) => setStartDate(date)}
-                                        className="border p-2 rounded w-full"
+                                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                                         dateFormat="yyyy-MM-dd"
                                         minDate={new Date()}
                                         disabled={isLoading}
                                     />
                                 </div>
-                                <div className="flex-1 pb-6">
-                                    <label className="block mb-1 font-semibold">End Date <span className="text-[#800000]">*</span></label>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-sm text-gray-700">End Date <span className="text-[#800000]">*</span></label>
                                     <DatePicker
                                         selected={endDate}
                                         onChange={(date: Date | null) => setEndDate(date)}
-                                        className="border p-2 rounded w-full"
+                                        className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                                         dateFormat="yyyy-MM-dd"
                                         minDate={startDate || new Date()}
                                         disabled={isLoading}
@@ -270,38 +285,42 @@ const LeaveRequestFaculty: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mb-4">
-                                <label htmlFor="File" className="block mb-1 font-semibold">Supporting Document</label>
+                            <div>
+                                <label htmlFor="File" className="block mb-1 font-semibold text-sm text-gray-700">Supporting Document</label>
                                 <input
                                     id="File"
-                                    title="File"
                                     type="file"
                                     onChange={handleFileChange}
-                                    className="border p-2 rounded w-full"
+                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                     disabled={isLoading}
                                 />
                             </div>
 
-                            <div className="mb-4">
-                                <label htmlFor="Reason" className="block mb-1 font-semibold">Reason <span className="text-[#800000]">*</span></label>
+                            <div>
+                                <label htmlFor="Reason" className="block mb-1 font-semibold text-sm text-gray-700">Reason <span className="text-[#800000]">*</span></label>
                                 <textarea
                                     id="Reason"
-                                    title="Reason"
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
-                                    className="border p-2 rounded w-full"
+                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                                     rows={4}
                                     disabled={isLoading}
                                 ></textarea>
                             </div>
                         </div>
 
-                        <div className="flex justify-end mt-8">
+                        <div className="flex justify-end space-x-4 mt-8">
                             <button
-                                title="Cancel"
+                                onClick={() => setShowModal(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                                disabled={isLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
                                 onClick={handleAddLeaveRequest}
-                                className="bg-[#800000] hover:bg-red-800 text-white px-6 py-2 rounded"
+                                className="px-4 py-2 bg-[#800000] text-white rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] disabled:opacity-50"
                                 disabled={isLoading}
                             >
                                 {isLoading ? 'Submitting...' : 'Submit'}
