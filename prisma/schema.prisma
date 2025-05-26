@@ -17,6 +17,7 @@ model UserIDSequence {
 
 model User {
   UserID       String         @id
+  ClerkUserID String?         @unique @db.VarChar(255)
   FirstName    String
   LastName     String
   Email        String         @unique
