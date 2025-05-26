@@ -128,6 +128,7 @@ exports.Prisma.UserIDSequenceScalarFieldEnum = {
 
 exports.Prisma.UserScalarFieldEnum = {
   UserID: 'UserID',
+  ClerkUserID: 'ClerkUserID',
   FirstName: 'FirstName',
   LastName: 'LastName',
   Email: 'Email',

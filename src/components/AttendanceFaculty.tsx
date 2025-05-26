@@ -31,6 +31,7 @@ const AttendanceFaculty: React.FC = () => {
     });
   };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateTimeIn = (record: AttendanceRecord | null): boolean => {
     if (!record) return true;
     
@@ -46,7 +47,7 @@ const AttendanceFaculty: React.FC = () => {
     
     return true;
   };
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateTimeOut = (record: AttendanceRecord | null): boolean => {
     if (!record) {
       toast.error('Please mark your time in first');
