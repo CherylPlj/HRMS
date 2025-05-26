@@ -106,8 +106,8 @@ model Schedule {
   ScheduleID   Int       @id @default(autoincrement())
   FacultyID    Int
   DayOfWeek    DayOfWeek
-  StartTime    DateTime
-  EndTime      DateTime
+  StartTime    String
+  EndTime      String
   Subject      String
   ClassSection String
   Faculty      Faculty   @relation(fields: [FacultyID], references: [FacultyID])

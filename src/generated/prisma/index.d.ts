@@ -12783,8 +12783,8 @@ export namespace Prisma {
     ScheduleID: number | null
     FacultyID: number | null
     DayOfWeek: $Enums.DayOfWeek | null
-    StartTime: Date | null
-    EndTime: Date | null
+    StartTime: string | null
+    EndTime: string | null
     Subject: string | null
     ClassSection: string | null
   }
@@ -12793,8 +12793,8 @@ export namespace Prisma {
     ScheduleID: number | null
     FacultyID: number | null
     DayOfWeek: $Enums.DayOfWeek | null
-    StartTime: Date | null
-    EndTime: Date | null
+    StartTime: string | null
+    EndTime: string | null
     Subject: string | null
     ClassSection: string | null
   }
@@ -12942,8 +12942,8 @@ export namespace Prisma {
     ScheduleID: number
     FacultyID: number
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date
-    EndTime: Date
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
     _count: ScheduleCountAggregateOutputType | null
@@ -13030,8 +13030,8 @@ export namespace Prisma {
       ScheduleID: number
       FacultyID: number
       DayOfWeek: $Enums.DayOfWeek
-      StartTime: Date
-      EndTime: Date
+      StartTime: string
+      EndTime: string
       Subject: string
       ClassSection: string
     }, ExtArgs["result"]["schedule"]>
@@ -13461,8 +13461,8 @@ export namespace Prisma {
     readonly ScheduleID: FieldRef<"Schedule", 'Int'>
     readonly FacultyID: FieldRef<"Schedule", 'Int'>
     readonly DayOfWeek: FieldRef<"Schedule", 'DayOfWeek'>
-    readonly StartTime: FieldRef<"Schedule", 'DateTime'>
-    readonly EndTime: FieldRef<"Schedule", 'DateTime'>
+    readonly StartTime: FieldRef<"Schedule", 'String'>
+    readonly EndTime: FieldRef<"Schedule", 'String'>
     readonly Subject: FieldRef<"Schedule", 'String'>
     readonly ClassSection: FieldRef<"Schedule", 'String'>
   }
@@ -22442,8 +22442,8 @@ export namespace Prisma {
     ScheduleID?: IntFilter<"Schedule"> | number
     FacultyID?: IntFilter<"Schedule"> | number
     DayOfWeek?: EnumDayOfWeekFilter<"Schedule"> | $Enums.DayOfWeek
-    StartTime?: DateTimeFilter<"Schedule"> | Date | string
-    EndTime?: DateTimeFilter<"Schedule"> | Date | string
+    StartTime?: StringFilter<"Schedule"> | string
+    EndTime?: StringFilter<"Schedule"> | string
     Subject?: StringFilter<"Schedule"> | string
     ClassSection?: StringFilter<"Schedule"> | string
     Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
@@ -22467,8 +22467,8 @@ export namespace Prisma {
     NOT?: ScheduleWhereInput | ScheduleWhereInput[]
     FacultyID?: IntFilter<"Schedule"> | number
     DayOfWeek?: EnumDayOfWeekFilter<"Schedule"> | $Enums.DayOfWeek
-    StartTime?: DateTimeFilter<"Schedule"> | Date | string
-    EndTime?: DateTimeFilter<"Schedule"> | Date | string
+    StartTime?: StringFilter<"Schedule"> | string
+    EndTime?: StringFilter<"Schedule"> | string
     Subject?: StringFilter<"Schedule"> | string
     ClassSection?: StringFilter<"Schedule"> | string
     Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
@@ -22496,8 +22496,8 @@ export namespace Prisma {
     ScheduleID?: IntWithAggregatesFilter<"Schedule"> | number
     FacultyID?: IntWithAggregatesFilter<"Schedule"> | number
     DayOfWeek?: EnumDayOfWeekWithAggregatesFilter<"Schedule"> | $Enums.DayOfWeek
-    StartTime?: DateTimeWithAggregatesFilter<"Schedule"> | Date | string
-    EndTime?: DateTimeWithAggregatesFilter<"Schedule"> | Date | string
+    StartTime?: StringWithAggregatesFilter<"Schedule"> | string
+    EndTime?: StringWithAggregatesFilter<"Schedule"> | string
     Subject?: StringWithAggregatesFilter<"Schedule"> | string
     ClassSection?: StringWithAggregatesFilter<"Schedule"> | string
   }
@@ -23444,8 +23444,8 @@ export namespace Prisma {
 
   export type ScheduleCreateInput = {
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date | string
-    EndTime: Date | string
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
     Faculty: FacultyCreateNestedOneWithoutSchedulesInput
@@ -23455,16 +23455,16 @@ export namespace Prisma {
     ScheduleID?: number
     FacultyID: number
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date | string
-    EndTime: Date | string
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
   }
 
   export type ScheduleUpdateInput = {
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
     Faculty?: FacultyUpdateOneRequiredWithoutSchedulesNestedInput
@@ -23474,8 +23474,8 @@ export namespace Prisma {
     ScheduleID?: IntFieldUpdateOperationsInput | number
     FacultyID?: IntFieldUpdateOperationsInput | number
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
   }
@@ -23484,16 +23484,16 @@ export namespace Prisma {
     ScheduleID?: number
     FacultyID: number
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date | string
-    EndTime: Date | string
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
   }
 
   export type ScheduleUpdateManyMutationInput = {
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
   }
@@ -23502,8 +23502,8 @@ export namespace Prisma {
     ScheduleID?: IntFieldUpdateOperationsInput | number
     FacultyID?: IntFieldUpdateOperationsInput | number
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
   }
@@ -26474,8 +26474,8 @@ export namespace Prisma {
 
   export type ScheduleCreateWithoutFacultyInput = {
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date | string
-    EndTime: Date | string
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
   }
@@ -26483,8 +26483,8 @@ export namespace Prisma {
   export type ScheduleUncheckedCreateWithoutFacultyInput = {
     ScheduleID?: number
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date | string
-    EndTime: Date | string
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
   }
@@ -26644,8 +26644,8 @@ export namespace Prisma {
     ScheduleID?: IntFilter<"Schedule"> | number
     FacultyID?: IntFilter<"Schedule"> | number
     DayOfWeek?: EnumDayOfWeekFilter<"Schedule"> | $Enums.DayOfWeek
-    StartTime?: DateTimeFilter<"Schedule"> | Date | string
-    EndTime?: DateTimeFilter<"Schedule"> | Date | string
+    StartTime?: StringFilter<"Schedule"> | string
+    EndTime?: StringFilter<"Schedule"> | string
     Subject?: StringFilter<"Schedule"> | string
     ClassSection?: StringFilter<"Schedule"> | string
   }
@@ -27907,8 +27907,8 @@ export namespace Prisma {
   export type ScheduleCreateManyFacultyInput = {
     ScheduleID?: number
     DayOfWeek: $Enums.DayOfWeek
-    StartTime: Date | string
-    EndTime: Date | string
+    StartTime: string
+    EndTime: string
     Subject: string
     ClassSection: string
   }
@@ -27935,8 +27935,8 @@ export namespace Prisma {
 
   export type ScheduleUpdateWithoutFacultyInput = {
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
   }
@@ -27944,8 +27944,8 @@ export namespace Prisma {
   export type ScheduleUncheckedUpdateWithoutFacultyInput = {
     ScheduleID?: IntFieldUpdateOperationsInput | number
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
   }
@@ -27953,8 +27953,8 @@ export namespace Prisma {
   export type ScheduleUncheckedUpdateManyWithoutFacultyInput = {
     ScheduleID?: IntFieldUpdateOperationsInput | number
     DayOfWeek?: EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
-    StartTime?: DateTimeFieldUpdateOperationsInput | Date | string
-    EndTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    StartTime?: StringFieldUpdateOperationsInput | string
+    EndTime?: StringFieldUpdateOperationsInput | string
     Subject?: StringFieldUpdateOperationsInput | string
     ClassSection?: StringFieldUpdateOperationsInput | string
   }
