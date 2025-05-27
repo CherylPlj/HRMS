@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
 import "./globals.css";
 import { Poppins } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
+import type { Metadata } from "next";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -27,7 +26,6 @@ export default function RootLayout({
   console.log("Supabase ANON KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   return (
-    <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <head>
           {/* Move external links and scripts to <head> */}
@@ -41,6 +39,5 @@ export default function RootLayout({
           {children}
         </body>
       </html>
-    </ClerkProvider>
   );
 }
