@@ -340,7 +340,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\Lenovo Gaming\\OneDrive - Polytechnic University of the Philippines\\BSIT 3-2\\All Programming\\capstone\\sjsfi-hrms\\HRMS\\src\\generated\\prisma",
+      "value": "C:\\Users\\Cheryl Jeanne\\hrms2\\HRMS\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -354,7 +354,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\Lenovo Gaming\\OneDrive - Polytechnic University of the Philippines\\BSIT 3-2\\All Programming\\capstone\\sjsfi-hrms\\HRMS\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\Cheryl Jeanne\\hrms2\\HRMS\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
