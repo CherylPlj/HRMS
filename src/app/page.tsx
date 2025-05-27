@@ -12,11 +12,11 @@ export default function Home() {
   const navigateToFaculty = () => {
     router.push('/dashboard/loginf');
   };
-  
+
   const navigateToAdmin = () => {
     router.push('/dashboard/login');
   };
-  
+
   return (
     <>
       <Head>
@@ -34,7 +34,7 @@ export default function Home() {
         <div className="w-full md:w-1/2 bg-[#800000] relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('/dotsBG.png')] opacity-10"></div>
           <div className="absolute inset-0 bg-gradient-to-br from-[#800000] to-[#600000]"></div>
-          
+
           <div className="relative h-full flex flex-col items-center justify-center p-8 text-white">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -60,7 +60,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <motion.h1 
+                <motion.h1
                   className="text-4xl md:text-5xl font-bold mb-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export default function Home() {
                 >
                   Saint Joseph School of Fairview Inc.
                 </motion.h1>
-                <motion.p 
+                <motion.p
                   className="text-xl text-white/90"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

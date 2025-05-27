@@ -71,7 +71,9 @@ const AttendanceFaculty: React.FC = () => {
     
     return true;
   };
-
+  
+  console.log('Current Record:', validateTimeOut);
+  
   const handleTimeIn = async () => {
     if (isProcessing) return;
     

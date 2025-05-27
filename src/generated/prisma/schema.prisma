@@ -17,13 +17,11 @@ model UserIDSequence {
 
 model User {
   UserID       String         @id
-  ClerkUserID  String?        @unique @db.VarChar(255)
   FirstName    String
   LastName     String
   Email        String         @unique
   Photo        String?
   PasswordHash String
-  Role         UserRole[]
   Status       Status         @default(Active)
   DateCreated  DateTime       @default(now())
   DateModified DateTime?      @default(now()) @updatedAt
@@ -35,6 +33,7 @@ model User {
   Notification Notification[]
   Registrar    Registrar?     @relation("UserRegistrar")
   Report       Report[]
+  Role         UserRole[]
 }
 
 model Faculty {
@@ -43,19 +42,19 @@ model Faculty {
   DateOfBirth      DateTime         @db.Date
   Phone            String?
   Address          String?
-  EmergencyContact String?
   EmploymentStatus EmploymentStatus
   HireDate         DateTime         @db.Date
   ResignationDate  DateTime?        @db.Date
   Position         String
   DepartmentID     Int
   ContractID       Int?
+  EmergencyContact String?
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
-  Department       Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
+  Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Cascade)
-  Schedules        Schedule[]
   Leaves           Leave[]
+  Schedules        Schedule[]
 }
 
 model Cashier {
@@ -107,11 +106,11 @@ model Contract {
 model Schedule {
   ScheduleID   Int       @id @default(autoincrement())
   FacultyID    Int
-  DayOfWeek    DayOfWeek
   StartTime    DateTime
   EndTime      DateTime
   Subject      String
   ClassSection String
+  DayOfWeek    DayOfWeek
   Faculty      Faculty   @relation(fields: [FacultyID], references: [FacultyID])
 }
 
@@ -161,9 +160,9 @@ model Attendance {
   date       DateTime  @default(now())
   timeIn     DateTime?
   timeOut    DateTime?
-  status     String    @default("NOT_RECORDED")
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  status     String    @default("NOT_RECORDED")
 }
 
 model Role {
@@ -172,15 +171,27 @@ model Role {
   users UserRole[]
 }
 
-// This model is used to create a many-to-many relationship between User and Role
 model UserRole {
   userId String
   roleId Int
-
-  user User @relation(fields: [userId], references: [UserID], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [UserID], onDelete: Cascade)
 
   @@id([userId, roleId])
+}
+
+model Leave {
+  LeaveID     Int         @id @default(autoincrement())
+  FacultyID   Int
+  LeaveType   LeaveType
+  StartDate   DateTime
+  EndDate     DateTime
+  Reason      String
+  Status      LeaveStatus @default(Pending)
+  DocumentUrl String?
+  CreatedAt   DateTime    @default(now())
+  UpdatedAt   DateTime    @updatedAt
+  Faculty     Faculty     @relation(fields: [FacultyID], references: [FacultyID])
 }
 
 enum Status {
@@ -231,18 +242,4 @@ enum LeaveType {
   Sick
   Vacation
   Emergency
-}
-
-model Leave {
-  LeaveID     Int         @id @default(autoincrement())
-  FacultyID   Int
-  LeaveType   LeaveType
-  StartDate   DateTime
-  EndDate     DateTime
-  Reason      String
-  Status      LeaveStatus @default(Pending)
-  DocumentUrl String?
-  CreatedAt   DateTime    @default(now())
-  UpdatedAt   DateTime    @updatedAt
-  Faculty     Faculty     @relation(fields: [FacultyID], references: [FacultyID])
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
+import Image from 'next/image';
 // import { FaCalendarAlt } from 'react-icons/fa';
 // import Head from 'next/head';
 // import { BsFillPersonPlusFill } from 'react-icons/bs';
@@ -264,7 +265,7 @@ const AttendanceContent: React.FC = () => {
                             ].map(({ name, date, in: timeIn, out: timeOut, status, color, icon, img }) => (
                                 <tr key={name} className="border border-white">
                                 <td className="border border-white px-3 py-2 flex items-center space-x-2">
-                                    <img src={img} alt={`${name} profile picture`} className="w-6 h-6 rounded-full" />
+                                    <Image src={img} alt={`${name} profile picture`} width={24} height={24}  className="w-6 h-6 rounded-full" />
                                     {name}
                                 </td>
                                 <td className="px-3 py-2">{date}</td>
@@ -339,7 +340,7 @@ const AttendanceContent: React.FC = () => {
                                 <tbody>
                                     <tr className="hover:bg-gray-50">
                                         <td className="p-2 border-b">
-                                            <img src="/manprofileavatar.png" alt="Profile" className="w-10 h-10 rounded-full" />
+                                            <Image src="/manprofileavatar.png" alt="Profile" width={40} height={40} className="w-10 h-10 rounded-full" />
                                         </td>
                                         <td className="p-2 border-b">John Doe</td>
                                         <td className="p-2 border-b">Mathematics</td>

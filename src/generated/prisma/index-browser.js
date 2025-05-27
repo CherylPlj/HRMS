@@ -128,7 +128,6 @@ exports.Prisma.UserIDSequenceScalarFieldEnum = {
 
 exports.Prisma.UserScalarFieldEnum = {
   UserID: 'UserID',
-  ClerkUserID: 'ClerkUserID',
   FirstName: 'FirstName',
   LastName: 'LastName',
   Email: 'Email',
@@ -146,13 +145,13 @@ exports.Prisma.FacultyScalarFieldEnum = {
   DateOfBirth: 'DateOfBirth',
   Phone: 'Phone',
   Address: 'Address',
-  EmergencyContact: 'EmergencyContact',
   EmploymentStatus: 'EmploymentStatus',
   HireDate: 'HireDate',
   ResignationDate: 'ResignationDate',
   Position: 'Position',
   DepartmentID: 'DepartmentID',
-  ContractID: 'ContractID'
+  ContractID: 'ContractID',
+  EmergencyContact: 'EmergencyContact'
 };
 
 exports.Prisma.CashierScalarFieldEnum = {
@@ -197,11 +196,11 @@ exports.Prisma.ContractScalarFieldEnum = {
 exports.Prisma.ScheduleScalarFieldEnum = {
   ScheduleID: 'ScheduleID',
   FacultyID: 'FacultyID',
-  DayOfWeek: 'DayOfWeek',
   StartTime: 'StartTime',
   EndTime: 'EndTime',
   Subject: 'Subject',
-  ClassSection: 'ClassSection'
+  ClassSection: 'ClassSection',
+  DayOfWeek: 'DayOfWeek'
 };
 
 exports.Prisma.AIChatScalarFieldEnum = {
@@ -246,9 +245,9 @@ exports.Prisma.AttendanceScalarFieldEnum = {
   date: 'date',
   timeIn: 'timeIn',
   timeOut: 'timeOut',
-  status: 'status',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  status: 'status'
 };
 
 exports.Prisma.RoleScalarFieldEnum = {
