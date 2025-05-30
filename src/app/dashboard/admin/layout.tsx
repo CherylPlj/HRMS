@@ -9,11 +9,34 @@ import AttendanceContent from '@/components/AttendanceContent';
 import LeaveContent from '@/components/LeaveContent';
 import UsersContent from '@/components/UsersContent';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
 interface ChatMessage {
   type: 'user' | 'ai';
   content: string;
 }
+
+interface FacultyData {
+  FacultyID: number;
+  Phone: string | null;
+  Address: string | null;
+  EmergencyContact: string | null;
+}
+
+interface UserData {
+  UserID: string;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  Photo: string | null;
+  Faculty: FacultyData | null;
+}
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function Dashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
@@ -34,6 +57,8 @@ export default function Dashboard() {
   const chatbotRef = useRef<HTMLDivElement | null>(null);
   const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
   const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
+  const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Function to position chatbot below the chat icon
   const positionChatbot = () => {
@@ -140,11 +165,111 @@ export default function Dashboard() {
     }
   };
 
-  const handleSave = () => {
-    console.log('Saved profile:', { phoneNumber, address });
-    setEditProfileVisible(false); // Close the Edit Profile modal after saving
-    setAdminInfoVisible(true); // Reopen the Admin Info modal after saving
+  // Fetch user data from Supabase
+  const fetchUserData = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      const { data: userData, error: userError } = await supabase
+        .from('User')
+        .select(`
+          UserID,
+          FirstName,
+          LastName,
+          Email,
+          Photo,
+          Faculty (
+            FacultyID,
+            Phone,
+            Address,
+            EmergencyContact
+          )
+        `)
+        .eq('UserID', user.id)
+        .single() as { data: UserData | null; error: any };
+
+      if (userError) throw userError;
+
+      if (userData) {
+        setPhoneNumber(userData.Faculty?.Phone || '');
+        setAddress(userData.Faculty?.Address || '');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to load profile data. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Update user data in Supabase
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+      
+      // First, get the faculty record to ensure it exists
+      const { data: facultyData, error: facultyError } = await supabase
+        .from('Faculty')
+        .select('FacultyID')
+        .eq('UserID', user.id)
+        .single();
+
+      if (facultyError) throw facultyError;
+
+      if (!facultyData) {
+        setNotification({
+          type: 'error',
+          message: 'Faculty record not found. Please contact IT support.'
+        });
+        return;
+      }
+
+      // Update faculty record
+      const { error: updateError } = await supabase
+        .from('Faculty')
+        .update({
+          Phone: phoneNumber,
+          Address: address,
+          DateModified: new Date().toISOString()
+        })
+        .eq('FacultyID', facultyData.FacultyID);
+
+      if (updateError) throw updateError;
+
+      setNotification({
+        type: 'success',
+        message: 'Profile updated successfully!'
+      });
+
+      // Close edit modal and show info modal
+      setEditProfileVisible(false);
+      setAdminInfoVisible(true);
+
+      // Refresh the data
+      await fetchUserData();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to update profile. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch user data when profile modal opens
+  useEffect(() => {
+    if (isAdminInfoVisible) {
+      fetchUserData();
+    }
+  }, [isAdminInfoVisible]);
 
   const renderContent = () => {
     switch (activeButton) {
@@ -484,31 +609,115 @@ export default function Dashboard() {
 
       {/* Admin Info Modal */}
       {isAdminInfoVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl text-center font-bold text-red-700 mb-4">Admin Information</h2>
-            <p className="text-gray-700 text-center mb-6">
-              Name: {user?.firstName} {user?.lastName}
-              <br />
-              Email: {user?.emailAddresses[0]?.emailAddress}
-              <br />
-              Phone: {phoneNumber || "Not provided"}
-              <br />
-              Address: {address || "Not provided"}
-            </p>
-            <button
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 w-full mt-4"
-              onClick={() => setEditProfileVisible(true)}
-            >
-              Edit Profile
-            </button>
-            <div className="flex justify-center space-x-10 mt-4">
-              <button
-                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
-                onClick={() => setAdminInfoVisible(false)}
-              >
-                Close
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl w-[480px] transform transition-all duration-300 ease-in-out">
+            {/* Header */}
+            <div className="bg-[#800000] text-white p-6 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Profile Information</h2>
+                <button
+                  onClick={() => setAdminInfoVisible(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  title="Close modal"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Profile Content */}
+            <div className="p-6">
+              {notification && (
+                <div className={`mb-4 p-3 rounded-lg ${
+                  notification.type === 'success' 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  {notification.message}
+                </div>
+              )}
+
+              {isLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]"></div>
+                </div>
+              ) : (
+                <>
+                  {/* Profile Picture Section */}
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+                        <i className="fas fa-user text-4xl text-gray-400"></i>
+                      </div>
+                      <button 
+                        className="absolute bottom-0 right-0 bg-[#800000] text-white p-2 rounded-full hover:bg-red-800 transition-colors"
+                        title="Change profile picture"
+                      >
+                        <i className="fas fa-camera"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* User Information */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">First Name</label>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                          {user?.firstName}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">Last Name</label>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                          {user?.lastName}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Email Address</label>
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        {user?.emailAddresses[0]?.emailAddress}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Phone Number</label>
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        {phoneNumber || "Not provided"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Address</label>
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        {address || "Not provided"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="mt-8 flex justify-end space-x-3">
+                    <button
+                      onClick={() => setAdminInfoVisible(false)}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAdminInfoVisible(false);
+                        setEditProfileVisible(true);
+                      }}
+                      className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-red-800 transition-colors flex items-center"
+                    >
+                      <i className="fas fa-edit mr-2"></i>
+                      Edit Profile
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -516,42 +725,119 @@ export default function Dashboard() {
 
       {/* Edit Profile Modal */}
       {isEditProfileVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl text-center font-bold text-red-700 mb-4">Edit Profile</h2>
-            <p className="text-gray-700 text-center mb-2">
-              Name: {user?.firstName} {user?.lastName}
-              <br />
-              Email: {user?.emailAddresses[0]?.emailAddress}
-            </p>
-            <div className="flex flex-col space-y-4 mt-4">
-              <input
-                type="text"
-                placeholder="Phone Number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded"
-              />
-              <textarea
-                placeholder="Address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded"
-              />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl w-[480px] transform transition-all duration-300 ease-in-out">
+            {/* Header */}
+            <div className="bg-[#800000] text-white p-6 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Edit Profile</h2>
+                <button
+                  onClick={() => setEditProfileVisible(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  title="Close modal"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
             </div>
-            <div className="flex justify-center space-x-10 mt-6">
-              <button
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                onClick={() => setEditProfileVisible(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
-                onClick={handleSave}
-              >
-                Save
-              </button>
+
+            {/* Edit Form */}
+            <div className="p-6">
+              {notification && (
+                <div className={`mb-4 p-3 rounded-lg ${
+                  notification.type === 'success' 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  {notification.message}
+                </div>
+              )}
+
+              <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+                <div className="space-y-4">
+                  {/* Read-only fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">First Name</label>
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        {user?.firstName}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Last Name</label>
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        {user?.lastName}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Email Address</label>
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                      {user?.emailAddresses[0]?.emailAddress}
+                    </div>
+                  </div>
+
+                  {/* Editable fields */}
+                  <div>
+                    <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-600 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      id="phoneNumber"
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="w-full p-2 rounded-lg border border-gray-300 focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="address" className="block text-sm font-medium text-gray-600 mb-1">
+                      Address
+                    </label>
+                    <textarea
+                      id="address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full p-2 rounded-lg border border-gray-300 focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+                      rows={3}
+                      placeholder="Enter address"
+                    />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-8 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditProfileVisible(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    title="Cancel editing"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-red-800 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save mr-2"></i>
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
