@@ -31,7 +31,6 @@ const AttendanceFaculty: React.FC = () => {
     });
   };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateTimeIn = (record: AttendanceRecord | null): boolean => {
     if (!record) return true;
     
@@ -47,7 +46,7 @@ const AttendanceFaculty: React.FC = () => {
     
     return true;
   };
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const validateTimeOut = (record: AttendanceRecord | null): boolean => {
     if (!record) {
       toast.error('Please mark your time in first');
@@ -71,9 +70,7 @@ const AttendanceFaculty: React.FC = () => {
     
     return true;
   };
-  
-  console.log('Current Record:', validateTimeOut);
-  
+
   const handleTimeIn = async () => {
     if (isProcessing) return;
     
@@ -203,14 +200,25 @@ const AttendanceFaculty: React.FC = () => {
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Mark Attendance</h2>
               <div className="flex flex-col sm:flex-row gap-4">
+                {/* Time In Button */}
                 <button
                   className={`flex-1 ${
-                    (currentRecord?.timeIn && currentRecord.date && new Date(currentRecord.date).toDateString() === new Date().toDateString()) || isProcessing
-                      ? 'bg-gray-300 cursor-not-allowed' 
+                    (currentRecord?.timeIn &&
+                      currentRecord.date &&
+                      new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
+                    isProcessing
+                      ? 'bg-gray-300 cursor-not-allowed'
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeIn}
-                  disabled={Boolean((currentRecord?.timeIn && currentRecord.date && new Date(currentRecord.date).toDateString() === new Date().toDateString()) || isProcessing)}
+                  disabled={
+                    Boolean(
+                    (currentRecord?.timeIn &&
+                      currentRecord.date &&
+                      new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
+                    isProcessing
+                    ) || !validateTimeIn(currentRecord)
+                  }
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center">
@@ -220,24 +228,29 @@ const AttendanceFaculty: React.FC = () => {
                       </svg>
                       Processing...
                     </span>
-                  ) : 'Time In'}
+                  ) : (
+                    'Time In'
+                  )}
                 </button>
+                {/* Time Out Button */}
                 <button
                   className={`flex-1 ${
-                    !currentRecord?.timeIn || 
-                    currentRecord?.timeOut || 
-                    !currentRecord?.date ||
-                    new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
-                    isProcessing
+                    (!currentRecord?.timeIn ||
+                      currentRecord?.timeOut ||
+                      !currentRecord?.date ||
+                      new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
+                      isProcessing)
                       ? 'bg-gray-300 cursor-not-allowed'
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeOut}
-                  disabled={Boolean(!currentRecord?.timeIn || 
-                    currentRecord?.timeOut || 
+                  disabled={
+                    !currentRecord?.timeIn ||
+                    currentRecord?.timeOut ||
                     !currentRecord?.date ||
                     new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
-                    isProcessing)}
+                    isProcessing
+                  }
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center">
@@ -338,4 +351,4 @@ const getStatusBadgeColor = (status: string | undefined) => {
   }
 };
 
-export default AttendanceFaculty; 
+export default AttendanceFaculty;
