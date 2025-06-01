@@ -100,13 +100,12 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
       {/* Header Section */}
         <div className="flex justify-end items-center mb-4">
           <button
-            className="bg-gray-500 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-600"
+            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-[#a83232]"
             onClick={() => setShowModal(true)}
           >
             <FaPlus /> Upload Document
           </button>
-        </div>
-      {/* Modal for Upload */}
+        </div>      {/* Modal for Upload */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
@@ -148,14 +147,14 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
                 />
               </div>
               {error && <div className="text-red-600">{error}</div>}
-              <button
-                type="submit"
-                className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900"
-                disabled={uploading}
-              >
-                {uploading ? 'Uploading...' : 'Submit'}
-              </button>
-            </form>
+      <button
+        type="submit"
+        className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-[#a83232]"
+        disabled={uploading}
+      >
+        {uploading ? 'Uploading...' : 'Submit'}
+      </button>            
+      </form>
           </div>
         </div>
       )}
