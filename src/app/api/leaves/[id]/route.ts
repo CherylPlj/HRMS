@@ -8,13 +8,16 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
-) {
+    // { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
+    
+    ): Promise<NextResponse> {
     try {
+        const { id } = await params;
         const { error } = await supabase
             .from('Leave')
             .delete()
-            .eq('LeaveID', params.id);
+            .eq('LeaveID', id);
 
         if (error) {
             console.error('Error deleting leave:', error);

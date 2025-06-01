@@ -187,7 +187,7 @@ export default function Dashboard() {
           )
         `)
         .eq('UserID', user.id)
-        .single() as { data: UserData | null; error: any };
+        .single() as { data: UserData | null; error: unknown };
 
       if (userError) throw userError;
 

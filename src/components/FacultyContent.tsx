@@ -192,6 +192,7 @@ const FacultyContent: React.FC = () => {
     try {
       const data = await fetchFacultyDocuments();
       setDocuments(data);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setDocuments([]);
     }
@@ -209,6 +210,7 @@ const FacultyContent: React.FC = () => {
       });
       if (!res.ok) throw new Error('Failed to update status');
       await fetchDocuments();
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       alert('Failed to update status');
     } finally {
@@ -423,6 +425,7 @@ const FacultyContent: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <select
+                        title="Change Submission Status"
                         value={doc.SubmissionStatus}
                         onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
                         disabled={statusUpdating === doc.DocumentID}

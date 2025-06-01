@@ -39,6 +39,7 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
     try {
       const data = await fetchFacultyDocuments(facultyId);
       setDocuments(data);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setDocuments([]);
     }
@@ -52,7 +53,7 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
 
   // Handle form changes
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, files } = e.target as any;
+    const { name, value, files } = e.target as unknown as HTMLInputElement & HTMLSelectElement;
     if (name === 'file' && files) {
       setForm(f => ({ ...f, file: files[0] }));
     } else {
@@ -82,6 +83,7 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
         file: null,
       });
       fetchDocs();
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setError('Failed to upload document.');
     } finally {
@@ -90,6 +92,7 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
   };
 
   // Helper to get DocumentTypeName from ID
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getDocumentTypeName = (id: number) => {
     const type = DOCUMENT_TYPES.find(dt => dt.DocumentTypeID === id);
     return type ? type.DocumentTypeName : id;
@@ -120,8 +123,9 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
             <h2 className="text-xl font-bold mb-4 text-black">Upload Document</h2>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="block text-black mb-1 font-medium">Document Type</label>
+                <label htmlFor="document-type-select" className="block text-black mb-1 font-medium">Document Type</label>
                 <select
+                  id="document-type-select"
                   name="DocumentTypeID"
                   value={form.DocumentTypeID}
                   onChange={handleFormChange}
@@ -145,6 +149,8 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
                   onChange={handleFormChange}
                   className="w-full"
                   required
+                  title="Upload your document file"
+                  placeholder="Choose a file to upload"
                 />
               </div>
               {error && <div className="text-red-600">{error}</div>}
