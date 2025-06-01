@@ -98,14 +98,15 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
   return (
     <div className="p-6 bg-white shadow-lg rounded-lg">
       {/* Header Section */}
-        <div className="flex justify-end items-center mb-4">
-          <button
-            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-[#a83232]"
-            onClick={() => setShowModal(true)}
-          >
-            <FaPlus /> Upload Document
-          </button>
-        </div>      {/* Modal for Upload */}
+      <div className="flex justify-end items-center mb-4">
+        <button
+          className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-[#a83232]"
+          onClick={() => setShowModal(true)}
+        >
+          <FaPlus /> Upload Document
+        </button>
+      </div>
+      {/* Modal for Upload */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
@@ -147,14 +148,14 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
                 />
               </div>
               {error && <div className="text-red-600">{error}</div>}
-      <button
-        type="submit"
-        className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-[#a83232]"
-        disabled={uploading}
-      >
-        {uploading ? 'Uploading...' : 'Submit'}
-      </button>            
-      </form>
+              <button
+                type="submit"
+                className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-[#a83232]"
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Submit'}
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -164,22 +165,25 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 text-left text-black">#</th>
-              <th className="p-3 text-left text-black">Document Type</th>
-              <th className="p-3 text-left text-black">Status</th>
+              <th className="p-3 text-left text-black">Document ID</th>
+              <th className="p-3 text-left text-black">Faculty ID</th>
+              <th className="p-3 text-left text-black">Document Type ID</th>
               <th className="p-3 text-left text-black">Upload Date</th>
+              <th className="p-3 text-left text-black">Status</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="p-3 text-center">Loading...</td>
+                <td colSpan={5} className="p-3 text-center">Loading...</td>
               </tr>
             ) : (
-              documents.map((doc, index) => (
+              documents.map((doc) => (
                 <tr key={doc.DocumentID} className="border-t hover:bg-gray-50">
-                  <td className="p-3 text-left text-black">{index + 1}</td>
-                  <td className="p-3 text-left text-black">{getDocumentTypeName(Number(doc.DocumentTypeID))}</td>
+                  <td className="p-3 text-left text-black">{doc.DocumentID}</td>
+                  <td className="p-3 text-left text-black">{doc.FacultyID}</td>
+                  <td className="p-3 text-left text-black">{doc.DocumentTypeID}</td>
+                  <td className="p-3 text-left text-black">{doc.UploadDate}</td>
                   <td className="p-3 text-left text-black">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
                       ${
@@ -195,7 +199,6 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
                       {doc.SubmissionStatus}
                     </span>
                   </td>
-                  <td className="p-3 text-left text-black">{doc.UploadDate}</td>
                 </tr>
               ))
             )}
