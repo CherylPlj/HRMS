@@ -6,6 +6,28 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Define a type for the leave record
+type LeaveRecord = {
+    LeaveID: number;
+    LeaveType: string;
+    StartDate: string;
+    EndDate: string;
+    Reason: string;
+    Status: string;
+    DocumentUrl: string | null;
+    CreatedAt: string;
+    UpdatedAt: string;
+    Faculty?: {
+        FacultyID: number;
+        UserID: string;
+        User?: {
+            FirstName: string;
+            LastName: string;
+            Photo: string | null;
+        };
+    };
+};
+
 export async function GET() {
     try {
         console.log('Fetching leaves from Supabase...'); // Debug log
@@ -38,7 +60,7 @@ export async function GET() {
         }
 
         // Transform the data to match the frontend structure
-        const transformedLeaves = leaves.map(function (leave: any) {
+        const transformedLeaves = (leaves as LeaveRecord[]).map((leave) => {
             // Check if Faculty and User data exists
             if (!leave.Faculty || !leave.Faculty.User) {
                 console.warn('Missing Faculty or User data for leave:', leave);
@@ -81,4 +103,4 @@ export async function GET() {
             { status: 500 }
         );
     }
-} 
+}

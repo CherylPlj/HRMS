@@ -244,13 +244,14 @@ const AttendanceFaculty: React.FC = () => {
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeOut}
-                  disabled={
-                    !currentRecord?.timeIn ||
-                    currentRecord?.timeOut ||
-                    !currentRecord?.date ||
-                    new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
+                  disabled={Boolean(
+                  (
+                    (currentRecord?.timeIn &&
+                      currentRecord.date &&
+                      new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
                     isProcessing
-                  }
+                  ) || !validateTimeIn(currentRecord)
+                )}
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center">

@@ -16,10 +16,19 @@ import {
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 export default function DashboardContent() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { user: user } = useUser(); // Prefix with underscore to indicate intentionally unused
+  const { user } = useUser();
+  const router = useRouter();
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (user === null) {
+      router.replace("/sign-in");
+    }
+  }, [user, router]);
+
   const [dateRange, setDateRange] = useState<[Date, Date]>([
     new Date(new Date().setDate(1)), // First day of current month
     new Date(), // Today
@@ -82,7 +91,10 @@ export default function DashboardContent() {
             )
           `);
 
-        if (facultyError) throw facultyError;
+        if (facultyError) {
+          console.error("Faculty fetch error:", facultyError.message || facultyError);
+          throw facultyError;
+        }
 
         const regularCount = faculty?.filter((f) => f.Contract?.ContractType === "Full_Time").length || 0;
         const probationaryCount = faculty?.filter((f) => f.Contract?.ContractType === "Probationary").length || 0;
@@ -103,7 +115,10 @@ export default function DashboardContent() {
             )
           `);
 
-        if (deptError) throw deptError;
+        if (deptError) {
+          console.error("Department fetch error:", deptError.message || deptError);
+          throw deptError;
+        }
 
         const deptStats: Record<string, number> = {};
         departments?.forEach((dept) => {
@@ -122,7 +137,10 @@ export default function DashboardContent() {
           `)
           .gte("LastLogin", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-        if (usersError) throw usersError;
+        if (usersError) {
+          console.error("Users fetch error:", usersError.message || usersError);
+          throw usersError;
+        }
 
         const facultyUsers = users?.filter((u) => u.Role === "Faculty").length || 0;
         const adminUsers = users?.filter((u) => u.Role === "Admin").length || 0;
@@ -140,7 +158,10 @@ export default function DashboardContent() {
           .gte("date", dateRange[0].toISOString())
           .lte("date", dateRange[1].toISOString());
 
-        if (attendanceError) throw attendanceError;
+        if (attendanceError) {
+          console.error("Attendance fetch error:", attendanceError.message || attendanceError);
+          throw attendanceError;
+        }
 
         setAttendanceData({
           present: attendance?.filter((a) => a.status === "PRESENT").length || 0,
@@ -166,7 +187,10 @@ export default function DashboardContent() {
               .gte("date", startDate.toISOString())
               .lte("date", endDate.toISOString());
 
-            if (monthError) throw monthError;
+            if (monthError) {
+              console.error("Monthly attendance fetch error:", monthError.message || monthError);
+              throw monthError;
+            }
 
             const totalDays = monthAttendance?.length || 0;
             const presentDays = monthAttendance?.filter((a) => a.status === "PRESENT").length || 0;
@@ -183,7 +207,10 @@ export default function DashboardContent() {
           .gte("created_at", dateRange[0].toISOString())
           .lte("created_at", dateRange[1].toISOString());
 
-        if (leavesError) throw leavesError;
+        if (leavesError) {
+          console.error("Leave requests fetch error:", leavesError.message || leavesError);
+          throw leavesError;
+        }
 
         setLeaveRequests({
           pending: leaves?.filter((l) => l.status === "pending").length || 0,
@@ -192,7 +219,11 @@ export default function DashboardContent() {
         });
 
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        if (error instanceof Error) {
+          console.error("Error fetching dashboard data:", error.message);
+        } else {
+          console.error("Error fetching dashboard data:", error);
+        }
       }
     };
 
@@ -215,11 +246,18 @@ export default function DashboardContent() {
           .order("Timestamp", { ascending: false })
           .limit(5);
 
-        if (logsError) throw logsError;
+        if (logsError) {
+          console.error("Logs fetch error:", logsError.message || logsError);
+          throw logsError;
+        }
 
         setLogs(activityLogs || []);
       } catch (error) {
-        console.error("Error fetching logs:", error);
+        if (error instanceof Error) {
+          console.error("Error fetching dashboard data:", error.message);
+        } else {
+          console.error("Error fetching dashboard data:", error);
+        }
       }
     };
 
