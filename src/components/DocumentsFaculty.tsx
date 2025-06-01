@@ -1,45 +1,164 @@
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaPaperclip, FaFilter, FaPen } from 'react-icons/fa';
+import { FaPlus, FaTimes } from 'react-icons/fa';
+import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 
-// Interface for document row, matching your backend API response
+// Example: Replace with fetch from your backend if needed
+const DOCUMENT_TYPES = [
+  { DocumentTypeID: 1, DocumentTypeName: 'Resume' },
+  { DocumentTypeID: 2, DocumentTypeName: 'Transcript' },
+  { DocumentTypeID: 3, DocumentTypeName: 'Certificate' },
+  // ...add more as needed
+];
+
 interface DocumentFacultyRow {
-  id: number;
-  name: string;
-  file: string;
-  status: string;
-  date: string;
+  DocumentID: number;
+  FacultyID: number;
+  DocumentTypeID: number;
+  UploadDate: string;
+  SubmissionStatus: string;
+  file?: string;
 }
 
 const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
   const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [form, setForm] = useState<{
+    DocumentTypeID: string;
+    file: File | null;
+  }>({
+    DocumentTypeID: '',
+    file: null,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch documents
+  const fetchDocs = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchFacultyDocuments(facultyId);
+      setDocuments(data);
+    } catch (err) {
+      setDocuments([]);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/faculty-documents${facultyId ? `?facultyId=${facultyId}` : ''}`)
-      .then(res => res.json())
-      .then(data => setDocuments(data))
-      .finally(() => setLoading(false));
+    fetchDocs();
+    // eslint-disable-next-line
   }, [facultyId]);
+
+  // Handle form changes
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, files } = e.target as any;
+    if (name === 'file' && files) {
+      setForm(f => ({ ...f, file: files[0] }));
+    } else {
+      setForm(f => ({ ...f, [name]: value }));
+    }
+  };
+
+  // Handle form submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!facultyId || !form.DocumentTypeID || !form.file) {
+      setError('Please fill all fields and select a file.');
+      return;
+    }
+    setUploading(true);
+    const data = new FormData();
+    data.append('FacultyID', facultyId.toString());
+    data.append('DocumentTypeID', form.DocumentTypeID);
+    data.append('file', form.file);
+
+    try {
+      await uploadFacultyDocument(data);
+      setShowModal(false);
+      setForm({
+        DocumentTypeID: '',
+        file: null,
+      });
+      fetchDocs();
+    } catch (err) {
+      setError('Failed to upload document.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Helper to get DocumentTypeName from ID
+  const getDocumentTypeName = (id: number) => {
+    const type = DOCUMENT_TYPES.find(dt => dt.DocumentTypeID === id);
+    return type ? type.DocumentTypeName : id;
+  };
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-lg">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl text-black font-bold">Documents Checklist</h1>
-        <button className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800">
-          <FaPlus /> Upload Files
-        </button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full p-2 border border-gray-300 rounded"
-        />
-      </div>
+        <div className="flex justify-end items-center mb-4">
+          <button
+            className="bg-gray-500 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-600"
+            onClick={() => setShowModal(true)}
+          >
+            <FaPlus /> Upload Document
+          </button>
+        </div>
+      {/* Modal for Upload */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => setShowModal(false)}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-black">Upload Document</h2>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-black mb-1 font-medium">Document Type</label>
+                <select
+                  name="DocumentTypeID"
+                  value={form.DocumentTypeID}
+                  onChange={handleFormChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                  required
+                >
+                  <option value="">Select document type</option>
+                  {DOCUMENT_TYPES.map(dt => (
+                    <option key={dt.DocumentTypeID} value={dt.DocumentTypeID}>
+                      {dt.DocumentTypeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-black mb-1 font-medium">File Upload</label>
+                <input
+                  type="file"
+                  name="file"
+                  accept=".pdf,.doc,.docx,.jpg,.png"
+                  onChange={handleFormChange}
+                  className="w-full"
+                  required
+                />
+              </div>
+              {error && <div className="text-red-600">{error}</div>}
+              <button
+                type="submit"
+                className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900"
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Submit'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Documents Table */}
       <div className="overflow-x-auto rounded-lg">
@@ -47,70 +166,42 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
           <thead className="bg-gray-100">
             <tr>
               <th className="p-3 text-left text-black">#</th>
-              <th className="p-3 text-left text-black">Document</th>
-              <th className="p-3 text-left text-black">File Uploaded</th>
-              <th className="p-3 text-left text-black">Submission Status</th>
-              <th className="p-3 text-left text-black">Date Submitted</th>
-              <th className="p-3 text-left text-black">Action</th>
-              <th className="p-3 text-left text-black">
-                <FaFilter />
-              </th>
+              <th className="p-3 text-left text-black">Document Type</th>
+              <th className="p-3 text-left text-black">Status</th>
+              <th className="p-3 text-left text-black">Upload Date</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-3 text-center">Loading...</td>
+                <td colSpan={4} className="p-3 text-center">Loading...</td>
               </tr>
             ) : (
               documents.map((doc, index) => (
-                <tr key={doc.id} className="border-t hover:bg-gray-50">
-                  {/* Sequential Number */}
+                <tr key={doc.DocumentID} className="border-t hover:bg-gray-50">
                   <td className="p-3 text-left text-black">{index + 1}</td>
-
-                  {/* Document Name with Checkbox */}
-                  <td className="p-3 gap-2 text-black">
-                    <input
-                      id={`checkbox-${doc.id}`}
-                      type="checkbox"
-                      checked
-                      readOnly
-                      className="h-4 w-4"
-                      aria-label={`Select ${doc.name}`}
-                    />
-                    <label htmlFor={`checkbox-${doc.id}`} className="ml-2 cursor-pointer">
-                      {doc.name}
-                    </label>
+                  <td className="p-3 text-left text-black">{getDocumentTypeName(Number(doc.DocumentTypeID))}</td>
+                  <td className="p-3 text-left text-black">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+                      ${
+                        doc.SubmissionStatus === 'Approved'
+                          ? 'bg-green-100 text-green-700'
+                          : doc.SubmissionStatus === 'Rejected'
+                          ? 'bg-red-100 text-red-700'
+                          : doc.SubmissionStatus === 'Submitted'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }
+                    `}>
+                      {doc.SubmissionStatus}
+                    </span>
                   </td>
-
-                  {/* File Uploaded */}
-                  <td className="p-3 text-[#800000] flex items-center text-left gap-2">
-                    <FaPaperclip className="w-4 h-4" />
-                    <span>{doc.file}</span>
-                  </td>
-
-                  {/* Submission Status */}
-                  <td className="p-3 text-green-600 text-black">{doc.status}</td>
-
-                  {/* Date Submitted */}
-                  <td className="p-3 text-left text-black">{doc.date}</td>
-
-                  {/* Action */}
-                  <td className="p-3 flex items-center gap-2">
-                    <FaPen className="text-gray-500 cursor-pointer w-4 h-4" />
-                  </td>
-                  {/* Filter column (empty for now) */}
-                  <td></td>
+                  <td className="p-3 text-left text-black">{doc.UploadDate}</td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
-      </div>
-      {/* Pagination */}      
-      {/* Submission Summary */}
-      <div className="mt-4 text-right text-sm text-black">
-        <span className="text-green-600 font-bold">Complete</span> Submitted: {documents.length}/5
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaTrash, FaPen, FaDownload, FaPlus, FaFile } from 'react-icons/fa';
 import { Search, Filter } from 'lucide-react';
+import { fetchFacultyDocuments } from '../api/faculty-documents';
 
 interface Faculty {
   FacultyId: number;
@@ -46,6 +47,15 @@ interface Notification {
   message: string;
 }
 
+interface DocumentFacultyRow {
+  DocumentID: number;
+  FacultyID: number;
+  DocumentTypeID: number;
+  UploadDate: string;
+  SubmissionStatus: string;
+  file?: string;
+}
+
 const FacultyContent: React.FC = () => {
   const [activeView, setActiveView] = useState<'facultyManagement' | 'documentManagement'>('facultyManagement');
   const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
@@ -67,17 +77,20 @@ const FacultyContent: React.FC = () => {
     Photo: ''
   });
 
+  // Document management state
+  const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
+  const [docLoading, setDocLoading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
+
   // Fetch faculty data from the API endpoint
   const fetchFacultyData = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/faculty');
-      
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to load faculty data');
       }
-
       const data = await response.json();
       setFacultyList(data);
       setNotification(null);
@@ -103,8 +116,6 @@ const FacultyContent: React.FC = () => {
     e.preventDefault();
     try {
       setLoading(true);
-
-      // Create user and faculty through the API
       const response = await fetch('/api/createUser', {
         method: 'POST',
         headers: {
@@ -115,7 +126,6 @@ const FacultyContent: React.FC = () => {
           lastName: newFaculty.LastName,
           Email: newFaculty.Email,
           role: 'Faculty',
-          // Additional faculty-specific fields
           facultyData: {
             Position: newFaculty.Position,
             DepartmentId: newFaculty.DepartmentId,
@@ -134,7 +144,6 @@ const FacultyContent: React.FC = () => {
         throw new Error(data.error || 'Failed to create faculty member');
       }
 
-      // Reset form and close modal
       setNewFaculty({
         FirstName: '',
         LastName: '',
@@ -150,7 +159,6 @@ const FacultyContent: React.FC = () => {
       });
       setIsFacultyModalOpen(false);
 
-      // Refresh faculty list
       await fetchFacultyData();
 
       setNotification({
@@ -171,20 +179,48 @@ const FacultyContent: React.FC = () => {
   };
 
   const handleOpenFacultyModal = () => {
-    setIsFacultyModalOpen(true); // Open the Add Faculty modal
+    setIsFacultyModalOpen(true);
   };
-
-  // const handleCloseFacultyModal = () => {
-  //   setIsFacultyModalOpen(false); // Close the Add Faculty modal
-  // };
 
   const handleOpenDocumentModal = () => {
-    setIsDocumentModalOpen(true); // Open the Add Document modal
+    setIsDocumentModalOpen(true);
   };
 
-  // const handleCloseDocumentModal = () => {
-  //   setIsDocumentModalOpen(false); // Close the Add Document modal
-  // };
+  // Document management: fetch documents
+  const fetchDocuments = async () => {
+    setDocLoading(true);
+    try {
+      const data = await fetchFacultyDocuments();
+      setDocuments(data);
+    } catch (err) {
+      setDocuments([]);
+    }
+    setDocLoading(false);
+  };
+
+  // Document management: update status
+  const handleStatusChange = async (docId: number, newStatus: string) => {
+    setStatusUpdating(docId);
+    try {
+      const res = await fetch(`/api/faculty-documents/${docId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ SubmissionStatus: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      await fetchDocuments();
+    } catch (err) {
+      alert('Failed to update status');
+    } finally {
+      setStatusUpdating(null);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'documentManagement') {
+      fetchDocuments();
+    }
+  }, [activeView]);
 
   return (
     <div className="p-6">
@@ -255,87 +291,157 @@ const FacultyContent: React.FC = () => {
       </div>
 
       {/* Faculty Table */}
-      {loading ? (
-        <div className="text-center py-4">Loading...</div>
-      ) : (
+      {activeView === 'facultyManagement' && (
+        loading ? (
+          <div className="text-center py-4">Loading...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Faculty
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Position
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {facultyList.map((Faculty) => (
+                  <tr key={Faculty.FacultyId}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 flex-shrink-0">
+                          <img
+                            className="h-10 w-10 rounded-full"
+                            src={Faculty.User.Photo || '/default-avatar.png'}
+                            alt={`${Faculty.User.FirstName} ${Faculty.User.LastName}`}
+                          />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {Faculty.User.FirstName} {Faculty.User.LastName}
+                          </div>
+                          <div className="text-sm text-gray-500">{Faculty.User.Email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {Faculty.Position}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {Faculty.Department.DepartmentName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        Faculty.EmploymentStatus === 'Regular'
+                          ? 'bg-green-100 text-green-800'
+                          : Faculty.EmploymentStatus === 'Probationary'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {Faculty.EmploymentStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button title="Edit"className="text-indigo-600 hover:text-indigo-900">
+                          <FaPen />
+                        </button>
+                        <button title="Delete" className="text-red-600 hover:text-red-900">
+                          <FaTrash />
+                        </button>
+                        <button title="Download" className="text-green-600 hover:text-green-900">
+                          <FaDownload />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+
+      {activeView === 'documentManagement' && (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border rounded-lg">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Faculty
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Position
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Department
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty ID</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {facultyList.map((Faculty) => (
-                <tr key={Faculty.FacultyId}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        <img
-                          className="h-10 w-10 rounded-full"
-                          src={Faculty.User.Photo || '/default-avatar.png'}
-                          alt={`${Faculty.User.FirstName} ${Faculty.User.LastName}`}
-                        />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {Faculty.User.FirstName} {Faculty.User.LastName}
-                        </div>
-                        <div className="text-sm text-gray-500">{Faculty.User.Email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {Faculty.Position}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {Faculty.Department.DepartmentName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      Faculty.EmploymentStatus === 'Regular'
-                        ? 'bg-green-100 text-green-800'
-                        : Faculty.EmploymentStatus === 'Probationary'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {Faculty.EmploymentStatus}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button title="Edit"className="text-indigo-600 hover:text-indigo-900">
-                        <FaPen />
-                      </button>
-                      <button title="Delete" className="text-red-600 hover:text-red-900">
-                        <FaTrash />
-                      </button>
-                      <button title="Download" className="text-green-600 hover:text-green-900">
-                        <FaDownload />
-                      </button>
-                    </div>
-                  </td>
+              {docLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">Loading documents...</td>
                 </tr>
-              ))}
+              ) : documents.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
+                </tr>
+              ) : (
+                documents.map((doc, idx) => (
+                  <tr
+                    key={doc.DocumentID}
+                    className="hover:bg-gray-100 transition-colors"
+                  >
+                    <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{doc.FacultyID}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{doc.DocumentTypeID}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+                        ${
+                          doc.SubmissionStatus === 'Approved'
+                            ? 'bg-green-100 text-green-700'
+                            : doc.SubmissionStatus === 'Rejected'
+                            ? 'bg-red-100 text-red-700'
+                            : doc.SubmissionStatus === 'Submitted'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }
+                      `}>
+                        {doc.SubmissionStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={doc.SubmissionStatus}
+                        onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
+                        disabled={statusUpdating === doc.DocumentID}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Submitted">Submitted</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       )}
-
+      
       {/* Add Faculty Modal */}
       {isFacultyModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
