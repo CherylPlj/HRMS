@@ -102,7 +102,6 @@ const UsersContent: React.FC = () => {
   const [isEditModalOpen, setEditModalOpen] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showConfirmModal, setShowConfirmModal] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);

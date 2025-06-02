@@ -136,7 +136,10 @@ exports.Prisma.UserScalarFieldEnum = {
   Status: 'Status',
   DateCreated: 'DateCreated',
   DateModified: 'DateModified',
-  LastLogin: 'LastLogin'
+  LastLogin: 'LastLogin',
+  createdBy: 'createdBy',
+  updatedBy: 'updatedBy',
+  isDeleted: 'isDeleted'
 };
 
 exports.Prisma.FacultyScalarFieldEnum = {
@@ -193,6 +196,17 @@ exports.Prisma.ContractScalarFieldEnum = {
   ContractType: 'ContractType'
 };
 
+exports.Prisma.AttendanceScalarFieldEnum = {
+  id: 'id',
+  facultyId: 'facultyId',
+  date: 'date',
+  timeIn: 'timeIn',
+  timeOut: 'timeOut',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  status: 'status'
+};
+
 exports.Prisma.ScheduleScalarFieldEnum = {
   ScheduleID: 'ScheduleID',
   FacultyID: 'FacultyID',
@@ -237,17 +251,6 @@ exports.Prisma.ActivityLogScalarFieldEnum = {
   ActionDetails: 'ActionDetails',
   Timestamp: 'Timestamp',
   IPAddress: 'IPAddress'
-};
-
-exports.Prisma.AttendanceScalarFieldEnum = {
-  id: 'id',
-  employeeId: 'employeeId',
-  date: 'date',
-  timeIn: 'timeIn',
-  timeOut: 'timeOut',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  status: 'status'
 };
 
 exports.Prisma.RoleScalarFieldEnum = {
@@ -308,6 +311,13 @@ exports.ContractType = exports.$Enums.ContractType = {
   Probationary: 'Probationary'
 };
 
+exports.AttendanceStatus = exports.$Enums.AttendanceStatus = {
+  PRESENT: 'PRESENT',
+  ABSENT: 'ABSENT',
+  LATE: 'LATE',
+  NOT_RECORDED: 'NOT_RECORDED'
+};
+
 exports.DayOfWeek = exports.$Enums.DayOfWeek = {
   Monday: 'Monday',
   Tuesday: 'Tuesday',
@@ -340,12 +350,12 @@ exports.Prisma.ModelName = {
   Document: 'Document',
   DocumentType: 'DocumentType',
   Contract: 'Contract',
+  Attendance: 'Attendance',
   Schedule: 'Schedule',
   AIChat: 'AIChat',
   Report: 'Report',
   Notification: 'Notification',
   ActivityLog: 'ActivityLog',
-  Attendance: 'Attendance',
   Role: 'Role',
   UserRole: 'UserRole',
   Leave: 'Leave'

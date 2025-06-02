@@ -3,19 +3,138 @@ import { Schedule, AttendanceRecord } from '../types/attendance';
 import { attendanceService } from '../services/attendanceService';
 import { toast } from 'react-toastify';
 import { useAttendance } from '../contexts/AttendanceContext';
-
-const EMPLOYEE_ID = '123-4567-FA'; // This should come from auth context in a real app
+import { useUser } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabaseClient';
+// import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
 const AttendanceFaculty: React.FC = () => {
+  const { user } = useUser();
   const { currentRecord, setCurrentRecord, currentTime, currentDate, setSummary } = useAttendance();
   const [schedule, setSchedule] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [mounted, setMounted] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
+  const [facultyId, setFacultyId] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch Supabase UserID and FacultyID when Clerk user is available
+  useEffect(() => {
+    const fetchUserAndFacultyId = async () => {
+      if (!user?.emailAddresses?.[0]?.emailAddress) {
+        console.log('No Clerk user email available');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Fetching Supabase user for email:', user.emailAddresses[0].emailAddress);
+        const { data: userData, error: userError } = await supabase
+          .from('User')
+          .select('UserID')
+          .eq('Email', user.emailAddresses[0].emailAddress)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching Supabase user:', userError);
+          return;
+        }
+
+        if (userData) {
+          console.log('Found Supabase user:', userData);
+          setSupabaseUserId(userData.UserID);
+
+          // Fetch FacultyID using UserID
+          const { data: facultyData, error: facultyError } = await supabase
+            .from('Faculty')
+            .select('FacultyID')
+            .eq('UserID', userData.UserID)
+            .single();
+
+          if (facultyError) {
+            console.error('Error fetching Faculty data:', facultyError);
+            return;
+          }
+
+          if (facultyData) {
+            console.log('Found Faculty ID:', facultyData);
+            setFacultyId(facultyData.FacultyID);
+          } else {
+            console.log('No Faculty found for user:', userData.UserID);
+          }
+        } else {
+          console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
+        }
+      } catch (error) {
+        console.error('Error in fetchUserAndFacultyId:', error);
+      }
+    };
+
+    fetchUserAndFacultyId();
+  }, [user]);
+
+  useEffect(() => {
+    if (facultyId) {
+      console.log('Faculty ID available, fetching attendance data');
+      fetchAttendanceData();
+    } else {
+      console.log('No Faculty ID available yet');
+    }
+  }, [facultyId]);
+
+  useEffect(() => {
+  // pseudo-code: replace with your actual fetch logic
+  async function fetchCurrentRecord() {
+    if (facultyId !== null) {
+      const record = await attendanceService.getTodayRecord(facultyId.toString(), user?.emailAddresses?.[0]?.emailAddress || '');
+      console.log('Fetched current record:', record);
+      setCurrentRecord(record);
+    }
+  }
+  fetchCurrentRecord();
+}, [facultyId]);
+
+function isWithinTimeWindow(startHour: number, endHour: number) {
+  const now = new Date();
+  const hour = now.getHours();
+  return hour >= startHour && hour < endHour;
+}
+
+// function getStatusForTimeIn(timeIn: string | null | undefined) {
+//   if (!timeIn) return 'NOT_RECORDED';
+//   const [h, m] = timeIn.split(':').map(Number);
+//   if (h > 8 || (h === 8 && m >= 15)) return 'LATE';
+//   return 'PRESENT';
+// }
+
+function formatTimeWithAmPm(timeStr: string | null | undefined) {
+  if (!timeStr) return 'Not recorded';
+  const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, seconds || 0, 0);
+  return date.toLocaleTimeString('en-PH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+}
+  const isTodayRecord = (record: AttendanceRecord | null) => {
+    if (!record?.date) return false;
+    const recDate = new Date(record.date);
+    const now = new Date();
+    // For debugging, log the record being checked:
+    console.log('Checking record:', record);
+    return (
+      recDate.getFullYear() === now.getFullYear() &&
+      recDate.getMonth() === now.getMonth() &&
+      recDate.getDate() === now.getDate()
+    );
+  };
 
   const confirmAction = (action: 'time-in' | 'time-out'): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -30,7 +149,7 @@ const AttendanceFaculty: React.FC = () => {
       }
     });
   };
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateTimeIn = (record: AttendanceRecord | null): boolean => {
     if (!record) return true;
     
@@ -72,16 +191,19 @@ const AttendanceFaculty: React.FC = () => {
   };
 
   const handleTimeIn = async () => {
-    if (isProcessing) return;
+    if (isProcessing || !facultyId || !user?.emailAddresses?.[0]?.emailAddress) return;
     
     try {
       const confirmed = await confirmAction('time-in');
       if (!confirmed) return;
       
       setIsProcessing(true);
-      console.log('Attempting to mark time in for employee:', EMPLOYEE_ID);
-      const record = await attendanceService.markTimeIn(EMPLOYEE_ID);
-      console.log('Time in response:', record);
+      console.log('Attempting to mark time in for faculty:', facultyId);
+      // Pass both facultyId and email!
+      const record = await attendanceService.markTimeIn(
+        facultyId.toString(),
+        user.emailAddresses[0].emailAddress
+      );      console.log('Time in response:', record);
       
       setCurrentRecord({
         ...record,
@@ -103,15 +225,16 @@ const AttendanceFaculty: React.FC = () => {
   };
 
   const handleTimeOut = async () => {
-    if (isProcessing) return;
+    if (isProcessing || !facultyId || !user?.emailAddresses?.[0]?.emailAddress) return;
     
     try {
       const confirmed = await confirmAction('time-out');
       if (!confirmed) return;
       
       setIsProcessing(true);
-      console.log('Attempting to mark time out for employee:', EMPLOYEE_ID);
-      const record = await attendanceService.markTimeOut(EMPLOYEE_ID);
+      console.log('Attempting to mark time out for faculty:', facultyId);
+      const record = await attendanceService.markTimeOut(facultyId.toString(), user.emailAddresses[0].emailAddress // <-- pass email here!
+);
       console.log('Time out response:', record);
       
       setCurrentRecord({
@@ -140,16 +263,29 @@ const AttendanceFaculty: React.FC = () => {
   };
 
   const fetchAttendanceData = async () => {
+    if (!facultyId) {
+      console.log('Cannot fetch attendance data: No Faculty ID available');
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log('Fetching attendance data for employee:', EMPLOYEE_ID);
+      console.log('Fetching attendance data for faculty:', facultyId);
+      const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
       const [summaryData, scheduleData, todayRecord] = await Promise.all([
-        attendanceService.getAttendanceSummary(EMPLOYEE_ID),
-        attendanceService.getSchedule(EMPLOYEE_ID),
-        attendanceService.getTodayRecord(EMPLOYEE_ID)
+        attendanceService.getAttendanceSummary(facultyId.toString(), email),
+        attendanceService.getSchedule(facultyId.toString(), email),
+        attendanceService.getTodayRecord(facultyId.toString(), email)
       ]);
       console.log('Fetched summary data:', summaryData);
       console.log('Fetched schedule data:', scheduleData);
       console.log('Fetched today\'s record:', todayRecord);
+
+      if (!summaryData || !scheduleData) {
+        console.error('Missing data in response:', { summaryData, scheduleData });
+        toast.error('Failed to fetch complete attendance data');
+        return;
+      }
 
       setSummary(summaryData);
       setSchedule(scheduleData);
@@ -161,10 +297,6 @@ const AttendanceFaculty: React.FC = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchAttendanceData();
-  }, []);
 
   if (!mounted) {
     return null;
@@ -206,18 +338,24 @@ const AttendanceFaculty: React.FC = () => {
                     (currentRecord?.timeIn &&
                       currentRecord.date &&
                       new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
-                    isProcessing
+                    isProcessing || !isWithinTimeWindow(7, 9) // Only allow Time In from 7:00 to 8:59 AM
                       ? 'bg-gray-300 cursor-not-allowed'
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeIn}
+                  // disabled={
+                  //   Boolean(
+                  //   (currentRecord?.timeIn &&
+                  //     currentRecord.date &&
+                  //     new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
+                  //   isProcessing
+                  //   ) || !validateTimeIn(currentRecord)
+                  // }
                   disabled={
-                    Boolean(
-                    (currentRecord?.timeIn &&
-                      currentRecord.date &&
-                      new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
-                    isProcessing
-                    ) || !validateTimeIn(currentRecord)
+                    isProcessing ||
+                    (isTodayRecord(currentRecord) && !!currentRecord?.timeIn) ||
+                    !isWithinTimeWindow(7, 17) // Only allow Time In from 7:00 to 5PM
+
                   }
                 >
                   {isProcessing ? (
@@ -239,19 +377,28 @@ const AttendanceFaculty: React.FC = () => {
                       currentRecord?.timeOut ||
                       !currentRecord?.date ||
                       new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
-                      isProcessing)
+                      isProcessing ||
+                      !isWithinTimeWindow(7, 21) // Only allow Time Out from 7:00 to 20:59 (8:59 PM)
+          )
                       ? 'bg-gray-300 cursor-not-allowed'
                       : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
                   } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
                   onClick={handleTimeOut}
-                  disabled={Boolean(
-                  (
-                    (currentRecord?.timeIn &&
-                      currentRecord.date &&
-                      new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
-                    isProcessing
-                  ) || !validateTimeIn(currentRecord)
-                )}
+                //   disabled={Boolean(
+                //   (
+                //     (currentRecord?.timeIn &&
+                //       currentRecord.date &&
+                //       new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
+                //     isProcessing
+                //   ) || !validateTimeIn(currentRecord)
+                // )}
+                disabled={
+                  isProcessing ||
+                  !isTodayRecord(currentRecord) ||
+                  !currentRecord?.timeIn ||
+                  !!currentRecord?.timeOut ||
+                  !isWithinTimeWindow(7, 21) // Only allow Time Out from 7:00 to 20:59 (8:59 PM)
+                }
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center">
@@ -272,15 +419,16 @@ const AttendanceFaculty: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
                   <span className="text-gray-600">Date</span>
-                  <span className="font-medium">{currentRecord?.date || 'Not recorded'}</span>
+                  <span className="font-medium">{currentRecord?.date ? new Date(currentRecord.date).toLocaleDateString() : 'Not recorded'}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
                   <span className="text-gray-600">Time In</span>
-                  <span className="font-medium">{currentRecord?.timeIn || 'Not recorded'}</span>
+                  <span className="font-medium"> 
+                    {formatTimeWithAmPm(currentRecord?.timeIn) || 'Not recorded'}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
                   <span className="text-gray-600">Time Out</span>
-                  <span className="font-medium">{currentRecord?.timeOut || 'Not recorded'}</span>
+                  <span className="font-medium"> {formatTimeWithAmPm(currentRecord?.timeOut) || 'Not recorded'}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
                   <span className="text-gray-600">Status</span>

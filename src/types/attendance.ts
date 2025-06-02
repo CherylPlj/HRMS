@@ -1,6 +1,6 @@
 export interface AttendanceRecord {
   id: string;
-  employeeId: string;
+  facultyId: string;
   date: string;
   timeIn: string | null;
   timeOut: string | null;

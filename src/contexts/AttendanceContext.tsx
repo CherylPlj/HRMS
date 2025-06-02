@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AttendanceRecord, AttendanceSummary } from '../types/attendance';
+// ...existing code...
 
 interface AttendanceContextType {
   currentRecord: AttendanceRecord | null;
@@ -27,7 +28,7 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     const updateDateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString());
-      setCurrentDate(now.toLocaleDateString('en-US', {
+      setCurrentDate(now.toLocaleDateString('en-PH', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',

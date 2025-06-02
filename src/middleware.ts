@@ -1,10 +1,31 @@
 import { clerkMiddleware, createRouteMatcher, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { prisma } from "./lib/prisma";
+import { supabase } from "@/lib/supabaseClient";
+
+interface Role {
+    role: {
+        name: string;
+    }[];
+}
+
+interface User {
+    Email: string;
+    Role: Role[];
+}
 
 const isPublicRoute = createRouteMatcher([
     '/login',
     '/loginf',
+    '/sign-in',
+    '/sign-up',
+    '/sign-in/[[...sign-in]]',
+    '/sign-up/[[...sign-up]]',
+    '/sign-in/[[...sign-in]]/forgot-password',
+    '/sign-up/[[...sign-up]]/forgot-password',
+    '/sign-in/[[...sign-in]]/reset-password',
+    '/sign-up/[[...sign-up]]/reset-password',
+    '/sign-in/[[...sign-in]]/verify-email',
+    '/sign-up/[[...sign-up]]/verify-email',
     '/student',
     '/student/forgot-password',
     '/faculty',
@@ -22,11 +43,14 @@ export default clerkMiddleware(async (auth, req) => {
 
     // If trying to access a protected route while not authenticated
     if (!isPublicRoute(req) && !isAuthenticated) {
-
         console.log('User is not authenticated, redirecting to sign-in page'); // Debug: log unauthenticated access
         await auth.protect();
     }
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const isProtectedRoute = createRouteMatcher([
+    '/dashboard(.*)', // protect dashboard and its children
+    // ...other protected routes
+    ]);
 
     // If trying to access a public route while authenticated
     if (isPublicRoute(req) && isAuthenticated) {
@@ -48,7 +72,7 @@ export default clerkMiddleware(async (auth, req) => {
 
         if (userRole === 'admin') {
             // Redirect admin users to the admin dashboard
-            return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+            return NextResponse.redirect(new URL('dashboard/admin', req.url));
         } else if (userRole === 'registrar') {
             // Redirect registrar users to the registrar dashboard
             return NextResponse.redirect(new URL('/registrar/dashboard', req.url));
@@ -57,7 +81,7 @@ export default clerkMiddleware(async (auth, req) => {
             return NextResponse.redirect(new URL('/cashier/dashboard', req.url));
         } else if (userRole === 'faculty') {
             // Redirect faculty users to the faculty dashboard
-            return NextResponse.redirect(new URL('/faculty/home', req.url));
+            return NextResponse.redirect(new URL('dashboard/faculty', req.url));
         }
         // If user is a student, redirect to student home
         if (userRole === 'student') {
@@ -78,44 +102,45 @@ export const config = {
 
 async function getUserRole(email?: string): Promise<string> {
     try {
-        const user = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    ...(email ? [{ Email: String(email) }] : [])
-                ],
-            },
-            select: {
-                Email: true,
-                Role: {
-                    select: {
-                        role: {
-                            select: {
-                                name: true
-                            }
-                        }
-                    }
-                },
-            },
-        })        // Transform the response to flatten role names
-        if (user) {
-            console.log('Raw user from DB:', user); // Debug: full object
-            // Flatten role names and return the first role or a default
-            const roles = user.Role.map(r => r.role.name);
-            console.log('Extracted roles:', roles); // Debug: role array
-            console.log('Returning role:', roles[0]); // Debug: final return
-            return roles[0];
+        if (!email) {
+            console.log('No email provided for role lookup');
+            return 'student';
         }
 
-        // If user not found, return a default role or throw an error
-        return 'student';
-    } catch (error) {
-        console.error(error)
-        // Optionally, rethrow or return a default role
-        return 'student';
-    } finally {
-        // Ensure connection cleanup in development
-        if (process.env.NODE_ENV === 'development') {
-            await prisma.$disconnect()
+        // Get user and their role from Supabase
+        const { data: user, error } = await supabase
+            .from('User')
+            .select(`
+                Email,
+                Role (
+                    role (
+                        name
+                    )
+                )
+            `)
+            .eq('Email', email)
+            .single();
+
+        if (error) {
+            console.error('Error fetching user role:', error);
+            return 'student';
         }
+
+        if (!user) {
+            console.log('No user found for email:', email);
+            return 'student';
+        }
+
+        console.log('Raw user from DB:', user); // Debug: full object
+
+        // Extract role names from the nested structure
+        const roles = (user as User).Role.flatMap(r => r.role.map(role => role.name));
+        console.log('Extracted roles:', roles); // Debug: role array
+        console.log('Returning role:', roles[0]); // Debug: final return
+
+        return roles[0] || 'student';
+    } catch (error) {
+        console.error('Error in getUserRole:', error);
+        return 'student';
     }
 }

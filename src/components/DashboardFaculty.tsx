@@ -7,53 +7,182 @@ import "react-datepicker/dist/react-datepicker.css";
 import Head from 'next/head';
 import { useAttendance } from '../contexts/AttendanceContext';
 import { attendanceService } from '../services/attendanceService';
-
-const EMPLOYEE_ID = '123-4567-FA'; // This should come from auth context in a real app
+import { useUser } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function DashboardFaculty() {
+  const { user } = useUser();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { currentRecord, currentTime, currentDate, summary } = useAttendance();
+  const { currentRecord, setCurrentRecord, currentTime, currentDate, summary } = useAttendance();
   const [dateRange, setDateRange] = useState<[Date, Date]>([
-    new Date(new Date().setDate(new Date().getDate() - 30)),
+    new Date(new Date().getFullYear(), new Date().getMonth() - 1, new Date().getDate()),
     new Date()
   ]);
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
+  const [facultyId, setFacultyId] = useState<number | null>(null);
   type AttendanceRecord = {
+    id?: string;
+    facultyId?: number;
     date: string;
     timeIn?: string;
     timeOut?: string;
     status?: string;
+    createdAt?: string;
+    updatedAt?: string;
   };
   
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch Supabase UserID and FacultyID when Clerk user is available
   useEffect(() => {
-    fetchAttendanceData();
-  }, [dateRange]);
+    const fetchUserAndFacultyId = async () => {
+      if (!user?.emailAddresses?.[0]?.emailAddress) {
+        console.log('No Clerk user email available');
+        setLoading(false);
+        setError('No user email available');
+        return;
+      }
+
+      try {
+        console.log('Fetching Supabase user for email:', user.emailAddresses[0].emailAddress);
+        const { data: userData, error: userError } = await supabase
+          .from('User')
+          .select('UserID')
+          .eq('Email', user.emailAddresses[0].emailAddress)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching Supabase user:', userError);
+          setError('Failed to fetch user data');
+          return;
+        }
+
+        if (userData) {
+          console.log('Found Supabase user:', userData);
+          setSupabaseUserId(userData.UserID);
+
+          // Fetch FacultyID using UserID
+          const { data: facultyData, error: facultyError } = await supabase
+            .from('Faculty')
+            .select('FacultyID')
+            .eq('UserID', userData.UserID)
+            .single();
+
+          if (facultyError) {
+            console.error('Error fetching Faculty data:', facultyError);
+            setError('Failed to fetch faculty data');
+            return;
+          }
+
+          if (facultyData) {
+            console.log('Found Faculty ID:', facultyData);
+            setFacultyId(facultyData.FacultyID);
+            setError(null);
+          } else {
+            console.log('No Faculty found for user:', userData.UserID);
+            setError('Faculty record not found');
+          }
+        } else {
+          console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
+          setError('User not found in database');
+        }
+      } catch (error) {
+        console.error('Error in fetchUserAndFacultyId:', error);
+        setError('An unexpected error occurred');
+      }
+    };
+
+    fetchUserAndFacultyId();
+  }, [user]);
+
+  // Fetch attendance data when faculty ID is available
+  useEffect(() => {
+    if (facultyId) {
+      console.log('Faculty ID available, fetching attendance data');
+      fetchAttendanceData();
+    } else {
+      console.log('No Faculty ID available yet');
+    }
+  }, [dateRange, facultyId]);
 
   const fetchAttendanceData = async () => {
+    if (!facultyId || !user?.emailAddresses?.[0]?.emailAddress) {
+      console.log('Cannot fetch attendance data: No Faculty ID or email available');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      setError(null);
+      console.log('Fetching attendance history for faculty:', facultyId);
+      console.log('Date range:', dateRange[0].toISOString(), 'to', dateRange[1].toISOString());
+      
       const data = await attendanceService.getAttendanceHistory(
-        EMPLOYEE_ID,
+        facultyId.toString(),
         dateRange[0].toISOString(),
-        dateRange[1].toISOString()
+        dateRange[1].toISOString(),
+        user.emailAddresses[0].emailAddress
       );
-      // Convert nulls to undefined for timeIn and timeOut
-      const mappedData = data.map((record: unknown) => {
-        const rec = record as AttendanceRecord;
-        return {
-          ...rec,
-          timeIn: rec.timeIn ?? undefined,
-          timeOut: rec.timeOut ?? undefined,
-        };
-      });
+
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid attendance data received:', data);
+        setAttendanceData([]);
+        return;
+      }
+
+      type NewType = any;
+
+      // Convert nulls to undefined for timeIn and timeOut and ensure all required fields
+      const mappedData = data.map((record: NewType) => ({
+        id: record.id,
+        facultyId: record.facultyId,
+        date: record.date || new Date().toISOString().split('T')[0],
+        timeIn: record.timeIn || undefined,
+        timeOut: record.timeOut || undefined,
+        status: record.status || 'NOT_RECORDED',
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt
+      }));
+
+      console.log('Mapped attendance data:', mappedData);
       setAttendanceData(mappedData);
+
+      // Find today's record and update currentRecord
+      const today = new Date();
+      const todayRecord = mappedData.find((rec) => {
+        const recDate = new Date(rec.date);
+        return (
+          recDate.getFullYear() === today.getFullYear() &&
+          recDate.getMonth() === today.getMonth() &&
+          recDate.getDate() === today.getDate()
+        );
+      });
+
+      if (todayRecord) {
+        console.log('Found today\'s record:', todayRecord);
+        setCurrentRecord(todayRecord);
+      } else {
+        console.log('No record found for today');
+        setCurrentRecord(null);
+      }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
+      setAttendanceData([]);
+      setCurrentRecord(null);
+      setError('Failed to fetch attendance data');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add a refresh function
+  const handleRefresh = () => {
+    console.log('Refreshing attendance data...');
+    setError(null);
+    fetchAttendanceData();
   };
 
   const handleDateChange = (dates: [Date | null, Date | null]) => {
@@ -62,16 +191,18 @@ export default function DashboardFaculty() {
     }
   };
 
+  function parseTimeString(timeStr: string | undefined) {
+    if (!timeStr) return null;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours + (minutes / 60);
+  }
+
   const lineData = {
     labels: attendanceData.map(d => new Date(d.date).toLocaleDateString()),
     datasets: [
       {
         label: 'Time In',
-        data: attendanceData.map(d => {
-          if (!d.timeIn) return null;
-          const time = new Date(d.timeIn);
-          return time.getHours() + (time.getMinutes() / 60);
-        }),
+        data: attendanceData.map(d => parseTimeString(d.timeIn)),
         borderColor: '#4CAF50',
         backgroundColor: 'rgba(76, 175, 80, 0.1)',
         tension: 0.1,
@@ -79,11 +210,7 @@ export default function DashboardFaculty() {
       },
       {
         label: 'Time Out',
-        data: attendanceData.map(d => {
-          if (!d.timeOut) return null;
-          const time = new Date(d.timeOut);
-          return time.getHours() + (time.getMinutes() / 60);
-        }),
+        data: attendanceData.map(d => parseTimeString(d.timeOut)),
         borderColor: '#f44336',
         backgroundColor: 'rgba(244, 67, 54, 0.1)',
         tension: 0.1,
@@ -137,6 +264,23 @@ export default function DashboardFaculty() {
       }
     }
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#600000] transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -234,7 +378,7 @@ export default function DashboardFaculty() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">Attendance Timeline</h2>
                 <button 
-                  onClick={fetchAttendanceData}
+                  onClick={handleRefresh}
                   className="text-sm text-[#800000] hover:text-[#600000] transition-colors"
                 >
                   <i className="fas fa-sync-alt mr-1"></i>
@@ -272,10 +416,10 @@ export default function DashboardFaculty() {
                           {new Date(record.date).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '-'}
+                          {record.timeIn ? record.timeIn : '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '-'}
+                          {record.timeOut ? record.timeOut : '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${

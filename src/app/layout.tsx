@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Poppins } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { SpeedInsights } from "@vercel/speed-insights/next"
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"], // Specify font weights
@@ -23,8 +24,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("Supabase ANON KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  //console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  // console.log("Supabase ANON KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   return (
     <ClerkProvider>
@@ -37,7 +38,7 @@ export default function RootLayout({
           />
           {/* <script src="https://cdn.tailwindcss.com"></script> */}
         </head>
-        <body suppressHydrationWarning className={poppins.className}>
+        <body suppressHydrationWarning className={`${poppins.className} antialiased`}>
           {children}
         </body>
       </html>

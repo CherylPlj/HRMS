@@ -24,8 +24,12 @@ model User {
   PasswordHash String
   Status       Status         @default(Active)
   DateCreated  DateTime       @default(now())
-  DateModified DateTime?      @default(now()) @updatedAt
+  DateModified DateTime?      @updatedAt
   LastLogin    DateTime?
+  createdBy String?
+  updatedBy String?
+  isDeleted Boolean @default(false)
+
   AIChat       AIChat[]
   ActivityLog  ActivityLog[]
   Cashier      Cashier?       @relation("UserCashier")
@@ -52,9 +56,10 @@ model Faculty {
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
   Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
-  User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Cascade)
+  User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Restrict)
   Leaves           Leave[]
   Schedules        Schedule[]
+  Attendance       Attendance[]
 }
 
 model Cashier {
@@ -101,6 +106,19 @@ model Contract {
   EndDate      DateTime
   ContractType ContractType
   Faculty      Faculty[]
+}
+
+model Attendance {
+  id         Int       @id @default(autoincrement())
+  facultyId  Int
+  date       DateTime  @default(now())  @db.Date
+  timeIn     DateTime?    @db.Time
+  timeOut    DateTime?   @db.Time
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime?  @updatedAt
+  status     AttendanceStatus @default(NOT_RECORDED)
+  Faculty    Faculty   @relation(fields: [facultyId], references: [FacultyID])
+
 }
 
 model Schedule {
@@ -154,16 +172,6 @@ model ActivityLog {
   User           User?    @relation(fields: [UserID], references: [UserID])
 }
 
-model Attendance {
-  id         Int       @id @default(autoincrement())
-  employeeId String
-  date       DateTime  @default(now())
-  timeIn     DateTime?
-  timeOut    DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  status     String    @default("NOT_RECORDED")
-}
 
 model Role {
   id    Int        @id @default(autoincrement())

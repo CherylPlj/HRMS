@@ -1,96 +1,102 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
+import {DateTime} from 'luxon';
 
 export async function POST(request: Request) {
   try {
-    const { employeeId } = await request.json();
-    console.log('Received time-out request for employee:', employeeId);
-    
-    if (!employeeId) {
-      console.error('Employee ID is missing');
-      return NextResponse.json(
-        { error: 'Employee ID is required' },
-        { status: 400 }
-      );
+    const { email, facultyId } = await request.json();
+    if (!email || !facultyId) {
+      return NextResponse.json({ error: 'Email and Faculty ID are required' }, { status: 400 });
     }
 
-    // Get current time in UTC
-    const now = new Date();
-    
-    // Convert to Philippines time (UTC+8)
-    const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-    const today = new Date(phTime.getFullYear(), phTime.getMonth(), phTime.getDate());
-
-    console.log('Current UTC time:', now.toISOString());
-    console.log('Philippines time:', phTime.toISOString());
-    console.log('Checking for existing record on:', today.toISOString());
-
-    // Find today's attendance record
-    const { data: existingRecord, error: fetchError } = await supabase
-      .from('Attendance')
-      .select('*')
-      .eq('employeeId', employeeId)
-      .gte('date', today.toISOString())
-      .lt('date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString())
+    // First get the UserID from Supabase using the email
+    const { data: userData, error: userError } = await supabase
+      .from('User')
+      .select('UserID')
+      .eq('Email', email)
       .single();
 
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        console.log('No time-in record found for today');
-        return NextResponse.json(
-          { error: 'No time-in record found for today' },
-          { status: 404 }
-        );
-      }
-      console.error('Error fetching existing record:', fetchError);
-      return NextResponse.json(
-        { error: `Error checking existing record: ${fetchError.message}` },
-        { status: 500 }
-      );
+    if (userError || !userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (!existingRecord?.timeIn) {
-      console.log('Time in not recorded for today');
+    // Then verify the faculty record belongs to this user
+    const { data: facultyData, error: facultyError } = await supabase
+      .from('Faculty')
+      .select('FacultyID')
+      .eq('UserID', userData.UserID)
+      .single();
+
+    if (facultyError || !facultyData || facultyData.FacultyID.toString() !== facultyId) {
+      return NextResponse.json({ error: 'Unauthorized access to faculty record' }, { status: 403 });
+    }
+
+    // const today = new Date();
+    // today.setHours(0, 0, 0, 0);
+    // Get today's date in Asia/Manila timezone
+    const now = DateTime.now().setZone('Asia/Manila');
+    const todayStr = now.toFormat('yyyy-MM-dd');
+    const timeStr = now.toFormat('HH:mm:ss');
+    console.log('Current date in Manila:', todayStr); // Debug log
+    console.log('Current time in Manila:', timeStr); // Debug log
+
+    // Check if there's a record for today
+    const { data: existingRecord, error: existingError } = await supabase
+      .from('Attendance')
+      .select('*')
+      .eq('facultyId',  parseInt(facultyId))
+      .eq('date', todayStr)
+      .maybeSingle();
+    if (existingError && existingError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      throw existingError;
+    }
+
+    if (!existingRecord) {
       return NextResponse.json(
-        { error: 'Time in not recorded for today' },
+        { error: 'No time-in record found for today' },
         { status: 400 }
       );
     }
 
     if (existingRecord.timeOut) {
-      console.log('Time out already recorded for today');
       return NextResponse.json(
         { error: 'Time out already recorded for today' },
         { status: 400 }
       );
     }
 
-    // Update the record with time out
-    console.log('Updating attendance record with time out');
-    const { data: attendance, error: updateError } = await supabase
+    // const now = new Date();
+    // Update attendance record
+    const { data: record, error: updateError } = await supabase
       .from('Attendance')
-      .update({ 
-        timeOut: phTime.toISOString(),
-        updatedAt: now.toISOString()
+      .update({
+        timeOut: timeStr,
+        updatedAt: now.toISO()
       })
-      .eq('id', existingRecord.id)
+      // .eq('id', existingRecord.id)
+      .eq('facultyId', Number(facultyId))
+      .eq('date', todayStr)
       .select()
       .single();
 
-    if (updateError) {
-      console.error('Error updating attendance record:', updateError);
-      return NextResponse.json(
-        { error: `Error updating attendance record: ${updateError.message}` },
-        { status: 500 }
-      );
-    }
+    if (updateError) throw updateError;
 
-    console.log('Successfully updated attendance record:', attendance);
-    return NextResponse.json(attendance);
+    return NextResponse.json({
+      id: record.id.toString(),
+      facultyId: record.facultyId.toString(),
+      //date: new Date(record.date).toISOString(),
+      // date: DateTime.fromISO(record.date).setZone('Asia/Manila').toFormat('MMMM d, yyyy'),
+      date: DateTime.fromISO(record.date).setZone('Asia/Manila').toISO(),
+      timeIn: record.timeIn ?? null,
+      timeOut: record.timeOut ?? null,
+      status: record.status,
+      createdAt: new Date(record.createdAt).toISOString(),
+      updatedAt: record.updatedAt ? new Date(record.updatedAt).toISOString() : null,
+    });
   } catch (error) {
-    console.error('Unexpected error in time-out:', error);
+    console.error('Error in time-out route:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to mark time out' },
+      { error: 'Failed to record time out' },
       { status: 500 }
     );
   }
