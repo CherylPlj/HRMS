@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
+import { createAttendanceNotification } from '@/lib/notifications';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -82,6 +86,32 @@ export async function POST(request: Request) {
         { error: `Error creating attendance record: ${insertError.message}` },
         { status: 500 }
       );
+    }
+
+    // Find admin user to send notification to
+    const adminUser = await prisma.user.findFirst({
+      where: {
+        Role: {
+          some: {
+            role: {
+              name: 'Admin'
+            }
+          }
+        }
+      }
+    });
+
+    if (adminUser) {
+      try {
+        await createAttendanceNotification({
+          employeeId,
+          type: 'CHECK_IN',
+          adminId: adminUser.UserID
+        });
+      } catch (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
     }
 
     console.log('Successfully created attendance record:', attendance);

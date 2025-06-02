@@ -1,105 +1,185 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { createLeaveRequestNotification } from '@/lib/notifications';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const prisma = new PrismaClient();
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Define a type for the leave record
-type LeaveRecord = {
+// Define a type for the leave record with related data
+interface LeaveWithRelations {
     LeaveID: number;
     LeaveType: string;
-    StartDate: string;
-    EndDate: string;
+    StartDate: Date;
+    EndDate: Date;
     Reason: string;
     Status: string;
     DocumentUrl: string | null;
-    CreatedAt: string;
-    UpdatedAt: string;
-    Faculty?: {
-        FacultyID: number;
-        UserID: string;
-        User?: {
+    CreatedAt: Date;
+    UpdatedAt: Date;
+    Faculty: {
+        User: {
             FirstName: string;
             LastName: string;
             Photo: string | null;
         };
     };
-};
+}
 
+// GET /api/leaves - Get all leave requests
 export async function GET() {
     try {
-        console.log('Fetching leaves from Supabase...'); // Debug log
-
-        const { data: leaves, error } = await supabase
-            .from('Leave')
-            .select(`
-                *,
-                Faculty (
-                    FacultyID,
-                    UserID,
-                    User (
-                        FirstName,
-                        LastName,
-                        Photo
-                    )
-                )
-            `)
-            .order('CreatedAt', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching leaves:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        console.log('Raw leaves data:', leaves); // Debug log
-
-        if (!leaves || leaves.length === 0) {
-            return NextResponse.json([]);
-        }
-
-        // Transform the data to match the frontend structure
-        const transformedLeaves = (leaves as LeaveRecord[]).map((leave) => {
-            // Check if Faculty and User data exists
-            if (!leave.Faculty || !leave.Faculty.User) {
-                console.warn('Missing Faculty or User data for leave:', leave);
-                return {
-                    leaveId: leave.LeaveID,
-                    employeeName: 'Unknown Employee',
-                    leaveType: leave.LeaveType,
-                    startDate: leave.StartDate,
-                    endDate: leave.EndDate,
-                    reason: leave.Reason,
-                    status: leave.Status,
-                    documentUrl: leave.DocumentUrl,
-                    createdAt: leave.CreatedAt,
-                    updatedAt: leave.UpdatedAt,
-                    photo: null
-                };
-            }
-
-            return {
-                leaveId: leave.LeaveID,
-                employeeName: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
-                leaveType: leave.LeaveType,
-                startDate: leave.StartDate,
-                endDate: leave.EndDate,
-                reason: leave.Reason,
-                status: leave.Status,
-                documentUrl: leave.DocumentUrl,
-                createdAt: leave.CreatedAt,
-                updatedAt: leave.UpdatedAt,
-                photo: leave.Faculty.User.Photo
-            };
+        const leaves = await prisma.leave.findMany({
+            include: {
+                Faculty: {
+                    include: {
+                        User: {
+                            select: {
+                                FirstName: true,
+                                LastName: true,
+                                Photo: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                CreatedAt: 'desc',
+            },
         });
 
-        console.log('Transformed leaves:', transformedLeaves); // Debug log
+        // Transform the data to match the frontend structure
+        const transformedLeaves = leaves.map((leave: LeaveWithRelations) => ({
+            leaveId: leave.LeaveID,
+            employeeName: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
+            leaveType: leave.LeaveType,
+            startDate: leave.StartDate,
+            endDate: leave.EndDate,
+            reason: leave.Reason,
+            status: leave.Status,
+            documentUrl: leave.DocumentUrl,
+            createdAt: leave.CreatedAt,
+            updatedAt: leave.UpdatedAt,
+            photo: leave.Faculty.User.Photo,
+        }));
+
         return NextResponse.json(transformedLeaves);
     } catch (error) {
         console.error('Error in leave API:', error);
         return NextResponse.json(
             { error: 'Internal Server Error' },
+            { status: 500 }
+        );
+    }
+}
+
+// POST /api/leaves - Create a new leave request
+export async function POST(request: Request) {
+    try {
+        const { facultyId, leaveType, startDate, endDate, reason, documentUrl } = await request.json();
+
+        // Create the leave request
+        const leave = await prisma.leave.create({
+            data: {
+                FacultyID: facultyId,
+                LeaveType: leaveType,
+                StartDate: new Date(startDate),
+                EndDate: new Date(endDate),
+                Reason: reason,
+                DocumentUrl: documentUrl,
+                Status: 'Pending',
+            },
+            include: {
+                Faculty: {
+                    include: {
+                        User: {
+                            select: {
+                                FirstName: true,
+                                LastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Find admin user to send notification to
+        const adminUser = await prisma.user.findFirst({
+            where: {
+                Role: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+
+        if (adminUser) {
+            try {
+                await createLeaveRequestNotification({
+                    facultyId,
+                    adminId: adminUser.UserID,
+                    status: 'REQUESTED'
+                });
+            } catch (notificationError) {
+                console.error('Error creating notification:', notificationError);
+                // Don't fail the request if notification fails
+            }
+        }
+
+        return NextResponse.json(leave, { status: 201 });
+    } catch (error) {
+        console.error('Error creating leave request:', error);
+        return NextResponse.json(
+            { error: 'Failed to create leave request' },
+            { status: 500 }
+        );
+    }
+}
+
+// PATCH /api/leaves/[id] - Update leave request status
+export async function PATCH(request: Request) {
+    try {
+        const { id, status } = await request.json();
+
+        const leave = await prisma.leave.update({
+            where: {
+                LeaveID: id,
+            },
+            data: {
+                Status: status,
+            },
+            include: {
+                Faculty: {
+                    include: {
+                        User: {
+                            select: {
+                                FirstName: true,
+                                LastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Send notification to faculty member
+        try {
+            await createLeaveRequestNotification({
+                facultyId: leave.FacultyID,
+                adminId: '', // Not needed for status updates
+                status: status === 'Approved' ? 'APPROVED' : 'REJECTED'
+            });
+        } catch (notificationError) {
+            console.error('Error creating notification:', notificationError);
+            // Don't fail the request if notification fails
+        }
+
+        return NextResponse.json(leave);
+    } catch (error) {
+        console.error('Error updating leave request:', error);
+        return NextResponse.json(
+            { error: 'Failed to update leave request' },
             { status: 500 }
         );
     }
