@@ -6,8 +6,8 @@ import { Search, Filter } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
 
 interface Faculty {
-  FacultyId: number;
-  UserId: string;
+  FacultyID: number;
+  UserID: string;
   DateOfBirth: string;
   Phone: string | null;
   Address: string | null;
@@ -319,40 +319,40 @@ const FacultyContent: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {facultyList.map((Faculty) => (
-                  <tr key={Faculty.FacultyId}>
+                {facultyList.map((faculty) => (
+                  <tr key={faculty.FacultyID}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
                           <img
                             className="h-10 w-10 rounded-full"
-                            src={Faculty.User.Photo || '/default-avatar.png'}
-                            alt={`${Faculty.User.FirstName} ${Faculty.User.LastName}`}
+                            src={faculty.User.Photo || '/default-avatar.png'}
+                            alt={`${faculty.User.FirstName} ${faculty.User.LastName}`}
                           />
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {Faculty.User.FirstName} {Faculty.User.LastName}
+                            {faculty.User.FirstName} {faculty.User.LastName}
                           </div>
-                          <div className="text-sm text-gray-500">{Faculty.User.Email}</div>
+                          <div className="text-sm text-gray-500">{faculty.User.Email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {Faculty.Position}
+                      {faculty.Position}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {Faculty.Department.DepartmentName}
+                      {faculty.Department.DepartmentName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        Faculty.EmploymentStatus === 'Regular'
+                        faculty.EmploymentStatus === 'Regular'
                           ? 'bg-green-100 text-green-800'
-                          : Faculty.EmploymentStatus === 'Probationary'
+                          : faculty.EmploymentStatus === 'Probationary'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {Faculty.EmploymentStatus}
+                        {faculty.EmploymentStatus}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

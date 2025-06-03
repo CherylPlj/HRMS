@@ -132,23 +132,38 @@ export default function DashboardContent() {
           .from("User")
           .select(`
             UserID,
-            Role,
-            LastLogin
+            Status,
+            LastLogin,
+            Role:UserRole (
+              role:Role (
+                name
+              )
+            )
           `)
-          .gte("LastLogin", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+          .eq("Status", "Active");
 
         if (usersError) {
           console.error("Users fetch error:", usersError.message || usersError);
           throw usersError;
         }
 
-        const facultyUsers = users?.filter((u) => u.Role === "Faculty").length || 0;
-        const adminUsers = users?.filter((u) => u.Role === "Admin").length || 0;
+        console.log("All users from database:", users); // Debug log to see all users
+
+        // First get total active users
+        const totalActiveUsers = users?.length || 0;
+        
+        // Then count users with specific roles
+        const facultyUsers = users?.filter((u) => u.Role?.some(r => (r.role as any).name === "Faculty")).length || 0;
+        const adminUsers = users?.filter((u) => u.Role?.some(r => (r.role as any).name === "Admin")).length || 0;
+
+        console.log("Total active users:", totalActiveUsers); // Debug log
+        console.log("Faculty users count:", facultyUsers); // Debug log
+        console.log("Admin users count:", adminUsers); // Debug log
 
         setActiveUsers({
           faculty: facultyUsers,
           admin: adminUsers,
-          total: facultyUsers + adminUsers,
+          total: totalActiveUsers, // Use total active users instead of sum of roles
         });
 
         // Fetch Attendance Data
@@ -202,10 +217,11 @@ export default function DashboardContent() {
 
         // Fetch Leave Requests
         const { data: leaves, error: leavesError } = await supabase
-          .from("leave_requests")
+          .from("Leave")
           .select("*")
-          .gte("created_at", dateRange[0].toISOString())
-          .lte("created_at", dateRange[1].toISOString());
+          // .gte("CreatedAt", dateRange[0].toISOString())
+          // .lte("CreatedAt", dateRange[1].toISOString())
+          .eq("Status", "Pending");
 
         if (leavesError) {
           console.error("Leave requests fetch error:", leavesError.message || leavesError);
@@ -213,9 +229,9 @@ export default function DashboardContent() {
         }
 
         setLeaveRequests({
-          pending: leaves?.filter((l) => l.status === "pending").length || 0,
-          approved: leaves?.filter((l) => l.status === "approved").length || 0,
-          rejected: leaves?.filter((l) => l.status === "rejected").length || 0,
+          pending: leaves?.filter((l) => l.Status === "Pending").length || 0,
+          approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
+          rejected: leaves?.filter((l) => l.Status === "Rejected").length || 0,
         });
 
       } catch (error) {

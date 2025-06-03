@@ -1,31 +1,103 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Trash2, Download } from 'lucide-react';
+import { ExternalLink, Trash2, Download, Calendar, Check, X } from 'lucide-react';
+import Image from 'next/image';
+import { User } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 type Leave = {
-    leaveId: number;
-    employeeName: string;
-    leaveType: string;
-    startDate: string;
-    endDate: string;
-    reason: string;
-    status: string;
-    documentUrl?: string;
-    createdAt: string;
-    updatedAt: string;
-    photo?: string;
+    LeaveID: number;
+    FacultyID: number;
+    LeaveType: 'Sick' | 'Vacation' | 'Emergency';
+    StartDate: string;
+    EndDate: string;
+    Reason: string;
+    Status: 'Pending' | 'Approved' | 'Rejected';
+    DocumentUrl?: string;
+    CreatedAt: string;
+    UpdatedAt: string;
+    Faculty?: {
+        Name: string;
+        Department: string;
+        UserID: string;
+    };
+};
+
+const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
+    try {
+        const response = await fetch(`/api/users/${userId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch user data');
+        }
+        const data = await response.json();
+        return data.imageUrl || '/manprofileavatar.png';
+    } catch (error) {
+        console.error('Error fetching user profile photo:', error);
+        return '/manprofileavatar.png';
+    }
+};
+
+// Add this new component before the LeaveContent component
+interface StatusUpdateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  status: 'Approved' | 'Rejected';
+  facultyName: string;
+}
+
+const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({ isOpen, onClose, onConfirm, status, facultyName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
+        <h2 className="text-2xl font-bold mb-4 text-[#800000]">Confirm Status Update</h2>
+        <p className="mb-6 text-gray-700">
+          Are you sure you want to {status.toLowerCase()} the leave request for {facultyName}?
+        </p>
+        <div className="flex justify-center space-x-4">
+          <button
+            onClick={onConfirm}
+            className={`${
+              status === 'Approved' 
+                ? 'bg-green-600 hover:bg-green-700' 
+                : 'bg-red-600 hover:bg-red-700'
+            } text-white px-4 py-2 rounded`}
+          >
+            Yes, {status}
+          </button>
+          <button
+            onClick={onClose}
+            className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const LeaveContent: React.FC = () => {
-    const [isViewingLogs, setIsViewingLogs] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
+    const { user } = useUser();
+    const [activeTab, setActiveTab] = useState<'management' | 'logs'>('management');
     const [leaves, setLeaves] = useState<Leave[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetchLeaves();
-    }, []);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedLeaveId, setSelectedLeaveId] = useState<number | null>(null);
+    const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
+    const [statusUpdateModal, setStatusUpdateModal] = useState<{
+        isOpen: boolean;
+        leaveId: number | null;
+        status: 'Approved' | 'Rejected' | null;
+        facultyName: string;
+    }>({
+        isOpen: false,
+        leaveId: null,
+        status: null,
+        facultyName: '',
+    });
 
     const fetchLeaves = async () => {
         try {
@@ -35,40 +107,82 @@ const LeaveContent: React.FC = () => {
                 throw new Error('Failed to fetch leaves');
             }
             const data = await response.json();
-            console.log('Fetched leaves:', data); // Debug log
+            console.log('Raw API response:', data);
+            console.log('Number of leaves received:', data.length);
+            console.log('First leave record:', data[0]);
             setLeaves(data);
+            setError(null);
+
+            // Fetch profile photos for all faculty members
+            const photoPromises = data
+                .filter((leave: Leave) => leave.Faculty?.UserID)
+                .map(async (leave: Leave) => {
+                    if (leave.Faculty?.UserID) {
+                        const photoUrl = await fetchUserProfilePhoto(leave.Faculty.UserID);
+                        return [leave.Faculty.UserID, photoUrl];
+                    }
+                    return null;
+                });
+
+            const photoResults = await Promise.all(photoPromises);
+            const photos = Object.fromEntries(
+                photoResults.filter((result): result is [string, string] => result !== null)
+            );
+            setProfilePhotos(photos);
         } catch (err) {
-            console.error('Error fetching leaves:', err); // Debug log
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            console.error('Error fetching leaves:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch leaves');
         } finally {
             setLoading(false);
         }
     };
 
-    const openDeleteModal = (leave: Leave) => {
-        setSelectedLeave(leave);
-        setIsModalOpen(true);
-    };
+    useEffect(() => {
+        fetchLeaves();
+    }, []);
 
-    const closeDeleteModal = () => setIsModalOpen(false);
-
-    const deleteLeave = async () => {
-        if (!selectedLeave) return;
-        
+    const handleDelete = async (id: number) => {
         try {
-            const response = await fetch(`/api/leaves/${selectedLeave.leaveId}`, {
+            const response = await fetch(`/api/leaves/${id}`, {
                 method: 'DELETE',
             });
-            
+
             if (!response.ok) {
-                throw new Error('Failed to delete leave');
+                throw new Error('Failed to delete leave request');
             }
-            
-            // Refresh the leaves list
-            await fetchLeaves();
-            setIsModalOpen(false);
+
+            setLeaves(leaves.filter(leave => leave.LeaveID !== id));
+            setShowDeleteModal(false);
+            setSelectedLeaveId(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete leave');
+            console.error('Error deleting leave:', err);
+            alert('Failed to delete leave request');
+        }
+    };
+
+    const handleStatusUpdate = async (id: number, status: 'Approved' | 'Rejected') => {
+        try {
+            const response = await fetch(`/api/leaves/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to ${status.toLowerCase()} leave request`);
+            }
+
+            setLeaves(leaves.map(leave => 
+                leave.LeaveID === id 
+                    ? { ...leave, Status: status }
+                    : leave
+            ));
+            setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '' });
+        } catch (err) {
+            console.error('Error updating leave status:', err);
+            alert(`Failed to ${status.toLowerCase()} leave request`);
         }
     };
 
@@ -85,215 +199,312 @@ const LeaveContent: React.FC = () => {
     };
 
     if (loading) {
-        return <div className="text-center p-4">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-maroon"></div>
+            </div>
+        );
     }
 
     if (error) {
-        return <div className="text-red-500 p-4">Error: {error}</div>;
+        return (
+            <div className="text-center p-4 bg-red-50 text-red-600 rounded-lg">
+                {error}
+            </div>
+        );
     }
 
     return (
         <div className="text-black p-6 min-h-screen bg-gray-50">
-            {/* Header */}
+            {/* Header with Toggle Switch */}
             <div className="flex justify-between items-center mb-6">
-                <div className="flex space-x-4">
-                    <span
-                        onClick={() => setIsViewingLogs(false)}
-                        className={`cursor-pointer text-xl font-semibold transition-colors duration-200 ${!isViewingLogs ? 'text-[#800000]' : 'text-gray-500 hover:text-gray-700'}`}
+                <div className="flex space-x-6">
+                    <button
+                        onClick={() => setActiveTab('management')}
+                        className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
+                            activeTab === 'management'
+                                ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
                     >
                         Leave Management
-                    </span>
-                    <span className="text-gray-400 text-xl">/</span>
-                    <span
-                        onClick={() => setIsViewingLogs(true)}
-                        className={`cursor-pointer text-xl font-semibold transition-colors duration-200 ${isViewingLogs ? 'text-[#800000]' : 'text-gray-500 hover:text-gray-700'}`}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('logs')}
+                        className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
+                            activeTab === 'logs'
+                                ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
                     >
                         Leave Logs
-                    </span>
+                    </button>
                 </div>
                 <button
                     onClick={() => {
-                        if (isViewingLogs) {
+                        if (activeTab === 'logs') {
                             console.log("Downloading Leave Logs...");
                         } else {
                             console.log("Downloading Leave Requests...");
                         }
                     }}
-                    className="bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-red-800 transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
+                    className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download size={18} />
                     Download
                 </button>
             </div>
 
-            {/* Full-screen White Box */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 h-[75vh] overflow-auto">
-                <div>
-                    <div className="flex-1 overflow-auto">
-                        {isViewingLogs ? (
-                            <table className="table-auto w-full text-left">
-                                <thead>
-                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                        <th className="p-4 text-left text-sm font-semibold text-gray-600">Picture</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Employee Name</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Leave Type</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Start Date</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">End Date</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Duration</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Date Submitted</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {leaves && leaves.length > 0 ? (
-                                        leaves.map((leave) => (
-                                            <tr key={leave.leaveId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
-                                                <td className="p-4">
-                                                    <img
-                                                        src={leave.photo || "/manprofileavatar.png"}
-                                                        alt="Employee"
-                                                        className="rounded-full w-10 h-10 object-cover border-2 border-gray-100"
-                                                    />
-                                                </td>
-                                                <td className="p-4 font-medium">{leave.employeeName}</td>
-                                                <td className="p-4">
-                                                    <span className="px-3 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
-                                                        {leave.leaveType}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4">{formatDate(leave.startDate)}</td>
-                                                <td className="p-4">{formatDate(leave.endDate)}</td>
-                                                <td className="p-4">{calculateDuration(leave.startDate, leave.endDate)}</td>
-                                                <td className="p-4">{formatDate(leave.createdAt)}</td>
-                                                <td className="p-4">
-                                                    <span className={`px-3 py-1 rounded-full text-sm ${
-                                                        leave.status === 'Approved' ? 'bg-green-50 text-green-700' :
-                                                        leave.status === 'Rejected' ? 'bg-red-50 text-red-700' :
-                                                        'bg-yellow-50 text-yellow-700'
-                                                    }`}>
-                                                        {leave.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
+            {/* Main Content */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-[75vh] flex flex-col">
+                <div className="flex-1 overflow-auto">
+                    {activeTab === 'management' ? (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
                                         <tr>
-                                            <td colSpan={8} className="p-8 text-center text-gray-500">
-                                                No Leave Logs Found
-                                            </td>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Faculty
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Leave Type
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Start Date
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                End Date
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Status
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Actions
+                                            </th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <table className="table-auto w-full text-left">
-                                <thead>
-                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                        <th className="p-4 text-left text-sm font-semibold text-gray-600">Picture</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Employee Name</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Leave Type</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Start Date</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">End Date</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Duration</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Date Submitted</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
-                                        <th className="p-4 text-sm font-semibold text-gray-600">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {leaves && leaves.length > 0 ? (
-                                        leaves.map((leave) => (
-                                            <tr key={leave.leaveId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
-                                                <td className="p-4">
-                                                    <img
-                                                        src={leave.photo || "/manprofileavatar.png"}
-                                                        alt="Employee"
-                                                        className="rounded-full w-10 h-10 object-cover border-2 border-gray-100"
-                                                    />
-                                                </td>
-                                                <td className="p-4 font-medium">{leave.employeeName}</td>
-                                                <td className="p-4">
-                                                    <span className="px-3 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
-                                                        {leave.leaveType}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4">{formatDate(leave.startDate)}</td>
-                                                <td className="p-4">{formatDate(leave.endDate)}</td>
-                                                <td className="p-4">{calculateDuration(leave.startDate, leave.endDate)}</td>
-                                                <td className="p-4">{formatDate(leave.createdAt)}</td>
-                                                <td className="p-4 space-x-2">
-                                                    {leave.status === 'Pending' && (
-                                                        <>
-                                                            <button className="bg-green-500 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 text-sm transition-colors duration-200 shadow-sm hover:shadow">
-                                                                Approve
-                                                            </button>
-                                                            <button className="bg-[#800000] text-white px-3 py-1.5 rounded-lg hover:bg-red-600 text-sm transition-colors duration-200 shadow-sm hover:shadow">
-                                                                Reject
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {leave.status !== 'Pending' && (
-                                                        <span className={`px-3 py-1 rounded-full text-sm ${
-                                                            leave.status === 'Approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {leaves.length > 0 ? (
+                                            leaves.map((leave) => (
+                                                <tr key={leave.LeaveID} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center">
+                                                            <div className="flex-shrink-0 h-10 w-10">
+                                                                {leave.Faculty?.UserID && profilePhotos[leave.Faculty.UserID] ? (
+                                                                    <Image
+                                                                        src={profilePhotos[leave.Faculty.UserID]}
+                                                                        alt={leave.Faculty.Name}
+                                                                        width={40}
+                                                                        height={40}
+                                                                        className="rounded-full"
+                                                                        onError={(e) => {
+                                                                            const target = e.target as HTMLImageElement;
+                                                                            target.src = '/manprofileavatar.png';
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                                        <User className="h-6 w-6 text-gray-400" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="ml-4">
+                                                                <div className="text-sm font-medium text-gray-900">
+                                                                    {leave.Faculty?.Name}
+                                                                </div>
+                                                                <div className="text-sm text-gray-500">
+                                                                    {leave.Faculty?.Department}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {leave.LeaveType}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {formatDate(leave.StartDate)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {formatDate(leave.EndDate)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                            leave.Status === 'Approved' 
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : leave.Status === 'Rejected'
+                                                                ? 'bg-red-100 text-red-800'
+                                                                : 'bg-yellow-100 text-yellow-800'
                                                         }`}>
-                                                            {leave.status}
+                                                            {leave.Status}
                                                         </span>
-                                                    )}
-                                                </td>
-                                                <td className="p-4 space-x-3">
-                                                    <button 
-                                                        title="View Fullscreen"
-                                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                                                    >
-                                                        <ExternalLink className="w-5 h-5 text-gray-600 hover:text-black" />
-                                                    </button>
-                                                    <button
-                                                        title="Delete"
-                                                        onClick={() => openDeleteModal(leave)}
-                                                        className="p-1.5 rounded-lg hover:bg-red-50 transition-colors duration-200"
-                                                    >
-                                                        <Trash2 className="w-5 h-5 text-red-600 hover:text-red-800" />
-                                                    </button>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        <div className="flex space-x-2">
+                                                            {leave.Status === 'Pending' && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => setStatusUpdateModal({
+                                                                            isOpen: true,
+                                                                            leaveId: leave.LeaveID,
+                                                                            status: 'Approved',
+                                                                            facultyName: leave.Faculty?.Name || 'Unknown'
+                                                                        })}
+                                                                        className="text-green-600 hover:text-green-900 transition-colors"
+                                                                        title="Approve leave"
+                                                                    >
+                                                                        <Check className="h-5 w-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setStatusUpdateModal({
+                                                                            isOpen: true,
+                                                                            leaveId: leave.LeaveID,
+                                                                            status: 'Rejected',
+                                                                            facultyName: leave.Faculty?.Name || 'Unknown'
+                                                                        })}
+                                                                        className="text-red-600 hover:text-red-900 transition-colors"
+                                                                        title="Reject leave"
+                                                                    >
+                                                                        <X className="h-5 w-5" />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedLeaveId(leave.LeaveID);
+                                                                    setShowDeleteModal(true);
+                                                                }}
+                                                                className="text-red-600 hover:text-red-900 transition-colors"
+                                                                title="Delete leave"
+                                                            >
+                                                                <Trash2 className="h-5 w-5" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={6} className="text-center text-gray-400 py-12">
+                                                    No leave requests found
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={9} className="p-8 text-center text-gray-500">
-                                                No Leave Requests Found
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Picture</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Employee Name</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Leave Type</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Start Date</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">End Date</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Duration</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Date Submitted</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {leaves.length > 0 ? (
+                                    leaves.map((leave) => (
+                                        <tr key={leave.LeaveID} className="hover:bg-gray-50 transition-colors duration-200">
+                                            <td className="px-4 py-3">
+                                                {leave.Faculty?.UserID && profilePhotos[leave.Faculty.UserID] ? (
+                                                    <Image
+                                                        src={profilePhotos[leave.Faculty.UserID]}
+                                                        alt={leave.Faculty.Name}
+                                                        width={40}
+                                                        height={40}
+                                                        className="rounded-full"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = '/manprofileavatar.png';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <User className="h-6 w-6 text-gray-400" />
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium">{leave.Faculty?.Name}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
+                                                    {leave.LeaveType}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">{formatDate(leave.StartDate)}</td>
+                                            <td className="px-4 py-3 text-gray-600">{formatDate(leave.EndDate)}</td>
+                                            <td className="px-4 py-3 text-gray-600">{calculateDuration(leave.StartDate, leave.EndDate)}</td>
+                                            <td className="px-4 py-3 text-gray-600">{formatDate(leave.CreatedAt)}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm ${
+                                                    leave.Status === 'Approved' ? 'bg-green-50 text-green-700' :
+                                                    leave.Status === 'Rejected' ? 'bg-red-50 text-red-700' :
+                                                    'bg-yellow-50 text-yellow-700'
+                                                }`}>
+                                                    {leave.Status}
+                                                </span>
                                             </td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={8} className="text-center text-gray-400 py-12">
+                                            No Leave Logs Found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 
             {/* Delete Confirmation Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center bg-gray-600 bg-opacity-50 z-10 backdrop-blur-sm">
-                    <div className="bg-white p-6 rounded-xl shadow-xl w-80 transform transition-all">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-800">Delete Confirmation</h2>
-                        <p className="text-gray-600 mb-6">Are you sure you want to delete the leave request for {selectedLeave?.employeeName}?</p>
-                        <div className="mt-4 flex justify-between space-x-4">
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">
+                            Delete Leave Request
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-6">
+                            Are you sure you want to delete this leave request? This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end space-x-3">
                             <button
-                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-sm hover:shadow flex-1"
-                                onClick={deleteLeave}
-                            >
-                                Confirm
-                            </button>
-                            <button
-                                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors duration-200 shadow-sm hover:shadow flex-1"
-                                onClick={closeDeleteModal}
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setSelectedLeaveId(null);
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                             >
                                 Cancel
+                            </button>
+                            <button
+                                onClick={() => selectedLeaveId && handleDelete(selectedLeaveId)}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                            >
+                                Delete
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Add the StatusUpdateModal */}
+            <StatusUpdateModal
+                isOpen={statusUpdateModal.isOpen}
+                onClose={() => setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '' })}
+                onConfirm={() => statusUpdateModal.leaveId && statusUpdateModal.status && 
+                    handleStatusUpdate(statusUpdateModal.leaveId, statusUpdateModal.status)}
+                status={statusUpdateModal.status || 'Approved'}
+                facultyName={statusUpdateModal.facultyName}
+            />
         </div>
     );
 };

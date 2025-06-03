@@ -9,6 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Define a type for the leave record
 type LeaveRecord = {
     LeaveID: number;
+    FacultyID: number;
     LeaveType: string;
     StartDate: string;
     EndDate: string;
@@ -25,6 +26,9 @@ type LeaveRecord = {
             LastName: string;
             Photo: string | null;
         };
+        Department?: {
+            DepartmentName: string;
+        };
     };
 };
 
@@ -38,11 +42,14 @@ export async function GET() {
                 *,
                 Faculty (
                     FacultyID,
-                    UserID,
+                    DepartmentID,
+                    Department (
+                        DepartmentName
+                    ),
                     User (
+                        UserID,
                         FirstName,
-                        LastName,
-                        Photo
+                        LastName
                     )
                 )
             `)
@@ -50,57 +57,41 @@ export async function GET() {
 
         if (error) {
             console.error('Error fetching leaves:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to fetch leaves' }, { status: 500 });
         }
 
-        console.log('Raw leaves data:', leaves); // Debug log
+        console.log('Raw leaves data:', JSON.stringify(leaves, null, 2)); // Detailed log
+        console.log('Number of leaves found:', leaves?.length || 0); // Debug log
 
         if (!leaves || leaves.length === 0) {
+            console.log('No leaves found in database'); // Debug log
             return NextResponse.json([]);
         }
 
         // Transform the data to match the frontend structure
-        const transformedLeaves = (leaves as LeaveRecord[]).map((leave) => {
-            // Check if Faculty and User data exists
-            if (!leave.Faculty || !leave.Faculty.User) {
-                console.warn('Missing Faculty or User data for leave:', leave);
-                return {
-                    leaveId: leave.LeaveID,
-                    employeeName: 'Unknown Employee',
-                    leaveType: leave.LeaveType,
-                    startDate: leave.StartDate,
-                    endDate: leave.EndDate,
-                    reason: leave.Reason,
-                    status: leave.Status,
-                    documentUrl: leave.DocumentUrl,
-                    createdAt: leave.CreatedAt,
-                    updatedAt: leave.UpdatedAt,
-                    photo: null
-                };
-            }
-
+        const transformedLeaves = leaves.map(leave => {
+            // Clean the UserID by removing any whitespace or newlines
+            const userId = leave.Faculty?.User?.UserID?.trim() || null;
+            
             return {
-                leaveId: leave.LeaveID,
-                employeeName: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
-                leaveType: leave.LeaveType,
-                startDate: leave.StartDate,
-                endDate: leave.EndDate,
-                reason: leave.Reason,
-                status: leave.Status,
-                documentUrl: leave.DocumentUrl,
-                createdAt: leave.CreatedAt,
-                updatedAt: leave.UpdatedAt,
-                photo: leave.Faculty.User.Photo
+                ...leave,
+                Faculty: {
+                    Name: leave.Faculty?.User ? 
+                        `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}` : 
+                        'Unknown',
+                    Department: leave.Faculty?.Department?.DepartmentName || 'Unknown',
+                    UserID: userId
+                }
             };
         });
 
-        console.log('Transformed leaves:', transformedLeaves); // Debug log
+        console.log('Final transformed leaves:', JSON.stringify(transformedLeaves, null, 2)); // Debug final output
         return NextResponse.json(transformedLeaves);
     } catch (error) {
-        console.error('Error in leave API:', error);
-        return NextResponse.json(
-            { error: 'Internal Server Error' },
-            { status: 500 }
-        );
+        console.error('Error in leaves API:', error);
+        return NextResponse.json({ 
+            error: 'Internal server error',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
     }
 }

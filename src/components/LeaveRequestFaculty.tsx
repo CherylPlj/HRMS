@@ -34,9 +34,33 @@ const LeaveRequestFaculty: React.FC = () => {
     const fetchLeaveRequests = async () => {
         try {
             setIsLoading(true);
+            
+            // Get current user
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                throw new Error('No user found');
+            }
+
+            // Get faculty ID for the current user
+            const { data: facultyData, error: facultyError } = await supabase
+                .from('Faculty')
+                .select('FacultyID')
+                .eq('UserID', user.id)
+                .single();
+
+            if (facultyError) {
+                throw facultyError;
+            }
+
+            if (!facultyData) {
+                throw new Error('No faculty record found for user');
+            }
+
+            // Fetch leaves for the specific faculty
             const { data, error } = await supabase
                 .from('Leave')
                 .select('*')
+                .eq('FacultyID', facultyData.FacultyID)
                 .order('CreatedAt', { ascending: false });
 
             if (error) {

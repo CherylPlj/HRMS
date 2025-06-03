@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
+import { useUser } from '@clerk/nextjs';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Example: Replace with fetch from your backend if needed
 const DOCUMENT_TYPES = [
@@ -19,7 +27,8 @@ interface DocumentFacultyRow {
   file?: string;
 }
 
-const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
+const DocumentsFaculty: React.FC = () => {
+  const { user } = useUser();
   const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -32,23 +41,53 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
     file: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [facultyId, setFacultyId] = useState<number | null>(null);
+
+  // Fetch faculty ID for the current user
+  useEffect(() => {
+    const fetchFacultyId = async () => {
+      if (!user?.emailAddresses[0]?.emailAddress) return;
+
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('User')
+          .select('Faculty(FacultyID)')
+          .eq('Email', user.emailAddresses[0].emailAddress)
+          .single();
+
+        if (userError) throw userError;
+
+        if (userData?.Faculty && 'FacultyID' in userData.Faculty && typeof userData.Faculty.FacultyID === 'number') {
+          setFacultyId(userData.Faculty.FacultyID);
+        }
+      } catch (err) {
+        console.error('Error fetching faculty ID:', err);
+        setError('Failed to fetch faculty information');
+      }
+    };
+
+    fetchFacultyId();
+  }, [user]);
 
   // Fetch documents
   const fetchDocs = async () => {
+    if (!facultyId) return;
+    
     setLoading(true);
     try {
       const data = await fetchFacultyDocuments(facultyId);
       setDocuments(data);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setDocuments([]);
+      setError('Failed to fetch documents');
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchDocs();
-    // eslint-disable-next-line
+    if (facultyId) {
+      fetchDocs();
+    }
   }, [facultyId]);
 
   // Handle form changes
@@ -83,7 +122,6 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
         file: null,
       });
       fetchDocs();
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setError('Failed to upload document.');
     } finally {
@@ -92,11 +130,14 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
   };
 
   // Helper to get DocumentTypeName from ID
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getDocumentTypeName = (id: number) => {
     const type = DOCUMENT_TYPES.find(dt => dt.DocumentTypeID === id);
     return type ? type.DocumentTypeName : id;
   };
+
+  if (!user) {
+    return <div>Please log in to view your documents.</div>;
+  }
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-lg">
@@ -172,8 +213,7 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
           <thead className="bg-gray-100">
             <tr>
               <th className="p-3 text-left text-black">Document ID</th>
-              <th className="p-3 text-left text-black">Faculty ID</th>
-              <th className="p-3 text-left text-black">Document Type ID</th>
+              <th className="p-3 text-left text-black">Document Type</th>
               <th className="p-3 text-left text-black">Upload Date</th>
               <th className="p-3 text-left text-black">Status</th>
             </tr>
@@ -181,14 +221,17 @@ const DocumentsFaculty: React.FC<{ facultyId?: number }> = ({ facultyId }) => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="p-3 text-center">Loading...</td>
+                <td colSpan={4} className="p-3 text-center">Loading...</td>
+              </tr>
+            ) : documents.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="p-3 text-center">No documents found</td>
               </tr>
             ) : (
               documents.map((doc) => (
                 <tr key={doc.DocumentID} className="border-t hover:bg-gray-50">
                   <td className="p-3 text-left text-black">{doc.DocumentID}</td>
-                  <td className="p-3 text-left text-black">{doc.FacultyID}</td>
-                  <td className="p-3 text-left text-black">{doc.DocumentTypeID}</td>
+                  <td className="p-3 text-left text-black">{getDocumentTypeName(doc.DocumentTypeID)}</td>
                   <td className="p-3 text-left text-black">{doc.UploadDate}</td>
                   <td className="p-3 text-left text-black">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
