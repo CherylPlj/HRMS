@@ -1,8 +1,20 @@
 "use client";
 import { SignIn } from "@clerk/nextjs";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 export default function FacultyLoginPage() {
+  const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard/faculty");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   return (
     <div className="flex justify-center items-center min-h-screen bg-[url('/portalBG.png')] bg-cover bg-center">
       <div className="bg-white p-6 rounded-md shadow-md backdrop-blur-sm bg-opacity-80">
@@ -22,7 +34,8 @@ export default function FacultyLoginPage() {
               formButtonPrimary: "bg-[#800000] hover:bg-red-800",
             },
           }}
-          redirectUrl="/dashboard/faculty" // ✅ Corrected here
+          afterSignInUrl="/dashboard/faculty"
+          signUpUrl="/sign-up"
         />
       </div>
     </div>

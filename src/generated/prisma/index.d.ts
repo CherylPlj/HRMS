@@ -109,6 +109,7 @@ export type Leave = $Result.DefaultSelection<Prisma.$LeavePayload>
  */
 export namespace $Enums {
   export const Status: {
+  Invited: 'Invited',
   Active: 'Active',
   Inactive: 'Inactive'
 };

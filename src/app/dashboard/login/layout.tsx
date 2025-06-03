@@ -1,8 +1,20 @@
 "use client";
 import { SignIn } from "@clerk/nextjs";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard/admin");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   return (
     <div className="flex justify-center items-center min-h-screen bg-[url('/portalBG.png')] bg-cover bg-center">
       <div className="bg-white p-6 rounded-md shadow-md backdrop-blur-sm bg-opacity-80">
@@ -22,7 +34,8 @@ export default function AdminLoginPage() {
               formButtonPrimary: "bg-[#800000] hover:bg-red-800",
             },
           }}
-          redirectUrl="/dashboard/admin" // ✅ Corrected here
+          afterSignInUrl="/dashboard/admin"
+          signUpUrl="/sign-up"
         />
       </div>
     </div>

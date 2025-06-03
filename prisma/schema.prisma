@@ -203,6 +203,7 @@ model Leave {
 }
 
 enum Status {
+  Invited
   Active
   Inactive
 }

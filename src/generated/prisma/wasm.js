@@ -291,6 +291,7 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 exports.Status = exports.$Enums.Status = {
+  Invited: 'Invited',
   Active: 'Active',
   Inactive: 'Inactive'
 };

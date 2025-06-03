@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {  Plus, List, Users, Download, X, Save } from 'lucide-react';
+import {  Plus, List, Users, Download, X, Save, Pencil, Trash2 } from 'lucide-react';
 import React from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { useUser } from '@clerk/nextjs';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -30,6 +31,11 @@ interface SupabaseUser {
       DepartmentName: string;
     } | null;
   } | null;
+  UserRole: {
+    role: {
+      name: string;
+    };
+  }[];
 }
 
 interface User {
@@ -37,7 +43,7 @@ interface User {
   FirstName: string;
   LastName: string;
   Email: string;
-  Photo: string | File;
+  Photo: string;
   Role: string;
   Status: string;
   DateCreated: string;
@@ -68,7 +74,6 @@ interface ActivityLog {
 
 interface UserWithPasswordReset extends User {
   resetPassword?: boolean;
-  Photo: string | File;
   isChecked?: boolean; // For reset password checkbox state
 }
 
@@ -83,10 +88,11 @@ interface NewUser {
   Email: string;
   Role: string;
   Status: string;
-  Photo: File | string;
+  Photo: string;
 }
 
 const UsersContent: React.FC = () => {
+  const { user: currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedDate, setSelectedDate] = useState(''); // Date filter state
@@ -96,6 +102,7 @@ const UsersContent: React.FC = () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [userImages, setUserImages] = useState<{ [key: string]: string }>({});
 
   const [isAddModalOpen, setAddModalOpen] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -105,6 +112,8 @@ const UsersContent: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const [newUser, setNewUser] = useState<NewUser>({
     FirstName: '',
@@ -116,6 +125,9 @@ const UsersContent: React.FC = () => {
   });
 
   const [selectedUser, setSelectedUser] = useState<UserWithPasswordReset | null>(null);
+  const [showEditConfirmModal, setShowEditConfirmModal] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [editedUser, setEditedUser] = useState<User | null>(null);
 
   // Filter users based on search, role, and date
   const filteredUsers = users.filter((user) => {
@@ -168,7 +180,8 @@ const UsersContent: React.FC = () => {
               DepartmentName
             )
           )
-        `);
+        `)
+        .eq('isDeleted', false);
 
       if (usersError) {
         setNotification({
@@ -186,26 +199,46 @@ const UsersContent: React.FC = () => {
         return;
       }
 
+      // Fetch Clerk user data for each user
+      const clerkUsers = await Promise.all(
+        usersData.map(async (user) => {
+          try {
+            const response = await fetch(`/api/getClerkUser?userId=${user.UserID}`);
+            const data = await response.json();
+            return data;
+          } catch (error) {
+            console.error('Error fetching Clerk user:', error);
+            return null;
+          }
+        })
+      );
+
+      // Create a map of user IDs to their Clerk image URLs
+      const imageMap: { [key: string]: string } = {};
+      clerkUsers.forEach((clerkUser, index) => {
+        if (clerkUser?.imageUrl) {
+          imageMap[usersData[index].UserID] = clerkUser.imageUrl;
+        }
+      });
+      setUserImages(imageMap);
+
       const transformedUsers: User[] = usersData.map((rawUser) => {
         const facultyObj = Array.isArray(rawUser.Faculty) ? rawUser.Faculty[0] : rawUser.Faculty;
+
+        const role =
+        Array.isArray(rawUser.UserRole?.[0]?.role)
+          ? (rawUser.UserRole?.[0]?.role[0] as { name: string } | undefined)?.name || ''
+          : (rawUser.UserRole?.[0]?.role as { name: string } | undefined)?.name || '';
+              if (!role) {
+                console.warn(`No role found for user ${rawUser.UserID}`);
+        }
         return {
           UserID: rawUser.UserID,
           FirstName: rawUser.FirstName,
           LastName: rawUser.LastName,
           Email: rawUser.Email,
-          Photo: rawUser.Photo || '',
-          Role: rawUser.UserRole && rawUser.UserRole.length > 0
-            ? rawUser.UserRole
-                .map((ur: unknown) => {
-                  const userRole = ur as { role: { name: string }[] | { name: string } | null | undefined };
-                  if (Array.isArray(userRole.role)) {
-                    return userRole.role.map((r: unknown) => (r as { name: string }).name).join(', ');
-                  } else {
-                    return userRole.role?.name || '';
-                  }
-                })
-                .join(', ')
-            : '',
+          Photo: imageMap[rawUser.UserID] || rawUser.Photo || '',
+          Role: role,
           Status: rawUser.Status,
           DateCreated: rawUser.DateCreated,
           DateModified: rawUser.DateModified,
@@ -285,6 +318,14 @@ const UsersContent: React.FC = () => {
         return;
       }
 
+      if (!currentUser?.id) {
+        setNotification({
+          type: 'error',
+          message: 'Unable to identify current user'
+        });
+        return;
+      }
+
       setLoading(true);
 
       const response = await fetch('/api/createUser', {
@@ -296,7 +337,8 @@ const UsersContent: React.FC = () => {
           firstName: newUser.FirstName,
           lastName: newUser.LastName,
           email: newUser.Email,
-          role: newUser.Role
+          role: newUser.Role,
+          createdBy: currentUser.id
         }),
       });
 
@@ -320,7 +362,7 @@ const UsersContent: React.FC = () => {
 
       setNotification({
         type: 'success',
-        message: 'User created successfully'
+        message: 'User invitation sent successfully. The user will receive an email to complete their registration.'
       });
     } catch (error: unknown) {
       setNotification({
@@ -331,29 +373,37 @@ const UsersContent: React.FC = () => {
       setLoading(false);
     }
   };
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const openEditModal = (user: User) => {
+    setUserToEdit(user);
+    setEditedUser(user);
+    setEditModalOpen(true);
+  };
+  const closeEditModal = () => {
+    setUserToEdit(null);
+    setEditedUser(null);
+    setEditModalOpen(false);
+    setShowEditConfirmModal(false);
+  };
   const handleEditUser = async () => {
-    if (!selectedUser?.UserID) return;
+    if (!editedUser || !currentUser?.id) return;
 
     try {
       setLoading(true);
-
-      const updatedUser = {
-        userId: selectedUser.UserID,
-        role: selectedUser.Role,
-        status: selectedUser.Status,
-        photo: selectedUser.Photo,
-        email: selectedUser.Email,
-        firstName: selectedUser.FirstName,
-        lastName: selectedUser.LastName
-      };
 
       const response = await fetch('/api/updateUser', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedUser),
+        body: JSON.stringify({
+          userId: editedUser.UserID,
+          firstName: editedUser.FirstName,
+          lastName: editedUser.LastName,
+          email: editedUser.Email,
+          role: editedUser.Role,
+          status: editedUser.Status,
+          updatedBy: currentUser.id
+        }),
       });
 
       const data = await response.json();
@@ -362,12 +412,26 @@ const UsersContent: React.FC = () => {
         throw new Error(data.error || 'Failed to update user');
       }
 
+      // Close modals first
+      closeEditModal();
+      setShowEditConfirmModal(false);
+
+      // Fetch fresh data from the server immediately
       await fetchUsers();
-      closeModals();
+
+      // Show success message
       setNotification({
         type: 'success',
         message: 'User updated successfully'
       });
+
+      // Clear any existing timeouts
+      const timeoutId = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
+
     } catch (error: unknown) {
       setNotification({
         type: 'error',
@@ -377,9 +441,16 @@ const UsersContent: React.FC = () => {
       setLoading(false);
     }
   };
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const openDeleteModal = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteConfirmModal(true);
+  };
+  const closeDeleteModal = () => {
+    setUserToDelete(null);
+    setShowDeleteConfirmModal(false);
+  };
   const handleDeleteUser = async () => {
-    if (!selectedUser) return;
+    if (!userToDelete) return;
 
     try {
       setLoading(true);
@@ -390,7 +461,8 @@ const UsersContent: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: selectedUser.UserID
+          userId: userToDelete.UserID,
+          createdBy: currentUser?.id
         }),
       });
 
@@ -401,7 +473,7 @@ const UsersContent: React.FC = () => {
       }
 
       await fetchUsers();
-      closeModals();
+      closeDeleteModal();
       setNotification({
         type: 'success',
         message: 'User deleted successfully'
@@ -463,23 +535,6 @@ const UsersContent: React.FC = () => {
 
   const toggleView = () => setIsViewingLogs(!isViewingLogs);
   const openAddModal = () => setAddModalOpen(true);
-  const openEditModal = (user: User) => {
-    setSelectedUser(user);
-    setEditModalOpen(true);
-  };
-  const openDeleteModal = (user: User) => {
-    setSelectedUser(user);
-    setDeleteModalOpen(true);
-  };
-  const closeModals = () => {
-    setAddModalOpen(false);
-    setEditModalOpen(false);
-    setDeleteModalOpen(false);
-    setSelectedUser(null);
-    setShowConfirmModal(false);
-    setShowConfirmEditModal(false);
-  };
-
   const handleConfirmAdd = () => {
     closeModals();
     setNewUser({
@@ -491,13 +546,11 @@ const UsersContent: React.FC = () => {
       Photo: ''
     });
   };
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleConfirmEdit = () => {
-    closeModals();
+  const handleEditConfirm = () => {
+    setEditModalOpen(false);
+    setShowEditConfirmModal(true);
   };
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [resetPassword, setResetPassword] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleUserUpdate = (field: keyof UserWithPasswordReset, value: string | boolean) => {
     if (selectedUser) {
       setSelectedUser({
@@ -515,55 +568,64 @@ const UsersContent: React.FC = () => {
     { value: 'Cashier', label: 'Cashier' }
   ];
 
+  const closeModals = () => {
+    setAddModalOpen(false);
+    setEditModalOpen(false);
+    setDeleteModalOpen(false);
+    setSelectedUser(null);
+    setShowConfirmModal(false);
+    setShowConfirmEditModal(false);
+  };
+
   return (
-    <div className="text-black p-4 min-h-screen">
+    <div className="min-h-screen bg-gray-50 p-6">
       {/* Show notification if exists */}
       {notification && (
-        <div className={`mb-4 p-4 rounded-lg ${
+        <div className={`mb-6 p-4 rounded-lg shadow-sm ${
           notification.type === 'success'
-            ? 'bg-green-100 border-green-400 text-green-700'
-            : 'bg-red-100 border-red-400 text-red-700'
+            ? 'bg-green-50 border border-green-200 text-green-700'
+            : 'bg-red-50 border border-red-200 text-red-700'
         }`}>
           {notification.message}
         </div>
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-black">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
           {isViewingLogs ? 'Activity Logs' : 'User Management'}
         </h1>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-3">
           <button
-            className="bg-white border border-[#800000] text-[#800000] px-4 py-2 rounded hover:bg-[#800000] hover:text-white transition flex items-center"
+            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
             onClick={toggleView}
           >
             {isViewingLogs ? (
               <>
-                <Users className="w-4 h-4 mr-2" />
+                <Users className="w-5 h-5 mr-2" />
                 Manage Users
               </>
             ) : (
               <>
-                <List className="w-4 h-4 mr-2" />
+                <List className="w-5 h-5 mr-2" />
                 View Activity Logs
               </>
             )}
           </button>
           {isViewingLogs ? (
             <button
-              className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-red-800 transition flex items-center"
+              className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
               onClick={downloadLogs}
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-5 h-5 mr-2" />
               Download
             </button>
           ) : (
             <button
-              className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-red-800 transition flex items-center"
+              className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
               onClick={openAddModal}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               Add User
             </button>
           )}
@@ -571,141 +633,172 @@ const UsersContent: React.FC = () => {
       </div>
 
       {/* Content Box */}
-      <div className="bg-white shadow-lg p-4 rounded-lg h-[75vh] flex flex-col overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Search Field */}
-          <div>
-            <input
-              type="text"
-              placeholder={isViewingLogs ? 'Search activity logs...' : 'Search users...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          {/* Filters */}
-          <div className="flex flex-col space-y-2 md:flex-row md:items-end md:space-x-4 md:space-y-0">
-            <div className="flex-1">
-              <label htmlFor="roleSelect" className="text-sm font-medium" title="Role">
-                {/* Role */}
-              </label>
-              <select
-                id="roleSelect"
-                title="Role"
-                aria-label="Role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded"
-              >
-                <option value="">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="faculty">Faculty</option>
-                <option value="registrar">Registrar</option>
-                <option value="cashier">Cashier</option>
-              </select>
-            </div>
-            {/* Date Picker */}
-            <div className="flex items-center">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Search Field */}
+            <div className="relative">
               <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-100"
-                title="Filter by Date Added"
+                type="text"
+                placeholder={isViewingLogs ? 'Search activity logs...' : 'Search users...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               />
-              {selectedDate && (
-                <button
-                  type="button"
-                  className="ml-2 text-gray-500 hover:text-black"
-                  onClick={() => setSelectedDate('')}
-                  title="Clear date filter"
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <select
+                  id="roleSelect"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+                  <option value="">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="faculty">Faculty</option>
+                  <option value="registrar">Registrar</option>
+                  <option value="cashier">Cashier</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                  title="Filter by date"
+                  aria-label="Filter by date"
+                />
+                {selectedDate && (
+                  <button
+                    type="button"
+                    className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    onClick={() => setSelectedDate('')}
+                    title="Clear date filter"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Placeholder Table or Content */}
-        <div className="flex-1 overflow-auto">
+        {/* Table */}
+        <div className="overflow-x-auto">
           {isViewingLogs ? (
             activityLogs.length === 0 ? (
-              <p className="text-gray-500 text-center mt-10">
-                Activity logs list content here. No Activity Logs at the moment.
-              </p>
+              <div className="p-8 text-center text-gray-500">
+                No activity logs found.
+              </div>
             ) : (
-              <table className="table-auto w-full text-left">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="p-2">#</th>
-                    <th className="p-2">Timestamp</th>
-                    <th className="p-2">Done By</th>
-                    <th className="p-2">Action</th>
-                    <th className="p-2">Description</th>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Done By</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {activityLogs.map((log, index) => (
-                    <tr key={log.LogId || index}>
-                      <td className="p-2">{index + 1}</td>
-                      <td className="p-2">{new Date(log.Timestamp).toLocaleString()}</td>
-                      <td className="p-2">
+                    <tr key={log.LogId || index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(log.Timestamp).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.User ? `${log.User.FirstName} ${log.User.LastName}` : 'System'}
                       </td>
-                      <td className="p-2">{log.ActionType}</td>
-                      <td className="p-2">{log.ActionDetails}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.ActionType}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{log.ActionDetails}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )
           ) : (
-            <table className="table-auto w-full text-left">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-2">#</th>
-                  <th className="p-2">User ID</th>
-                  <th className="p-2 text-left">Image</th>
-                  <th className="p-2">Name</th>
-                  <th className="p-2">Role</th>
-                  <th className="p-2">Status</th>
-                  <th className="p-2">Date Added</th>
-                  <th className="p-2">Last Login</th>
-                  <th className="p-2 text-center">Actions</th>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Added</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map((user, index) => (
-                  <tr key={user.UserID}>
-                    <td className="p-2">{index + 1}</td>
-                    <td className="p-2">{user.UserID}</td>
-                    <td className="p-2">
+                  <tr key={user.UserID} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.UserID}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <img
-                        src={typeof user.Photo === 'string' && user.Photo ? user.Photo : '/manprofileavatar.png'}
-                        alt='profile'
-                        className="w-10 h-10 rounded-full object-cover"
+                        src={user.Photo || '/manprofileavatar.png'}
+                        alt="profile"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                       />
                     </td>
-                    <td className="p-2">{`${user.FirstName} ${user.LastName}`}</td>
-                    <td className="p-2">{user.Role}</td>
-                    <td className="p-2">{user.Status}</td>
-                    <td className="p-2">{user.DateCreated || 'N/A'}</td>
-                    <td className="p-2">{user.LastLogin || 'N/A'}</td>
-                    <td className="p-2">
-                      <button
-                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-                        onClick={() => openEditModal(user)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        title="Delete"
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2"
-                        onClick={() => openDeleteModal(user)}
-                      >
-                        Delete
-                      </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {`${user.FirstName} ${user.LastName}`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.Role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        user.Status === 'Active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.Status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.DateCreated ? new Date(user.DateCreated).toLocaleDateString('en-US', {
+                        timeZone: 'Asia/Manila',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      }) : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.LastLogin ? new Date(user.LastLogin).toLocaleDateString('en-US', {
+                        timeZone: 'Asia/Manila',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      }) : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                      <div className="flex justify-center space-x-3">
+                        <button
+                          className="p-1.5 rounded-lg hover:bg-[#800000]/10 transition-colors duration-200"
+                          onClick={() => openEditModal(user)}
+                          title="Edit User"
+                        >
+                          <Pencil className="w-5 h-5 text-[#800000] hover:text-[#600000]" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-lg hover:bg-[#800000]/10 transition-colors duration-200"
+                          onClick={() => openDeleteModal(user)}
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-5 h-5 text-[#800000] hover:text-[#600000]" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -718,178 +811,333 @@ const UsersContent: React.FC = () => {
       {/* Add User Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl relative">
-            {/* Close Icon */}
-            <button
-              title="Close"
-              onClick={closeModals}
-              className="absolute top-4 right-4 text-gray-500 hover:text-black"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h2 className="text-xl font-bold mb-4">Add User</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Left Column */}
-              <div className="flex flex-col space-y-2">
-                <label htmlFor="firstName" className="text-sm font-medium" title="firstName">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="firstName"
-                  type="text"
-                  title="First Name"
-                  aria-label="First Name"
-                  placeholder="Enter first name"
-                  value={newUser.FirstName}
-                  onChange={(e) => setNewUser({ ...newUser, FirstName: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  title="Email Address"
-                  aria-label="Email"
-                  placeholder="Enter email"
-                  value={newUser.Email}
-                  onChange={(e) => setNewUser({ ...newUser, Email: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-
-                <label htmlFor="roleSelect" className="text-sm font-medium">
-                  Role <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="roleSelect"
-                  aria-label="Role"
-                  title="Role"
-                  value={newUser.Role}
-                  onChange={(e) => setNewUser({ ...newUser, Role: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Add User</h2>
+                <button
+                  onClick={closeModals}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  title="Close modal"
                 >
-                  <option value="">Select Role</option>
-                  <option value="admin">Admin</option>
-                  <option value="faculty">Faculty</option>
-                  <option value="registrar">Registrar</option>
-                  <option value="cashier">Cashier</option>
-                </select>
-              </div>
-
-              {/* Right Column */}
-              <div className="flex flex-col space-y-2">
-                <label htmlFor="lastName" className="text-sm font-medium">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="lastName"
-                  type="text"
-                  title="Last Name"
-                  aria-label="Last Name"
-                  placeholder="Enter last name"
-                  value={newUser.LastName}
-                  onChange={(e) => setNewUser({ ...newUser, LastName: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-
-                <label htmlFor="Status" className="text-sm font-medium">
-                  Status <span className="text-red-500">*</span>
-                </label>
-                <select
-                  title="Status"
-                  id="Status"
-                  aria-label="Status"
-                  value={newUser.Status}
-                  onChange={(e) =>
-                    setNewUser(prev => ({ ...prev, Status: e.target.value }))
-                  }
-                  className="p-2 border border-gray-300 rounded"
-                >
-                  <option value="">Select Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-
-                <label htmlFor="photoUpload" className="text-sm font-medium">
-                  Photo <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="photoUpload"
-                  type="file"
-                  accept="image/png, image/jpeg"
-                  title="Upload Photo"
-                  aria-label="Upload Photo"
-                  placeholder="Choose a photo"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setNewUser(prev => ({ ...prev, Photo: file }));
-                    }
-                  }}
-                  className="p-2 border border-gray-300 rounded"
-                />
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            <div className="flex justify-end mt-6">
-              <button
-                title="Save"
-                onClick={handleAddUser}
-                className="bg-[#800000] text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-800"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save New User</span>
-              </button>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      value={newUser.FirstName}
+                      onChange={(e) => setNewUser({ ...newUser, FirstName: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={newUser.Email}
+                      onChange={(e) => setNewUser({ ...newUser, Email: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="roleSelect" className="block text-sm font-medium text-gray-700">
+                      Role <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="roleSelect"
+                      value={newUser.Role}
+                      onChange={(e) => setNewUser({ ...newUser, Role: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    >
+                      <option value="">Select Role</option>
+                      <option value="admin">Admin</option>
+                      <option value="faculty">Faculty</option>
+                      <option value="registrar">Registrar</option>
+                      <option value="cashier">Cashier</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      value={newUser.LastName}
+                      onChange={(e) => setNewUser({ ...newUser, LastName: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="Status" className="block text-sm font-medium text-gray-700">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="Status"
+                      value={newUser.Status}
+                      onChange={(e) => setNewUser({ ...newUser, Status: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    >
+                      <option value="">Select Status</option>
+                      <option value="Invited">Invited</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="photoUpload" className="block text-sm font-medium text-gray-700">
+                      Photo
+                    </label>
+                    <input
+                      id="photoUpload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Convert File to string URL for preview
+                          const fileUrl = URL.createObjectURL(file);
+                          setNewUser({ ...newUser, Photo: fileUrl });
+                        }
+                      }}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Confirm Add User Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Confirm New User</h2>
-            <p><strong>First Name:</strong> {newUser.FirstName}</p>
-            <p><strong>Last Name:</strong> {newUser.LastName}</p>
-            <p><strong>Email:</strong> {newUser.Email}</p>
-            <p><strong>Role:</strong> {newUser.Role}</p>
-            <p><strong>Status:</strong> {newUser.Status}</p>
-            <p>
-              <strong>Photo:</strong>{' '}
-              {newUser.Photo ? (
-                'uploaded'
-              ) : (
-                'No photo uploaded'
-              )}
-            </p>
-
-            <div className="flex justify-end mt-4 space-x-4">
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
               <button
-                title="Confirm"
-                onClick={handleConfirmAdd}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                Confirm
-              </button>
-              <button
-                title="Cancel"
-                onClick={() => setShowConfirmModal(false)}
-                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+                onClick={closeModals}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
               >
                 Cancel
               </button>
+              <button
+                onClick={handleAddUser}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-white bg-[#800000] hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+              >
+                <Save className="w-5 h-5 mr-2" />
+                Save User
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ...Edit User Modal, Confirm Edit Modal, Delete Modal (unchanged)... */}
-      {/* Keep your existing Edit, Confirm Edit, and Delete modals here */}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Confirm Delete</h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete {userToDelete.FirstName} {userToDelete.LastName}?
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                >
+                  No, Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditModalOpen && editedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Edit User</h2>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  title="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="editFirstName" className="block text-sm font-medium text-gray-700">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="editFirstName"
+                      type="text"
+                      value={editedUser.FirstName}
+                      onChange={(e) => setEditedUser({ ...editedUser, FirstName: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editEmail" className="block text-sm font-medium text-gray-700">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="editEmail"
+                      type="email"
+                      value={editedUser.Email}
+                      onChange={(e) => setEditedUser({ ...editedUser, Email: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editRole" className="block text-sm font-medium text-gray-700">
+                      Role <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="editRole"
+                      value={editedUser.Role}
+                      onChange={(e) => setEditedUser({ ...editedUser, Role: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    >
+                      <option value="Admin">Admin</option>
+                      <option value="Faculty">Faculty</option>
+                      <option value="Registrar">Registrar</option>
+                      <option value="Cashier">Cashier</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="editLastName" className="block text-sm font-medium text-gray-700">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="editLastName"
+                      type="text"
+                      value={editedUser.LastName}
+                      onChange={(e) => setEditedUser({ ...editedUser, LastName: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editStatus" className="block text-sm font-medium text-gray-700">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="editStatus"
+                      value={editedUser.Status}
+                      onChange={(e) => setEditedUser({ ...editedUser, Status: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    >
+                      <option value="Invited">Invited</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+              <button
+                onClick={closeEditModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditConfirm}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-white bg-[#800000] hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+              >
+                <Save className="w-5 h-5 mr-2" />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Confirmation Modal */}
+      {showEditConfirmModal && editedUser && userToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Confirm Changes</h2>
+              <div className="space-y-4 mb-6">
+                <p className="text-gray-600">Please review the changes for {userToEdit.FirstName} {userToEdit.LastName}:</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  {userToEdit.FirstName !== editedUser.FirstName && (
+                    <p><span className="font-medium">First Name:</span> {userToEdit.FirstName} → {editedUser.FirstName}</p>
+                  )}
+                  {userToEdit.LastName !== editedUser.LastName && (
+                    <p><span className="font-medium">Last Name:</span> {userToEdit.LastName} → {editedUser.LastName}</p>
+                  )}
+                  {userToEdit.Email !== editedUser.Email && (
+                    <p><span className="font-medium">Email:</span> {userToEdit.Email} → {editedUser.Email}</p>
+                  )}
+                  {userToEdit.Role !== editedUser.Role && (
+                    <p><span className="font-medium">Role:</span> {userToEdit.Role} → {editedUser.Role}</p>
+                  )}
+                  {userToEdit.Status !== editedUser.Status && (
+                    <p><span className="font-medium">Status:</span> {userToEdit.Status} → {editedUser.Status}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeEditModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditUser}
+                  className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                >
+                  Confirm Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

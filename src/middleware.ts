@@ -1,147 +1,85 @@
-import { clerkMiddleware, createRouteMatcher, currentUser } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-interface Role {
-    role: {
-        name: string;
-    }[];
-}
+// Public routes that don't require authentication
+const publicRoutes = [
+    "/",
+    "/sign-in",
+    "/sign-up",
+    "/api/webhooks/clerk",
+    "/api/updateUserStatus"
+];
 
-interface User {
-    Email: string;
-    Role: Role[];
-}
+// Routes that can be accessed while signed out
+const ignoredRoutes = [
+    "/api/webhooks/clerk",
+    "/api/updateUserStatus"
+];
 
-const isPublicRoute = createRouteMatcher([
-    '/',
-    '/login',
-    '/loginf',
-    '/sign-in',
-    '/sign-up',
-    '/sign-in/[[...sign-in]]',
-    '/sign-up/[[...sign-up]]',
-    '/sign-in/[[...sign-in]]/forgot-password',
-    '/sign-up/[[...sign-up]]/forgot-password',
-    '/sign-in/[[...sign-in]]/reset-password',
-    '/sign-up/[[...sign-up]]/reset-password',
-    '/sign-in/[[...sign-in]]/verify-email',
-    '/sign-up/[[...sign-up]]/verify-email',
-    '/student',
-    '/student/forgot-password',
-    '/faculty',
-    '/faculty/forgot-password',
-    '/terms-of-use',
-    '/privacy-statement'
-]);
+const isPublicRoute = createRouteMatcher(publicRoutes);
+const isIgnoredRoute = createRouteMatcher(ignoredRoutes);
 
 export default clerkMiddleware(async (auth, req) => {
     const { userId } = await auth();
     const isAuthenticated = !!userId;
     const url = new URL(req.url);
 
-    console.log('Middleware URL:', url.pathname); // Debug: log the current URL path
+    // Allow access to ignored routes
+    if (isIgnoredRoute(req)) {
+        return NextResponse.next();
+    }
 
     // If trying to access a protected route while not authenticated
     if (!isPublicRoute(req) && !isAuthenticated) {
-        console.log('User is not authenticated, redirecting to root page'); // Debug: log unauthenticated access
-        return NextResponse.redirect(new URL('/', req.url));
+        return NextResponse.redirect(new URL('/sign-in', req.url));
     }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isProtectedRoute = createRouteMatcher([
-    '/dashboard(.*)', // protect dashboard and its children
-    // ...other protected routes
-    ]);
 
     // If trying to access a public route while authenticated
     if (isPublicRoute(req) && isAuthenticated) {
-        console.log('User is authenticated, redirecting to appropriate dashboard'); // Debug: log authenticated access
-        // Allow access to terms and privacy pages even when authenticated
-
+        // Allow access to terms and privacy pages
         if (url.pathname === '/terms-of-use' || url.pathname === '/privacy-statement') {
-            console.log('Accessing terms or privacy page, allowing access'); // Debug: log access to terms/privacy
             return NextResponse.next();
         }
 
-        const loggedInUser = await currentUser()
-
-        console.log('Logged in user:', loggedInUser); // Debug: log the logged-in user
-
-        // get user role using email from clerk to check role in supabase using email
-        const userEmail = loggedInUser?.emailAddresses[0]?.emailAddress;
+        // Redirect to appropriate dashboard based on role
+        const session = await auth();
+        const userEmail = session.sessionClaims?.email as string;
         const userRole = await getUserRole(userEmail);
 
         if (userRole === 'admin') {
-            // Redirect admin users to the admin dashboard
-            return NextResponse.redirect(new URL('/admin/dashboard', req.url));
-        } else if (userRole === 'registrar') {
-            // Redirect registrar users to the registrar dashboard
-            return NextResponse.redirect(new URL('/registrar/dashboard', req.url));
-        } else if (userRole === 'cashier') {
-            // Redirect cashier users to the cashier dashboard
-            return NextResponse.redirect(new URL('/cashier/dashboard', req.url));
+            return NextResponse.redirect(new URL('/dashboard/admin', req.url));
         } else if (userRole === 'faculty') {
-            // Redirect faculty users to the faculty dashboard
-            return NextResponse.redirect(new URL('/faculty/dashboard', req.url));
-        }
-        // If user is a student, redirect to student home
-        if (userRole === 'student') {
-            return NextResponse.redirect(new URL('/student/home', req.url));
+            return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
         }
     }
+
     return NextResponse.next();
-}, { debug: false });// change before pushing to production
+});
 
 export const config = {
-    matcher: [
-        // Skip Next.js internals and all static files, unless found in search params
-        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-        // Always run for API routes
-        '/(api|trpc)(.*)',
-    ],
-}
+    matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
+};
 
 async function getUserRole(email?: string): Promise<string> {
-    try {
-        if (!email) {
-            console.log('No email provided for role lookup');
-            return 'student';
-        }
+    if (!email) return '';
 
-        // Get user and their role from Supabase
-        const { data: user, error } = await supabase
-            .from('User')
-            .select(`
-                Email,
-                Role (
-                    role (
-                        name
-                    )
+    const { data, error } = await supabase
+        .from('User')
+        .select(`
+            UserRole (
+                role:Role (
+                    name
                 )
-            `)
-            .eq('Email', email)
-            .single();
+            )
+        `)
+        .eq('Email', email)
+        .single();
 
-        if (error) {
-            console.error('Error fetching user role:', error);
-            return 'student';
-        }
+    if (error || !data) return '';
 
-        if (!user) {
-            console.log('No user found for email:', email);
-            return 'student';
-        }
+    const roleData = data.UserRole?.[0]?.role;
+    if (!roleData || !('name' in roleData)) return '';
 
-        console.log('Raw user from DB:', user); // Debug: full object
-
-        // Extract role names from the nested structure
-        const roles = (user as User).Role.flatMap(r => r.role.map(role => role.name));
-        console.log('Extracted roles:', roles); // Debug: role array
-        console.log('Returning role:', roles[0]); // Debug: final return
-
-        return roles[0] || 'student';
-    } catch (error) {
-        console.error('Error in getUserRole:', error);
-        return 'student';
-    }
+    return (roleData as { name: string }).name.toLowerCase();
 }
