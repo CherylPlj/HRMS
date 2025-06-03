@@ -10,6 +10,7 @@ import LeaveContent from '@/components/LeaveContent';
 import UsersContent from '@/components/UsersContent';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { UserProfile } from '@clerk/nextjs'; // Add this import
 
 interface ChatMessage {
   type: 'user' | 'ai';
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isAdminInfoVisible, setAdminInfoVisible] = useState(false); // State for Admin Info Modal
   const [isEditProfileVisible, setEditProfileVisible] = useState(false); // State for Edit Profile Modal
+  const [isProfileVisible, setProfileVisible] = useState(false); // Add this state
   const [phoneNumber, setPhoneNumber] = useState(''); // Editable phone number
   const [address, setAddress] = useState(''); // Editable address
   const [isNotificationsVisible, setNotificationsVisible] = useState(false); // State for Notifications Popup
@@ -271,6 +273,11 @@ export default function Dashboard() {
     }
   }, [isAdminInfoVisible]);
 
+  // Add this function to handle profile visibility
+  const toggleProfile = () => {
+    setProfileVisible(!isProfileVisible);
+  };
+
   const renderContent = () => {
     switch (activeButton) {
       case 'dashboard':
@@ -402,19 +409,33 @@ export default function Dashboard() {
                   </a>
                   <a
                     href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
+                    className="p-1 rounded-full hover:bg-gray-200 transition"
                     title="Profile"
-                    onClick={() => setAdminInfoVisible(true)} // Open Admin Info Modal on profile icon click
+                    onClick={toggleProfile}
                   >
-                    <i className="fas fa-user-circle text-black text-lg"></i>
+                    {user?.imageUrl ? (
+                      <img
+                        src={user.imageUrl}
+                        alt={`${user.firstName}'s profile`}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <i className="fas fa-user-circle text-black text-lg"></i>
+                    )}
                   </a>
                 </div>
                 {/* User Information */}
                 {isLoaded && isSignedIn && user ? (
+                  <a
+                  href="#"
+                  onClick={toggleProfile}
+                  className="flex flex-col text-black hover:text-red-700 transition"
+                  title="User Profile"
+                >
                   <div className="flex flex-col text-black">
                     <div className="font-semibold">{user.firstName} {user.lastName}</div>
                     <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
-                  </div>
+                  </div></a>
                 ) : (
                   <div>Loading user info...</div>
                 )}
@@ -838,6 +859,27 @@ export default function Dashboard() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add the UserProfile modal */}
+      {isProfileVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-[1000px] max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold text-[#800000]">Profile Settings</h2>
+              <button
+                onClick={toggleProfile}
+                className="text-gray-500 hover:text-gray-700"
+                title="Close profile settings"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="p-4">
+              <UserProfile />
             </div>
           </div>
         </div>

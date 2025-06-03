@@ -93,7 +93,6 @@ export async function POST(request: Request) {
       Email: email.toLowerCase(),
       Photo: '',
       PasswordHash: tempPasswordHash,
-      Role: normalizedRole as Role,
       Status: 'Active' as Status,
       DateCreated: now,
       DateModified: null,
@@ -126,6 +125,56 @@ export async function POST(request: Request) {
     if (!createdUser) {
       await clerk.invitations.revokeInvitation(invitation.id);
       throw new Error('User was not created in database');
+    }
+
+    // Get or create the role
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('Role')
+      .select('id')
+      .eq('name', normalizedRole)
+      .single();
+
+    if (roleError) {
+      // If role doesn't exist, create it
+      const { data: newRole, error: createRoleError } = await supabaseAdmin
+        .from('Role')
+        .insert([{ name: normalizedRole }])
+        .select()
+        .single();
+
+      if (createRoleError) {
+        await clerk.invitations.revokeInvitation(invitation.id);
+        await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
+        throw new Error('Failed to create role');
+      }
+
+      // Create user role relationship
+      const { error: userRoleError } = await supabaseAdmin
+        .from('UserRole')
+        .insert([{
+          userId: invitation.id,
+          roleId: newRole.id
+        }]);
+
+      if (userRoleError) {
+        await clerk.invitations.revokeInvitation(invitation.id);
+        await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
+        throw new Error('Failed to assign role to user');
+      }
+    } else {
+      // Create user role relationship with existing role
+      const { error: userRoleError } = await supabaseAdmin
+        .from('UserRole')
+        .insert([{
+          userId: invitation.id,
+          roleId: roleData.id
+        }]);
+
+      if (userRoleError) {
+        await clerk.invitations.revokeInvitation(invitation.id);
+        await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
+        throw new Error('Failed to assign role to user');
+      }
     }
 
     console.log('Temporary user created in Supabase:', { ...createdUser, PasswordHash: '[REDACTED]' });

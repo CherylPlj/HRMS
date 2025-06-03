@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { Schedule, AttendanceRecord } from '../types/attendance';
 import { attendanceService } from '../services/attendanceService';
@@ -7,7 +9,11 @@ import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 // import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
-const AttendanceFaculty: React.FC = () => {
+interface AttendanceFacultyProps {
+  onBack?: () => void;
+}
+
+const AttendanceFaculty: React.FC<AttendanceFacultyProps> = ({ onBack }) => {
   const { user } = useUser();
   const { currentRecord, setCurrentRecord, currentTime, currentDate, setSummary } = useAttendance();
   const [schedule, setSchedule] = useState<Schedule[]>([]);
@@ -316,7 +322,16 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
         {/* Header Section */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <div>
+            <div className="flex items-center space-x-4">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="text-[#800000] hover:text-[#600000] transition-colors"
+                >
+                  <i className="fas fa-arrow-left mr-2"></i>
+                  Back to Dashboard
+                </button>
+              )}
               <p className="text-sm text-gray-500">Track your daily attendance and schedule</p>
             </div>
             <div className="mt-4 sm:mt-0 text-right">

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation'; // For Next.js 13+
+import AttendanceFaculty from '@/components/AttendanceFaculty';
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
@@ -9,9 +11,12 @@ import { useAttendance } from '../contexts/AttendanceContext';
 import { attendanceService } from '../services/attendanceService';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
+import { DateTime } from 'luxon';
+
 
 export default function DashboardFaculty() {
   const { user } = useUser();
+  const router = useRouter();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { currentRecord, setCurrentRecord, currentTime, currentDate, summary } = useAttendance();
   const [dateRange, setDateRange] = useState<[Date, Date]>([
@@ -20,6 +25,7 @@ export default function DashboardFaculty() {
   ]);
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'attendance'>('dashboard');
   type AttendanceRecord = {
     id?: string;
     facultyId?: number;
@@ -199,10 +205,9 @@ export default function DashboardFaculty() {
 
   function formatTimeWithAmPm(timeStr: string | null | undefined) {
   if (!timeStr) return '-';
-  const [hours, minutes, seconds] = timeStr.split(':').map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, seconds || 0, 0);
-  return date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+ // Use a fixed date and Asia/Manila timezone
+  return DateTime.fromFormat(timeStr, 'HH:mm:ss', { zone: 'Asia/Manila' })
+  .toFormat('hh:mm a');
 }
   const lineData = {
     labels: attendanceData.map(d => new Date(d.date).toLocaleDateString()),
@@ -272,6 +277,10 @@ export default function DashboardFaculty() {
     }
   };
 
+  if (currentView === 'attendance') {
+    return <AttendanceFaculty onBack={() => setCurrentView('dashboard')} />;
+  }
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -306,32 +315,43 @@ export default function DashboardFaculty() {
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-500">{currentDate}</div>
             </div>
-            <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2">
-              <i className="fas fa-calendar-alt text-gray-400 mr-2"></i>
-              <DatePicker
-                selected={dateRange[0]}
-                onChange={handleDateChange}
-                startDate={dateRange[0]}
-                endDate={dateRange[1]}
-                selectsRange
-                dateFormat="yyyy-MM-dd"
-                maxDate={new Date()}
-                className="border-none focus:ring-0 text-sm"
-                customInput={
-                  <input
-                    title='Select date range'
-                    className="border-none focus:ring-0 text-sm w-48"
-                    value={`${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`}
-                    readOnly
-                  />
-                }
-              />
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setCurrentView('attendance')}
+                className="text-[#800000] hover:text-[#600000] transition-colors"
+              >
+                <i className="fas fa-clock mr-2"></i>
+                View Attendance
+              </button>
+              <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2">
+                <i className="fas fa-calendar-alt text-gray-400 mr-2"></i>
+                <DatePicker
+                  selected={dateRange[0]}
+                  onChange={handleDateChange}
+                  startDate={dateRange[0]}
+                  endDate={dateRange[1]}
+                  selectsRange
+                  dateFormat="yyyy-MM-dd"
+                  maxDate={new Date()}
+                  className="border-none focus:ring-0 text-sm"
+                  customInput={
+                    <input
+                      title='Select date range'
+                      className="border-none focus:ring-0 text-sm w-48"
+                      value={`${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`}
+                      readOnly
+                    />
+                  }
+                />
+              </div>
             </div>
           </div>
 
           {/* Status Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setCurrentView('attendance')}
+              title="Go to Attendance">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Current Status</p>

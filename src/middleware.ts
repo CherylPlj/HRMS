@@ -14,6 +14,7 @@ interface User {
 }
 
 const isPublicRoute = createRouteMatcher([
+    '/',
     '/login',
     '/loginf',
     '/sign-in',
@@ -43,8 +44,8 @@ export default clerkMiddleware(async (auth, req) => {
 
     // If trying to access a protected route while not authenticated
     if (!isPublicRoute(req) && !isAuthenticated) {
-        console.log('User is not authenticated, redirecting to sign-in page'); // Debug: log unauthenticated access
-        await auth.protect();
+        console.log('User is not authenticated, redirecting to root page'); // Debug: log unauthenticated access
+        return NextResponse.redirect(new URL('/', req.url));
     }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isProtectedRoute = createRouteMatcher([
@@ -72,7 +73,7 @@ export default clerkMiddleware(async (auth, req) => {
 
         if (userRole === 'admin') {
             // Redirect admin users to the admin dashboard
-            return NextResponse.redirect(new URL('dashboard/admin', req.url));
+            return NextResponse.redirect(new URL('/admin/dashboard', req.url));
         } else if (userRole === 'registrar') {
             // Redirect registrar users to the registrar dashboard
             return NextResponse.redirect(new URL('/registrar/dashboard', req.url));
@@ -81,7 +82,7 @@ export default clerkMiddleware(async (auth, req) => {
             return NextResponse.redirect(new URL('/cashier/dashboard', req.url));
         } else if (userRole === 'faculty') {
             // Redirect faculty users to the faculty dashboard
-            return NextResponse.redirect(new URL('dashboard/faculty', req.url));
+            return NextResponse.redirect(new URL('/faculty/dashboard', req.url));
         }
         // If user is a student, redirect to student home
         if (userRole === 'student') {
