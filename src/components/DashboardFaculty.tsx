@@ -197,6 +197,13 @@ export default function DashboardFaculty() {
     return hours + (minutes / 60);
   }
 
+  function formatTimeWithAmPm(timeStr: string | null | undefined) {
+  if (!timeStr) return '-';
+  const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, seconds || 0, 0);
+  return date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
   const lineData = {
     labels: attendanceData.map(d => new Date(d.date).toLocaleDateString()),
     datasets: [
@@ -416,10 +423,10 @@ export default function DashboardFaculty() {
                           {new Date(record.date).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {record.timeIn ? record.timeIn : '-'}
+                          {record.timeIn ? formatTimeWithAmPm(record.timeIn) : '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {record.timeOut ? record.timeOut : '-'}
+                          {record.timeOut ? formatTimeWithAmPm(record.timeOut) : '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
