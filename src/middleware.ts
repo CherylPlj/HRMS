@@ -14,7 +14,8 @@ const publicRoutes = [
 // Routes that can be accessed while signed out
 const ignoredRoutes = [
     "/api/webhooks/clerk",
-    "/api/updateUserStatus"
+    "/api/updateUserStatus",
+    "/api/getUserRole"
 ];
 
 const isPublicRoute = createRouteMatcher(publicRoutes);
@@ -27,6 +28,7 @@ export default clerkMiddleware(async (auth, req) => {
 
     // Allow access to ignored routes
     if (isIgnoredRoute(req)) {
+
         return NextResponse.next();
     }
 

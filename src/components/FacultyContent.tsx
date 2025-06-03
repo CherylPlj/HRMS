@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { FaTrash, FaPen, FaDownload, FaPlus, FaFile } from 'react-icons/fa';
 import { Search, Filter } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Faculty {
   FacultyID: number;
@@ -54,6 +56,32 @@ interface DocumentFacultyRow {
   UploadDate: string;
   SubmissionStatus: string;
   file?: string;
+  facultyName: string;
+  documentTypeName: string;
+  Faculty: {
+    User: {
+      FirstName: string;
+      LastName: string;
+      Email: string;
+    };
+  };
+  DocumentType: {
+    DocumentTypeID: number;
+    DocumentTypeName: string;
+  };
+}
+
+interface DocumentType {
+  DocumentTypeID: number;
+  DocumentTypeName: string;
+  AllowedFileTypes: string[];
+  Template: string | null;
+}
+
+interface NewDocument {
+  DocumentTypeID: number;
+  file: File | null;
+  acceptedFileTypes: string[];
 }
 
 const FacultyContent: React.FC = () => {
@@ -81,6 +109,12 @@ const FacultyContent: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
   const [docLoading, setDocLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  const [newDocument, setNewDocument] = useState<NewDocument>({
+    DocumentTypeID: 0,
+    file: null,
+    acceptedFileTypes: []
+  });
 
   // Fetch faculty data from the API endpoint
   const fetchFacultyData = async () => {
@@ -191,9 +225,10 @@ const FacultyContent: React.FC = () => {
     setDocLoading(true);
     try {
       const data = await fetchFacultyDocuments();
+      console.log('Received documents data:', data);
       setDocuments(data);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
+      console.error('Error fetching documents:', err);
       setDocuments([]);
     }
     setDocLoading(false);
@@ -223,6 +258,119 @@ const FacultyContent: React.FC = () => {
       fetchDocuments();
     }
   }, [activeView]);
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    
+    if (activeView === 'facultyManagement') {
+      // Add title for faculty list
+      doc.setFontSize(16);
+      doc.text('Faculty List', 14, 15);
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+      // Prepare faculty table data
+      const tableData = facultyList.map(faculty => [
+        `${faculty.User.FirstName} ${faculty.User.LastName}`,
+        faculty.User.Email,
+        faculty.Position,
+        faculty.Department.DepartmentName,
+        faculty.EmploymentStatus
+      ]);
+
+      // Add faculty table
+      autoTable(doc, {
+        head: [['Name', 'Email', 'Position', 'Department', 'Status']],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [128, 0, 0] } // Maroon color
+      });
+
+      // Save the PDF
+      doc.save('faculty-list.pdf');
+    } else {
+      // Add title for documents list
+      doc.setFontSize(16);
+      doc.text('Documents List', 14, 15);
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+      // Prepare documents table data
+      const tableData = documents.map(doc => [
+        doc.facultyName,
+        doc.documentTypeName,
+        new Date(doc.UploadDate).toLocaleDateString(),
+        doc.SubmissionStatus
+      ]);
+
+      // Add documents table
+      autoTable(doc, {
+        head: [['Faculty Name', 'Document Type', 'Upload Date', 'Status']],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [128, 0, 0] } // Maroon color
+      });
+
+      // Save the PDF
+      doc.save('documents-list.pdf');
+    }
+  };
+
+  // Fetch document types
+  const fetchDocumentTypes = async () => {
+    try {
+      const response = await fetch('/api/document-types');
+      if (!response.ok) throw new Error('Failed to fetch document types');
+      const data = await response.json();
+      setDocumentTypes(data);
+    } catch (error) {
+      console.error('Error fetching document types:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isDocumentModalOpen) {
+      fetchDocumentTypes();
+    }
+  }, [isDocumentModalOpen]);
+
+  const handleDocumentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('DocumentTypeID', newDocument.DocumentTypeID.toString());
+      if (newDocument.file) {
+        formData.append('file', newDocument.file);
+      }
+      formData.append('acceptedFileTypes', JSON.stringify(newDocument.acceptedFileTypes));
+
+      const response = await fetch('/api/faculty-documents', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Failed to upload document');
+
+      setNotification({
+        type: 'success',
+        message: 'Document uploaded successfully!'
+      });
+      setIsDocumentModalOpen(false);
+      fetchDocuments(); // Refresh the documents list
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to upload document'
+      });
+    }
+  };
 
   return (
     <div className="p-6">
@@ -260,17 +408,27 @@ const FacultyContent: React.FC = () => {
           </button>
         </div>
         <div className="flex space-x-2">
+          {activeView === 'facultyManagement' && (
+            <button
+              onClick={handleOpenFacultyModal}
+              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+            >
+              <FaPlus /> Add Faculty
+            </button>
+          )}
+          {activeView === 'documentManagement' && (
+            <button
+              onClick={handleOpenDocumentModal}
+              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+            >
+              <FaFile /> Add Document
+            </button>
+          )}
           <button
-            onClick={handleOpenFacultyModal}
+            onClick={handleDownloadPDF}
             className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
           >
-            <FaPlus /> Add Faculty
-          </button>
-          <button
-            onClick={handleOpenDocumentModal}
-            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
-          >
-            <FaFile /> Add Document
+            <FaDownload /> Download {activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'}
           </button>
         </div>
       </div>
@@ -382,7 +540,7 @@ const FacultyContent: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty ID</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty Name</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -399,46 +557,49 @@ const FacultyContent: React.FC = () => {
                   <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
                 </tr>
               ) : (
-                documents.map((doc, idx) => (
-                  <tr
-                    key={doc.DocumentID}
-                    className="hover:bg-gray-100 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{doc.FacultyID}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{doc.DocumentTypeID}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
-                        ${
-                          doc.SubmissionStatus === 'Approved'
-                            ? 'bg-green-100 text-green-700'
-                            : doc.SubmissionStatus === 'Rejected'
-                            ? 'bg-red-100 text-red-700'
-                            : doc.SubmissionStatus === 'Submitted'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }
-                      `}>
-                        {doc.SubmissionStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select
-                        title="Change Submission Status"
-                        value={doc.SubmissionStatus}
-                        onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
-                        disabled={statusUpdating === doc.DocumentID}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="Submitted">Submitted</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Rejected">Rejected</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))
+                documents.map((doc, idx) => {
+                  console.log('Rendering document:', doc);
+                  return (
+                    <tr
+                      key={doc.DocumentID}
+                      className="hover:bg-gray-100 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{doc.facultyName || 'Unknown Faculty'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+                          ${
+                            doc.SubmissionStatus === 'Approved'
+                              ? 'bg-green-100 text-green-700'
+                              : doc.SubmissionStatus === 'Rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : doc.SubmissionStatus === 'Submitted'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }
+                        `}>
+                          {doc.SubmissionStatus}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          title="Change Submission Status"
+                          value={doc.SubmissionStatus}
+                          onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
+                          disabled={statusUpdating === doc.DocumentID}
+                          className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Submitted">Submitted</option>
+                          <option value="Approved">Approved</option>
+                          <option value="Rejected">Rejected</option>
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -567,18 +728,84 @@ const FacultyContent: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">Add New Document</h2>
-            {/* Document form fields will go here */}
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setIsDocumentModalOpen(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-red-800">
-                Add Document
-              </button>
-            </div>
+            <form onSubmit={handleDocumentSubmit}>
+              <div className="space-y-4">
+                {/* Document Type Selection */}
+                <div>
+                  <label htmlFor="documentType" className="block text-sm font-medium text-gray-700 mb-2">
+                    Document Type
+                  </label>
+                  <select
+                    id="documentType"
+                    value={newDocument.DocumentTypeID}
+                    onChange={(e) => setNewDocument({
+                      ...newDocument,
+                      DocumentTypeID: parseInt(e.target.value)
+                    })}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                    title="Select document type"
+                  >
+                    <option value="">Select Document Type</option>
+                    {documentTypes.map((type) => (
+                      <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
+                        {type.DocumentTypeName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Allowed File Types */}
+                {newDocument.DocumentTypeID > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Allowed File Types
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {documentTypes.find(t => t.DocumentTypeID === newDocument.DocumentTypeID)?.AllowedFileTypes.map((type) => (
+                        <span key={type} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                          {type}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* File Upload */}
+                <div>
+                  <label htmlFor="documentFile" className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Template
+                  </label>
+                  <input
+                    id="documentFile"
+                    type="file"
+                    onChange={(e) => setNewDocument({
+                      ...newDocument,
+                      file: e.target.files?.[0] || null
+                    })}
+                    className="w-full"
+                    required
+                    title="Upload document template"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDocumentModalOpen(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-red-800"
+                >
+                  Save Document
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -97,6 +97,8 @@ model Document {
 model DocumentType {
   DocumentTypeID   Int        @id @default(autoincrement())
   DocumentTypeName String     @unique
+  AllowedFileTypes String[] // Array of allowed file extensions
+  Template         String? // Optional template file path
   Document         Document[]
 }
 

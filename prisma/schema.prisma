@@ -97,7 +97,9 @@ model Document {
 model DocumentType {
   DocumentTypeID   Int        @id @default(autoincrement())
   DocumentTypeName String     @unique
-  Document         Document[]
+  AllowedFileTypes String[]   // Array of allowed file extensions
+  Template        String?     // Optional template file path
+  Document        Document[]
 }
 
 model Contract {

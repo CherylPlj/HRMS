@@ -8,10 +8,18 @@ export async function uploadFacultyDocument(formData: FormData) {
 }
 
 export async function fetchFacultyDocuments(facultyId?: number) {
-  const url = facultyId
-    ? `/api/faculty-documents?facultyId=${facultyId}`
-    : '/api/faculty-documents';
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch documents');
-  return res.json();
+  try {
+    const url = facultyId
+      ? `/api/faculty-documents?facultyId=${facultyId}`
+      : '/api/faculty-documents';
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch documents');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    throw error;
+  }
 }

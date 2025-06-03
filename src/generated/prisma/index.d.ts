@@ -10836,16 +10836,20 @@ export namespace Prisma {
   export type DocumentTypeMinAggregateOutputType = {
     DocumentTypeID: number | null
     DocumentTypeName: string | null
+    Template: string | null
   }
 
   export type DocumentTypeMaxAggregateOutputType = {
     DocumentTypeID: number | null
     DocumentTypeName: string | null
+    Template: string | null
   }
 
   export type DocumentTypeCountAggregateOutputType = {
     DocumentTypeID: number
     DocumentTypeName: number
+    AllowedFileTypes: number
+    Template: number
     _all: number
   }
 
@@ -10861,16 +10865,20 @@ export namespace Prisma {
   export type DocumentTypeMinAggregateInputType = {
     DocumentTypeID?: true
     DocumentTypeName?: true
+    Template?: true
   }
 
   export type DocumentTypeMaxAggregateInputType = {
     DocumentTypeID?: true
     DocumentTypeName?: true
+    Template?: true
   }
 
   export type DocumentTypeCountAggregateInputType = {
     DocumentTypeID?: true
     DocumentTypeName?: true
+    AllowedFileTypes?: true
+    Template?: true
     _all?: true
   }
 
@@ -10963,6 +10971,8 @@ export namespace Prisma {
   export type DocumentTypeGroupByOutputType = {
     DocumentTypeID: number
     DocumentTypeName: string
+    AllowedFileTypes: string[]
+    Template: string | null
     _count: DocumentTypeCountAggregateOutputType | null
     _avg: DocumentTypeAvgAggregateOutputType | null
     _sum: DocumentTypeSumAggregateOutputType | null
@@ -10987,6 +10997,8 @@ export namespace Prisma {
   export type DocumentTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     DocumentTypeID?: boolean
     DocumentTypeName?: boolean
+    AllowedFileTypes?: boolean
+    Template?: boolean
     Document?: boolean | DocumentType$DocumentArgs<ExtArgs>
     _count?: boolean | DocumentTypeCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["documentType"]>
@@ -10994,19 +11006,25 @@ export namespace Prisma {
   export type DocumentTypeSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     DocumentTypeID?: boolean
     DocumentTypeName?: boolean
+    AllowedFileTypes?: boolean
+    Template?: boolean
   }, ExtArgs["result"]["documentType"]>
 
   export type DocumentTypeSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     DocumentTypeID?: boolean
     DocumentTypeName?: boolean
+    AllowedFileTypes?: boolean
+    Template?: boolean
   }, ExtArgs["result"]["documentType"]>
 
   export type DocumentTypeSelectScalar = {
     DocumentTypeID?: boolean
     DocumentTypeName?: boolean
+    AllowedFileTypes?: boolean
+    Template?: boolean
   }
 
-  export type DocumentTypeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"DocumentTypeID" | "DocumentTypeName", ExtArgs["result"]["documentType"]>
+  export type DocumentTypeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"DocumentTypeID" | "DocumentTypeName" | "AllowedFileTypes" | "Template", ExtArgs["result"]["documentType"]>
   export type DocumentTypeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     Document?: boolean | DocumentType$DocumentArgs<ExtArgs>
     _count?: boolean | DocumentTypeCountOutputTypeDefaultArgs<ExtArgs>
@@ -11022,6 +11040,8 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       DocumentTypeID: number
       DocumentTypeName: string
+      AllowedFileTypes: string[]
+      Template: string | null
     }, ExtArgs["result"]["documentType"]>
     composites: {}
   }
@@ -11448,6 +11468,8 @@ export namespace Prisma {
   interface DocumentTypeFieldRefs {
     readonly DocumentTypeID: FieldRef<"DocumentType", 'Int'>
     readonly DocumentTypeName: FieldRef<"DocumentType", 'String'>
+    readonly AllowedFileTypes: FieldRef<"DocumentType", 'String[]'>
+    readonly Template: FieldRef<"DocumentType", 'String'>
   }
     
 
@@ -23057,7 +23079,9 @@ export namespace Prisma {
 
   export const DocumentTypeScalarFieldEnum: {
     DocumentTypeID: 'DocumentTypeID',
-    DocumentTypeName: 'DocumentTypeName'
+    DocumentTypeName: 'DocumentTypeName',
+    AllowedFileTypes: 'AllowedFileTypes',
+    Template: 'Template'
   };
 
   export type DocumentTypeScalarFieldEnum = (typeof DocumentTypeScalarFieldEnum)[keyof typeof DocumentTypeScalarFieldEnum]
@@ -23869,12 +23893,16 @@ export namespace Prisma {
     NOT?: DocumentTypeWhereInput | DocumentTypeWhereInput[]
     DocumentTypeID?: IntFilter<"DocumentType"> | number
     DocumentTypeName?: StringFilter<"DocumentType"> | string
+    AllowedFileTypes?: StringNullableListFilter<"DocumentType">
+    Template?: StringNullableFilter<"DocumentType"> | string | null
     Document?: DocumentListRelationFilter
   }
 
   export type DocumentTypeOrderByWithRelationInput = {
     DocumentTypeID?: SortOrder
     DocumentTypeName?: SortOrder
+    AllowedFileTypes?: SortOrder
+    Template?: SortOrderInput | SortOrder
     Document?: DocumentOrderByRelationAggregateInput
   }
 
@@ -23884,12 +23912,16 @@ export namespace Prisma {
     AND?: DocumentTypeWhereInput | DocumentTypeWhereInput[]
     OR?: DocumentTypeWhereInput[]
     NOT?: DocumentTypeWhereInput | DocumentTypeWhereInput[]
+    AllowedFileTypes?: StringNullableListFilter<"DocumentType">
+    Template?: StringNullableFilter<"DocumentType"> | string | null
     Document?: DocumentListRelationFilter
   }, "DocumentTypeID" | "DocumentTypeName">
 
   export type DocumentTypeOrderByWithAggregationInput = {
     DocumentTypeID?: SortOrder
     DocumentTypeName?: SortOrder
+    AllowedFileTypes?: SortOrder
+    Template?: SortOrderInput | SortOrder
     _count?: DocumentTypeCountOrderByAggregateInput
     _avg?: DocumentTypeAvgOrderByAggregateInput
     _max?: DocumentTypeMaxOrderByAggregateInput
@@ -23903,6 +23935,8 @@ export namespace Prisma {
     NOT?: DocumentTypeScalarWhereWithAggregatesInput | DocumentTypeScalarWhereWithAggregatesInput[]
     DocumentTypeID?: IntWithAggregatesFilter<"DocumentType"> | number
     DocumentTypeName?: StringWithAggregatesFilter<"DocumentType"> | string
+    AllowedFileTypes?: StringNullableListFilter<"DocumentType">
+    Template?: StringNullableWithAggregatesFilter<"DocumentType"> | string | null
   }
 
   export type ContractWhereInput = {
@@ -24994,38 +25028,52 @@ export namespace Prisma {
 
   export type DocumentTypeCreateInput = {
     DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
     Document?: DocumentCreateNestedManyWithoutDocumentTypeInput
   }
 
   export type DocumentTypeUncheckedCreateInput = {
     DocumentTypeID?: number
     DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
     Document?: DocumentUncheckedCreateNestedManyWithoutDocumentTypeInput
   }
 
   export type DocumentTypeUpdateInput = {
     DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
     Document?: DocumentUpdateManyWithoutDocumentTypeNestedInput
   }
 
   export type DocumentTypeUncheckedUpdateInput = {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
     Document?: DocumentUncheckedUpdateManyWithoutDocumentTypeNestedInput
   }
 
   export type DocumentTypeCreateManyInput = {
     DocumentTypeID?: number
     DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
   }
 
   export type DocumentTypeUpdateManyMutationInput = {
     DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentTypeUncheckedUpdateManyInput = {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ContractCreateInput = {
@@ -26241,9 +26289,19 @@ export namespace Prisma {
     _max?: NestedEnumSubmissionStatusFilter<$PrismaModel>
   }
 
+  export type StringNullableListFilter<$PrismaModel = never> = {
+    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    has?: string | StringFieldRefInput<$PrismaModel> | null
+    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
+    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
+    isEmpty?: boolean
+  }
+
   export type DocumentTypeCountOrderByAggregateInput = {
     DocumentTypeID?: SortOrder
     DocumentTypeName?: SortOrder
+    AllowedFileTypes?: SortOrder
+    Template?: SortOrder
   }
 
   export type DocumentTypeAvgOrderByAggregateInput = {
@@ -26253,11 +26311,13 @@ export namespace Prisma {
   export type DocumentTypeMaxOrderByAggregateInput = {
     DocumentTypeID?: SortOrder
     DocumentTypeName?: SortOrder
+    Template?: SortOrder
   }
 
   export type DocumentTypeMinOrderByAggregateInput = {
     DocumentTypeID?: SortOrder
     DocumentTypeName?: SortOrder
+    Template?: SortOrder
   }
 
   export type DocumentTypeSumOrderByAggregateInput = {
@@ -27377,6 +27437,10 @@ export namespace Prisma {
     update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutDocumentsInput, FacultyUpdateWithoutDocumentsInput>, FacultyUncheckedUpdateWithoutDocumentsInput>
   }
 
+  export type DocumentTypeCreateAllowedFileTypesInput = {
+    set: string[]
+  }
+
   export type DocumentCreateNestedManyWithoutDocumentTypeInput = {
     create?: XOR<DocumentCreateWithoutDocumentTypeInput, DocumentUncheckedCreateWithoutDocumentTypeInput> | DocumentCreateWithoutDocumentTypeInput[] | DocumentUncheckedCreateWithoutDocumentTypeInput[]
     connectOrCreate?: DocumentCreateOrConnectWithoutDocumentTypeInput | DocumentCreateOrConnectWithoutDocumentTypeInput[]
@@ -27389,6 +27453,11 @@ export namespace Prisma {
     connectOrCreate?: DocumentCreateOrConnectWithoutDocumentTypeInput | DocumentCreateOrConnectWithoutDocumentTypeInput[]
     createMany?: DocumentCreateManyDocumentTypeInputEnvelope
     connect?: DocumentWhereUniqueInput | DocumentWhereUniqueInput[]
+  }
+
+  export type DocumentTypeUpdateAllowedFileTypesInput = {
+    set?: string[]
+    push?: string | string[]
   }
 
   export type DocumentUpdateManyWithoutDocumentTypeNestedInput = {
@@ -29118,11 +29187,15 @@ export namespace Prisma {
 
   export type DocumentTypeCreateWithoutDocumentInput = {
     DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
   }
 
   export type DocumentTypeUncheckedCreateWithoutDocumentInput = {
     DocumentTypeID?: number
     DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
   }
 
   export type DocumentTypeCreateOrConnectWithoutDocumentInput = {
@@ -29184,11 +29257,15 @@ export namespace Prisma {
 
   export type DocumentTypeUpdateWithoutDocumentInput = {
     DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentTypeUncheckedUpdateWithoutDocumentInput = {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type FacultyUpsertWithoutDocumentsInput = {

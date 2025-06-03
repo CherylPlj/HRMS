@@ -186,7 +186,9 @@ exports.Prisma.DocumentScalarFieldEnum = {
 
 exports.Prisma.DocumentTypeScalarFieldEnum = {
   DocumentTypeID: 'DocumentTypeID',
-  DocumentTypeName: 'DocumentTypeName'
+  DocumentTypeName: 'DocumentTypeName',
+  AllowedFileTypes: 'AllowedFileTypes',
+  Template: 'Template'
 };
 
 exports.Prisma.ContractScalarFieldEnum = {
