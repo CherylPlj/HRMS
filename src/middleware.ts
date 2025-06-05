@@ -6,9 +6,13 @@ import { supabase } from "@/lib/supabaseClient";
 const publicRoutes = [
     "/",
     "/sign-in",
+    "/dashboard/login",
+    "/dashboard/loginf",
     "/sign-up",
     "/api/webhooks/clerk",
-    "/api/updateUserStatus"
+    "/api/updateUserStatus",
+    "/api/getUserRole"
+
 ];
 
 // Routes that can be accessed while signed out

@@ -90,6 +90,13 @@ async function main() {
             lastName: 'User',
             roleName: 'Cashier',
         },
+        {
+            email: 'student@student.com',
+            plainPassword: 'Student@SJSFI',
+            firstName: 'Student',
+            lastName: 'User',
+            roleName: 'Student',
+        },
     ];
 
     for (const user of users) {

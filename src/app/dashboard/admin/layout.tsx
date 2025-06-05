@@ -143,9 +143,9 @@ export default function Dashboard() {
       const userRole = user.publicMetadata?.role;
 
       if (userRole === 'admin') {
-        router.push('/admin');
+        router.push('/dashboard/admin');
       } else if (userRole === 'faculty') {
-        router.push('/faculty-dashboard');
+        router.push('/dashboard/faculty');
       }
       // Else: stay on dashboard
     }
