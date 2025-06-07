@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "../lib/supabaseClient";
+import { useUser } from '@clerk/nextjs';
 
 interface LeaveRequest {
     LeaveID: string;
@@ -16,6 +17,7 @@ interface LeaveRequest {
 }
 
 const LeaveRequestFaculty: React.FC = () => {
+    const { user } = useUser();
     const [showModal, setShowModal] = useState(false);
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [leaveType, setLeaveType] = useState('');
@@ -26,50 +28,85 @@ const LeaveRequestFaculty: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
+    const [facultyId, setFacultyId] = useState<number | null>(null);
+    // const navigate = useNavigate();
 
     useEffect(() => {
-        fetchLeaveRequests();
-    }, []);
+        const fetchUserAndFacultyId = async () => {
+            if (!user?.emailAddresses?.[0]?.emailAddress) {
+                console.log('No Clerk user email available');
+                setError('Please log in to access this page');
+                return;
+            }
 
-    const fetchLeaveRequests = async () => {
+            try {
+                console.log('Fetching Supabase user for email:', user.emailAddresses[0].emailAddress);
+                const { data: userData, error: userError } = await supabase
+                    .from('User')
+                    .select('UserID')
+                    .eq('Email', user.emailAddresses[0].emailAddress)
+                    .single();
+
+                if (userError) {
+                    console.error('Error fetching Supabase user:', userError);
+                    setError('Failed to fetch user data');
+                    return;
+                }
+
+                if (userData) {
+                    console.log('Found Supabase user:', userData);
+
+                    // Fetch FacultyID using UserID
+                    const { data: facultyData, error: facultyError } = await supabase
+                        .from('Faculty')
+                        .select('FacultyID')
+                        .eq('UserID', userData.UserID)
+                        .single();
+
+                    if (facultyError) {
+                        console.error('Error fetching Faculty data:', facultyError);
+                        setError('Failed to fetch faculty data');
+                        return;
+                    }
+
+                    if (facultyData) {
+                        console.log('Found Faculty ID:', facultyData);
+                        setFacultyId(facultyData.FacultyID);
+                        fetchLeaveRequests(facultyData.FacultyID);
+                    } else {
+                        console.log('No Faculty found for user:', userData.UserID);
+                        setError('Faculty record not found');
+                    }
+                } else {
+                    console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
+                    setError('User not found in database');
+                }
+            } catch (error) {
+                console.error('Error in fetchUserAndFacultyId:', error);
+                setError('An unexpected error occurred');
+            }
+        };
+
+        fetchUserAndFacultyId();
+    }, [user]);
+
+    const fetchLeaveRequests = async (facultyId: number) => {
         try {
             setIsLoading(true);
-            
-            // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                throw new Error('No user found');
-            }
-
-            // Get faculty ID for the current user
-            const { data: facultyData, error: facultyError } = await supabase
-                .from('Faculty')
-                .select('FacultyID')
-                .eq('UserID', user.id)
-                .single();
-
-            if (facultyError) {
-                throw facultyError;
-            }
-
-            if (!facultyData) {
-                throw new Error('No faculty record found for user');
-            }
+            setError(null);
 
             // Fetch leaves for the specific faculty
             const { data, error } = await supabase
                 .from('Leave')
                 .select('*')
-                .eq('FacultyID', facultyData.FacultyID)
+                .eq('FacultyID', facultyId)
                 .order('CreatedAt', { ascending: false });
 
             if (error) {
-                console.error('Supabase error:', error);
-                throw error;
+                throw new Error('Error fetching leave requests: ' + error.message);
             }
 
             if (!data) {
-                console.warn('No data returned');
                 setLeaveRequests([]);
                 return;
             }
@@ -97,7 +134,7 @@ const LeaveRequestFaculty: React.FC = () => {
 
     const handleAddLeaveRequest = async () => {
         try {
-            if (!startDate || !endDate || !leaveType || !reason) {
+            if (!startDate || !endDate || !leaveType || !reason || !facultyId) {
                 setError('Please fill in all required fields');
                 return;
             }
@@ -123,16 +160,12 @@ const LeaveRequestFaculty: React.FC = () => {
                 }
             }
 
-            // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No user found');
-
             // Create leave request
             const { error } = await supabase
                 .from('Leave')
                 .insert([
                     {
-                        FacultyID: user.id,
+                        FacultyID: facultyId,
                         LeaveType: leaveType,
                         StartDate: startDate.toISOString(),
                         EndDate: endDate.toISOString(),
@@ -152,7 +185,7 @@ const LeaveRequestFaculty: React.FC = () => {
             setEndDate(null);
             setReason('');
             setFile(null);
-            await fetchLeaveRequests();
+            await fetchLeaveRequests(facultyId);
 
         } catch (err) {
             console.error('Error adding leave request:', err);

@@ -49,6 +49,12 @@ interface Notification {
   message: string;
 }
 
+interface ValidationErrors {
+  Phone?: string;
+  Address?: string;
+  EmergencyContact?: string;
+}
+
 const PersonalData: React.FC = () => {
   const { user } = useUser();
   const [facultyDetails, setFacultyDetails] = useState<FacultyDetails | null>(null);
@@ -56,6 +62,8 @@ const PersonalData: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedDetails, setEditedDetails] = useState<FacultyDetails | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   interface ClerkUserData {
     firstName: string;
@@ -236,50 +244,49 @@ const PersonalData: React.FC = () => {
         setNotification(null);
 
         // Set up real-time subscription for updates
-        const subscription = supabase
-          .channel('faculty_changes')
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'Faculty',
-              filter: `UserID=eq.${userData.UserID}`
-            },
-            async (payload) => {
-              console.log('Real-time update received:', payload);
-              // Refetch the data to ensure we have the latest
-              const { data: updatedData, error: updateError } = await supabase
-                .from('Faculty')
-                .select(`
-                  *,
-                  Department (
-                    DepartmentName
-                  )
-                `)
-                .eq('UserID', userData.UserID)
-                .single();
+        if (!subscription) {
+          const newSubscription = supabase
+            .channel('faculty_changes')
+            .on(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'Faculty',
+                filter: `UserID=eq.${userData.UserID}`
+              },
+              async (payload) => {
+                console.log('Real-time update received:', payload);
+                // Refetch the data to ensure we have the latest
+                const { data: updatedData, error: updateError } = await supabase
+                  .from('Faculty')
+                  .select(`
+                    *,
+                    Department (
+                      DepartmentName
+                    )
+                  `)
+                  .eq('UserID', userData.UserID)
+                  .single();
 
-              if (!updateError && updatedData) {
-                const transformedUpdatedData: FacultyDetails = {
-                  ...updatedData,
-                  DepartmentName: updatedData.Department?.DepartmentName || 'Unknown Department'
-                };
-                setFacultyDetails(transformedUpdatedData);
-                setEditedDetails(transformedUpdatedData);
-                setNotification({
-                  type: 'success',
-                  message: 'Your profile has been updated.'
-                });
+                if (!updateError && updatedData) {
+                  const transformedUpdatedData: FacultyDetails = {
+                    ...updatedData,
+                    DepartmentName: updatedData.Department?.DepartmentName || 'Unknown Department'
+                  };
+                  setFacultyDetails(transformedUpdatedData);
+                  setEditedDetails(transformedUpdatedData);
+                  setNotification({
+                    type: 'success',
+                    message: 'Your profile has been updated.'
+                  });
+                }
               }
-            }
-          )
-          .subscribe();
+            )
+            .subscribe();
 
-        // Cleanup subscription on unmount
-        return () => {
-          subscription.unsubscribe();
-        };
+          setSubscription(newSubscription);
+        }
       } catch (error: unknown) {
         console.error('Unexpected error:', error);
         setNotification({
@@ -292,7 +299,15 @@ const PersonalData: React.FC = () => {
     };
 
     fetchFacultyDetails();
-  }, [user]);
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+        setSubscription(null);
+      }
+    };
+  }, [user, subscription]);
 
   const handleDownload = () => {
     if (!facultyDetails) return;
@@ -341,11 +356,96 @@ const PersonalData: React.FC = () => {
     setIsEditing(true);
   };
 
+  // Validation functions
+  const validatePhone = (phone: string): string | undefined => {
+    if (!phone) return undefined;
+    const phoneRegex = /^\+?[\d\s-()]{10,15}$/;
+    if (!phoneRegex.test(phone)) {
+      return 'Please enter a valid phone number (10-15 digits, may include +, spaces, hyphens, or parentheses)';
+    }
+    return undefined;
+  };
+
+  const validateAddress = (address: string): string | undefined => {
+    if (!address) return undefined;
+    if (address.length < 5) {
+      return 'Address must be at least 5 characters long';
+    }
+    if (address.length > 200) {
+      return 'Address must not exceed 200 characters';
+    }
+    return undefined;
+  };
+
+  const validateEmergencyContact = (contact: string): string | undefined => {
+    if (!contact) return undefined;
+    if (contact.length < 3) {
+      return 'Emergency contact name must be at least 3 characters long';
+    }
+    if (contact.length > 100) {
+      return 'Emergency contact name must not exceed 100 characters';
+    }
+    return undefined;
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    
+    if (editedDetails) {
+      errors.Phone = validatePhone(editedDetails.Phone || '');
+      errors.Address = validateAddress(editedDetails.Address || '');
+      errors.EmergencyContact = validateEmergencyContact(editedDetails.EmergencyContact || '');
+    }
+
+    setValidationErrors(errors);
+    return !Object.values(errors).some(error => error !== undefined);
+  };
+
+  // Update handleInputChange to include validation
+  const handleInputChange = (field: keyof FacultyDetails, value: string) => {
+    console.log('Handling input change:', field, value);
+    setEditedDetails(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
+
+    // Validate the changed field
+    let error: string | undefined;
+    switch (field) {
+      case 'Phone':
+        error = validatePhone(value);
+        break;
+      case 'Address':
+        error = validateAddress(value);
+        break;
+      case 'EmergencyContact':
+        error = validateEmergencyContact(value);
+        break;
+    }
+
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+  };
+
+  // Update handleSave to include validation
   const handleSave = async () => {
     if (!editedDetails || !user) {
       setNotification({
         type: 'error',
         message: 'No data to save. Please try again.'
+      });
+      return;
+    }
+
+    if (!validateForm()) {
+      setNotification({
+        type: 'error',
+        message: 'Please fix the validation errors before saving.'
       });
       return;
     }
@@ -404,6 +504,7 @@ const PersonalData: React.FC = () => {
       setFacultyDetails(transformedData);
       setEditedDetails(transformedData);
       setIsEditing(false);
+      setValidationErrors({});
       setNotification({
         type: 'success',
         message: 'Changes saved successfully!'
@@ -417,17 +518,6 @@ const PersonalData: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleInputChange = (field: keyof FacultyDetails, value: string) => {
-    console.log('Handling input change:', field, value);
-    setEditedDetails(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        [field]: value
-      };
-    });
   };
 
   const calculateYearsOfService = () => {
@@ -521,17 +611,24 @@ const PersonalData: React.FC = () => {
               </div>
             </div>
 
-            {/* Editable fields */}
+            {/* Editable fields with validation */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Phone Number</label>
               {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.Phone ?? ''}
-                  onChange={(e) => handleInputChange('Phone', e.target.value)}
-                  className="w-full p-2 rounded border border-gray-300 bg-gray-50"
-                  placeholder="Enter phone number"
-                />
+                <div>
+                  <input
+                    type="text"
+                    value={editedDetails?.Phone ?? ''}
+                    onChange={(e) => handleInputChange('Phone', e.target.value)}
+                    className={`w-full p-2 rounded border ${
+                      validationErrors.Phone ? 'border-red-500' : 'border-gray-300'
+                    } bg-gray-50`}
+                    placeholder="Enter phone number"
+                  />
+                  {validationErrors.Phone && (
+                    <p className="mt-1 text-sm text-red-600">{validationErrors.Phone}</p>
+                  )}
+                </div>
               ) : (
                 <div className="bg-gray-50 text-black p-2 rounded border border-gray-200">
                   {facultyDetails?.Phone || 'Not set'}
@@ -541,13 +638,20 @@ const PersonalData: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Address</label>
               {isEditing ? (
-                <textarea
-                  value={editedDetails?.Address ?? ''}
-                  onChange={(e) => handleInputChange('Address', e.target.value)}
-                  className="w-full p-2 rounded border border-gray-300 bg-gray-50"
-                  rows={2}
-                  placeholder="Enter address"
-                />
+                <div>
+                  <textarea
+                    value={editedDetails?.Address ?? ''}
+                    onChange={(e) => handleInputChange('Address', e.target.value)}
+                    className={`w-full p-2 rounded border ${
+                      validationErrors.Address ? 'border-red-500' : 'border-gray-300'
+                    } bg-gray-50`}
+                    rows={2}
+                    placeholder="Enter address"
+                  />
+                  {validationErrors.Address && (
+                    <p className="mt-1 text-sm text-red-600">{validationErrors.Address}</p>
+                  )}
+                </div>
               ) : (
                 <div className="bg-gray-50 text-black p-2 rounded border border-gray-200">
                   {facultyDetails?.Address || 'Not set'}
@@ -557,13 +661,20 @@ const PersonalData: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Emergency Contact</label>
               {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.EmergencyContact ?? ''}
-                  onChange={(e) => handleInputChange('EmergencyContact', e.target.value)}
-                  className="w-full p-2 rounded border border-gray-300 bg-gray-50"
-                  placeholder="Enter emergency contact"
-                />
+                <div>
+                  <input
+                    type="text"
+                    value={editedDetails?.EmergencyContact ?? ''}
+                    onChange={(e) => handleInputChange('EmergencyContact', e.target.value)}
+                    className={`w-full p-2 rounded border ${
+                      validationErrors.EmergencyContact ? 'border-red-500' : 'border-gray-300'
+                    } bg-gray-50`}
+                    placeholder="Enter emergency contact"
+                  />
+                  {validationErrors.EmergencyContact && (
+                    <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContact}</p>
+                  )}
+                </div>
               ) : (
                 <div className="bg-gray-50 text-black p-2 rounded border border-gray-200">
                   {facultyDetails?.EmergencyContact || 'Not set'}

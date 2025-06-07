@@ -28,10 +28,70 @@ interface Document {
   DocumentType: DocumentType;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     console.log('Fetching faculty documents from API route...');
     
+    // Get facultyId from query params
+    const { searchParams } = new URL(request.url);
+    const facultyId = searchParams.get('facultyId');
+    
+    if (!facultyId) {
+      return NextResponse.json(
+        { error: 'Faculty ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get current user for verification
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Verify the faculty ID belongs to the current user
+    const { data: facultyData, error: facultyError } = await supabaseAdmin
+      .from('Faculty')
+      .select('UserID')
+      .eq('FacultyID', facultyId)
+      .single();
+
+    if (facultyError || !facultyData) {
+      console.error('Error verifying faculty:', facultyError);
+      return NextResponse.json(
+        { error: 'Faculty not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get user's email from Clerk
+    const userEmail = user.emailAddresses[0]?.emailAddress;
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'User email not found' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the faculty belongs to the current user
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('User')
+      .select('UserID')
+      .eq('Email', userEmail)
+      .single();
+
+    if (userError || !userData || userData.UserID !== facultyData.UserID) {
+      console.error('Error verifying user ownership:', userError);
+      return NextResponse.json(
+        { error: 'Unauthorized access to faculty documents' },
+        { status: 403 }
+      );
+    }
+
+    // Fetch documents for the faculty
     const { data: documents, error: documentsError } = await supabaseAdmin
       .from('Document')
       .select(`
@@ -52,7 +112,8 @@ export async function GET() {
             Email
           )
         )
-      `);
+      `)
+      .eq('FacultyID', facultyId);
 
     if (documentsError) {
       console.error('Error fetching documents:', {
@@ -90,7 +151,7 @@ export async function GET() {
 
     console.log('Transformed documents:', JSON.stringify(transformedDocuments, null, 2));
     return NextResponse.json(transformedDocuments);
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Unexpected error in faculty-documents:', error);
     return NextResponse.json(
       { error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : 'An unexpected error occurred' },

@@ -2,13 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from '../lib/supabaseClient';
 
 // Example: Replace with fetch from your backend if needed
 const DOCUMENT_TYPES = [
@@ -46,23 +40,62 @@ const DocumentsFaculty: React.FC = () => {
   // Fetch faculty ID for the current user
   useEffect(() => {
     const fetchFacultyId = async () => {
-      if (!user?.emailAddresses[0]?.emailAddress) return;
+      if (!user?.emailAddresses?.[0]?.emailAddress) {
+        console.log('No Clerk user email available');
+        setError('Please log in to access this page');
+        setLoading(false);
+        return;
+      }
 
       try {
+        console.log('Fetching Supabase user for email:', user.emailAddresses[0].emailAddress);
         const { data: userData, error: userError } = await supabase
           .from('User')
-          .select('Faculty(FacultyID)')
+          .select('UserID')
           .eq('Email', user.emailAddresses[0].emailAddress)
           .single();
 
-        if (userError) throw userError;
+        if (userError) {
+          console.error('Error fetching Supabase user:', userError);
+          setError('Failed to fetch user data');
+          setLoading(false);
+          return;
+        }
 
-        if (userData?.Faculty && 'FacultyID' in userData.Faculty && typeof userData.Faculty.FacultyID === 'number') {
-          setFacultyId(userData.Faculty.FacultyID);
+        if (userData) {
+          console.log('Found Supabase user:', userData);
+
+          // Fetch FacultyID using UserID
+          const { data: facultyData, error: facultyError } = await supabase
+            .from('Faculty')
+            .select('FacultyID')
+            .eq('UserID', userData.UserID)
+            .single();
+
+          if (facultyError) {
+            console.error('Error fetching Faculty data:', facultyError);
+            setError('Failed to fetch faculty data');
+            setLoading(false);
+            return;
+          }
+
+          if (facultyData) {
+            console.log('Found Faculty ID:', facultyData);
+            setFacultyId(facultyData.FacultyID);
+          } else {
+            console.log('No Faculty found for user:', userData.UserID);
+            setError('Faculty record not found');
+            setLoading(false);
+          }
+        } else {
+          console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
+          setError('User not found in database');
+          setLoading(false);
         }
       } catch (err) {
-        console.error('Error fetching faculty ID:', err);
-        setError('Failed to fetch faculty information');
+        console.error('Error in fetchFacultyId:', err);
+        setError('An unexpected error occurred');
+        setLoading(false);
       }
     };
 
@@ -71,17 +104,25 @@ const DocumentsFaculty: React.FC = () => {
 
   // Fetch documents
   const fetchDocs = async () => {
-    if (!facultyId) return;
+    if (!facultyId) {
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
+    setError(null);
     try {
+      console.log('Fetching documents for faculty:', facultyId);
       const data = await fetchFacultyDocuments(facultyId);
+      console.log('Received documents:', data);
       setDocuments(data);
     } catch (err) {
+      console.error('Error fetching documents:', err);
       setDocuments([]);
       setError('Failed to fetch documents');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
