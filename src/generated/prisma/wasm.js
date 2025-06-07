@@ -181,7 +181,10 @@ exports.Prisma.DocumentScalarFieldEnum = {
   FacultyID: 'FacultyID',
   DocumentTypeID: 'DocumentTypeID',
   UploadDate: 'UploadDate',
-  SubmissionStatus: 'SubmissionStatus'
+  SubmissionStatus: 'SubmissionStatus',
+  FilePath: 'FilePath',
+  FileUrl: 'FileUrl',
+  DownloadUrl: 'DownloadUrl'
 };
 
 exports.Prisma.DocumentTypeScalarFieldEnum = {

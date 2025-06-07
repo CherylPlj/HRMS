@@ -9735,6 +9735,9 @@ export namespace Prisma {
     DocumentTypeID: number | null
     UploadDate: Date | null
     SubmissionStatus: $Enums.SubmissionStatus | null
+    FilePath: string | null
+    FileUrl: string | null
+    DownloadUrl: string | null
   }
 
   export type DocumentMaxAggregateOutputType = {
@@ -9743,6 +9746,9 @@ export namespace Prisma {
     DocumentTypeID: number | null
     UploadDate: Date | null
     SubmissionStatus: $Enums.SubmissionStatus | null
+    FilePath: string | null
+    FileUrl: string | null
+    DownloadUrl: string | null
   }
 
   export type DocumentCountAggregateOutputType = {
@@ -9751,6 +9757,9 @@ export namespace Prisma {
     DocumentTypeID: number
     UploadDate: number
     SubmissionStatus: number
+    FilePath: number
+    FileUrl: number
+    DownloadUrl: number
     _all: number
   }
 
@@ -9773,6 +9782,9 @@ export namespace Prisma {
     DocumentTypeID?: true
     UploadDate?: true
     SubmissionStatus?: true
+    FilePath?: true
+    FileUrl?: true
+    DownloadUrl?: true
   }
 
   export type DocumentMaxAggregateInputType = {
@@ -9781,6 +9793,9 @@ export namespace Prisma {
     DocumentTypeID?: true
     UploadDate?: true
     SubmissionStatus?: true
+    FilePath?: true
+    FileUrl?: true
+    DownloadUrl?: true
   }
 
   export type DocumentCountAggregateInputType = {
@@ -9789,6 +9804,9 @@ export namespace Prisma {
     DocumentTypeID?: true
     UploadDate?: true
     SubmissionStatus?: true
+    FilePath?: true
+    FileUrl?: true
+    DownloadUrl?: true
     _all?: true
   }
 
@@ -9884,6 +9902,9 @@ export namespace Prisma {
     DocumentTypeID: number
     UploadDate: Date
     SubmissionStatus: $Enums.SubmissionStatus
+    FilePath: string | null
+    FileUrl: string | null
+    DownloadUrl: string | null
     _count: DocumentCountAggregateOutputType | null
     _avg: DocumentAvgAggregateOutputType | null
     _sum: DocumentSumAggregateOutputType | null
@@ -9911,8 +9932,11 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
-    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    FilePath?: boolean
+    FileUrl?: boolean
+    DownloadUrl?: boolean
     Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
+    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["document"]>
 
   export type DocumentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -9921,8 +9945,11 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
-    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    FilePath?: boolean
+    FileUrl?: boolean
+    DownloadUrl?: boolean
     Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
+    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["document"]>
 
   export type DocumentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -9931,8 +9958,11 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
-    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
+    FilePath?: boolean
+    FileUrl?: boolean
+    DownloadUrl?: boolean
     Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
+    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["document"]>
 
   export type DocumentSelectScalar = {
@@ -9941,27 +9971,30 @@ export namespace Prisma {
     DocumentTypeID?: boolean
     UploadDate?: boolean
     SubmissionStatus?: boolean
+    FilePath?: boolean
+    FileUrl?: boolean
+    DownloadUrl?: boolean
   }
 
-  export type DocumentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"DocumentID" | "FacultyID" | "DocumentTypeID" | "UploadDate" | "SubmissionStatus", ExtArgs["result"]["document"]>
+  export type DocumentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"DocumentID" | "FacultyID" | "DocumentTypeID" | "UploadDate" | "SubmissionStatus" | "FilePath" | "FileUrl" | "DownloadUrl", ExtArgs["result"]["document"]>
   export type DocumentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
     Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
+    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
   }
   export type DocumentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
     Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
+    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
   }
   export type DocumentIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
     Faculty?: boolean | FacultyDefaultArgs<ExtArgs>
+    DocumentType?: boolean | DocumentTypeDefaultArgs<ExtArgs>
   }
 
   export type $DocumentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Document"
     objects: {
-      DocumentType: Prisma.$DocumentTypePayload<ExtArgs>
       Faculty: Prisma.$FacultyPayload<ExtArgs>
+      DocumentType: Prisma.$DocumentTypePayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       DocumentID: number
@@ -9969,6 +10002,9 @@ export namespace Prisma {
       DocumentTypeID: number
       UploadDate: Date
       SubmissionStatus: $Enums.SubmissionStatus
+      FilePath: string | null
+      FileUrl: string | null
+      DownloadUrl: string | null
     }, ExtArgs["result"]["document"]>
     composites: {}
   }
@@ -10363,8 +10399,8 @@ export namespace Prisma {
    */
   export interface Prisma__DocumentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    DocumentType<T extends DocumentTypeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DocumentTypeDefaultArgs<ExtArgs>>): Prisma__DocumentTypeClient<$Result.GetResult<Prisma.$DocumentTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     Faculty<T extends FacultyDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FacultyDefaultArgs<ExtArgs>>): Prisma__FacultyClient<$Result.GetResult<Prisma.$FacultyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    DocumentType<T extends DocumentTypeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DocumentTypeDefaultArgs<ExtArgs>>): Prisma__DocumentTypeClient<$Result.GetResult<Prisma.$DocumentTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -10399,6 +10435,9 @@ export namespace Prisma {
     readonly DocumentTypeID: FieldRef<"Document", 'Int'>
     readonly UploadDate: FieldRef<"Document", 'DateTime'>
     readonly SubmissionStatus: FieldRef<"Document", 'SubmissionStatus'>
+    readonly FilePath: FieldRef<"Document", 'String'>
+    readonly FileUrl: FieldRef<"Document", 'String'>
+    readonly DownloadUrl: FieldRef<"Document", 'String'>
   }
     
 
@@ -23071,7 +23110,10 @@ export namespace Prisma {
     FacultyID: 'FacultyID',
     DocumentTypeID: 'DocumentTypeID',
     UploadDate: 'UploadDate',
-    SubmissionStatus: 'SubmissionStatus'
+    SubmissionStatus: 'SubmissionStatus',
+    FilePath: 'FilePath',
+    FileUrl: 'FileUrl',
+    DownloadUrl: 'DownloadUrl'
   };
 
   export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
@@ -23836,8 +23878,11 @@ export namespace Prisma {
     DocumentTypeID?: IntFilter<"Document"> | number
     UploadDate?: DateTimeFilter<"Document"> | Date | string
     SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
-    DocumentType?: XOR<DocumentTypeScalarRelationFilter, DocumentTypeWhereInput>
+    FilePath?: StringNullableFilter<"Document"> | string | null
+    FileUrl?: StringNullableFilter<"Document"> | string | null
+    DownloadUrl?: StringNullableFilter<"Document"> | string | null
     Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
+    DocumentType?: XOR<DocumentTypeScalarRelationFilter, DocumentTypeWhereInput>
   }
 
   export type DocumentOrderByWithRelationInput = {
@@ -23846,8 +23891,11 @@ export namespace Prisma {
     DocumentTypeID?: SortOrder
     UploadDate?: SortOrder
     SubmissionStatus?: SortOrder
-    DocumentType?: DocumentTypeOrderByWithRelationInput
+    FilePath?: SortOrderInput | SortOrder
+    FileUrl?: SortOrderInput | SortOrder
+    DownloadUrl?: SortOrderInput | SortOrder
     Faculty?: FacultyOrderByWithRelationInput
+    DocumentType?: DocumentTypeOrderByWithRelationInput
   }
 
   export type DocumentWhereUniqueInput = Prisma.AtLeast<{
@@ -23859,8 +23907,11 @@ export namespace Prisma {
     DocumentTypeID?: IntFilter<"Document"> | number
     UploadDate?: DateTimeFilter<"Document"> | Date | string
     SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
-    DocumentType?: XOR<DocumentTypeScalarRelationFilter, DocumentTypeWhereInput>
+    FilePath?: StringNullableFilter<"Document"> | string | null
+    FileUrl?: StringNullableFilter<"Document"> | string | null
+    DownloadUrl?: StringNullableFilter<"Document"> | string | null
     Faculty?: XOR<FacultyScalarRelationFilter, FacultyWhereInput>
+    DocumentType?: XOR<DocumentTypeScalarRelationFilter, DocumentTypeWhereInput>
   }, "DocumentID">
 
   export type DocumentOrderByWithAggregationInput = {
@@ -23869,6 +23920,9 @@ export namespace Prisma {
     DocumentTypeID?: SortOrder
     UploadDate?: SortOrder
     SubmissionStatus?: SortOrder
+    FilePath?: SortOrderInput | SortOrder
+    FileUrl?: SortOrderInput | SortOrder
+    DownloadUrl?: SortOrderInput | SortOrder
     _count?: DocumentCountOrderByAggregateInput
     _avg?: DocumentAvgOrderByAggregateInput
     _max?: DocumentMaxOrderByAggregateInput
@@ -23885,6 +23939,9 @@ export namespace Prisma {
     DocumentTypeID?: IntWithAggregatesFilter<"Document"> | number
     UploadDate?: DateTimeWithAggregatesFilter<"Document"> | Date | string
     SubmissionStatus?: EnumSubmissionStatusWithAggregatesFilter<"Document"> | $Enums.SubmissionStatus
+    FilePath?: StringNullableWithAggregatesFilter<"Document"> | string | null
+    FileUrl?: StringNullableWithAggregatesFilter<"Document"> | string | null
+    DownloadUrl?: StringNullableWithAggregatesFilter<"Document"> | string | null
   }
 
   export type DocumentTypeWhereInput = {
@@ -24977,9 +25034,12 @@ export namespace Prisma {
 
   export type DocumentCreateInput = {
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
-    DocumentType: DocumentTypeCreateNestedOneWithoutDocumentInput
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
     Faculty: FacultyCreateNestedOneWithoutDocumentsInput
+    DocumentType: DocumentTypeCreateNestedOneWithoutDocumentInput
   }
 
   export type DocumentUncheckedCreateInput = {
@@ -24987,14 +25047,20 @@ export namespace Prisma {
     FacultyID: number
     DocumentTypeID: number
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
   }
 
   export type DocumentUpdateInput = {
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
-    DocumentType?: DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
     Faculty?: FacultyUpdateOneRequiredWithoutDocumentsNestedInput
+    DocumentType?: DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput
   }
 
   export type DocumentUncheckedUpdateInput = {
@@ -25003,6 +25069,9 @@ export namespace Prisma {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentCreateManyInput = {
@@ -25010,12 +25079,18 @@ export namespace Prisma {
     FacultyID: number
     DocumentTypeID: number
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
   }
 
   export type DocumentUpdateManyMutationInput = {
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentUncheckedUpdateManyInput = {
@@ -25024,6 +25099,9 @@ export namespace Prisma {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentTypeCreateInput = {
@@ -26233,14 +26311,14 @@ export namespace Prisma {
     not?: NestedEnumSubmissionStatusFilter<$PrismaModel> | $Enums.SubmissionStatus
   }
 
-  export type DocumentTypeScalarRelationFilter = {
-    is?: DocumentTypeWhereInput
-    isNot?: DocumentTypeWhereInput
-  }
-
   export type FacultyScalarRelationFilter = {
     is?: FacultyWhereInput
     isNot?: FacultyWhereInput
+  }
+
+  export type DocumentTypeScalarRelationFilter = {
+    is?: DocumentTypeWhereInput
+    isNot?: DocumentTypeWhereInput
   }
 
   export type DocumentCountOrderByAggregateInput = {
@@ -26249,6 +26327,9 @@ export namespace Prisma {
     DocumentTypeID?: SortOrder
     UploadDate?: SortOrder
     SubmissionStatus?: SortOrder
+    FilePath?: SortOrder
+    FileUrl?: SortOrder
+    DownloadUrl?: SortOrder
   }
 
   export type DocumentAvgOrderByAggregateInput = {
@@ -26263,6 +26344,9 @@ export namespace Prisma {
     DocumentTypeID?: SortOrder
     UploadDate?: SortOrder
     SubmissionStatus?: SortOrder
+    FilePath?: SortOrder
+    FileUrl?: SortOrder
+    DownloadUrl?: SortOrder
   }
 
   export type DocumentMinOrderByAggregateInput = {
@@ -26271,6 +26355,9 @@ export namespace Prisma {
     DocumentTypeID?: SortOrder
     UploadDate?: SortOrder
     SubmissionStatus?: SortOrder
+    FilePath?: SortOrder
+    FileUrl?: SortOrder
+    DownloadUrl?: SortOrder
   }
 
   export type DocumentSumOrderByAggregateInput = {
@@ -27405,28 +27492,20 @@ export namespace Prisma {
     deleteMany?: FacultyScalarWhereInput | FacultyScalarWhereInput[]
   }
 
-  export type DocumentTypeCreateNestedOneWithoutDocumentInput = {
-    create?: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
-    connectOrCreate?: DocumentTypeCreateOrConnectWithoutDocumentInput
-    connect?: DocumentTypeWhereUniqueInput
-  }
-
   export type FacultyCreateNestedOneWithoutDocumentsInput = {
     create?: XOR<FacultyCreateWithoutDocumentsInput, FacultyUncheckedCreateWithoutDocumentsInput>
     connectOrCreate?: FacultyCreateOrConnectWithoutDocumentsInput
     connect?: FacultyWhereUniqueInput
   }
 
-  export type EnumSubmissionStatusFieldUpdateOperationsInput = {
-    set?: $Enums.SubmissionStatus
-  }
-
-  export type DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput = {
+  export type DocumentTypeCreateNestedOneWithoutDocumentInput = {
     create?: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
     connectOrCreate?: DocumentTypeCreateOrConnectWithoutDocumentInput
-    upsert?: DocumentTypeUpsertWithoutDocumentInput
     connect?: DocumentTypeWhereUniqueInput
-    update?: XOR<XOR<DocumentTypeUpdateToOneWithWhereWithoutDocumentInput, DocumentTypeUpdateWithoutDocumentInput>, DocumentTypeUncheckedUpdateWithoutDocumentInput>
+  }
+
+  export type EnumSubmissionStatusFieldUpdateOperationsInput = {
+    set?: $Enums.SubmissionStatus
   }
 
   export type FacultyUpdateOneRequiredWithoutDocumentsNestedInput = {
@@ -27435,6 +27514,14 @@ export namespace Prisma {
     upsert?: FacultyUpsertWithoutDocumentsInput
     connect?: FacultyWhereUniqueInput
     update?: XOR<XOR<FacultyUpdateToOneWithWhereWithoutDocumentsInput, FacultyUpdateWithoutDocumentsInput>, FacultyUncheckedUpdateWithoutDocumentsInput>
+  }
+
+  export type DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput = {
+    create?: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
+    connectOrCreate?: DocumentTypeCreateOrConnectWithoutDocumentInput
+    upsert?: DocumentTypeUpsertWithoutDocumentInput
+    connect?: DocumentTypeWhereUniqueInput
+    update?: XOR<XOR<DocumentTypeUpdateToOneWithWhereWithoutDocumentInput, DocumentTypeUpdateWithoutDocumentInput>, DocumentTypeUncheckedUpdateWithoutDocumentInput>
   }
 
   export type DocumentTypeCreateAllowedFileTypesInput = {
@@ -28477,7 +28564,10 @@ export namespace Prisma {
 
   export type DocumentCreateWithoutFacultyInput = {
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
     DocumentType: DocumentTypeCreateNestedOneWithoutDocumentInput
   }
 
@@ -28485,7 +28575,10 @@ export namespace Prisma {
     DocumentID?: number
     DocumentTypeID: number
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
   }
 
   export type DocumentCreateOrConnectWithoutFacultyInput = {
@@ -28695,6 +28788,9 @@ export namespace Prisma {
     DocumentTypeID?: IntFilter<"Document"> | number
     UploadDate?: DateTimeFilter<"Document"> | Date | string
     SubmissionStatus?: EnumSubmissionStatusFilter<"Document"> | $Enums.SubmissionStatus
+    FilePath?: StringNullableFilter<"Document"> | string | null
+    FileUrl?: StringNullableFilter<"Document"> | string | null
+    DownloadUrl?: StringNullableFilter<"Document"> | string | null
   }
 
   export type ContractUpsertWithoutFacultyInput = {
@@ -29185,24 +29281,6 @@ export namespace Prisma {
     EmergencyContact?: StringNullableFilter<"Faculty"> | string | null
   }
 
-  export type DocumentTypeCreateWithoutDocumentInput = {
-    DocumentTypeName: string
-    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
-    Template?: string | null
-  }
-
-  export type DocumentTypeUncheckedCreateWithoutDocumentInput = {
-    DocumentTypeID?: number
-    DocumentTypeName: string
-    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
-    Template?: string | null
-  }
-
-  export type DocumentTypeCreateOrConnectWithoutDocumentInput = {
-    where: DocumentTypeWhereUniqueInput
-    create: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
-  }
-
   export type FacultyCreateWithoutDocumentsInput = {
     FacultyID: number
     DateOfBirth: Date | string
@@ -29244,28 +29322,22 @@ export namespace Prisma {
     create: XOR<FacultyCreateWithoutDocumentsInput, FacultyUncheckedCreateWithoutDocumentsInput>
   }
 
-  export type DocumentTypeUpsertWithoutDocumentInput = {
-    update: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
+  export type DocumentTypeCreateWithoutDocumentInput = {
+    DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
+  }
+
+  export type DocumentTypeUncheckedCreateWithoutDocumentInput = {
+    DocumentTypeID?: number
+    DocumentTypeName: string
+    AllowedFileTypes?: DocumentTypeCreateAllowedFileTypesInput | string[]
+    Template?: string | null
+  }
+
+  export type DocumentTypeCreateOrConnectWithoutDocumentInput = {
+    where: DocumentTypeWhereUniqueInput
     create: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
-    where?: DocumentTypeWhereInput
-  }
-
-  export type DocumentTypeUpdateToOneWithWhereWithoutDocumentInput = {
-    where?: DocumentTypeWhereInput
-    data: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
-  }
-
-  export type DocumentTypeUpdateWithoutDocumentInput = {
-    DocumentTypeName?: StringFieldUpdateOperationsInput | string
-    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
-    Template?: NullableStringFieldUpdateOperationsInput | string | null
-  }
-
-  export type DocumentTypeUncheckedUpdateWithoutDocumentInput = {
-    DocumentTypeID?: IntFieldUpdateOperationsInput | number
-    DocumentTypeName?: StringFieldUpdateOperationsInput | string
-    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
-    Template?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type FacultyUpsertWithoutDocumentsInput = {
@@ -29315,9 +29387,36 @@ export namespace Prisma {
     Attendance?: AttendanceUncheckedUpdateManyWithoutFacultyNestedInput
   }
 
+  export type DocumentTypeUpsertWithoutDocumentInput = {
+    update: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
+    create: XOR<DocumentTypeCreateWithoutDocumentInput, DocumentTypeUncheckedCreateWithoutDocumentInput>
+    where?: DocumentTypeWhereInput
+  }
+
+  export type DocumentTypeUpdateToOneWithWhereWithoutDocumentInput = {
+    where?: DocumentTypeWhereInput
+    data: XOR<DocumentTypeUpdateWithoutDocumentInput, DocumentTypeUncheckedUpdateWithoutDocumentInput>
+  }
+
+  export type DocumentTypeUpdateWithoutDocumentInput = {
+    DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type DocumentTypeUncheckedUpdateWithoutDocumentInput = {
+    DocumentTypeID?: IntFieldUpdateOperationsInput | number
+    DocumentTypeName?: StringFieldUpdateOperationsInput | string
+    AllowedFileTypes?: DocumentTypeUpdateAllowedFileTypesInput | string[]
+    Template?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
   export type DocumentCreateWithoutDocumentTypeInput = {
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
     Faculty: FacultyCreateNestedOneWithoutDocumentsInput
   }
 
@@ -29325,7 +29424,10 @@ export namespace Prisma {
     DocumentID?: number
     FacultyID: number
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
   }
 
   export type DocumentCreateOrConnectWithoutDocumentTypeInput = {
@@ -30432,7 +30534,10 @@ export namespace Prisma {
     DocumentID?: number
     DocumentTypeID: number
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
   }
 
   export type LeaveCreateManyFacultyInput = {
@@ -30469,6 +30574,9 @@ export namespace Prisma {
   export type DocumentUpdateWithoutFacultyInput = {
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
     DocumentType?: DocumentTypeUpdateOneRequiredWithoutDocumentNestedInput
   }
 
@@ -30477,6 +30585,9 @@ export namespace Prisma {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentUncheckedUpdateManyWithoutFacultyInput = {
@@ -30484,6 +30595,9 @@ export namespace Prisma {
     DocumentTypeID?: IntFieldUpdateOperationsInput | number
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type LeaveUpdateWithoutFacultyInput = {
@@ -30644,12 +30758,18 @@ export namespace Prisma {
     DocumentID?: number
     FacultyID: number
     UploadDate?: Date | string
-    SubmissionStatus: $Enums.SubmissionStatus
+    SubmissionStatus?: $Enums.SubmissionStatus
+    FilePath?: string | null
+    FileUrl?: string | null
+    DownloadUrl?: string | null
   }
 
   export type DocumentUpdateWithoutDocumentTypeInput = {
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
     Faculty?: FacultyUpdateOneRequiredWithoutDocumentsNestedInput
   }
 
@@ -30658,6 +30778,9 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DocumentUncheckedUpdateManyWithoutDocumentTypeInput = {
@@ -30665,6 +30788,9 @@ export namespace Prisma {
     FacultyID?: IntFieldUpdateOperationsInput | number
     UploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
     SubmissionStatus?: EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
+    FilePath?: NullableStringFieldUpdateOperationsInput | string | null
+    FileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    DownloadUrl?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type FacultyCreateManyContractInput = {

@@ -224,7 +224,8 @@ const FacultyContent: React.FC = () => {
   const fetchDocuments = async () => {
     setDocLoading(true);
     try {
-      const data = await fetchFacultyDocuments();
+      // Since this is the admin view, we'll fetch all documents
+      const data = await fetchFacultyDocuments(0); // Pass 0 to fetch all documents
       console.log('Received documents data:', data);
       setDocuments(data);
     } catch (err) {

@@ -85,13 +85,19 @@ model Department {
 }
 
 model Document {
-  DocumentID       Int              @id @default(autoincrement())
-  FacultyID        Int
-  DocumentTypeID   Int
-  UploadDate       DateTime         @default(now())
-  SubmissionStatus SubmissionStatus
-  DocumentType     DocumentType     @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
-  Faculty          Faculty          @relation(fields: [FacultyID], references: [FacultyID])
+  DocumentID        Int       @id @default(autoincrement())
+  FacultyID         Int
+  DocumentTypeID    Int
+  UploadDate        DateTime  @default(now())
+  SubmissionStatus  SubmissionStatus @default(Pending)
+  FilePath          String?   // Google Drive file ID
+  FileUrl           String?   // Google Drive web view link
+  DownloadUrl       String?   // Google Drive download link
+  Faculty           Faculty   @relation(fields: [FacultyID], references: [FacultyID])
+  DocumentType      DocumentType @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
+
+  @@index([FacultyID])
+  @@index([DocumentTypeID])
 }
 
 model DocumentType {

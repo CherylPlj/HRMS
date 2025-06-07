@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
+import { googleDriveService } from '@/services/googleDriveService';
 
 interface User {
   FirstName: string;
@@ -30,68 +31,43 @@ interface Document {
 
 export async function GET(request: Request) {
   try {
-    console.log('Fetching faculty documents from API route...');
-    
-    // Get facultyId from query params
+    const user = await currentUser();
+    console.log('Current user from Clerk:', {
+      id: user?.id,
+      email: user?.emailAddresses?.[0]?.emailAddress
+    });
+
+    if (!user) {
+      console.log('No authenticated user found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get facultyId from query parameters
     const { searchParams } = new URL(request.url);
     const facultyId = searchParams.get('facultyId');
-    
+
     if (!facultyId) {
-      return NextResponse.json(
-        { error: 'Faculty ID is required' },
-        { status: 400 }
-      );
+      console.log('No facultyId provided in query parameters');
+      return NextResponse.json({ error: 'Faculty ID is required' }, { status: 400 });
     }
 
-    // Get current user for verification
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    console.log('Fetching documents for faculty:', facultyId);
 
-    // Verify the faculty ID belongs to the current user
+    // First verify the faculty exists
     const { data: facultyData, error: facultyError } = await supabaseAdmin
       .from('Faculty')
-      .select('UserID')
+      .select('FacultyID')
       .eq('FacultyID', facultyId)
       .single();
 
-    if (facultyError || !facultyData) {
+    if (facultyError) {
       console.error('Error verifying faculty:', facultyError);
-      return NextResponse.json(
-        { error: 'Faculty not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
     }
 
-    // Get user's email from Clerk
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: 'User email not found' },
-        { status: 400 }
-      );
-    }
+    console.log('Verified faculty exists:', facultyData);
 
-    // Verify the faculty belongs to the current user
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('User')
-      .select('UserID')
-      .eq('Email', userEmail)
-      .single();
-
-    if (userError || !userData || userData.UserID !== facultyData.UserID) {
-      console.error('Error verifying user ownership:', userError);
-      return NextResponse.json(
-        { error: 'Unauthorized access to faculty documents' },
-        { status: 403 }
-      );
-    }
-
-    // Fetch documents for the faculty
+    // Fetch documents from Supabase
     const { data: documents, error: documentsError } = await supabaseAdmin
       .from('Document')
       .select(`
@@ -100,61 +76,31 @@ export async function GET(request: Request) {
         DocumentTypeID,
         UploadDate,
         SubmissionStatus,
-        DocumentType!inner (
+        FilePath,
+        FileUrl,
+        DownloadUrl,
+        DocumentType (
           DocumentTypeID,
           DocumentTypeName
-        ),
-        Faculty!inner (
-          FacultyID,
-          User!inner (
-            FirstName,
-            LastName,
-            Email
-          )
         )
       `)
-      .eq('FacultyID', facultyId);
+      .eq('FacultyID', facultyId)
+      .order('UploadDate', { ascending: false });
 
     if (documentsError) {
-      console.error('Error fetching documents:', {
-        message: documentsError.message,
-        details: documentsError.details,
-        hint: documentsError.hint,
-        code: documentsError.code
-      });
+      console.error('Error fetching documents:', documentsError);
       return NextResponse.json(
-        { error: documentsError.message || 'Failed to fetch documents' },
+        { error: 'Failed to fetch documents' },
         { status: 500 }
       );
     }
 
-    if (!documents) {
-      return NextResponse.json(
-        { error: 'No documents found' },
-        { status: 404 }
-      );
-    }
-
-    console.log('Raw documents data:', JSON.stringify(documents, null, 2));
-
-    // Transform the data to include faculty name and document type name
-    const transformedDocuments = (documents as unknown as Document[]).map(doc => {
-      const facultyName = `${doc.Faculty.User.FirstName} ${doc.Faculty.User.LastName}`;
-      const documentTypeName = doc.DocumentType.DocumentTypeName;
-      
-      return {
-        ...doc,
-        facultyName,
-        documentTypeName
-      };
-    });
-
-    console.log('Transformed documents:', JSON.stringify(transformedDocuments, null, 2));
-    return NextResponse.json(transformedDocuments);
+    console.log('Successfully fetched documents:', documents);
+    return NextResponse.json(documents || []);
   } catch (error) {
-    console.error('Unexpected error in faculty-documents:', error);
+    console.error('Error in faculty-documents GET:', error);
     return NextResponse.json(
-      { error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : 'An unexpected error occurred' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -163,17 +109,56 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await currentUser();
+    console.log('Current user from Clerk:', {
+      id: user?.id,
+      email: user?.emailAddresses?.[0]?.emailAddress
+    });
+
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      console.log('No authenticated user found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Get the user's email from Clerk
+    const userEmail = user.emailAddresses[0]?.emailAddress;
+    console.log('Looking up user in Supabase with email:', userEmail);
+
+    // First, find the user in Supabase
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('User')
+      .select('UserID, FirstName, LastName, Email')
+      .eq('Email', userEmail)
+      .single();
+
+    if (userError) {
+      console.error('Error finding user in Supabase:', userError);
+      return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
+    }
+
+    console.log('Found user in Supabase:', userData);
+
+    // Then find the faculty record
+    const { data: facultyData, error: facultyError } = await supabaseAdmin
+      .from('Faculty')
+      .select('FacultyID, UserID')
+      .eq('UserID', userData.UserID)
+      .single();
+
+    if (facultyError) {
+      console.error('Error finding faculty record:', facultyError);
+      return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
+    }
+
+    if (!facultyData) {
+      console.log('No faculty record found for user:', userData.UserID);
+      return NextResponse.json({ error: 'Faculty record not found' }, { status: 404 });
+    }
+
+    console.log('Found faculty record:', facultyData);
 
     const formData = await request.formData();
     const DocumentTypeID = formData.get('DocumentTypeID');
     const file = formData.get('file') as File;
-    const acceptedFileTypes = JSON.parse(formData.get('acceptedFileTypes') as string);
 
     if (!DocumentTypeID || !file) {
       return NextResponse.json(
@@ -182,39 +167,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get faculty ID for the current user
-    const { data: facultyData, error: facultyError } = await supabaseAdmin
-      .from('Faculty')
-      .select('FacultyID')
-      .eq('UserID', user.id)
-      .single();
+    console.log('Processing document upload:', {
+      DocumentTypeID,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+    });
 
-    if (facultyError || !facultyData) {
-      console.error('Error fetching faculty:', facultyError);
-      return NextResponse.json(
-        { error: 'Faculty not found' },
-        { status: 404 }
-      );
-    }
+    // Upload file to Google Drive
+    const fileName = `${Date.now()}_${file.name}`;
+    console.log('Uploading to Google Drive:', {
+      fileName,
+      fileType: file.type,
+      folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
+    });
 
-    // Upload file to Supabase Storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `documents/${facultyData.FacultyID}/${fileName}`;
+    const uploadResult = await googleDriveService.uploadFile(
+      file,
+      fileName,
+      file.type,
+      process.env.GOOGLE_DRIVE_FOLDER_ID
+    );
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('documents')
-      .upload(filePath, file);
+    console.log('Google Drive upload successful:', uploadResult);
 
-    if (uploadError) {
-      console.error('Error uploading file:', uploadError);
-      return NextResponse.json(
-        { error: 'Failed to upload file' },
-        { status: 500 }
-      );
-    }
-
-    // Create document record
+    // Create document record in Supabase
     const { data: document, error: documentError } = await supabaseAdmin
       .from('Document')
       .insert([{
@@ -222,24 +199,30 @@ export async function POST(request: Request) {
         DocumentTypeID: parseInt(DocumentTypeID as string),
         UploadDate: new Date().toISOString(),
         SubmissionStatus: 'Pending',
-        FilePath: filePath
+        FilePath: uploadResult.fileId,
+        FileUrl: uploadResult.webViewLink,
+        DownloadUrl: uploadResult.downloadLink
       }])
       .select()
       .single();
 
     if (documentError) {
       console.error('Error creating document record:', documentError);
+      // If document record creation fails, delete the uploaded file from Google Drive
+      await googleDriveService.deleteFile(uploadResult.fileId);
       return NextResponse.json(
-        { error: 'Failed to create document record' },
+        { error: 'Failed to create document record: ' + documentError.message },
         { status: 500 }
       );
     }
 
+    console.log('Document record created successfully:', document);
     return NextResponse.json(document);
   } catch (error) {
     console.error('Error in faculty-documents POST:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

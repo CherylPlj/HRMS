@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaDownload, FaEye } from 'react-icons/fa';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
@@ -18,7 +18,13 @@ interface DocumentFacultyRow {
   DocumentTypeID: number;
   UploadDate: string;
   SubmissionStatus: string;
-  file?: string;
+  FilePath?: string;
+  FileUrl?: string;
+  DownloadUrl?: string;
+  DocumentType?: {
+    DocumentTypeID: number;
+    DocumentTypeName: string;
+  };
 }
 
 const DocumentsFaculty: React.FC = () => {
@@ -48,6 +54,11 @@ const DocumentsFaculty: React.FC = () => {
       }
 
       try {
+        console.log('Current user:', {
+          id: user.id,
+          email: user.emailAddresses[0].emailAddress
+        });
+
         console.log('Fetching Supabase user for email:', user.emailAddresses[0].emailAddress);
         const { data: userData, error: userError } = await supabase
           .from('User')
@@ -68,7 +79,7 @@ const DocumentsFaculty: React.FC = () => {
           // Fetch FacultyID using UserID
           const { data: facultyData, error: facultyError } = await supabase
             .from('Faculty')
-            .select('FacultyID')
+            .select('FacultyID, UserID')
             .eq('UserID', userData.UserID)
             .single();
 
@@ -80,7 +91,7 @@ const DocumentsFaculty: React.FC = () => {
           }
 
           if (facultyData) {
-            console.log('Found Faculty ID:', facultyData);
+            console.log('Found Faculty:', facultyData);
             setFacultyId(facultyData.FacultyID);
           } else {
             console.log('No Faculty found for user:', userData.UserID);
@@ -115,11 +126,23 @@ const DocumentsFaculty: React.FC = () => {
       console.log('Fetching documents for faculty:', facultyId);
       const data = await fetchFacultyDocuments(facultyId);
       console.log('Received documents:', data);
+      
+      if (!Array.isArray(data)) {
+        console.error('Invalid response format:', data);
+        setError('Invalid response from server');
+        setDocuments([]);
+        return;
+      }
+      
       setDocuments(data);
     } catch (err) {
       console.error('Error fetching documents:', err);
       setDocuments([]);
-      setError('Failed to fetch documents');
+      if (err instanceof Error) {
+        setError(`Failed to fetch documents: ${err.message}`);
+      } else {
+        setError('Failed to fetch documents');
+      }
     } finally {
       setLoading(false);
     }
@@ -149,6 +172,15 @@ const DocumentsFaculty: React.FC = () => {
       setError('Please fill all fields and select a file.');
       return;
     }
+
+    console.log('Starting document upload:', {
+      facultyId,
+      documentTypeId: form.DocumentTypeID,
+      fileName: form.file.name,
+      fileType: form.file.type,
+      fileSize: form.file.size
+    });
+
     setUploading(true);
     const data = new FormData();
     data.append('FacultyID', facultyId.toString());
@@ -156,15 +188,23 @@ const DocumentsFaculty: React.FC = () => {
     data.append('file', form.file);
 
     try {
-      await uploadFacultyDocument(data);
+      console.log('Sending upload request...');
+      const response = await uploadFacultyDocument(data);
+      console.log('Upload successful:', response);
+      
       setShowModal(false);
       setForm({
         DocumentTypeID: '',
         file: null,
       });
-      fetchDocs();
+      await fetchDocs();
     } catch (err) {
-      setError('Failed to upload document.');
+      console.error('Upload error:', err);
+      if (err instanceof Error) {
+        setError(`Failed to upload document: ${err.message}`);
+      } else {
+        setError('Failed to upload document. Please try again.');
+      }
     } finally {
       setUploading(false);
     }
@@ -257,23 +297,24 @@ const DocumentsFaculty: React.FC = () => {
               <th className="p-3 text-left text-black">Document Type</th>
               <th className="p-3 text-left text-black">Upload Date</th>
               <th className="p-3 text-left text-black">Status</th>
+              <th className="p-3 text-left text-black">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="p-3 text-center">Loading...</td>
+                <td colSpan={5} className="p-3 text-center">Loading...</td>
               </tr>
             ) : documents.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-3 text-center">No documents found</td>
+                <td colSpan={5} className="p-3 text-center">No documents found</td>
               </tr>
             ) : (
               documents.map((doc) => (
                 <tr key={doc.DocumentID} className="border-t hover:bg-gray-50">
                   <td className="p-3 text-left text-black">{doc.DocumentID}</td>
-                  <td className="p-3 text-left text-black">{getDocumentTypeName(doc.DocumentTypeID)}</td>
-                  <td className="p-3 text-left text-black">{doc.UploadDate}</td>
+                  <td className="p-3 text-left text-black">{doc.DocumentType?.DocumentTypeName || getDocumentTypeName(doc.DocumentTypeID)}</td>
+                  <td className="p-3 text-left text-black">{new Date(doc.UploadDate).toLocaleDateString()}</td>
                   <td className="p-3 text-left text-black">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
                       ${
@@ -288,6 +329,31 @@ const DocumentsFaculty: React.FC = () => {
                     `}>
                       {doc.SubmissionStatus}
                     </span>
+                  </td>
+                  <td className="p-3 text-left text-black">
+                    <div className="flex space-x-2">
+                      {doc.FileUrl && (
+                        <a
+                          href={doc.FileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                          title="View document"
+                        >
+                          <FaEye />
+                        </a>
+                      )}
+                      {doc.DownloadUrl && (
+                        <a
+                          href={doc.DownloadUrl}
+                          download
+                          className="text-green-600 hover:text-green-800"
+                          title="Download document"
+                        >
+                          <FaDownload />
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
