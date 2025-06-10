@@ -11,15 +11,21 @@ const publicRoutes = [
     "/sign-up",
     "/api/webhooks/clerk",
     "/api/updateUserStatus",
-    "/api/getUserRole"
-
+    "/api/getUserRole",
+    "/api/xr/user-access-lookup" // Add this
 ];
 
 // Routes that can be accessed while signed out
 const ignoredRoutes = [
+    "/",
+    "/sign-in",
+    "/dashboard/login",
+    "/dashboard/loginf",
+    "/sign-up",
     "/api/webhooks/clerk",
     "/api/updateUserStatus",
-    "/api/getUserRole"
+    "/api/getUserRole",
+    "/api/xr/user-access-lookup" // Add this
 ];
 
 const isPublicRoute = createRouteMatcher(publicRoutes);
