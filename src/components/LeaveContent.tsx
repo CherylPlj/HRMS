@@ -3,22 +3,22 @@ import { ExternalLink, Trash2, Download, Calendar, Check, X } from 'lucide-react
 import Image from 'next/image';
 import { User } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import type { Leave, Faculty, User as PrismaUser, Department } from '@/generated/prisma';
+import { LeaveType, LeaveStatus } from '@/generated/prisma';
 
-type Leave = {
-    LeaveID: number;
-    FacultyID: number;
-    LeaveType: 'Sick' | 'Vacation' | 'Emergency';
-    StartDate: string;
-    EndDate: string;
-    Reason: string;
-    Status: 'Pending' | 'Approved' | 'Rejected';
-    DocumentUrl?: string;
-    CreatedAt: string;
-    UpdatedAt: string;
-    Faculty?: {
+type LeaveWithRelations = Leave & {
+    Faculty: (Faculty & {
+        User: Pick<PrismaUser, 'FirstName' | 'LastName' | 'UserID'> | null;
+        Department: Pick<Department, 'DepartmentName'> | null;
+    }) | null;
+};
+
+type TransformedLeave = Omit<LeaveWithRelations, 'Faculty'> & {
+    Faculty: {
         Name: string;
         Department: string;
-        UserID: string;
+        UserID: string | null;
     };
 };
 
@@ -41,7 +41,7 @@ interface StatusUpdateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  status: 'Approved' | 'Rejected';
+  status: LeaveStatus;
   facultyName: string;
 }
 
@@ -79,9 +79,10 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({ isOpen, onClose, 
 };
 
 const LeaveContent: React.FC = () => {
-    const { user } = useUser();
+    const { user, isLoaded: isUserLoaded } = useUser();
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<'management' | 'logs'>('management');
-    const [leaves, setLeaves] = useState<Leave[]>([]);
+    const [leaves, setLeaves] = useState<TransformedLeave[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -90,7 +91,7 @@ const LeaveContent: React.FC = () => {
     const [statusUpdateModal, setStatusUpdateModal] = useState<{
         isOpen: boolean;
         leaveId: number | null;
-        status: 'Approved' | 'Rejected' | null;
+        status: LeaveStatus | null;
         facultyName: string;
     }>({
         isOpen: false,
@@ -98,28 +99,91 @@ const LeaveContent: React.FC = () => {
         status: null,
         facultyName: '',
     });
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    useEffect(() => {
+        if (!isUserLoaded) {
+            return; // Wait for user to load
+        }
+
+        if (!user) {
+            console.log('No user found, redirecting to sign in...');
+            router.push('/sign-in');
+            return;
+        }
+
+        fetchLeaves();
+    }, [user, isUserLoaded, router]);
 
     const fetchLeaves = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/leaves');
-            if (!response.ok) {
-                throw new Error('Failed to fetch leaves');
+            setError(null);
+            
+            console.log('Fetching leaves...');
+            const response = await fetch('/api/leaves', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+            
+            // Log the full response for debugging
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            // Handle different response types
+            const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+
+            let data;
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Failed to parse response as JSON:', e);
+                console.error('Response text:', responseText);
+                throw new Error('Invalid server response format');
             }
-            const data = await response.json();
-            console.log('Raw API response:', data);
+            
+            if (!response.ok) {
+                console.error('Error response from API:', data);
+                if (response.status === 401) {
+                    router.push('/sign-in');
+                    return;
+                }
+                throw new Error(data.error || data.details || `Server error: ${response.status}`);
+            }
+            
+            if (!Array.isArray(data)) {
+                console.error('Invalid response format:', data);
+                throw new Error('Invalid response format from server');
+            }
+            
             console.log('Number of leaves received:', data.length);
-            console.log('First leave record:', data[0]);
+            if (data.length > 0) {
+                console.log('First leave record:', data[0]);
+            }
+            
             setLeaves(data);
             setError(null);
 
             // Fetch profile photos for all faculty members
             const photoPromises = data
-                .filter((leave: Leave) => leave.Faculty?.UserID)
-                .map(async (leave: Leave) => {
+                .filter((leave: TransformedLeave) => leave.Faculty?.UserID)
+                .map(async (leave: TransformedLeave) => {
                     if (leave.Faculty?.UserID) {
-                        const photoUrl = await fetchUserProfilePhoto(leave.Faculty.UserID);
-                        return [leave.Faculty.UserID, photoUrl];
+                        try {
+                            const photoUrl = await fetchUserProfilePhoto(leave.Faculty.UserID);
+                            return [leave.Faculty.UserID, photoUrl];
+                        } catch (error) {
+                            console.error(`Failed to fetch photo for user ${leave.Faculty.UserID}:`, error);
+                            return [leave.Faculty.UserID, '/manprofileavatar.png'];
+                        }
                     }
                     return null;
                 });
@@ -132,14 +196,11 @@ const LeaveContent: React.FC = () => {
         } catch (err) {
             console.error('Error fetching leaves:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch leaves');
+            setLeaves([]); // Reset leaves on error
         } finally {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        fetchLeaves();
-    }, []);
 
     const handleDelete = async (id: number) => {
         try {
@@ -160,7 +221,7 @@ const LeaveContent: React.FC = () => {
         }
     };
 
-    const handleStatusUpdate = async (id: number, status: 'Approved' | 'Rejected') => {
+    const handleStatusUpdate = async (id: number, status: LeaveStatus) => {
         try {
             const response = await fetch(`/api/leaves/${id}`, {
                 method: 'PATCH',
@@ -186,17 +247,29 @@ const LeaveContent: React.FC = () => {
         }
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString();
+    const formatDate = (date: string | Date) => {
+        return new Date(date).toLocaleDateString();
     };
 
-    const calculateDuration = (startDate: string, endDate: string) => {
+    const calculateDuration = (startDate: string | Date, endDate: string | Date) => {
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
     };
+
+    if (!isUserLoaded) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-maroon"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return null; // Will redirect in useEffect
+    }
 
     if (loading) {
         return (
@@ -209,7 +282,14 @@ const LeaveContent: React.FC = () => {
     if (error) {
         return (
             <div className="text-center p-4 bg-red-50 text-red-600 rounded-lg">
-                {error}
+                <p className="font-semibold">Error Loading Leave Requests</p>
+                <p className="mt-2">{error}</p>
+                <button 
+                    onClick={() => fetchLeaves()}
+                    className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-red-800"
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -341,7 +421,7 @@ const LeaveContent: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <div className="flex space-x-2">
-                                                            {leave.Status === 'Pending' && (
+                                                            {isAdmin && leave.Status === 'Pending' && (
                                                                 <>
                                                                     <button
                                                                         onClick={() => setStatusUpdateModal({
@@ -369,16 +449,18 @@ const LeaveContent: React.FC = () => {
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedLeaveId(leave.LeaveID);
-                                                                    setShowDeleteModal(true);
-                                                                }}
-                                                                className="text-red-600 hover:text-red-900 transition-colors"
-                                                                title="Delete leave"
-                                                            >
-                                                                <Trash2 className="h-5 w-5" />
-                                                            </button>
+                                                            {isAdmin && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedLeaveId(leave.LeaveID);
+                                                                        setShowDeleteModal(true);
+                                                                    }}
+                                                                    className="text-red-600 hover:text-red-900 transition-colors"
+                                                                    title="Delete leave"
+                                                                >
+                                                                    <Trash2 className="h-5 w-5" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>

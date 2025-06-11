@@ -1,5 +1,5 @@
 // app/api/getUserRole/route.ts
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { rateLimiter } from '@/lib/limiter';
 import { getClientIp } from '@/lib/ip';
@@ -19,14 +19,20 @@ export async function GET(request: NextRequest) {
         // Check rate limit
         await rateLimiter.consume(userIP, 1);
     } catch {
-        return Response.json({ error: 'Too many requests, please try again later.' }, { status: 429 });
+        return NextResponse.json(
+            { error: 'Too many requests, please try again later.' },
+            { status: 429 }
+        );
     }
 
     // Check for API key in the Authorization header and if it matches a valid trusted key
     const authorization = request.headers.get('authorization');
     const apiKey = authorization?.split(' ')[1];
     if (!apiKey || !Object.values(VALID_API_KEYS).includes(apiKey)) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401 }
+        );
     }
 
     // Get query parameters
@@ -35,7 +41,10 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email');
 
     if (!userId && !email) {
-        return Response.json({ error: 'Invalid request, contact the administrator for help.' }, { status: 400 });
+        return NextResponse.json(
+            { error: 'Invalid request, contact the administrator for help.' },
+            { status: 400 }
+        );
     }
 
     try {
@@ -58,29 +67,34 @@ export async function GET(request: NextRequest) {
                     }
                 },
             },
-        })
+        });
 
         // Transform the response to flatten role names
         if (user) {
             const transformedUser = {
                 ...user,
-                Role: user.Role.map(r => r.role.name)
-            }
-            return Response.json(transformedUser);
+                Role: user.Role.map((r: { role: { name: string } }) => r.role.name)
+            };
+            return NextResponse.json(transformedUser);
         }
 
-        return Response.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json(
+            { error: 'User not found' },
+            { status: 404 }
+        );
     } catch (error) {
-        console.error(error)
-        // return the error
-        if (error instanceof Error) {
-            return Response.json({ error: error.message }, { status: 500 });
-        }
-        return Response.json({ error: 'Internal server error' }, { status: 500 });
+        console.error('Error in getUserRole:', error);
+        return NextResponse.json(
+            { 
+                error: 'Internal Server Error',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
+            { status: 500 }
+        );
     } finally {
         // Ensure connection cleanup in development
         if (process.env.NODE_ENV === 'development') {
-            await prisma.$disconnect()
+            await prisma.$disconnect();
         }
     }
 }

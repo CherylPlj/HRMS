@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {  Plus, List, Users, Download, X, Save, Pencil, Trash2 } from 'lucide-react';
+import {  Plus, List, Users, Download, X, Save, Pencil, Trash2, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import React from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useUser } from '@clerk/nextjs';
+import MigrateUsersButton from '@/components/MigrateUsersButton';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -78,7 +79,7 @@ interface UserWithPasswordReset extends User {
 }
 
 interface Notification {
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
   message: string;
 }
 
@@ -89,6 +90,45 @@ interface NewUser {
   Role: string;
   Status: string;
   Photo: string;
+  // Faculty specific fields
+  DateOfBirth?: string;
+  HireDate?: string;
+  Position?: string;
+  DepartmentID?: number;
+}
+
+interface Department {
+  DepartmentID: number;
+  DepartmentName: string;
+}
+
+// Add new interface for detailed status
+interface UserStatus {
+  status: string;
+  lastLogin: string | null;
+  invitationStatus: string;
+  emailVerified: boolean;
+}
+
+// Add new interface for activity log display
+interface ActivityLogDisplay {
+  LogId: string;
+  Timestamp: string;
+  UserName: string;
+  ActionType: string;
+  EntityAffected: string;
+  ActionDetails: string;
+  IPAddress: string;
+}
+
+// Add new interface for activity log filters
+interface ActivityLogFilters {
+  searchQuery: string;
+  actionType: string;
+  dateRange: {
+    start: string;
+    end: string;
+  };
 }
 
 const UsersContent: React.FC = () => {
@@ -120,14 +160,56 @@ const UsersContent: React.FC = () => {
     LastName: '',
     Email: '',
     Role: 'Faculty',
-    Status: 'active',
-    Photo: ''
+    Status: 'Invited',
+    Photo: '',
+    // Faculty specific fields
+    DateOfBirth: '',
+    HireDate: '',
+    Position: '',
+    DepartmentID: undefined
   });
 
   const [selectedUser, setSelectedUser] = useState<UserWithPasswordReset | null>(null);
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [editedUser, setEditedUser] = useState<User | null>(null);
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  // Add new state for refresh interval
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Add new state for detailed status
+  const [userStatuses, setUserStatuses] = useState<{ [key: string]: UserStatus }>({});
+  const [checkingStatus, setCheckingStatus] = useState<{ [key: string]: boolean }>({});
+
+  // Add new state for formatted activity logs
+  const [formattedLogs, setFormattedLogs] = useState<ActivityLogDisplay[]>([]);
+
+  // Add new state for activity log filters
+  const [activityFilters, setActivityFilters] = useState<ActivityLogFilters>({
+    searchQuery: '',
+    actionType: '',
+    dateRange: {
+      start: '',
+      end: ''
+    }
+  });
+
+  // Add action type options
+  const actionTypeOptions = [
+    { value: '', label: 'All Actions' },
+    { value: 'user_login', label: 'Login' },
+    { value: 'user_logout', label: 'Logout' },
+    { value: 'user_created', label: 'User Created' },
+    { value: 'user_activated', label: 'User Activated' },
+    { value: 'user_deleted', label: 'User Deleted' },
+    { value: 'user_updated', label: 'User Updated' },
+    { value: 'invitation_sent', label: 'Invitation Sent' },
+    { value: 'invitation_expired', label: 'Invitation Expired' },
+    { value: 'invitation_auto_resent', label: 'Invitation Resent' },
+    { value: 'invitation_revoked', label: 'Invitation Revoked' }
+  ];
 
   // Filter users based on search, role, and date
   const filteredUsers = users.filter((user) => {
@@ -150,7 +232,25 @@ const UsersContent: React.FC = () => {
     return matchesQuery && matchesRole && matchesDate;
   });
 
-  // Fetch users from Supabase
+  // Add function to check user status
+  const checkUserStatus = async (userId: string) => {
+    try {
+      const { data: userData, error } = await supabase
+        .from('User')
+        .select('Status, LastLogin')
+        .eq('UserID', userId)
+        .single();
+
+      if (error) throw error;
+
+      return userData;
+    } catch (error) {
+      console.error('Error checking user status:', error);
+      return null;
+    }
+  };
+
+  // Modify fetchUsers to include status check
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -181,7 +281,8 @@ const UsersContent: React.FC = () => {
             )
           )
         `)
-        .eq('isDeleted', false);
+        .eq('isDeleted', false)
+        .order('DateCreated', { ascending: false });
 
       if (usersError) {
         setNotification({
@@ -202,12 +303,19 @@ const UsersContent: React.FC = () => {
       // Fetch Clerk user data for each user
       const clerkUsers = await Promise.all(
         usersData.map(async (user) => {
-          try {
-            const response = await fetch(`/api/getClerkUser?userId=${user.UserID}`);
-            const data = await response.json();
-            return data;
-          } catch (error) {
-            console.error('Error fetching Clerk user:', error);
+          // Only attempt to fetch Clerk user if UserID looks like a Clerk ID
+          if (user.UserID && (user.UserID.startsWith('user_') || user.UserID.startsWith('inv_'))) {
+            try {
+              const response = await fetch(`/api/getClerkUser?userId=${user.UserID}`);
+              const data = await response.json();
+              return data;
+            } catch (error) {
+              console.error(`Error fetching Clerk user for ID ${user.UserID}:`, error);
+              return null; // Return null for users where Clerk data couldn't be fetched
+            }
+          } else {
+            // For users with non-Clerk UserID, return null or a placeholder
+            console.warn(`Skipping Clerk user fetch for non-Clerk ID: ${user.UserID}`);
             return null;
           }
         })
@@ -267,45 +375,206 @@ const UsersContent: React.FC = () => {
     }
   };
 
-  // Fetch activity logs
+  // Modify fetchLogs to format the data
+  const fetchLogs = async () => {
+    if (!isViewingLogs) return;
+
+    try {
+      setLoading(true);
+      const { data: logsData, error: logsError } = await supabase
+        .from('ActivityLog')
+        .select(`
+          *,
+          User (
+            FirstName,
+            LastName
+          )
+        `)
+        .order('Timestamp', { ascending: false });
+
+      if (logsError) {
+        throw logsError;
+      }
+
+      // Format the logs for display
+      const formatted = logsData.map(log => ({
+        LogId: log.LogId,
+        Timestamp: log.Timestamp,
+        UserName: log.User ? `${log.User.FirstName} ${log.User.LastName}` : 'System',
+        ActionType: formatActionType(log.ActionType),
+        EntityAffected: log.EntityAffected,
+        ActionDetails: log.ActionDetails,
+        IPAddress: log.IPAddress || 'N/A'
+      }));
+
+      setFormattedLogs(formatted);
+      setActivityLogs(logsData || []);
+    } catch (error: unknown) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to load activity logs. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add helper function to format action types
+  const formatActionType = (actionType: string): string => {
+    const actionMap: { [key: string]: string } = {
+      'user_login': 'Login',
+      'user_logout': 'Logout',
+      'user_created': 'User Created',
+      'user_activated': 'User Activated',
+      'user_deleted': 'User Deleted',
+      'user_updated': 'User Updated',
+      'invitation_sent': 'Invitation Sent',
+      'invitation_expired': 'Invitation Expired',
+      'invitation_auto_resent': 'Invitation Resent',
+      'invitation_revoked': 'Invitation Revoked'
+    };
+    return actionMap[actionType] || actionType;
+  };
+
+  // Add helper function to get action type color
+  const getActionTypeColor = (actionType: string): string => {
+    const colorMap: { [key: string]: string } = {
+      'user_login': 'text-green-600',
+      'user_logout': 'text-blue-600',
+      'user_created': 'text-purple-600',
+      'user_activated': 'text-green-600',
+      'user_deleted': 'text-red-600',
+      'user_updated': 'text-yellow-600',
+      'invitation_sent': 'text-blue-600',
+      'invitation_expired': 'text-orange-600',
+      'invitation_auto_resent': 'text-indigo-600',
+      'invitation_revoked': 'text-red-600'
+    };
+    return colorMap[actionType] || 'text-gray-600';
+  };
+
+  // Add useEffect for periodic refresh
   useEffect(() => {
-    const fetchLogs = async () => {
-      if (!isViewingLogs) return;
+    // Initial fetch
+    fetchUsers();
 
-      try {
-        setLoading(true);
-        const { data: logsData, error: logsError } = await supabase
-          .from('ActivityLog')
-          .select(`
-            *,
-            User (
-              FirstName,
-              LastName
-            )
-          `)
-          .order('Timestamp', { ascending: false });
+    // Set up periodic refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 30000);
 
-        if (logsError) {
-          throw logsError;
+    setRefreshInterval(interval);
+
+    // Cleanup on unmount
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
+  // Add function to get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case 'Invited':
+        return <Clock className="w-5 h-5 text-yellow-500" />;
+      case 'Inactive':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return <AlertCircle className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  // Add function to get status text
+  const getStatusText = (user: User) => {
+    const status = userStatuses[user.UserID];
+    if (!status) return user.Status;
+
+    if (status.status === 'Invited') {
+      if (!status.emailVerified) {
+        return 'Invitation Sent (Email Not Verified)';
+      }
+      return 'Invitation Sent (Email Verified)';
+    }
+
+    if (status.status === 'Active') {
+      if (status.lastLogin) {
+        return `Active (Last Login: ${new Date(status.lastLogin).toLocaleDateString()})`;
+      }
+      return 'Active (Not Logged In)';
+    }
+
+    return status.status;
+  };
+
+  // Modify checkInvitationStatus to update local state
+  const checkInvitationStatus = async (userId: string) => {
+    try {
+      setCheckingStatus(prev => ({ ...prev, [userId]: true }));
+      const response = await fetch(`/api/checkInvitationStatus?userId=${userId}`);
+      const data = await response.json();
+      
+      setUserStatuses(prev => ({
+        ...prev,
+        [userId]: {
+          status: data.status,
+          lastLogin: data.lastLogin,
+          invitationStatus: data.invitationStatus,
+          emailVerified: data.emailVerified
         }
+      }));
 
-        setActivityLogs(logsData || []);
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error: unknown) {
+      if (data.status === 'Active') {
+        setNotification({
+          type: 'success',
+          message: 'User has accepted the invitation and activated their account.'
+        });
+        fetchUsers();
+      } else {
+        setNotification({
+          type: 'info',
+          message: `User status: ${data.status}, Email verified: ${data.emailVerified ? 'Yes' : 'No'}`
+        });
+      }
+    } catch (error) {
+      console.error('Error checking invitation status:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to check invitation status'
+      });
+    } finally {
+      setCheckingStatus(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  // Add function to fetch departments
+  const fetchDepartments = async () => {
+    try {
+      const { data: departmentsData, error: departmentsError } = await supabase
+        .from('Department')
+        .select('DepartmentID, DepartmentName')
+        .order('DepartmentName');
+
+      if (departmentsError) {
         setNotification({
           type: 'error',
-          message: 'Failed to load activity logs. Please try again.'
+          message: `Failed to load departments: ${departmentsError.message}`
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    fetchLogs();
-  }, [isViewingLogs]);
+      setDepartments(departmentsData || []);
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to load departments. Please try again.'
+      });
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
+    fetchDepartments();
   }, []);
 
   const handleAddUser = async () => {
@@ -318,6 +587,17 @@ const UsersContent: React.FC = () => {
         return;
       }
 
+      // Additional validation for faculty
+      if (newUser.Role === 'faculty') {
+        if (!newUser.DateOfBirth || !newUser.HireDate || !newUser.Position || !newUser.DepartmentID) {
+          setNotification({
+            type: 'error',
+            message: 'Please fill in all required faculty fields'
+          });
+          return;
+        }
+      }
+
       if (!currentUser?.id) {
         setNotification({
           type: 'error',
@@ -328,23 +608,36 @@ const UsersContent: React.FC = () => {
 
       setLoading(true);
 
+      // Prepare the request data
+      const requestData = {
+        firstName: newUser.FirstName,
+        lastName: newUser.LastName,
+        email: newUser.Email,
+        role: newUser.Role,
+        createdBy: currentUser.id,
+        facultyData: newUser.Role === 'faculty' ? {
+          date_of_birth: newUser.DateOfBirth,
+          hire_date: newUser.HireDate,
+          position: newUser.Position,
+          department_id: newUser.DepartmentID,
+          employment_status: 'Hired'
+        } : undefined
+      };
+
+      console.log('Sending request data:', requestData);
+
       const response = await fetch('/api/createUser', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          firstName: newUser.FirstName,
-          lastName: newUser.LastName,
-          email: newUser.Email,
-          role: newUser.Role,
-          createdBy: currentUser.id
-        }),
+        body: JSON.stringify(requestData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('Error response:', data);
         throw new Error(data.error || data.message || 'Failed to create user');
       }
 
@@ -354,7 +647,12 @@ const UsersContent: React.FC = () => {
         Email: '',
         Role: '',
         Status: '',
-        Photo: ''
+        Photo: '',
+        // Reset faculty fields
+        DateOfBirth: '',
+        HireDate: '',
+        Position: '',
+        DepartmentID: undefined
       });
       setAddModalOpen(false);
 
@@ -365,6 +663,7 @@ const UsersContent: React.FC = () => {
         message: 'User invitation sent successfully. The user will receive an email to complete their registration.'
       });
     } catch (error: unknown) {
+      console.error('Error in handleAddUser:', error);
       setNotification({
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to create user. Please try again.'
@@ -375,7 +674,11 @@ const UsersContent: React.FC = () => {
   };
   const openEditModal = (user: User) => {
     setUserToEdit(user);
-    setEditedUser(user);
+    setEditedUser({
+      ...user,
+      Role: user.Role || '', // Ensure Role is never undefined
+      Status: user.Status || 'Invited' // Ensure Status is never undefined
+    });
     setEditModalOpen(true);
   };
   const closeEditModal = () => {
@@ -385,11 +688,18 @@ const UsersContent: React.FC = () => {
     setShowEditConfirmModal(false);
   };
   const handleEditUser = async () => {
-    if (!editedUser || !currentUser?.id) return;
+    if (!editedUser || !currentUser?.id) {
+      setNotification({
+        type: 'error',
+        message: 'Missing user data or current user not authenticated'
+      });
+      return;
+    }
 
     try {
       setLoading(true);
 
+      // Send status as is, without forcing uppercase
       const response = await fetch('/api/updateUser', {
         method: 'PUT',
         headers: {
@@ -416,8 +726,17 @@ const UsersContent: React.FC = () => {
       closeEditModal();
       setShowEditConfirmModal(false);
 
-      // Fetch fresh data from the server immediately
+      // Force a refresh of the users list
       await fetchUsers();
+
+      // Update the local state to reflect changes immediately
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.UserID === editedUser.UserID 
+            ? { ...user, ...editedUser, Status: editedUser.Status }
+            : user
+        )
+      );
 
       // Show success message
       setNotification({
@@ -425,14 +744,13 @@ const UsersContent: React.FC = () => {
         message: 'User updated successfully'
       });
 
-      // Clear any existing timeouts
-      const timeoutId = setTimeout(() => {
+      // Clear notification after 5 seconds
+      setTimeout(() => {
         setNotification(null);
       }, 5000);
 
-      return () => clearTimeout(timeoutId);
-
     } catch (error: unknown) {
+      console.error('Error updating user:', error);
       setNotification({
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to update user'
@@ -455,14 +773,14 @@ const UsersContent: React.FC = () => {
     try {
       setLoading(true);
 
-      const response = await fetch('/api/deleteUser', {
-        method: 'DELETE',
+      const response = await fetch('/api/softDeleteUser', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           userId: userToDelete.UserID,
-          createdBy: currentUser?.id
+          updatedBy: currentUser?.id
         }),
       });
 
@@ -543,7 +861,12 @@ const UsersContent: React.FC = () => {
       Email: '',
       Role: '',
       Status: '',
-      Photo: ''
+      Photo: '',
+      // Faculty specific fields
+      DateOfBirth: '',
+      HireDate: '',
+      Position: '',
+      DepartmentID: undefined
     });
   };
   const handleEditConfirm = () => {
@@ -577,6 +900,97 @@ const UsersContent: React.FC = () => {
     setShowConfirmEditModal(false);
   };
 
+  const resendInvitation = async (userId: string, email: string) => {
+    try {
+      setCheckingStatus(prev => ({ ...prev, [userId]: true }));
+      
+      const response = await fetch('/api/resendInvitation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend invitation');
+      }
+
+      setNotification({
+        type: 'success',
+        message: 'Invitation resent successfully'
+      });
+
+      // Refresh user list after a short delay
+      setTimeout(() => {
+        fetchUsers();
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to resend invitation'
+      });
+    } finally {
+      setCheckingStatus(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  // Add function to filter activity logs
+  const getFilteredActivityLogs = () => {
+    return formattedLogs.filter(log => {
+      const matchesSearch = activityFilters.searchQuery === '' || 
+        log.UserName.toLowerCase().includes(activityFilters.searchQuery.toLowerCase()) ||
+        log.ActionDetails.toLowerCase().includes(activityFilters.searchQuery.toLowerCase()) ||
+        log.EntityAffected.toLowerCase().includes(activityFilters.searchQuery.toLowerCase());
+
+      const matchesActionType = activityFilters.actionType === '' || 
+        log.ActionType.toLowerCase() === activityFilters.actionType.toLowerCase();
+
+      const logDate = new Date(log.Timestamp);
+      const matchesDateRange = (
+        (!activityFilters.dateRange.start || new Date(activityFilters.dateRange.start) <= logDate) &&
+        (!activityFilters.dateRange.end || new Date(activityFilters.dateRange.end) >= logDate)
+      );
+
+      return matchesSearch && matchesActionType && matchesDateRange;
+    });
+  };
+
+  // Add function to handle filter changes
+  const handleFilterChange = (field: keyof ActivityLogFilters, value: any) => {
+    setActivityFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Add function to handle date range changes
+  const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
+    setActivityFilters(prev => ({
+      ...prev,
+      dateRange: {
+        ...prev.dateRange,
+        [field]: value
+      }
+    }));
+  };
+
+  // Add function to clear filters
+  const clearFilters = () => {
+    setActivityFilters({
+      searchQuery: '',
+      actionType: '',
+      dateRange: {
+        start: '',
+        end: ''
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Show notification if exists */}
@@ -584,7 +998,9 @@ const UsersContent: React.FC = () => {
         <div className={`mb-6 p-4 rounded-lg shadow-sm ${
           notification.type === 'success'
             ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-700'
+            : notification.type === 'error'
+              ? 'bg-red-50 border border-red-200 text-red-700'
+              : 'bg-yellow-50 border border-yellow-200 text-yellow-700'
         }`}>
           {notification.message}
         </div>
@@ -621,13 +1037,16 @@ const UsersContent: React.FC = () => {
               Download
             </button>
           ) : (
-            <button
-              className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
-              onClick={openAddModal}
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add User
-            </button>
+            <>
+              <MigrateUsersButton />
+              <button
+                className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
+                onClick={openAddModal}
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Add User
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -641,8 +1060,11 @@ const UsersContent: React.FC = () => {
               <input
                 type="text"
                 placeholder={isViewingLogs ? 'Search activity logs...' : 'Search users...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={isViewingLogs ? activityFilters.searchQuery : searchQuery}
+                onChange={(e) => isViewingLogs ? 
+                  handleFilterChange('searchQuery', e.target.value) : 
+                  setSearchQuery(e.target.value)
+                }
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -653,40 +1075,64 @@ const UsersContent: React.FC = () => {
             </div>
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <select
-                  id="roleSelect"
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                >
-                  <option value="">All Roles</option>
-                  <option value="admin">Admin</option>
-                  <option value="faculty">Faculty</option>
-                  <option value="registrar">Registrar</option>
-                  <option value="cashier">Cashier</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                  title="Filter by date"
-                  aria-label="Filter by date"
-                />
-                {selectedDate && (
-                  <button
-                    type="button"
-                    className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                    onClick={() => setSelectedDate('')}
-                    title="Clear date filter"
+              {isViewingLogs ? (
+                <>
+                  <div className="flex-1">
+                    <select
+                      value={activityFilters.actionType}
+                      onChange={(e) => handleFilterChange('actionType', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                      aria-label="Filter by action type"
+                      title="Filter by action type"
+                    >
+                      {actionTypeOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={activityFilters.dateRange.start}
+                      onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                      title="Start date"
+                    />
+                    <span className="text-gray-500">to</span>
+                    <input
+                      type="date"
+                      value={activityFilters.dateRange.end}
+                      onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                      title="End date"
+                    />
+                    <button
+                      onClick={clearFilters}
+                      className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      title="Clear filters"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1">
+                  <select
+                    id="roleSelect"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                   >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
+                    <option value="">All Roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="registrar">Registrar</option>
+                    <option value="cashier">Cashier</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -694,7 +1140,7 @@ const UsersContent: React.FC = () => {
         {/* Table */}
         <div className="overflow-x-auto">
           {isViewingLogs ? (
-            activityLogs.length === 0 ? (
+            getFilteredActivityLogs().length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 No activity logs found.
               </div>
@@ -704,23 +1150,45 @@ const UsersContent: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Done By</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {activityLogs.map((log, index) => (
-                    <tr key={log.LogId || index} className="hover:bg-gray-50">
+                  {getFilteredActivityLogs().map((log, index) => (
+                    <tr key={log.LogId} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(log.Timestamp).toLocaleString()}
+                        {new Date(log.Timestamp).toLocaleString('en-US', {
+                          timeZone: 'Asia/Manila',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {log.User ? `${log.User.FirstName} ${log.User.LastName}` : 'System'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {log.UserName}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.ActionType}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{log.ActionDetails}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`font-medium ${getActionTypeColor(log.ActionType)}`}>
+                          {log.ActionType}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.EntityAffected}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {log.ActionDetails}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.IPAddress}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -758,13 +1226,12 @@ const UsersContent: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.Role}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.Status === 'Active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.Status}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(user.Status)}
+                        <span className={getStatusText(user)}>
+                          {user.Status}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.DateCreated ? new Date(user.DateCreated).toLocaleDateString('en-US', {
@@ -854,6 +1321,22 @@ const UsersContent: React.FC = () => {
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                     />
                   </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      value={newUser.LastName}
+                      onChange={(e) => setNewUser({ ...newUser, LastName: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    />
+                  </div>
 
                   <div>
                     <label htmlFor="roleSelect" className="block text-sm font-medium text-gray-700">
@@ -874,58 +1357,77 @@ const UsersContent: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right Column */}
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="lastName"
-                      type="text"
-                      value={newUser.LastName}
-                      onChange={(e) => setNewUser({ ...newUser, LastName: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                    />
-                  </div>
+                {/* Faculty Specific Fields */}
+                {newUser.Role === 'faculty' && (
+                  <>
+                    <div className="col-span-2 border-t border-gray-200 pt-4 mt-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Faculty Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
+                            Birth Date <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="dateOfBirth"
+                            type="date"
+                            value={newUser.DateOfBirth}
+                            onChange={(e) => setNewUser({ ...newUser, DateOfBirth: e.target.value })}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                            required
+                          />
+                        </div>
 
-                  <div>
-                    <label htmlFor="Status" className="block text-sm font-medium text-gray-700">
-                      Status <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="Status"
-                      value={newUser.Status}
-                      onChange={(e) => setNewUser({ ...newUser, Status: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                    >
-                      <option value="">Select Status</option>
-                      <option value="Invited">Invited</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
+                        <div>
+                          <label htmlFor="hireDate" className="block text-sm font-medium text-gray-700">
+                            Hire Date <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="hireDate"
+                            type="date"
+                            value={newUser.HireDate}
+                            onChange={(e) => setNewUser({ ...newUser, HireDate: e.target.value })}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                            required
+                          />
+                        </div>
 
-                  <div>
-                    <label htmlFor="photoUpload" className="block text-sm font-medium text-gray-700">
-                      Photo
-                    </label>
-                    <input
-                      id="photoUpload"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          // Convert File to string URL for preview
-                          const fileUrl = URL.createObjectURL(file);
-                          setNewUser({ ...newUser, Photo: fileUrl });
-                        }
-                      }}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                    />
-                  </div>
-                </div>
+                        <div>
+                          <label htmlFor="position" className="block text-sm font-medium text-gray-700">
+                            Position <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="position"
+                            type="text"
+                            value={newUser.Position}
+                            onChange={(e) => setNewUser({ ...newUser, Position: e.target.value })}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700">
+                            Department <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            id="departmentId"
+                            value={newUser.DepartmentID}
+                            onChange={(e) => setNewUser({ ...newUser, DepartmentID: Number(e.target.value) })}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                            required
+                          >
+                            <option value="">Select Department</option>
+                            {departments.map((dept) => (
+                              <option key={dept.DepartmentID} value={dept.DepartmentID}>
+                                {dept.DepartmentName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1104,19 +1606,54 @@ const UsersContent: React.FC = () => {
                 <p className="text-gray-600">Please review the changes for {userToEdit.FirstName} {userToEdit.LastName}:</p>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   {userToEdit.FirstName !== editedUser.FirstName && (
-                    <p><span className="font-medium">First Name:</span> {userToEdit.FirstName} → {editedUser.FirstName}</p>
+                    <p className="flex justify-between">
+                      <span className="font-medium">First Name:</span>
+                      <span className="text-gray-600">
+                        <span className="line-through text-red-500">{userToEdit.FirstName}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-green-600">{editedUser.FirstName}</span>
+                      </span>
+                    </p>
                   )}
                   {userToEdit.LastName !== editedUser.LastName && (
-                    <p><span className="font-medium">Last Name:</span> {userToEdit.LastName} → {editedUser.LastName}</p>
+                    <p className="flex justify-between">
+                      <span className="font-medium">Last Name:</span>
+                      <span className="text-gray-600">
+                        <span className="line-through text-red-500">{userToEdit.LastName}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-green-600">{editedUser.LastName}</span>
+                      </span>
+                    </p>
                   )}
                   {userToEdit.Email !== editedUser.Email && (
-                    <p><span className="font-medium">Email:</span> {userToEdit.Email} → {editedUser.Email}</p>
+                    <p className="flex justify-between">
+                      <span className="font-medium">Email:</span>
+                      <span className="text-gray-600">
+                        <span className="line-through text-red-500">{userToEdit.Email}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-green-600">{editedUser.Email}</span>
+                      </span>
+                    </p>
                   )}
                   {userToEdit.Role !== editedUser.Role && (
-                    <p><span className="font-medium">Role:</span> {userToEdit.Role} → {editedUser.Role}</p>
+                    <p className="flex justify-between">
+                      <span className="font-medium">Role:</span>
+                      <span className="text-gray-600">
+                        <span className="line-through text-red-500">{userToEdit.Role}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-green-600">{editedUser.Role}</span>
+                      </span>
+                    </p>
                   )}
                   {userToEdit.Status !== editedUser.Status && (
-                    <p><span className="font-medium">Status:</span> {userToEdit.Status} → {editedUser.Status}</p>
+                    <p className="flex justify-between">
+                      <span className="font-medium">Status:</span>
+                      <span className="text-gray-600">
+                        <span className="line-through text-red-500">{userToEdit.Status}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-green-600">{editedUser.Status}</span>
+                      </span>
+                    </p>
                   )}
                 </div>
               </div>

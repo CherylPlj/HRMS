@@ -11,12 +11,13 @@ datasource db {
 
 model UserIDSequence {
   id        Int @id @default(autoincrement())
-  year      Int
+  year      Int @unique
   lastCount Int
 }
 
 model User {
   UserID       String    @id
+  ClerkID      String?   @unique
   FirstName    String
   LastName     String
   Email        String    @unique

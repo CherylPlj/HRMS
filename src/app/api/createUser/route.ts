@@ -1,292 +1,227 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { createClerkClient } from '@clerk/clerk-sdk-node';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { headers } from 'next/headers';
+
+// Initialize Supabase client with service role key for admin operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Initialize Clerk client
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
-const VALID_ROLES = ['Admin', 'Faculty', 'Cashier', 'Registrar'] as const;
-type Role = typeof VALID_ROLES[number];
+// Define valid roles and statuses
+const VALID_ROLES = ['admin', 'faculty', 'registrar', 'cashier'] as const;
 const VALID_STATUS = ['Invited', 'Active', 'Inactive'] as const;
+
+type Role = typeof VALID_ROLES[number];
 type Status = typeof VALID_STATUS[number];
+
+// Activity logging function
+async function logActivity(
+  userId: string,
+  actionType: string,
+  entityAffected: string,
+  actionDetails: string,
+  ipAddress: string = 'system'
+) {
+  try {
+    const { error } = await supabase
+      .from('ActivityLog')
+      .insert({
+        UserID: userId,
+        ActionType: actionType,
+        EntityAffected: entityAffected,
+        ActionDetails: actionDetails,
+        IPAddress: ipAddress
+      });
+
+    if (error) {
+      console.error('Error logging activity:', error);
+    }
+  } catch (error) {
+    console.error('Error in logActivity:', error);
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    // Log environment variables (without exposing secrets)
-    console.log('Environment check:', {
-      hasClerkSecret: !!process.env.CLERK_SECRET_KEY,
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    });
+    const headersList = await headers();
+    const ipAddress = headersList.get('x-forwarded-for') || 'system';
 
-    // Validate environment variables
-    if (!process.env.CLERK_SECRET_KEY) {
-      throw new Error('CLERK_SECRET_KEY is not configured');
-    }
-
-    const body = await request.json();
-    console.log('Received request body:', { ...body, facultyData: '[REDACTED]' });
-
-    const { email, firstName, lastName, role, facultyData, createdBy } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      role,
+      createdBy,
+      facultyData
+    } = await request.json();
 
     // Validate required fields
-    if (!email || !firstName || !lastName || !role || !createdBy) {
-      console.log('Missing required fields:', { email, firstName, lastName, role, createdBy });
+    if (!firstName || !lastName || !email || !role || !createdBy) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, firstName, lastName, role, and createdBy are required' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      console.log('Invalid email format:', email);
+    // Validate role
+    if (!VALID_ROLES.includes(role.toLowerCase() as Role)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { error: 'Invalid role' },
         { status: 400 }
       );
     }
 
-    // Validate and normalize role
-    const normalizedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-    if (!VALID_ROLES.includes(normalizedRole as Role)) {
-      console.log('Invalid role. Valid roles are:', VALID_ROLES);
+    // Check if user already exists in Supabase
+    const { data: existingUser, error: checkError } = await supabase
+      .from('User')
+      .select('UserID, Status')
+      .eq('Email', email)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
       return NextResponse.json(
-        { error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` },
-        { status: 400 }
+        { error: 'Error checking existing user' },
+        { status: 500 }
       );
     }
 
-    // Validate faculty data if role is Faculty
-    if (normalizedRole === 'Faculty' && facultyData) {
-      if (
-        !facultyData.position ||
-        facultyData.department_id === undefined ||
-        facultyData.department_id === null ||
-        !facultyData.employment_status ||
-        !facultyData.hire_date ||
-        !facultyData.date_of_birth
-      ) {
-        return NextResponse.json(
-          { error: 'Missing required faculty fields: position, department_id, employment_status, hire_date, and date_of_birth are required' },
-          { status: 400 }
-        );
-      }
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User already exists' },
+        { status: 409 }
+      );
     }
 
+    // Generate a unique UserID
+    const { data: sequence, error: sequenceError } = await supabase
+      .from('UserIDSequence')
+      .select('lastCount')
+      .eq('year', new Date().getFullYear())
+      .single();
+
+    if (sequenceError && sequenceError.code !== 'PGRST116') {
+      return NextResponse.json(
+        { error: 'Error generating user ID' },
+        { status: 500 }
+      );
+    }
+
+    const year = new Date().getFullYear();
+    const lastCount = sequence?.lastCount || 0;
+    const newCount = lastCount + 1;
+    const paddedCount = newCount.toString().padStart(4, '0');
+    const userId = `USER-${year}-${paddedCount}`;
+
+    // Create user in Supabase first
+    const { data: newUser, error: createError } = await supabase
+      .from('User')
+      .insert({
+        UserID: userId,
+        FirstName: firstName,
+        LastName: lastName,
+        Email: email,
+        Status: 'Invited',
+        PasswordHash: '', // Empty password hash since user will set it in Clerk
+        createdBy: createdBy
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      return NextResponse.json(
+        { error: 'Error creating user in database' },
+        { status: 500 }
+      );
+    }
+
+    // Update the sequence
+    if (sequence) {
+      await supabase
+        .from('UserIDSequence')
+        .update({ lastCount: newCount })
+        .eq('year', year);
+    } else {
+      await supabase
+        .from('UserIDSequence')
+        .insert({ year, lastCount: newCount });
+    }
+
+    // Get the role ID from the Role table
+    const { data: roleData, error: roleError } = await supabase
+      .from('Role')
+      .select('id')
+      .eq('name', role.charAt(0).toUpperCase() + role.slice(1).toLowerCase())
+      .single();
+
+    if (roleError) {
+      return NextResponse.json(
+        { error: 'Error getting role ID' },
+        { status: 500 }
+      );
+    }
+
+    // Assign role to user
+    const { error: roleAssignError } = await supabase
+      .from('UserRole')
+      .insert({
+        userId: userId,
+        roleId: roleData.id
+      });
+
+    if (roleAssignError) {
+      return NextResponse.json(
+        { error: 'Error assigning role to user' },
+        { status: 500 }
+      );
+    }
+
+    // Create invitation in Clerk
     try {
-      console.log('Creating invitation in Clerk for:', { email, firstName, lastName, role: normalizedRole });
-
-      // Create invitation in Clerk with metadata
       const invitation = await clerk.invitations.createInvitation({
         emailAddress: email,
         publicMetadata: {
-          role: normalizedRole,
+          role: role.charAt(0).toUpperCase() + role.slice(1).toLowerCase(),
           firstName,
           lastName,
-          facultyData: facultyData || {}
+          facultyData: facultyData || null
         },
-        // Use a public invite route that will handle the sign-up process
-        redirectUrl: `${process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL || 'http://localhost:3000'}/sign-up`,
-        notify: true
+        redirectUrl: `${process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || 'https://pleased-jackal-93.accounts.dev/sign-up'}`
       });
 
-      if (!invitation) {
-        throw new Error('Failed to create invitation');
-      }
-
-      console.log('Invitation created successfully:', invitation.id);
-
-      // Generate a temporary password hash (never log this in clear text)
-      const tempPasswordHash = Buffer.from(Math.random().toString()).toString('base64');
-
-      // Prepare user data for Supabase
-      const now = new Date().toISOString();
-      const userData = {
-        UserID: invitation.id,
-        FirstName: firstName,
-        LastName: lastName,
-        Email: email.toLowerCase(),
-        Photo: '',
-        PasswordHash: tempPasswordHash,
-        Status: 'Invited' as Status,
-        DateCreated: now,
-        DateModified: now,
-        LastLogin: null,
-        createdBy: createdBy,
-        updatedBy: createdBy,
-        isDeleted: false
-      };
-
-      // Do not log password hash in clear text
-      console.log('Creating temporary user record in Supabase:', { ...userData, PasswordHash: '[REDACTED]' });
-
-      // Create temporary user record in Supabase
-      const { data: createdUser, error: userError } = await supabaseAdmin
-        .from('User')
-        .insert([userData])
-        .select()
-        .single();
-
-      if (userError) {
-        // If Supabase insert fails, revoke the invitation
-        await clerk.invitations.revokeInvitation(invitation.id);
-        console.error('Supabase user creation error:', {
-          error: userError,
-          details: userError.details,
-          hint: userError.hint,
-          message: userError.message,
-          code: userError.code
-        });
-        return NextResponse.json(
-          { error: userError.message || 'Failed to create user in database' },
-          { status: 422 }
-        );
-      }
-
-      if (!createdUser) {
-        await clerk.invitations.revokeInvitation(invitation.id);
-        return NextResponse.json(
-          { error: 'User was not created in database' },
-          { status: 422 }
-        );
-      }
-
-      // Get or create the role
-      const { data: roleData, error: roleError } = await supabaseAdmin
-        .from('Role')
-        .select('id')
-        .eq('name', normalizedRole)
-        .single();
-
-      if (roleError) {
-        // If role doesn't exist, create it
-        const { data: newRole, error: createRoleError } = await supabaseAdmin
-          .from('Role')
-          .insert([{ name: normalizedRole }])
-          .select()
-          .single();
-
-        if (createRoleError) {
-          await clerk.invitations.revokeInvitation(invitation.id);
-          await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
-          return NextResponse.json(
-            { error: 'Failed to create role' },
-            { status: 422 }
-          );
-        }
-
-        // Create user role relationship
-        const { error: userRoleError } = await supabaseAdmin
-          .from('UserRole')
-          .insert([{
-            userId: invitation.id,
-            roleId: newRole.id
-          }]);
-
-        if (userRoleError) {
-          await clerk.invitations.revokeInvitation(invitation.id);
-          await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
-          return NextResponse.json(
-            { error: 'Failed to assign role to user' },
-            { status: 422 }
-          );
-        }
-      } else {
-        // Create user role relationship with existing role
-        const { error: userRoleError } = await supabaseAdmin
-          .from('UserRole')
-          .insert([{
-            userId: invitation.id,
-            roleId: roleData.id
-          }]);
-
-        if (userRoleError) {
-          await clerk.invitations.revokeInvitation(invitation.id);
-          await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
-          return NextResponse.json(
-            { error: 'Failed to assign role to user' },
-            { status: 422 }
-          );
-        }
-      }
-
-      // If user is faculty, create faculty record
-      if (normalizedRole === 'Faculty' && facultyData) {
-        console.log('Creating faculty record...');
-
-        const facultyRecord = {
-          user_id: invitation.id,
-          date_of_birth: new Date(facultyData.date_of_birth).toISOString(),
-          phone: facultyData.phone || null,
-          address: facultyData.address || null,
-          employment_status: facultyData.employment_status,
-          hire_date: new Date(facultyData.hire_date).toISOString(),
-          resignation_date: null,
-          position: facultyData.position,
-          department_id: facultyData.department_id,
-          contract_id: null
-        };
-
-        console.log('Faculty data:', { ...facultyRecord, date_of_birth: '[REDACTED]' });
-
-        const { error: facultyError } = await supabaseAdmin
-          .from('faculty')
-          .insert([facultyRecord]);
-
-        if (facultyError) {
-          // If faculty insert fails, delete invitation and Supabase user
-          await clerk.invitations.revokeInvitation(invitation.id);
-          await supabaseAdmin.from('User').delete().eq('UserID', invitation.id);
-          console.error('Faculty record creation error:', {
-            error: facultyError,
-            details: facultyError.details,
-            hint: facultyError.hint,
-            message: facultyError.message,
-            code: facultyError.code
-          });
-          return NextResponse.json(
-            { error: facultyError.message || 'Failed to create faculty record' },
-            { status: 422 }
-          );
-        }
-        console.log('Faculty record created successfully');
-      }
-
-      // Log activity with createdBy information
-      console.log('Logging activity...');
-      await supabaseAdmin
-        .from('ActivityLog')
-        .insert([
-          {
-            UserID: createdBy,
-            ActionType: 'user_invitation_sent',
-            EntityAffected: 'User',
-            ActionDetails: `Created new ${normalizedRole} account for ${firstName} ${lastName} (${email})`,
-            Timestamp: now,
-            IPAddress: request.headers.get('x-forwarded-for') || 'unknown'
-          },
-        ]);
-
-      console.log('Activity logged successfully');
+      // Log the activity
+      await logActivity(
+        createdBy,
+        'user_created',
+        'User',
+        `Created new user: ${firstName} ${lastName} (${email}) with role: ${role}`,
+        ipAddress
+      );
 
       return NextResponse.json({
-        invitationId: invitation.id,
-        message: 'User invitation sent successfully. The user will receive an email with a link to complete their registration.',
-        user: { ...createdUser, PasswordHash: '[REDACTED]' }
+        message: 'User created and invitation sent successfully',
+        userId: userId,
+        invitationId: invitation.id
       });
-    } catch (error) {
-      console.error('Error creating user:', error);
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : 'Failed to create user' },
-        { status: 422 }
-      );
+
+    } catch (clerkError) {
+      // If Clerk invitation fails, delete the Supabase user
+      await supabase
+        .from('User')
+        .delete()
+        .eq('UserID', userId);
+
+      throw clerkError;
     }
+
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create user' },
+      { error: 'Failed to create user' },
       { status: 500 }
     );
   }

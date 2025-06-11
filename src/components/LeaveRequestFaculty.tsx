@@ -1,26 +1,56 @@
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { supabase } from "../lib/supabaseClient";
 import { useUser } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+
+// Define leave types as string literals
+type LeaveType = 'Sick' | 'Vacation' | 'Emergency';
+type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 
 interface LeaveRequest {
     LeaveID: string;
-    FacultyID: string;
-    LeaveType: string;
+    FacultyID: number;
+    LeaveType: LeaveType;
     StartDate: Date;
     EndDate: Date;
     Reason: string;
-    Status: 'Pending' | 'Approved' | 'Rejected';
+    Status: LeaveStatus;
     DocumentUrl?: string;
     CreatedAt: Date;
+    Faculty: {
+        Name: string;
+        Department: string;
+    };
+}
+
+interface SupabaseLeave {
+    LeaveID: string;
+    FacultyID: number;
+    LeaveType: LeaveType;
+    StartDate: string;
+    EndDate: string;
+    Reason: string;
+    Status: LeaveStatus;
+    DocumentUrl?: string;
+    CreatedAt: string;
+    Faculty: {
+        User: {
+            FirstName: string;
+            LastName: string;
+        };
+        Department: {
+            DepartmentName: string;
+        };
+    };
 }
 
 const LeaveRequestFaculty: React.FC = () => {
     const { user } = useUser();
     const [showModal, setShowModal] = useState(false);
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
-    const [leaveType, setLeaveType] = useState('');
+    const [leaveType, setLeaveType] = useState<LeaveType | ''>('');
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
     const [reason, setReason] = useState('');
@@ -29,7 +59,6 @@ const LeaveRequestFaculty: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [facultyId, setFacultyId] = useState<number | null>(null);
-    // const navigate = useNavigate();
 
     useEffect(() => {
         const fetchUserAndFacultyId = async () => {
@@ -75,15 +104,15 @@ const LeaveRequestFaculty: React.FC = () => {
                         fetchLeaveRequests(facultyData.FacultyID);
                     } else {
                         console.log('No Faculty found for user:', userData.UserID);
-                        setError('Faculty record not found');
+                        setError('Faculty record not found. Please contact the administrator.');
                     }
                 } else {
                     console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
-                    setError('User not found in database');
+                    setError('User not found in database. Please contact the administrator.');
                 }
             } catch (error) {
                 console.error('Error in fetchUserAndFacultyId:', error);
-                setError('An unexpected error occurred');
+                setError('An unexpected error occurred. Please try again later.');
             }
         };
 
@@ -95,23 +124,53 @@ const LeaveRequestFaculty: React.FC = () => {
             setIsLoading(true);
             setError(null);
 
-            // Fetch leaves for the specific faculty
-            const { data, error } = await supabase
+            const { data: leaves, error: leavesError } = await supabase
                 .from('Leave')
-                .select('*')
+                .select(`
+                    LeaveID,
+                    FacultyID,
+                    LeaveType,
+                    StartDate,
+                    EndDate,
+                    Reason,
+                    Status,
+                    DocumentUrl,
+                    CreatedAt,
+                    Faculty (
+                        User (
+                            FirstName,
+                            LastName
+                        ),
+                        Department (
+                            DepartmentName
+                        )
+                    )
+                `)
                 .eq('FacultyID', facultyId)
                 .order('CreatedAt', { ascending: false });
 
-            if (error) {
-                throw new Error('Error fetching leave requests: ' + error.message);
+            if (leavesError) {
+                throw new Error('Failed to fetch leave requests');
             }
 
-            if (!data) {
+            if (!leaves) {
                 setLeaveRequests([]);
                 return;
             }
 
-            setLeaveRequests(data);
+            // Type assertion to unknown first, then to SupabaseLeave[]
+            const formattedLeaves: LeaveRequest[] = (leaves as unknown as SupabaseLeave[]).map(leave => ({
+                ...leave,
+                StartDate: new Date(leave.StartDate),
+                EndDate: new Date(leave.EndDate),
+                CreatedAt: new Date(leave.CreatedAt),
+                Faculty: {
+                    Name: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
+                    Department: leave.Faculty.Department.DepartmentName
+                }
+            }));
+
+            setLeaveRequests(formattedLeaves);
         } catch (err) {
             console.error('Error fetching leave requests:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch leave requests');
@@ -133,9 +192,31 @@ const LeaveRequestFaculty: React.FC = () => {
     };
 
     const handleAddLeaveRequest = async () => {
+        if (!facultyId) {
+            setError('Faculty ID is required');
+            return;
+        }
+
         try {
-            if (!startDate || !endDate || !leaveType || !reason || !facultyId) {
-                setError('Please fill in all required fields');
+            // Log all form values for debugging
+            console.log('Form values:', {
+                startDate: startDate?.toISOString() || null,
+                endDate: endDate?.toISOString() || null,
+                leaveType,
+                reason,
+                facultyId,
+                file: file ? file.name : null
+            });
+
+            // Detailed validation with specific messages
+            const validationErrors = [];
+            if (!startDate) validationErrors.push('Start date is required');
+            if (!endDate) validationErrors.push('End date is required');
+            if (!leaveType) validationErrors.push('Leave type is required');
+            if (!reason) validationErrors.push('Reason is required');
+
+            if (validationErrors.length > 0) {
+                setError(`Please fill in all required fields: ${validationErrors.join(', ')}`);
                 return;
             }
 
@@ -144,39 +225,54 @@ const LeaveRequestFaculty: React.FC = () => {
 
             // Upload file if exists
             if (file) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}.${fileExt}`;
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('leave-documents')
-                    .upload(fileName, file);
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
 
-                if (uploadError) throw uploadError;
-
-                if (uploadData) {
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('leave-documents')
-                        .getPublicUrl(fileName);
-                    fileUrl = publicUrl;
+                if (!uploadResponse.ok) {
+                    throw new Error('Failed to upload file');
                 }
+
+                const uploadData = await uploadResponse.json();
+                fileUrl = uploadData.url;
             }
 
-            // Create leave request
-            const { error } = await supabase
-                .from('Leave')
-                .insert([
-                    {
-                        FacultyID: facultyId,
-                        LeaveType: leaveType,
-                        StartDate: startDate.toISOString(),
-                        EndDate: endDate.toISOString(),
-                        reason,
-                        Status: 'Pending',
-                        DocumentUrl: fileUrl,
-                    }
-                ])
-                .select();
+            // Create leave request using the API route
+            const response = await fetch('/api/leaves', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    FacultyID: facultyId,
+                    LeaveType: leaveType,
+                    StartDate: startDate?.toISOString(),
+                    EndDate: endDate?.toISOString(),
+                    Reason: reason,
+                    DocumentUrl: fileUrl
+                }),
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                let errorMessage = 'Failed to submit leave request';
+                const responseText = await response.text();
+                console.error('Raw error response:', responseText);
+                try {
+                    const errorData = JSON.parse(responseText);
+                    errorMessage = errorData.error || errorData.details || errorMessage;
+                    console.error('Server error response:', errorData);
+                } catch (e) {
+                    console.error('Error parsing error response:', e);
+                }
+                throw new Error(errorMessage);
+            }
+
+            const leave = await response.json();
+            console.log('Leave request successful:', leave);
 
             // Reset form and refresh list
             setShowModal(false);
@@ -189,7 +285,7 @@ const LeaveRequestFaculty: React.FC = () => {
 
         } catch (err) {
             console.error('Error adding leave request:', err);
-            setError('Failed to submit leave request');
+            setError(err instanceof Error ? err.message : 'Failed to submit leave request');
         } finally {
             setIsLoading(false);
         }
@@ -308,7 +404,7 @@ const LeaveRequestFaculty: React.FC = () => {
                                     <select
                                         id="LeaveType"
                                         value={leaveType}
-                                        onChange={(e) => setLeaveType(e.target.value)}
+                                        onChange={(e) => setLeaveType(e.target.value as LeaveType)}
                                         className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                                         disabled={isLoading}
                                     >

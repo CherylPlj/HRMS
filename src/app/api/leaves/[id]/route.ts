@@ -1,34 +1,51 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await context.params;
     try {
-        const { error } = await supabase
-            .from('Leave')
-            .delete()
-            .eq('LeaveID', id);
+        const { id } = await context.params;
+        console.log('Attempting to delete leave with ID:', id);
+        
+        const leave = await prisma.leave.delete({
+            where: {
+                LeaveID: parseInt(id)
+            }
+        });
 
-        if (error) {
-            console.error('Error deleting leave:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
+        console.log('Successfully deleted leave:', leave);
         return NextResponse.json({ message: 'Leave deleted successfully' });
     } catch (error) {
         console.error('Error in delete leave API:', error);
+        // Handle Prisma-specific errors
+        if (error instanceof Error) {
+            if (error.message.includes('Record to delete does not exist')) {
+                return NextResponse.json(
+                    { error: 'Leave record not found' },
+                    { status: 404 }
+                );
+            }
+            if (error.message.includes('prisma')) {
+                return NextResponse.json(
+                    { error: 'Database error', details: error.message },
+                    { status: 500 }
+                );
+            }
+        }
         return NextResponse.json(
-            { error: 'Internal Server Error' },
+            { 
+                error: 'Internal Server Error',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         );
+    } finally {
+        // Ensure connection cleanup in development
+        if (process.env.NODE_ENV === 'development') {
+            await prisma.$disconnect();
+        }
     }
 }
 
@@ -36,10 +53,10 @@ export async function PATCH(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await context.params;
-
     try {
+        const { id } = await context.params;
         const { status } = await request.json();
+        console.log('Received status update request:', { id, status });
 
         if (!status || !['Approved', 'Rejected'].includes(status)) {
             return NextResponse.json(
@@ -48,22 +65,46 @@ export async function PATCH(
             );
         }
 
-        const { error } = await supabase
-            .from('Leave')
-            .update({ Status: status })
-            .eq('LeaveID', id);
+        const leave = await prisma.leave.update({
+            where: {
+                LeaveID: parseInt(id)
+            },
+            data: {
+                Status: status,
+                UpdatedAt: new Date()
+            }
+        });
 
-        if (error) {
-            console.error('Error updating leave status:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
+        console.log('Successfully updated leave status:', leave);
         return NextResponse.json({ message: 'Leave status updated successfully' });
     } catch (error) {
         console.error('Error in update leave status API:', error);
+        // Handle Prisma-specific errors
+        if (error instanceof Error) {
+            if (error.message.includes('Record to update does not exist')) {
+                return NextResponse.json(
+                    { error: 'Leave record not found' },
+                    { status: 404 }
+                );
+            }
+            if (error.message.includes('prisma')) {
+                return NextResponse.json(
+                    { error: 'Database error', details: error.message },
+                    { status: 500 }
+                );
+            }
+        }
         return NextResponse.json(
-            { error: 'Internal Server Error' },
+            { 
+                error: 'Internal Server Error',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         );
+    } finally {
+        // Ensure connection cleanup in development
+        if (process.env.NODE_ENV === 'development') {
+            await prisma.$disconnect();
+        }
     }
 } 

@@ -12,8 +12,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "SJSFI - HRMS",
   icons: { icon: "/sjsfilogo.png" },
-  keywords: ["HRMS", "SJSFI", "Human Resource Management System"],
-  authors: [{ name: "Saint Joseph School of Fairview, Inc." }],
+  keywords: ["HRMS", "SJSFI", "Human Resource Management System", "faculty management", "document management"],
+  authors: [{
+    name: "Saint Joseph School of Fairview, Inc.",
+    url: "https://www.sjsfi.edu.ph"
+  }],
   creator: "Saint Joseph School of Fairview, Inc.",
   publisher: "Saint Joseph School of Fairview, Inc.",
   description: "Human Resource Management System",
@@ -38,7 +41,7 @@ export default function RootLayout({
           />
           {/* <script src="https://cdn.tailwindcss.com"></script> */}
         </head>
-        <body suppressHydrationWarning className={`${poppins.className} antialiased`}>
+        <body className={`${poppins.className} antialiased`}>
           {children}
         </body>
       </html>

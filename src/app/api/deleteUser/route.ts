@@ -11,6 +11,33 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Add helper function to log activities
+async function logActivity(
+  userId: string,
+  actionType: string,
+  entityAffected: string,
+  actionDetails: string,
+  ipAddress: string = 'system'
+) {
+  try {
+    await supabase
+      .from('ActivityLog')
+      .insert([
+        {
+          UserID: userId,
+          ActionType: actionType,
+          EntityAffected: entityAffected,
+          ActionDetails: actionDetails,
+          Timestamp: new Date().toISOString(),
+          IPAddress: ipAddress
+        }
+      ]);
+    console.log('Activity logged successfully:', { actionType, userId });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { userId, createdBy } = await request.json();
@@ -62,23 +89,18 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Log activity
-    await supabase
-      .from('ActivityLog')
-      .insert([
-        {
-          UserID: createdBy,
-          ActionType: 'user_deleted',
-          EntityAffected: 'User',
-          ActionDetails: `Marked user ${userData.FirstName} ${userData.LastName} (${userData.Email}) as deleted`,
-          Timestamp: new Date().toISOString(),
-          IPAddress: request.headers.get('x-forwarded-for') || 'unknown'
-        },
-      ]);
+    // After successful user deletion, log the activity
+    await logActivity(
+      createdBy,
+      'user_deleted',
+      'User',
+      `Deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})`,
+      request.headers.get('x-forwarded-for') || 'system'
+    );
 
     return NextResponse.json({ 
-      success: true,
-      message: 'User marked as deleted successfully'
+      message: 'User deleted successfully',
+      userId
     });
   } catch (error: unknown) {
     console.error('Error marking user as deleted:', error);

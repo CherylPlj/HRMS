@@ -10,11 +10,11 @@ export default function Home() {
   const currentYear = new Date().getFullYear();
 
   const navigateToFaculty = () => {
-    router.push('/dashboard/loginf');
+    router.push('/sign-in?portal=faculty');
   };
 
   const navigateToAdmin = () => {
-    router.push('/dashboard/login');
+    router.push('/sign-in?portal=admin');
   };
 
   return (

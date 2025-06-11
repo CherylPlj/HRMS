@@ -7,8 +7,8 @@ import { supabase } from '../lib/supabaseClient';
 // Example: Replace with fetch from your backend if needed
 const DOCUMENT_TYPES = [
   { DocumentTypeID: 1, DocumentTypeName: 'Resume' },
-  { DocumentTypeID: 2, DocumentTypeName: 'Transcript' },
-  { DocumentTypeID: 3, DocumentTypeName: 'Certificate' },
+  { DocumentTypeID: 2, DocumentTypeName: 'Certificate' },
+  { DocumentTypeID: 3, DocumentTypeName: 'Transcript' },
   // ...add more as needed
 ];
 

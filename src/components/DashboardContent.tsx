@@ -18,6 +18,31 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
+interface User {
+  UserID: string;
+  Status: string;
+  LastLogin: string;
+  isDeleted: string;
+  Role?: {
+    role: {
+      name: string;
+    };
+  }[];
+}
+
+interface Faculty {
+  FacultyID: number;
+  Contract?: {
+    ContractType: string;
+  };
+  User?: User;
+}
+
+interface Department {
+  DepartmentName: string;
+  Faculty?: Faculty[];
+}
+
 export default function DashboardContent() {
   const { user } = useUser();
   const router = useRouter();
@@ -88,19 +113,37 @@ export default function DashboardContent() {
             *,
             Contract (
               ContractType
+            ),
+            User:UserID (
+              UserID,
+              isDeleted,
+              Status
             )
-          `);
+          `) as { data: Faculty[] | null, error: any };
 
         if (facultyError) {
           console.error("Faculty fetch error:", facultyError.message || facultyError);
           throw facultyError;
         }
 
-        const regularCount = faculty?.filter((f) => f.Contract?.ContractType === "Full_Time").length || 0;
-        const probationaryCount = faculty?.filter((f) => f.Contract?.ContractType === "Probationary").length || 0;
+        console.log('Raw faculty data from dashboard:', faculty); // Debug log
+
+        // Filter out deleted faculty first
+        const activeFaculty = faculty?.filter(f => !f.User?.isDeleted) || [];
+        console.log('Active faculty after filtering:', activeFaculty); // Debug log
+
+        // Calculate stats only for active faculty
+        const regularCount = activeFaculty.filter((f) => f.Contract?.ContractType === "Full_Time").length;
+        const probationaryCount = activeFaculty.filter((f) => f.Contract?.ContractType === "Probationary").length;
+
+        console.log('Stats calculation:', {
+          total: activeFaculty.length,
+          regular: regularCount,
+          probationary: probationaryCount
+        }); // Debug log
 
         setFacultyStats({
-          total: faculty?.length || 0,
+          total: activeFaculty.length,
           regular: regularCount,
           probationary: probationaryCount,
         });
@@ -111,18 +154,28 @@ export default function DashboardContent() {
           .select(`
             DepartmentName,
             Faculty (
-              FacultyID
+              FacultyID,
+              User:UserID (
+                UserID,
+                isDeleted,
+                Status
+              )
             )
-          `);
+          `) as { data: Department[] | null, error: any };
 
         if (deptError) {
           console.error("Department fetch error:", deptError.message || deptError);
           throw deptError;
         }
 
+        console.log('Raw department data:', departments); // Debug log
+
         const deptStats: Record<string, number> = {};
         departments?.forEach((dept) => {
-          deptStats[dept.DepartmentName] = dept.Faculty?.length || 0;
+          // Only count faculty who are not deleted
+          const activeFacultyInDept = dept.Faculty?.filter(f => !f.User?.isDeleted) || [];
+          console.log(`Department ${dept.DepartmentName} active faculty:`, activeFacultyInDept.length); // Debug log
+          deptStats[dept.DepartmentName] = activeFacultyInDept.length;
         });
 
         setDepartmentStats(deptStats);
@@ -134,13 +187,17 @@ export default function DashboardContent() {
             UserID,
             Status,
             LastLogin,
+            isDeleted,
             Role:UserRole (
               role:Role (
                 name
               )
             )
           `)
-          .eq("Status", "Active");
+          .eq("Status", "Active")
+          .eq("isDeleted", 'FALSE') as { data: User[] | null, error: any };
+
+        console.log('Raw users data:', users); // Debug log
 
         if (usersError) {
           console.error("Users fetch error:", usersError.message || usersError);
