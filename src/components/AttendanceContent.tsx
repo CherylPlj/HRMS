@@ -356,6 +356,20 @@ const AttendanceContent: React.FC = () => {
     }
   }, [activeTab, dateFilter]);
 
+  // Load schedules from Supabase
+  useEffect(() => {
+    if (activeTab === 'schedule') {
+      const fetchSchedules = async () => {
+        const { data, error } = await supabase
+          .from('Schedules')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data) setSchedules(data as ScheduleRecord[]);
+      };
+      fetchSchedules();
+    }
+  }, [activeTab]);
+
   // Attendance filter
   const filteredAttendance = attendance.filter((record) => {
     const search = searchQuery.toLowerCase();
@@ -381,24 +395,59 @@ const AttendanceContent: React.FC = () => {
   const handleOpenDeleteModal = (schedId: string) => { setDeleteScheduleId(schedId); setIsDeleteModalOpen(true);}
   const handleCloseDeleteModal = () => setIsDeleteModalOpen(false);
 
-  // Handle schedule save (add or edit)
-  const handleScheduleSave = (sched: ScheduleRecord) => {
+// Handle schedule save (add or edit)
+  const handleScheduleSave = async (sched: ScheduleRecord) => {
     if (editSchedule) {
       // Edit
-      setSchedules(prev =>
-        prev.map(s => (s.id === sched.id ? sched : s))
-      );
+      const { data, error } = await supabase
+        .from('Schedules')
+        .update({
+          name: sched.name,
+          subject: sched.subject,
+          classSection: sched.classSection,
+          day: sched.day,
+          time: sched.time,
+          img: sched.img,
+        })
+        .eq('id', sched.id)
+        .select()
+        .single();
+      if (!error && data) {
+        setSchedules(prev => prev.map(s => (s.id === data.id ? data : s)));
+      }
       setIsEditModalOpen(false);
-    } else {
+    } else {      
       // Add
-      setSchedules(prev => [...prev, { ...sched, id: Math.random().toString() }]);
+ const { data, error } = await supabase
+        .from('Schedules')
+        .insert([{
+          name: sched.name,
+          subject: sched.subject,
+          classSection: sched.classSection,
+          day: sched.day,
+          time: sched.time,
+          img: sched.img || '/manprofileavatar.png',
+        }])
+        .select()
+        .single();
+      if (!error && data) {
+        setSchedules(prev => [data, ...prev]);
+      }
       setIsModalOpen(false);
     }
   };
 
-  // Handle schedule delete
-  const handleConfirmDelete = () => {
-    setSchedules(prev => prev.filter(s => s.id !== deleteScheduleId));
+ // Handle schedule delete
+  const handleConfirmDelete = async () => {
+    if (deleteScheduleId) {
+      const { error } = await supabase
+        .from('Schedules')
+        .delete()
+        .eq('id', deleteScheduleId);
+      if (!error) {
+        setSchedules(prev => prev.filter(s => s.id !== deleteScheduleId));
+      }
+    }
     setIsDeleteModalOpen(false);
   };
 
