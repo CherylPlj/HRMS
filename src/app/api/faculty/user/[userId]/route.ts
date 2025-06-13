@@ -1,59 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// `context` type is inferred correctly by Next.js
 export async function GET(
     request: NextRequest,
-    context: { params: Promise<{ userId: string }> }
+    { params }: { params: { userId: string } }
 ) {
-    try {
-        const { userId } = await context.params;
-        console.log('Fetching faculty for user ID:', userId);
+    const userId = params.userId;
 
+    try {
         const faculty = await prisma.faculty.findFirst({
-            where: {
-                UserID: userId
-            },
-            select: {
-                FacultyID: true,
-                UserID: true,
-                DepartmentID: true,
-                Position: true,
-                EmploymentStatus: true
-            }
+        where: {
+            UserID: userId,
+        },
+        select: {
+            FacultyID: true,
+            UserID: true,
+            DepartmentID: true,
+            Position: true,
+            EmploymentStatus: true,
+        },
         });
 
         if (!faculty) {
-            console.log('Faculty record not found for user:', userId);
-            return NextResponse.json(
-                { error: 'Faculty record not found' },
-                { status: 404 }
-            );
+        return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
         }
 
-        console.log('Found faculty record:', faculty);
         return NextResponse.json(faculty);
     } catch (error) {
-        console.error('Error in faculty API:', error);
-        // Handle Prisma-specific errors
-        if (error instanceof Error) {
-            if (error.message.includes('prisma')) {
-                return NextResponse.json(
-                    { error: 'Database error', details: error.message },
-                    { status: 500 }
-                );
-            }
-        }
         return NextResponse.json(
-            { 
-                error: 'Internal Server Error',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
+        {
+            error: 'Internal Server Error',
+            details: error instanceof Error ? error.message : 'Unknown error',
+        },
+        { status: 500 }
         );
     } finally {
-        // Ensure connection cleanup in development
         if (process.env.NODE_ENV === 'development') {
-            await prisma.$disconnect();
+        await prisma.$disconnect();
         }
     }
-} 
+}

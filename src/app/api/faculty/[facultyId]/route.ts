@@ -4,7 +4,7 @@ import { currentUser } from '@clerk/nextjs/server';
 
 export async function PUT(
   request: Request,
-  context: { params: Promise<{ facultyId: string }> }
+  context: { params:{ facultyId: string }}
 ) {
   try {
     const { params } = context;
@@ -129,7 +129,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  context: { params: Promise<{ facultyId: string }> }
+  context: { params: { facultyId: string } }
 ) {
   try {
       const { params } = context;

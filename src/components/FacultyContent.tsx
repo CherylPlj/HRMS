@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaTrash, FaPen, FaDownload, FaPlus, FaFile } from 'react-icons/fa';
-import { Search, Filter } from 'lucide-react';
+import { FaTrash, FaPen, FaDownload, FaPlus, FaFile, FaEye } from 'react-icons/fa';
+import { Search } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -59,6 +59,9 @@ interface DocumentFacultyRow {
   file?: string;
   facultyName: string;
   documentTypeName: string;
+  FilePath?: string;
+  FileUrl?: string;
+  DownloadUrl?: string;
   Faculty: {
     User: {
       FirstName: string;
@@ -100,7 +103,6 @@ const FacultyContent: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<number | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<string | 'all'>('all');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [newFaculty, setNewFaculty] = useState<NewFaculty>({
     FirstName: '',
@@ -127,6 +129,11 @@ const FacultyContent: React.FC = () => {
     acceptedFileTypes: []
   });
 
+  // New document management filter states
+  const [selectedDocumentStatus, setSelectedDocumentStatus] = useState<string | 'all'>('all');
+  const [selectedDocumentType, setSelectedDocumentType] = useState<number | 'all'>('all');
+  const [documentSearchTerm, setDocumentSearchTerm] = useState('');
+
   // Edit and delete state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -135,6 +142,9 @@ const FacultyContent: React.FC = () => {
 
   // Fetch departments
   const [departments, setDepartments] = useState<Department[]>([]);
+
+  // Add this line
+  const [expandedFacultyId, setExpandedFacultyId] = useState<number | null>(null);
 
   // Fetch faculty data from the API endpoint
   const fetchFacultyData = async () => {
@@ -179,6 +189,7 @@ const FacultyContent: React.FC = () => {
   useEffect(() => {
     console.log('FacultyContent mounted, fetching data...'); // Debug log
     fetchFacultyData();
+    fetchDocuments('all'); // Fetch all documents on initial mount for both views
   }, []);
 
   // Add debug logging for facultyList changes
@@ -316,11 +327,10 @@ const FacultyContent: React.FC = () => {
   };
 
   // Document management: fetch documents
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (facultyId: number | 'all' = 'all') => {
     setDocLoading(true);
     try {
-      // Since this is the admin view, we'll fetch all documents
-      const data = await fetchFacultyDocuments(0); // Pass 0 to fetch all documents
+      const data = await fetchFacultyDocuments(facultyId);
       console.log('Received documents data:', data);
       setDocuments(data);
     } catch (err) {
@@ -352,6 +362,7 @@ const FacultyContent: React.FC = () => {
   useEffect(() => {
     if (activeView === 'documentManagement') {
       fetchDocuments();
+      fetchDocumentTypes(); // Fetch document types when document management is active
     }
   }, [activeView]);
 
@@ -638,10 +649,10 @@ const FacultyContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Search and Filter Section */}
-      <div className="mb-6 flex flex-col space-y-4">
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1 max-w-md">
+      {/* Faculty Management: Search and Filter Section */}
+      {activeView === 'facultyManagement' && (
+        <div className="mb-6 flex flex-wrap items-start gap-4">
+          <div className="relative flex-grow max-w-md">
             <input
               type="text"
               placeholder="Search faculty..."
@@ -651,18 +662,9 @@ const FacultyContent: React.FC = () => {
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
-          <button 
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`p-2 border rounded-lg ${isFilterOpen ? 'bg-[#800000] text-white' : 'text-gray-600'}`}
-            title="Filter"
-          >
-            <Filter className="h-5 w-5" />
-          </button>
-        </div>
 
-        {/* Filter Options */}
-        {isFilterOpen && (
-          <div className="bg-white p-4 rounded-lg shadow-md border">
+          {/* Filter Options for Faculty (always visible) */}
+          <div className="bg-white p-4 rounded-lg shadow-md border flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -700,8 +702,69 @@ const FacultyContent: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Document Management: Search and Filter Section */}
+      {activeView === 'documentManagement' && (
+        <div className="mb-6 flex flex-wrap items-start gap-4">
+          <div className="relative flex-grow max-w-md">
+            <input
+              type="text"
+              placeholder="Search documents..."
+              value={documentSearchTerm}
+              onChange={(e) => setDocumentSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+            />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          </div>
+
+          {/* Filter Options for Documents (always visible), reordered */}
+          <div className="bg-white p-4 rounded-lg shadow-md border flex-grow">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Document Type Filter (moved before Status) */}
+              <div>
+                <label htmlFor="documentTypeFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Document Type
+                </label>
+                <select
+                  id="documentTypeFilter"
+                  value={selectedDocumentType}
+                  onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000]"
+                  title="Filter by Document Type"
+                >
+                  <option value="all">All Document Types</option>
+                  {documentTypes.map((type) => (
+                    <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
+                      {type.DocumentTypeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Status Filter */}
+              <div>
+                <label htmlFor="documentStatusFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  id="documentStatusFilter"
+                  value={selectedDocumentStatus}
+                  onChange={(e) => setSelectedDocumentStatus(e.target.value)}
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000]"
+                  title="Filter by Submission Status"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Faculty Table */}
       {activeView === 'facultyManagement' && (
@@ -722,7 +785,10 @@ const FacultyContent: React.FC = () => {
                     Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    List of Documents
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Submission Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -730,65 +796,139 @@ const FacultyContent: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredFacultyList.map((faculty) => (
-                  <tr key={faculty.FacultyID}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0">
-                          <img
-                            className="h-10 w-10 rounded-full"
-                            src={faculty.User?.Photo || '/default-avatar.png'}
-                            alt={`${faculty.User?.FirstName || ''} ${faculty.User?.LastName || ''}`}
-                          />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {faculty.User?.FirstName || 'Unknown'} {faculty.User?.LastName || 'User'}
+                {filteredFacultyList.map((faculty) => {
+                  const documentsForFaculty = documents.filter(doc => doc.FacultyID === faculty.FacultyID);
+                  const submittedDocs = documentsForFaculty.filter(doc => doc.SubmissionStatus === 'Submitted');
+                  const submittedCount = submittedDocs.length;
+                  const totalCount = documentsForFaculty.length;
+
+                  let facultySubmissionStatus = 'N/A';
+                  if (totalCount > 0) {
+                    if (submittedCount === totalCount) {
+                      facultySubmissionStatus = 'Complete';
+                    } else if (submittedCount > 0 && submittedCount < totalCount) {
+                      facultySubmissionStatus = 'Incomplete';
+                    } else {
+                      facultySubmissionStatus = 'Pending';
+                    }
+                  }
+
+                  return (
+                    <React.Fragment key={faculty.FacultyID}>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              <img
+                                className="h-10 w-10 rounded-full"
+                                src={faculty.User?.Photo || '/default-avatar.png'}
+                                alt={`${faculty.User?.FirstName || ''} ${faculty.User?.LastName || ''}`}
+                              />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {faculty.User?.FirstName || 'Unknown'} {faculty.User?.LastName || 'User'}
+                              </div>
+                              <div className="text-sm text-gray-500">{faculty.User?.Email || 'No email'}</div>
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-500">{faculty.User?.Email || 'No email'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {faculty.Position}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {faculty.Department.DepartmentName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        faculty.EmploymentStatus === 'Regular'
-                          ? 'bg-green-100 text-green-800'
-                          : faculty.EmploymentStatus === 'Probationary'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {faculty.EmploymentStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => openEditModal(faculty)}
-                          title="Edit" 
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          <FaPen />
-                        </button>
-                        <button 
-                          onClick={() => openDeleteModal(faculty)}
-                          title="Delete" 
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {faculty.Position}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {faculty.Department.DepartmentName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            <span>Submitted: {submittedCount}/{totalCount}</span>
+                            {totalCount > 0 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedFacultyId(expandedFacultyId === faculty.FacultyID ? null : faculty.FacultyID);
+                                }}
+                                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                                title={expandedFacultyId === faculty.FacultyID ? 'Collapse documents' : 'Expand documents'}
+                              >
+                                {expandedFacultyId === faculty.FacultyID ? '▲' : '▼'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            facultySubmissionStatus === 'Complete'
+                              ? 'bg-green-100 text-green-800'
+                              : facultySubmissionStatus === 'Incomplete'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : facultySubmissionStatus === 'Pending'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-700' // For N/A
+                          }`}>
+                            {facultySubmissionStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => openEditModal(faculty)}
+                              title="Edit" 
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              <FaPen />
+                            </button>
+                            <button 
+                              onClick={() => openDeleteModal(faculty)}
+                              title="Delete" 
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedFacultyId === faculty.FacultyID && ( /* Expanded row */
+                        <tr>
+                          <td colSpan={6} className="px-6 py-4 bg-gray-50">
+                            <div className="p-2 border rounded-md">
+                              <h4 className="font-semibold text-gray-800 mb-2">Documents for {faculty.User?.FirstName} {faculty.User?.LastName}:</h4>
+                              <ul className="list-disc list-inside text-sm text-gray-700">
+                                {documentsForFaculty.length > 0 ? (
+                                  documentsForFaculty.map((doc) => (
+                                    <li key={doc.DocumentID} className="mb-1 flex justify-between items-center">
+                                      <span>
+                                        {doc.documentTypeName}: <span className={`font-medium ${
+                                          doc.SubmissionStatus === 'Submitted' ? 'text-green-600' : 'text-red-600'
+                                        }`}>{doc.SubmissionStatus}</span>
+                                      </span>
+                                      {doc.DownloadUrl && (
+                                        <a
+                                          href={doc.DownloadUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-500 hover:underline flex items-center text-xs ml-auto"
+                                          title="Download Document"
+                                        >
+                                          <FaDownload className="mr-1" /> Download
+                                        </a>
+                                      )}
+                                    </li>
+                                  ))
+                                ) : (
+                                  <li>No documents found for this faculty.</li>
+                                )}
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
                 {filteredFacultyList.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                       No faculty members found matching your search criteria
                     </td>
                   </tr>
@@ -822,49 +962,79 @@ const FacultyContent: React.FC = () => {
                   <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
                 </tr>
               ) : (
-                documents.map((doc, idx) => {
-                  console.log('Rendering document:', doc);
-                  return (
-                    <tr
-                      key={doc.DocumentID}
-                      className="hover:bg-gray-100 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{doc.facultyName || 'Unknown Faculty'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
-                          ${
-                            doc.SubmissionStatus === 'Approved'
-                              ? 'bg-green-100 text-green-700'
-                              : doc.SubmissionStatus === 'Rejected'
-                              ? 'bg-red-100 text-red-700'
-                              : doc.SubmissionStatus === 'Submitted'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }
-                        `}>
-                          {doc.SubmissionStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          title="Change Submission Status"
-                          value={doc.SubmissionStatus}
-                          onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
-                          disabled={statusUpdating === doc.DocumentID}
-                          className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Submitted">Submitted</option>
-                          <option value="Approved">Approved</option>
-                          <option value="Rejected">Rejected</option>
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                })
+                documents
+                  .filter(doc => 
+                    (selectedDocumentStatus === 'all' || doc.SubmissionStatus === selectedDocumentStatus) &&
+                    (selectedDocumentType === 'all' || doc.DocumentTypeID === selectedDocumentType) &&
+                    (documentSearchTerm === '' || 
+                     doc.facultyName.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                     doc.documentTypeName.toLowerCase().includes(documentSearchTerm.toLowerCase()))
+                  )
+                  .map((doc, idx) => {
+                    console.log('Rendering document:', doc);
+                    return (
+                      <tr
+                        key={doc.DocumentID}
+                        className="hover:bg-gray-100 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{doc.facultyName || 'Unknown Faculty'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+                            ${
+                              doc.SubmissionStatus === 'Approved'
+                                ? 'bg-green-100 text-green-700'
+                                : doc.SubmissionStatus === 'Rejected'
+                                ? 'bg-red-100 text-red-700'
+                                : doc.SubmissionStatus === 'Submitted'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }
+                          `}>
+                            {doc.SubmissionStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 flex items-center space-x-2">
+                          <select
+                            title="Change Submission Status"
+                            value={doc.SubmissionStatus}
+                            onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
+                            disabled={statusUpdating === doc.DocumentID}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Submitted">Submitted</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+                          {doc.FileUrl && (
+                            <a
+                              href={doc.FileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-600 hover:text-gray-900"
+                              title="View Document"
+                            >
+                              <FaEye className="w-5 h-5" />
+                            </a>
+                          )}
+                          {doc.DownloadUrl && (
+                            <a
+                              href={doc.DownloadUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-600 hover:text-gray-900"
+                              title="Download Document"
+                            >
+                              <FaDownload className="w-5 h-5" />
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>

@@ -46,29 +46,28 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const facultyId = searchParams.get('facultyId');
 
-    if (!facultyId) {
-      console.log('No facultyId provided in query parameters');
-      return NextResponse.json({ error: 'Faculty ID is required' }, { status: 400 });
-    }
-
     console.log('Fetching documents for faculty:', facultyId);
 
-    // First verify the faculty exists
-    const { data: facultyData, error: facultyError } = await supabaseAdmin
-      .from('Faculty')
-      .select('FacultyID')
-      .eq('FacultyID', facultyId)
-      .single();
+    // If facultyId is provided, verify the faculty exists
+    if (facultyId && facultyId !== 'all') { // Added 'all' check to allow fetching all documents
+      const { data: facultyData, error: facultyError } = await supabaseAdmin
+        .from('Faculty')
+        .select('FacultyID')
+        .eq('FacultyID', facultyId)
+        .single();
 
-    if (facultyError) {
-      console.error('Error verifying faculty:', facultyError);
-      return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
+      if (facultyError) {
+        console.error('Error verifying faculty:', facultyError);
+        return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
+      }
+
+      console.log('Verified faculty exists:', facultyData);
+    } else {
+      console.log('Fetching all documents (facultyId not provided or is "all")');
     }
 
-    console.log('Verified faculty exists:', facultyData);
-
     // Fetch documents from Supabase
-    const { data: documents, error: documentsError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('Document')
       .select(`
         DocumentID,
@@ -79,13 +78,25 @@ export async function GET(request: Request) {
         FilePath,
         FileUrl,
         DownloadUrl,
+        Faculty (
+          FacultyID,
+          User (
+            FirstName,
+            LastName,
+            Email
+          )
+        ),
         DocumentType (
           DocumentTypeID,
           DocumentTypeName
         )
-      `)
-      .eq('FacultyID', facultyId)
-      .order('UploadDate', { ascending: false });
+      `);
+
+    if (facultyId && facultyId !== 'all') {
+      query = query.eq('FacultyID', facultyId);
+    }
+    
+    const { data: documents, error: documentsError } = await query.order('UploadDate', { ascending: false });
 
     if (documentsError) {
       console.error('Error fetching documents:', documentsError);
@@ -95,8 +106,15 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log('Successfully fetched documents:', documents);
-    return NextResponse.json(documents || []);
+    // Map the data to include facultyName and documentTypeName directly, similar to FacultyContent's structure
+    const mappedDocuments = documents.map((doc: Document) => ({
+      ...doc,
+      facultyName: `${doc.Faculty.User.FirstName} ${doc.Faculty.User.LastName}`,
+      documentTypeName: doc.DocumentType.DocumentTypeName,
+    }));
+
+    console.log('Successfully fetched documents:', mappedDocuments);
+    return NextResponse.json(mappedDocuments || []);
   } catch (error) {
     console.error('Error in faculty-documents GET:', error);
     return NextResponse.json(

@@ -95,7 +95,8 @@ export async function POST(request: NextRequest) {
         // Transform the response to flatten role names
         const transformedUser = {
             ...user,
-                Role: user.Role.map((r: { role: { name: string } }) => r.role.name)        }
+            Role: user.Role.map((r: { role: { name: string } }) => r.role.name)
+        }
         console.log('User found:', transformedUser);
         return Response.json(transformedUser);
     } catch {
@@ -105,5 +106,6 @@ export async function POST(request: NextRequest) {
     //     if (process.env.NODE_ENV === 'development') {
     //         await prisma.$disconnect();
     //     }
+    
     }
 }
