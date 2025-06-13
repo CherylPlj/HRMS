@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { FaDownload, FaEdit } from 'react-icons/fa';
 import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
+import jsPDF from 'jspdf';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -309,39 +310,53 @@ const PersonalData: React.FC = () => {
     };
   }, [user, subscription]);
 
-  const handleDownload = () => {
-    if (!facultyDetails) return;
+const handleDownload = () => {
+  if (!facultyDetails) return;
 
-    const downloadData = {
-      "Personal Information": {
-        "Name": `${user?.firstName} ${user?.lastName}`,
-        "Email": user?.emailAddresses[0]?.emailAddress,
-        "Phone": facultyDetails.Phone || 'Not set',
-        "Address": facultyDetails.Address || 'Not set',
-        "Date of Birth": facultyDetails.DateOfBirth,
-        "Emergency Contact": facultyDetails.EmergencyContact || 'Not set'
-      },
-      "Employment Information": {
-        "Faculty ID": facultyDetails.FacultyID,
-        "Position": facultyDetails.Position,
-        "Department": facultyDetails.DepartmentName,
-        "Employment Status": facultyDetails.EmploymentStatus,
-        "Hire Date": facultyDetails.HireDate,
-        "Years of Service": calculateYearsOfService(),
-        "Resignation Date": facultyDetails.ResignationDate || 'Not Applicable'
-      }
-    };
+  const doc = new jsPDF();
 
-    const blob = new Blob([JSON.stringify(downloadData, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `faculty_data_${facultyDetails.FacultyID}.json`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+  doc.setFontSize(16);
+  doc.text('Faculty Profile', 14, 15);
+
+  doc.setFontSize(12);
+  let y = 25;
+
+  const personal = {
+    "Name": `${user?.firstName} ${user?.lastName}`,
+    "Email": user?.emailAddresses[0]?.emailAddress,
+    "Phone": facultyDetails.Phone || 'Not set',
+    "Address": facultyDetails.Address || 'Not set',
+    "Date of Birth": facultyDetails.DateOfBirth,
+    "Emergency Contact": facultyDetails.EmergencyContact || 'Not set'
   };
+
+  const employment = {
+    "Faculty ID": facultyDetails.FacultyID,
+    "Position": facultyDetails.Position,
+    "Department": facultyDetails.DepartmentName,
+    "Employment Status": facultyDetails.EmploymentStatus,
+    "Hire Date": facultyDetails.HireDate,
+    "Years of Service": calculateYearsOfService(),
+    "Resignation Date": facultyDetails.ResignationDate || 'Not Applicable'
+  };
+
+  doc.text('Personal Information:', 14, y);
+  y += 8;
+  for (const [label, value] of Object.entries(personal)) {
+    doc.text(`${label}: ${value}`, 14, y);
+    y += 6;
+  }
+
+  y += 6;
+  doc.text('Employment Information:', 14, y);
+  y += 8;
+  for (const [label, value] of Object.entries(employment)) {
+    doc.text(`${label}: ${value}`, 14, y);
+    y += 6;
+  }
+
+  doc.save(`faculty_profile_${facultyDetails.FacultyID}.pdf`);
+};
 
   if (!user) {
     return <div className="p-6">Please sign in to view your personal data.</div>;
