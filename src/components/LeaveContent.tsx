@@ -387,7 +387,7 @@ const LeaveContent: React.FC = () => {
                         } else {
                             console.log("Downloading Leave Requests...");
                         }
-                        handleDownloadPDF(); // dpwnload function
+                        handleDownloadPDF(); // download function
                     }}
                     className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
                 >

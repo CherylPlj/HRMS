@@ -275,11 +275,11 @@ export default function DashboardContent() {
         // Fetch Leave Requests
         const { data: leaves, error: leavesError } = await supabase
           .from("Leave")
-          .select("*")
+          .select("*");
           // .gte("CreatedAt", dateRange[0].toISOString())
           // .lte("CreatedAt", dateRange[1].toISOString())
-          .eq("Status", "Pending");
-
+          // .eq("Status", "Pending");
+            console.log(leaves);
         if (leavesError) {
           console.error("Leave requests fetch error:", leavesError.message || leavesError);
           throw leavesError;
@@ -290,6 +290,7 @@ export default function DashboardContent() {
           approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
           rejected: leaves?.filter((l) => l.Status === "Rejected").length || 0,
         });
+        console.log("Statuses:", leaves.map((l) => l.Status));
 
       } catch (error) {
         if (error instanceof Error) {
