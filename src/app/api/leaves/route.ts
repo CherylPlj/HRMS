@@ -186,16 +186,16 @@ export async function POST(request: NextRequest) {
         });
 
         // Log the activity
-        await prisma.activityLog.create({
-            data: {
-                UserID: userId,
-                ActionType: 'leave_request_created',
-                EntityAffected: 'Leave',
-                ActionDetails: `Created leave request for faculty ID ${FacultyID}`,
-                Timestamp: new Date(),
-                IPAddress: request.headers.get('x-forwarded-for') || 'unknown'
-            }
-        });
+        // await prisma.activityLog.create({
+        //     data: {
+        //         UserID: userId,
+        //         ActionType: 'leave_request_created',
+        //         EntityAffected: 'Leave',
+        //         ActionDetails: `Created leave request for faculty ID ${FacultyID}`,
+        //         Timestamp: new Date(),
+        //         IPAddress: request.headers.get('x-forwarded-for') || 'unknown'
+        //     }
+        // });
 
         console.log('Successfully created leave request:', JSON.stringify(leave, null, 2));
         return NextResponse.json(leave);

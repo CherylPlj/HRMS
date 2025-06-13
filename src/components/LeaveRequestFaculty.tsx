@@ -10,7 +10,7 @@ type LeaveType = 'Sick' | 'Vacation' | 'Emergency';
 type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 
 interface LeaveRequest {
-    LeaveID: string;
+    LeaveID: number;
     FacultyID: number;
     LeaveType: LeaveType;
     StartDate: Date;
@@ -26,7 +26,7 @@ interface LeaveRequest {
 }
 
 interface SupabaseLeave {
-    LeaveID: string;
+    LeaveID: number;
     FacultyID: number;
     LeaveType: LeaveType;
     StartDate: string;
@@ -107,7 +107,7 @@ const LeaveRequestFaculty: React.FC = () => {
                         setError('Faculty record not found. Please contact the administrator.');
                     }
                 } else {
-                    console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
+                    console.log('No user found for email:', user.emailAddresses[0].emailAddress);
                     setError('User not found in database. Please contact the administrator.');
                 }
             } catch (error) {
