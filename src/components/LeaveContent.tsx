@@ -6,6 +6,8 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import type { Leave, Faculty, User as PrismaUser, Department } from '@/generated/prisma';
 import { LeaveType, LeaveStatus } from '@/generated/prisma';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type LeaveWithRelations = Leave & {
     Faculty: (Faculty & {
@@ -259,6 +261,64 @@ const LeaveContent: React.FC = () => {
         return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
     };
 
+    const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+
+    if (activeTab === 'management') {
+        // Title
+        doc.setFontSize(16);
+        doc.text('Leave Management Report', 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+        const tableData = leaves.map(item => [
+        item.Faculty?.Name || '',
+        item.Faculty?.Department || 'N/A',
+        item.LeaveType,
+        new Date(item.StartDate).toLocaleDateString(),
+        new Date(item.EndDate).toLocaleDateString(),
+        item.Status
+        ]);
+
+        autoTable(doc, {
+        head: [['Faculty', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Status']],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [128, 0, 0] }
+        });
+
+        doc.save('leave-management.pdf');
+
+    } else if (activeTab === 'logs') {
+        // Title
+        doc.setFontSize(16);
+        doc.text('Leave Logs Report', 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+        const tableData = leaves.map(log => [
+        `${log.Faculty?.Name}`,
+        log.LeaveType,
+        new Date(log.StartDate).toLocaleDateString(),
+        new Date(log.EndDate).toLocaleDateString(),
+        `${calculateDuration(log.StartDate, log.EndDate)}`,
+        new Date(log.CreatedAt).toLocaleDateString(),
+        log.Status
+        ]);
+
+        autoTable(doc, {
+        head: [['Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Duration', 'Date Submitted', 'Status']],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [128, 0, 0] }
+        });
+
+        doc.save('leave-logs.pdf');
+    }
+    };
+
     if (!isUserLoaded) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -327,6 +387,7 @@ const LeaveContent: React.FC = () => {
                         } else {
                             console.log("Downloading Leave Requests...");
                         }
+                        handleDownloadPDF(); // dpwnload function
                     }}
                     className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
@@ -421,7 +482,7 @@ const LeaveContent: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <div className="flex space-x-2">
-                                                            {isAdmin && leave.Status === 'Pending' && (
+                                                            {leave.Status === 'Pending' && (
                                                                 <>
                                                                     <button
                                                                         onClick={() => setStatusUpdateModal({
@@ -449,7 +510,7 @@ const LeaveContent: React.FC = () => {
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            {isAdmin && (
+                                                            { (
                                                                 <button
                                                                     onClick={() => {
                                                                         setSelectedLeaveId(leave.LeaveID);
