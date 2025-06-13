@@ -225,6 +225,8 @@ enum EmploymentStatus {
 enum SubmissionStatus {
   Submitted
   Pending
+  Approved
+  Rejected
 }
 
 enum ContractType {

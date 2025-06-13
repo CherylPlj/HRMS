@@ -13,6 +13,7 @@ const publicRoutes = [
     "/api/xr/user-access-lookup",
     "/api/faculty-documents",
     "/api/faculty/user",
+    "/api/faculty/user/[userId]",
     "/api/webhooks/clerk"
 ];
 
@@ -27,6 +28,7 @@ const ignoredRoutes = [
     "/api/xr/user-access-lookup",
     "/api/faculty-documents",
     "/api/faculty/user",
+    "/api/faculty/user/[userId]",
     "/api/webhooks/clerk"
 ];
 
