@@ -1,18 +1,22 @@
 // lib/prisma.ts
-import { PrismaClient } from '@/generated/prisma'
+import { PrismaClient } from '@prisma/client';
 
-const prismaClientSingleton = () => {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+let prisma: PrismaClient;
+
+if (process.env.NODE_ENV === 'production') {
+  // In production (Vercel): create a new client per function execution
+  prisma = new PrismaClient();
+} else {
+  // In dev: prevent multiple instances during hot reload
+  const globalWithPrisma = globalThis as typeof globalThis & {
+    prisma?: PrismaClient;
+  };
+
+  if (!globalWithPrisma.prisma) {
+    globalWithPrisma.prisma = new PrismaClient();
+  }
+
+  prisma = globalWithPrisma.prisma;
 }
 
-declare global {
-  var prisma: undefined | ReturnType<typeof prismaClientSingleton>
-}
-
-export const prisma = globalThis.prisma ?? prismaClientSingleton()
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma
-}
+export { prisma };

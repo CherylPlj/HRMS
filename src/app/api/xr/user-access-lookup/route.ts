@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
     } catch {
         // console.error('Database error:', err);
         return Response.json({ error: 'Server error' }, { status: 500 });
-    } finally {
-        if (process.env.NODE_ENV === 'development') {
-            await prisma.$disconnect();
-        }
+    // } finally {
+    //     if (process.env.NODE_ENV === 'development') {
+    //         await prisma.$disconnect();
+    //     }
     }
 }
