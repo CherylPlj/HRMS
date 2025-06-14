@@ -7,6 +7,10 @@ import { toast } from 'react-toastify';
 import { useAttendance } from '../contexts/AttendanceContext';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from "xlsx";
+
 // import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
 interface AttendanceFacultyProps {
@@ -316,6 +320,67 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
     );
   }
 
+  const handleDownloadSchedule = async () => {
+  try {
+    const FacultyID = facultyId; 
+    //const email = user?.emailAddresses?.[0]?.emailAddress ?? ''; 
+
+    const response = await fetch(`/api/schedule/${FacultyID}`);
+    const schedule = await response.json();
+
+    if (!Array.isArray(schedule) || schedule.length === 0) {
+      alert("No schedule data to download.");
+      return;
+    }
+
+    // Convert to CSV
+    const headers = ["Day", "Time In", "Time Out", "Status"];
+    const rows = schedule.map(item => [
+      item.day,
+      item.timeIn,
+      item.timeOut,
+      item.subject,
+      item.classSection,
+      item.status
+    ]);
+    
+//       const csvContent = [headers, ...rows].map(row =>
+//       row.map(value => `"${value}"`).join(",")
+//     ).join("\n");
+
+//     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+//     const url = URL.createObjectURL(blob);
+
+//     const link = document.createElement("a");
+//     link.href = url;
+//     link.download = "weekly_schedule.csv";
+//     link.click();
+//     URL.revokeObjectURL(url);
+//   } catch (error) {
+//     console.error("Error downloading schedule:", error);
+//     alert("Failed to download schedule.");
+//   }
+// };
+    const worksheet = XLSX.utils.json_to_sheet(schedule.map(s => ({
+      Day: s.day,
+      "Time In": s.timeIn,
+      "Time Out": s.timeOut,
+      Subject: s.subject,
+      "Class Section": s.classSection,
+      Status: s.status,
+    })));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Schedule");
+
+    XLSX.writeFile(workbook, "Weekly_Schedule.xlsx");
+  } catch (error) {
+    console.error("Excel download error:", error);
+    alert("Failed to export schedule.");
+  }
+};
+
+
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -461,7 +526,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
             <button 
-              onClick={() => {/* Implement download */}}
+              onClick={() => {handleDownloadSchedule}}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
