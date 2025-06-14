@@ -136,6 +136,7 @@ export default clerkMiddleware(async (auth, req) => {
             if (!userRole) {
                 throw new Error("No role found for user");
             }
+            
 
             switch (userRole.toLowerCase()) {
                 case 'admin':
