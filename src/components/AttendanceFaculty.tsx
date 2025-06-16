@@ -397,7 +397,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
                   Back to Dashboard
                 </button>
               )}
-              <p className="text-sm text-gray-500">Track your daily attendance and schedule</p>
+              <p className="text-sm text-gray-500">Track your schedule</p>
             </div>
             <div className="mt-4 sm:mt-0 text-right">
               <div className="text-sm font-medium text-gray-700">
@@ -406,119 +406,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
               </div>
             </div>
           </div>
-
-          {/* Time In/Out Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Mark Attendance</h2>
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Time In Button */}
-                <button
-                  className={`flex-1 ${
-                    (currentRecord?.timeIn &&
-                      currentRecord.date &&
-                      new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
-                    isProcessing || !isWithinTimeWindow(7, 9) // Only allow Time In from 7:00 to 8:59 AM
-                      ? 'bg-gray-300 cursor-not-allowed'
-                      : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
-                  } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
-                  onClick={handleTimeIn}
-                  // disabled={
-                  //   Boolean(
-                  //   (currentRecord?.timeIn &&
-                  //     currentRecord.date &&
-                  //     new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
-                  //   isProcessing
-                  //   ) || !validateTimeIn(currentRecord)
-                  // }
-                  disabled={
-                    isProcessing ||
-                    (isTodayRecord(currentRecord) && !!currentRecord?.timeIn) ||
-                    !isWithinTimeWindow(7, 17) // Only allow Time In from 7:00 to 5PM
-
-                  }
-                >
-                  {isProcessing ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : (
-                    'Time In'
-                  )}
-                </button>
-                {/* Time Out Button */}
-                <button
-                  className={`flex-1 ${
-                    (!currentRecord?.timeIn ||
-                      currentRecord?.timeOut ||
-                      !currentRecord?.date ||
-                      new Date(currentRecord.date).toDateString() !== new Date().toDateString() ||
-                      isProcessing ||
-                      !isWithinTimeWindow(7, 21) // Only allow Time Out from 7:00 to 20:59 (8:59 PM)
-          )
-                      ? 'bg-gray-300 cursor-not-allowed'
-                      : 'bg-[#800000] hover:bg-[#a00000] transform hover:scale-105'
-                  } text-white rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all duration-200`}
-                  onClick={handleTimeOut}
-                //   disabled={Boolean(
-                //   (
-                //     (currentRecord?.timeIn &&
-                //       currentRecord.date &&
-                //       new Date(currentRecord.date).toDateString() === new Date().toDateString()) ||
-                //     isProcessing
-                //   ) || !validateTimeIn(currentRecord)
-                // )}
-                disabled={
-                  isProcessing ||
-                  !isTodayRecord(currentRecord) ||
-                  !currentRecord?.timeIn ||
-                  !!currentRecord?.timeOut ||
-                  !isWithinTimeWindow(7, 21) // Only allow Time Out from 7:00 to 20:59 (8:59 PM)
-                }
-                >
-                  {isProcessing ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : 'Time Out'}
-                </button>
-              </div>
-            </div>
-
-            {/* Today's Record Card */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Record</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                  <span className="text-gray-600">Date</span>
-                  <span className="font-medium">{currentRecord?.date ? new Date(currentRecord.date).toLocaleDateString() : 'Not recorded'}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                  <span className="text-gray-600">Time In</span>
-                  <span className="font-medium"> 
-                    {formatTimeWithAmPm(currentRecord?.timeIn) || 'Not recorded'}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                  <span className="text-gray-600">Time Out</span>
-                  <span className="font-medium"> {formatTimeWithAmPm(currentRecord?.timeOut) || 'Not recorded'}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                  <span className="text-gray-600">Status</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(currentRecord?.status)}`}>
-                    {currentRecord?.status || 'NOT_RECORDED'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+  
         </div>
 
         {/* Schedule Section */}

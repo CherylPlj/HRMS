@@ -420,7 +420,7 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -430,7 +430,7 @@ export default function DashboardContent() {
             <FaUsers className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Present Today</p>
@@ -438,7 +438,7 @@ export default function DashboardContent() {
             </div>
             <FaUserCheck className="text-4xl text-[#800000] opacity-50" />
           </div>
-        </div>
+        </div> */}
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -486,7 +486,7 @@ export default function DashboardContent() {
             }} />
           </div>
         </div>
-
+{/*  Attendance Overview
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaUserClock className="text-[#800000] text-2xl mr-3" />
@@ -513,7 +513,7 @@ export default function DashboardContent() {
               }
             }} />
           </div>
-        </div>
+        </div> */}
 
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
@@ -535,7 +535,7 @@ export default function DashboardContent() {
             </div>
           </div>
         </div>
-
+{/* ACtivity Logs
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaHistory className="text-[#800000] text-2xl mr-3" />
@@ -563,7 +563,7 @@ export default function DashboardContent() {
               </tbody>
             </table>
           </div>
-        </div>
+        </div>  */}
       </div>
     </div>
   );

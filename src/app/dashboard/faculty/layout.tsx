@@ -204,7 +204,8 @@ export default function Dashboard() {
                 onClick={() => handleButtonClick('attendance')}
               >
                 <i className="fas fa-calendar-check text-xl"></i>
-                <span className="text-[10px]">Attendance</span>
+                {/* <span className="text-[10px]">Attendance</span> */}
+                <span className="text-[10px]">Schedule</span>
               </a>
               <a
                 href="#"
@@ -241,7 +242,8 @@ export default function Dashboard() {
                 {activeButton === 'dashboard' && 'DASHBOARD'}
                 {activeButton === 'personal-data' && 'PERSONAL DATA'}
                 {activeButton === 'documents' && 'DOCUMENTS'}
-                {activeButton === 'attendance' && 'ATTENDANCE'}
+                {/* {activeButton === 'attendance' && 'ATTENDANCE'} */}
+                {activeButton === 'attendance' && 'SCHEDULE'}
                 {activeButton === 'leave' && 'LEAVE REQUEST'}
               </h1>
             {/* </div> */}
@@ -258,14 +260,14 @@ export default function Dashboard() {
                   >
                     <i className="fas fa-comments text-black text-lg"></i>
                   </a>
-                  <a
+                  {/* <a
                     href="#"
                     className="p-2 rounded-full hover:bg-gray-200 transition"
                     title="Notifications"
                     onClick={() => setNotificationsVisible(!isNotificationsVisible)}
                   >
                     <i className="fas fa-bell text-black text-lg"></i>
-                  </a>
+                  </a> */}
                   <a
                     href="#"
                     className="p-1 rounded-full hover:bg-gray-200 transition"

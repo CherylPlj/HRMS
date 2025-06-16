@@ -618,7 +618,7 @@ const FacultyContent: React.FC = () => {
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
-            Faculty Management
+            Faculty Information
           </button>
           <button
             onClick={() => setActiveView('documentManagement')}
@@ -628,7 +628,7 @@ const FacultyContent: React.FC = () => {
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
-            Document Management
+            Document Requirements
           </button>
         </div>
         <div className="flex space-x-2">

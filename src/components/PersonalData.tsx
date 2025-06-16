@@ -337,7 +337,7 @@ const handleDownload = () => {
     "Employment Status": facultyDetails.EmploymentStatus,
     "Hire Date": facultyDetails.HireDate,
     "Years of Service": calculateYearsOfService(),
-    "Resignation Date": facultyDetails.ResignationDate || 'Not Applicable'
+    "Resignation Date": facultyDetails.ResignationDate
   };
 
   doc.text('Personal Information:', 14, y);
@@ -625,6 +625,13 @@ const handleDownload = () => {
                 {user.emailAddresses[0]?.emailAddress}
               </div>
             </div>
+          {/* Read-only fields */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+              <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
+                {facultyDetails?.DateOfBirth || 'Not set'}
+              </div>
+            </div>
 
             {/* Editable fields with validation */}
             <div className="mb-4">
@@ -696,14 +703,6 @@ const handleDownload = () => {
                 </div>
               )}
             </div>
-
-            {/* Read-only fields */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-              <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
-                {facultyDetails?.DateOfBirth || 'Not set'}
-              </div>
-            </div>
           </div>
 
           {/* Right Column - All read-only */}
@@ -721,10 +720,16 @@ const handleDownload = () => {
               </div>
             </div>
             <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Department</label>
+              <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
+                {facultyDetails?.DepartmentName || 'Not set'}
+            </div>
+            </div>
+            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Employment Status</label>
               <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
                 {facultyDetails?.EmploymentStatus || 'Not set'}
-              </div>
+            </div>
             </div>
             <div className="mb-4 grid grid-cols-2 gap-4">
               <div>
@@ -733,19 +738,22 @@ const handleDownload = () => {
                   {facultyDetails?.HireDate || 'Not set'}
                 </div>
               </div>
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700">Resignation Date</label>
                 <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
                   {facultyDetails?.ResignationDate || 'Not set'}
                 </div>
-              </div>
+              </div> */}
+              {facultyDetails?.ResignationDate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Resignation Date</label>
+                  <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
+                    {facultyDetails.ResignationDate}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">Department</label>
-              <div className="bg-blue-50 text-black p-2 rounded border border-blue-100">
-                {facultyDetails?.DepartmentName || 'Not set'}
-              </div>
-            </div>
+          
           </div>
         </div>
       )}

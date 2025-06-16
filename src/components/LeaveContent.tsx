@@ -367,7 +367,7 @@ const LeaveContent: React.FC = () => {
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
-                        Leave Management
+                        Leave Requests
                     </button>
                     <button
                         onClick={() => setActiveTab('logs')}

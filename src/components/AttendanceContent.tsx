@@ -328,7 +328,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ onConfirm, onClose }) => (
 const AttendanceContent: React.FC = () => {
   const { user } = useUser();
   // Tab state
-  const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('attendance');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('schedule');
 
   // Attendance state
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -461,6 +461,7 @@ const AttendanceContent: React.FC = () => {
       {/* Header with Toggle Switch */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex space-x-6">
+          {false && (
           <button
             onClick={() => setActiveTab('attendance')}
             className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
@@ -471,6 +472,7 @@ const AttendanceContent: React.FC = () => {
           >
             Attendance Management
           </button>
+          )}
           <button
             onClick={() => setActiveTab('schedule')}
             className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${

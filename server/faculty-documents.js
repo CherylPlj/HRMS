@@ -6,8 +6,8 @@ const { createClient } = require('@supabase/supabase-js');
 const router = express.Router();
 
 // --- Supabase setup ---
-const supabaseUrl = 'YOUR_SUPABASE_URL'; // <-- Replace with your Supabase URL
-const supabaseKey = 'YOUR_SUPABASE_SERVICE_ROLE_KEY'; // <-- Replace with your Supabase service role key
+const supabaseUrl = 'NEXT_PUBLIC_SUPABASE_URL'; // <-- Replace with your Supabase URL
+const supabaseKey = 'SUPABASE_SERVICE_ROLE_KEY'; // <-- Replace with your Supabase service role key
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- Multer setup for temp local upload ---
@@ -23,7 +23,7 @@ const upload = multer({ storage });
 // --- GET documents from Supabase ---
 router.get('/', async (req, res) => {
   const { facultyId } = req.query;
-  let query = supabase.from('faculty_documents').select('*');
+  let query = supabase.from('Document').select('*');
   if (facultyId) {
     query = query.eq('FacultyID', facultyId);
   }
@@ -58,7 +58,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
   // Insert metadata into Supabase table
   const { data, error: insertError } = await supabase
-    .from('faculty_documents')
+    .from('Document')
     .insert([{
       FacultyID: parseInt(FacultyID, 10),
       DocumentTypeID: parseInt(DocumentTypeID, 10),

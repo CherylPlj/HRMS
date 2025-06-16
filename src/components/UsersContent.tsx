@@ -1012,6 +1012,7 @@ const UsersContent: React.FC = () => {
           {isViewingLogs ? 'Activity Logs' : 'User Management'}
         </h1>
         <div className="flex flex-wrap gap-3">
+          {false && (
           <button
             className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
             onClick={toggleView}
@@ -1028,6 +1029,7 @@ const UsersContent: React.FC = () => {
               </>
             )}
           </button>
+          )}
           {isViewingLogs ? (
             <button
               className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
@@ -1199,7 +1201,7 @@ const UsersContent: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th> */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
@@ -1213,7 +1215,7 @@ const UsersContent: React.FC = () => {
                 {filteredUsers.map((user, index) => (
                   <tr key={user.UserID} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.UserID}</td>
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.UserID}</td> */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <img
                         src={user.Photo || '/manprofileavatar.png'}
