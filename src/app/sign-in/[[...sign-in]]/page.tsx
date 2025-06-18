@@ -1,12 +1,13 @@
 "use client";
 
-import { SignIn, useUser, useClerk } from "@clerk/nextjs";
+import { useUser, useClerk, useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { Eye, ArrowLeft, AlertCircle } from 'lucide-react';
 
 // Initialize Supabase client with proper error handling
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,265 +41,498 @@ interface UserCheck {
   UserRole: UserRole[];
 }
 
+interface WarningModalProps {
+  isOpen: boolean;
+  message: string;
+  onClose: () => void;
+}
+
+const WarningModal: React.FC<WarningModalProps> = ({ isOpen, message, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="flex items-center justify-center mb-4">
+          <AlertCircle className="h-12 w-12 text-[#800000]" />
+        </div>
+        <h2 className="text-xl font-bold text-center text-[#800000] mb-4">Access Denied</h2>
+        <p className="text-gray-700 text-center mb-6">{message}</p>
+        <div className="flex justify-center">
+          <button
+            onClick={onClose}
+            className="bg-[#800000] text-white px-6 py-2 rounded hover:bg-[#800000]/80 transition-colors"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { signIn, setActive } = useSignIn();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const portal = searchParams?.get('portal') || 'faculty';
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [warningModal, setWarningModal] = useState({
+    isOpen: false,
+    message: ''
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(() => {
+    // Initialize rememberMe from localStorage on component mount
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('rememberMe') === 'true';
+    }
+    return false;
+  });
 
+  // Load remembered email and state on component mount
   useEffect(() => {
-    const handleSignIn = async () => {
-      try {
-        if (!isSignedIn || !user) {
-          console.log('User not signed in or not loaded');
-          return;
+    if (typeof window !== 'undefined') {
+      const rememberedEmail = localStorage.getItem('rememberedEmail');
+      const rememberedState = localStorage.getItem('rememberMe') === 'true';
+      
+      if (rememberedEmail && rememberedState) {
+        setFormData(prev => ({ ...prev, email: rememberedEmail }));
+        setRememberMe(true);
+      }
+    }
+  }, []);
+
+  const validateEmailCharacters = (email: string) => {
+    // Regular expression to match only allowed characters
+    const validEmailRegex = /^[a-zA-Z0-9._\-@ ]*$/;
+    if (!validEmailRegex.test(email)) {
+      return 'Only letters, numbers, dots, underscores, hyphens, and @ are allowed';
+    }
+
+    // Check for length requirements
+    if (email.length > 50) {
+      return 'Email must not exceed 50 characters';
+    }
+
+    if (email.length < 6 && email.length > 0) {
+      return 'Email must be at least 6 characters';
+    }
+
+    // Always check for valid email format if there's input
+    if (email.length > 0) {
+      const emailRegex = /^[a-zA-Z0-9._\-]+@[a-zA-Z0-9._\-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        if (!email.includes('@')) {
+          return 'Please include @ in the email address';
         }
-
-        const userEmail = user.primaryEmailAddress?.emailAddress;
-        console.log('Attempting to verify user with email:', userEmail);
-
-        // Verify Supabase client is initialized
-        if (!supabase) {
-          console.error('Supabase client is not initialized');
-          setError('Database connection error. Please try again.');
-          await signOut();
-          return;
+        if (!email.includes('.')) {
+          return 'Please include a domain (e.g., .com, .edu)';
         }
+        return 'Please enter a valid email address (e.g., example@domain.com)';
+      }
+    }
 
-        try {
-          // First, let's check if the user exists in the database
-          console.log('Checking if user exists in database...');
-          const { data: userCheck, error: userError } = await supabase
-            .from('User')
-            .select(`
-              UserID,
-              Status,
-              Email,
-              isDeleted,
-              UserRole!inner (
-                role:Role (
-                  name
-                )
-              )
-            `)
-            .eq('Email', userEmail)
-            .single();
+    return null;
+  };
 
-          console.log('Raw database response:', {
-            userCheck,
-            hasError: !!userError,
-            errorDetails: userError ? {
-              message: userError.message,
-              details: userError.details,
-              hint: userError.hint,
-              code: userError.code
-            } : null
-          });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'email') {
+      const error = validateEmailCharacters(value);
+      setEmailError(error);
+      
+      if (error && error.includes('Only letters, numbers')) {
+        // Don't update the form if invalid characters are entered
+        return;
+      }
+      
+      if (value.length > 50) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: value.slice(0, 50)
+        }));
+        return;
+      }
+    }
+    
+    if (name === 'password') {
+      if (value.length >= 50) {
+        setPasswordError('Password must not exceed 50 characters');
+        setFormData(prev => ({
+          ...prev,
+          [name]: value.slice(0, 50)
+        }));
+        return;
+      } else if (value.length < 6 && value.length > 0) {
+        setPasswordError('Password must be at least 6 characters');
+      } else {
+        setPasswordError(null);
+      }
+    }
 
-          if (userError) {
-            console.error('Error checking user:', {
-              error: userError,
-              message: userError.message,
-              details: userError.details,
-              hint: userError.hint,
-              code: userError.code
-            });
-            setError('Failed to verify user. Please try again.');
-            await signOut();
-            return;
-          }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear any previous errors when user starts typing
+    setError(null);
+  };
 
-          if (!userCheck) {
-            console.error('User not found in database:', {
-              email: userEmail,
-              clerkUserId: user.id
-            });
-            setError('User not found in the system. Please contact your administrator.');
-            await signOut();
-            return;
-          }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-          // Check if user is deleted
-          if (userCheck.isDeleted) {
-            console.error('Deleted user attempting to login:', {
-              userId: userCheck.UserID,
-              email: userCheck.Email
-            });
-            setError('This account has been deleted. Please contact your administrator.');
-            await signOut();
-            return;
-          }
+    try {
+      if (!formData.email || !formData.password) {
+        setIsLoading(false);
+        throw new Error('Please fill in all fields');
+      }
 
-          // Get the role from UserRole relation
-          const userRoles = (userCheck as unknown as UserCheck).UserRole;
-          console.log('User roles from database:', userRoles);
+      if (formData.email.length < 6) {
+        setIsLoading(false);
+        throw new Error('Email must be at least 6 characters');
+      }
 
-          if (!userRoles || userRoles.length === 0) {
-            console.error('No roles found for user:', {
-              userId: userCheck.UserID,
-              email: userCheck.Email
-            });
-            setError('User role not found. Please contact your administrator.');
-            await signOut();
-            return;
-          }
+      if (formData.email.length > 50) {
+        setIsLoading(false);
+        throw new Error('Email must not exceed 50 characters');
+      }
 
-          const role = userRoles[0]?.role?.name;
-          console.log('Extracted role:', role);
+      const emailError = validateEmailCharacters(formData.email);
+      if (emailError) {
+        setIsLoading(false);
+        throw new Error(emailError);
+      }
 
-          if (!role) {
-            console.error('Invalid role data structure:', {
-              userId: userCheck.UserID,
-              email: userCheck.Email,
-              userRoles
-            });
-            setError('User role not found. Please contact your administrator.');
-            await signOut();
-            return;
-          }
+      if (formData.password.length < 6) {
+        setIsLoading(false);
+        throw new Error('Password must be at least 6 characters');
+      }
 
-          // Check if user role is allowed to access HRMS
-          if (role.toLowerCase() === 'registrar' || role.toLowerCase() === 'cashier') {
-            console.error('Unauthorized role attempting to access HRMS:', {
-              userId: userCheck.UserID,
-              role: role
-            });
-            setError('Unauthorized User.');
-            await signOut();
-            return;
-          }
+      if (formData.password.length > 50) {
+        setIsLoading(false);
+        throw new Error('Password must not exceed 50 characters');
+      }
 
-          if (userCheck.Status !== 'Active') {
-            console.error('User account is not active:', {
-              userId: userCheck.UserID,
-              status: userCheck.Status
-            });
-            setError('Your account is not active. Please contact your administrator.');
-            await signOut();
-            return;
-          }
+      if (!signIn) {
+        setIsLoading(false);
+        throw new Error('Authentication is not initialized');
+      }
 
-          // Update last login timestamp using the API route
-          const response = await fetch('/api/updateLastLogin', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ userId: userCheck.UserID }),
-          });
+      // First verify the role before attempting to sign in
+      const { data: userCheck, error: userError } = await supabase
+        .from('User')
+        .select(`
+          UserID,
+          Status,
+          Email,
+          isDeleted,
+          UserRole!inner (
+            role:Role (
+              name
+            )
+          )
+        `)
+        .eq('Email', formData.email)
+        .single();
 
-          if (!response.ok) {
-            console.error('Error updating last login:', await response.text());
-            // Continue with the flow even if last login update fails
-          } else {
-            console.log('Successfully updated last login timestamp');
-          }
+      if (userError) {
+        setIsLoading(false);
+        throw new Error('Failed to verify user role');
+      }
 
-          // Determine the redirect path based on user role
-          let redirectPath = '/';
-          switch (role.toLowerCase()) {
-            case 'admin':
-              redirectPath = '/dashboard/admin';
-              break;
-            case 'faculty':
-              redirectPath = '/dashboard/faculty';
-              break;
-            case 'registrar':
-              redirectPath = '/dashboard/registrar';
-              break;
-            case 'cashier':
-              redirectPath = '/dashboard/cashier';
-              break;
-            default:
-              console.warn('Unknown role:', role);
-              redirectPath = '/';
-          }
+      if (!userCheck) {
+        setIsLoading(false);
+        throw new Error('User not found in the system');
+      }
 
-          // Check if there's a return URL in the search params
-          const returnUrl = searchParams?.get('returnUrl');
-          if (returnUrl) {
-            // Validate the return URL to prevent open redirect vulnerabilities
-            const validPaths = ['/dashboard/admin', '/dashboard/faculty', '/dashboard/registrar', '/dashboard/cashier'];
-            const isValidReturnUrl = validPaths.some(path => returnUrl.startsWith(path));
-            if (isValidReturnUrl) {
-              redirectPath = returnUrl;
-            }
-          }
+      const userRoles = (userCheck as unknown as UserCheck).UserRole;
+      if (!userRoles || userRoles.length === 0) {
+        setIsLoading(false);
+        throw new Error('User role not found');
+      }
 
-          console.log('Redirecting to:', redirectPath);
-          router.push(redirectPath);
-        } catch (queryError) {
-          console.error('Error executing Supabase query:', {
-            error: queryError,
-            message: queryError instanceof Error ? queryError.message : 'Unknown error',
-            stack: queryError instanceof Error ? queryError.stack : undefined
-          });
-          setError('Database query error. Please try again.');
-          await signOut();
-        }
-      } catch (error) {
-        console.error('Error in handleSignIn:', {
-          error,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined
+      const role = userRoles[0]?.role?.name;
+      if (!role) {
+        setIsLoading(false);
+        throw new Error('Invalid role configuration');
+      }
+
+      const portalRole = portal.toLowerCase();
+      if (role.toLowerCase() !== portalRole) {
+        setIsLoading(false);
+        setWarningModal({
+          isOpen: true,
+          message: `Your account has ${role.toLowerCase()} privileges. Please use the ${role.toLowerCase()} portal instead.`
         });
-        setError(error instanceof Error ? error.message : "Failed to sign in. Please try again.");
-        // Sign out the user if there's an error
+        setFormData({ email: '', password: '' }); // Clear form data when showing warning
+        return;
+      }
+
+      // Proceed with sign in only if role matches
+      const result = await signIn.create({
+        identifier: formData.email,
+        password: formData.password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ 
+          session: result.createdSessionId,
+        });
+        
+        // Handle remember me state persistence
+        if (rememberMe) {
+          localStorage.setItem('rememberedEmail', formData.email);
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('rememberedEmail');
+          localStorage.removeItem('rememberMe');
+        }
+
+        // After successful sign-in, verify user and redirect
+        const userEmail = formData.email;
+
+        if (userCheck.isDeleted) {
+          await signOut();
+          setIsLoading(false);
+          throw new Error('This account has been deleted');
+        }
+
+        if (userCheck.Status !== 'Active') {
+          await signOut();
+          setIsLoading(false);
+          throw new Error('Your account is not active');
+        }
+
+        // Update last login timestamp
+        await fetch('/api/updateLastLogin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: userCheck.UserID }),
+        });
+
+        // Redirect to the appropriate dashboard
+        router.push(`/dashboard/${role.toLowerCase()}`);
+      } else {
+        setIsLoading(false);
+        throw new Error('Sign in failed');
+      }
+    } catch (err) {
+      console.error('Sign in error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to sign in. Please try again.');
+      if (isSignedIn) {
         await signOut();
       }
-    };
-
-    if (isLoaded && isSignedIn && user) {
-      handleSignIn();
+      setIsLoading(false);
     }
-  }, [isLoaded, isSignedIn, user, router, searchParams, signOut]);
+  };
+
+  const handleBack = () => {
+    if (isSignedIn) {
+      signOut();
+    }
+    router.push('/');
+  };
+
+  const closeWarningModal = () => {
+    setWarningModal({ isOpen: false, message: '' });
+    setFormData({ email: '', password: '' }); // Clear the form
+  };
+
+  const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setRememberMe(checked);
+    if (checked) {
+      localStorage.setItem('rememberMe', 'true');
+      if (formData.email) {
+        localStorage.setItem('rememberedEmail', formData.email);
+      }
+    } else {
+      localStorage.removeItem('rememberedEmail');
+      localStorage.removeItem('rememberMe');
+    }
+  };
+
+  // Return early if auth is not loaded
+  if (!isLoaded || !signIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[url('/portalBG.png')] bg-cover bg-center">
-      <div className="bg-white p-6 rounded-md shadow-md backdrop-blur-sm bg-opacity-80">
-        <Image
-          alt="logo"
-          src="/sjsfilogo.png"
-          width={112}
-          height={112}
-          className="mx-auto h-28 mb-4"
-        />
-        <h1 className="text-center text-xl font-bold text-[#800000] mb-4">
-          SJSFI HRMS Portal Login
-        </h1>
-        {error && (
-          <div className="mb-4 p-2 text-sm text-red-600 bg-red-50 rounded">
-            {error}
+    <>
+      <WarningModal 
+        isOpen={warningModal.isOpen}
+        message={warningModal.message}
+        onClose={closeWarningModal}
+      />
+
+      <div className="min-h-screen flex">
+        {/* Left side - Background */}
+        <div className="flex-1 bg-[url('/portalBG.png')] bg-cover bg-center" />
+
+        {/* Right side - Login panel */}
+        <div className="absolute right-0 w-full md:w-1/3 min-h-screen min-w-[360px] pt-[10vh] overflow-hidden bg-white/70 backdrop-blur-[20px] backdrop-saturate-[168%] shadow-md m-0 rounded-none flex flex-col bg-clip-border border border-transparent break-words mb-4">
+          {/* Back button */}
+          <button
+            onClick={handleBack}
+            className="absolute top-4 left-4 text-[#800000] hover:text-[#800000]/80 transition-colors duration-200 flex items-center gap-1 text-sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+
+          <div className="flex flex-col items-center h-full w-full">
+            <div className="flex flex-col items-center justify-center w-full mb-4">
+              <Image
+                alt="SJSFI Logo"
+                src="/sjsfilogo.png"
+                width={90}
+                height={90}
+                className="mb-2"
+                priority
+              />
+              <h1 className="text-3xl text-center w-full mb-2 mx-1">
+                <span className="font-bold text-[#800000]">SJSFI-HRMS </span>
+                {portal.charAt(0).toUpperCase() + portal.slice(1)} Module
+              </h1>
+            </div>
+            <div className="flex flex-col items-center justify-center w-full">
+              <p className="text-center text-black text-sm mb-4">
+                Sign in to start your session
+              </p>
+              {error && (
+                <div className="mb-4 p-2 text-sm text-red-600 bg-red-50 rounded w-full mx-4">
+                  {error}
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="w-full px-4" autoComplete="off">
+                <div className="mb-4 w-full">
+                  <div className="relative w-full">
+                    <input
+                      autoComplete="off"
+                      placeholder="Email Address"
+                      className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10 ${
+                        emailError ? 'border-red-500' : ''
+                      }`}
+                      type="text"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {emailError && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {emailError}
+                    </p>
+                  )}
+                </div>
+                <div className="mb-4 w-full">
+                  <div className="relative w-full">
+                    <input
+                      autoComplete="off"
+                      placeholder="Password"
+                      className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10 ${
+                        passwordError ? 'border-red-500' : ''
+                      }`}
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none"
+                      disabled={isLoading}
+                    >
+                      <Eye className="h-[18px] w-[18px]" />
+                    </button>
+                  </div>
+                  {passwordError && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {passwordError}
+                    </p>
+                  )}
+                </div>
+                <div className="mb-4 w-full flex items-center">
+                  <label className="flex items-center cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={handleRememberMeChange}
+                      className="form-checkbox h-4 w-4 text-[#800000] rounded border-gray-300 focus:ring-[#800000]"
+                      disabled={isLoading}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Remember me</span>
+                  </label>
+                </div>
+                <div className="mb-4 w-full">
+                  <button
+                    type="submit"
+                    className={`text-sm rounded-sm px-4 py-2 w-full transition duration-200 ease-in-out ${
+                      isLoading || !formData.email || !formData.password
+                        ? 'bg-white text-red-600 cursor-not-allowed opacity-75'
+                        : 'bg-[#800000] hover:bg-[#800000]/80 text-white'
+                    }`}
+                    disabled={isLoading || !formData.email || !formData.password}
+                  >
+                    {isLoading ? 'Signing in...' : 'Sign In'}
+                  </button>
+                </div>
+                <div className="flex items-center justify-center mb-4 w-full">
+                  <a
+                    className="font-medium text-sm text-[#800000] hover:underline hover:text-[#800000]/80 transition duration-200 ease-in-out"
+                    href="/forgot-password"
+                  >
+                    I forgot my password
+                  </a>
+                </div>
+                <div className="flex items-center justify-center mb-4 w-full">
+                  <p className="text-sm text-black text-center">
+                    By using this service, you understood and agree to the
+                    <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
+                    <a
+                      className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      href="/terms-of-use"
+                    >
+                      Terms of Use
+                    </a>
+                    {' '}and{' '}
+                    <a
+                      className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      href="/privacy-statement"
+                    >
+                      Privacy Statement
+                    </a>
+                    .
+                  </p>
+                </div>
+              </form>
+            </div>
           </div>
-        )}
-        <SignIn
-          appearance={{
-            elements: {
-              formButtonPrimary: "bg-[#800000] hover:bg-red-800",
-              formFieldInput: "border-gray-300 focus:border-[#800000] focus:ring-[#800000]",
-              formFieldLabel: "text-gray-700",
-              formFieldAction: "text-[#800000] hover:text-red-800",
-              identityPreviewEditButton: "text-[#800000] hover:text-red-800",
-              card: "bg-transparent shadow-none",
-              headerTitle: "text-[#800000]",
-              headerSubtitle: "text-gray-600",
-              socialButtonsBlockButton: "border-gray-300 hover:bg-gray-50",
-              socialButtonsBlockButtonText: "text-gray-700",
-              socialButtonsBlockButtonArrow: "text-gray-700",
-              dividerLine: "bg-gray-300",
-              dividerText: "text-gray-600",
-              formFieldWarningText: "text-red-600",
-              formFieldErrorText: "text-red-600",
-              footerAction: "text-gray-600",
-              footerActionLink: "text-[#800000] hover:text-red-800",
-            },
-          }}
-          afterSignInUrl="/sign-in"
-          signUpUrl="/sign-up"
-        />
+        </div>
       </div>
-    </div>
+    </>
   );
 } 

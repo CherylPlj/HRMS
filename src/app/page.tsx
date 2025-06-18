@@ -2,12 +2,10 @@
 
 'use client';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
-  const currentYear = new Date().getFullYear();
 
   const navigateToFaculty = () => {
     router.push('/sign-in?portal=faculty');
@@ -18,137 +16,72 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left Side - Branding Section */}
-      <div className="w-full md:w-1/2 bg-[#800000] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/dotsBG.png')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-[#800000] to-[#600000]"></div>
+    <div className="min-h-screen flex">
+      {/* Left side - Background */}
+      <div className="flex-1 bg-[url('/portalBG.png')] bg-cover bg-center" />
 
-        <div className="relative h-full flex flex-col items-center justify-center p-8 text-white">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
-          >
-            <motion.div
-              animate={{
-                y: [0, -10, 0],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <Image
-                src="/sjsfilogo.png"
-                alt="School Logo"
-                width={192}
-                height={192}
-                className="mx-auto mb-8 drop-shadow-lg"
-                priority
-              />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <motion.h1
-                className="text-4xl md:text-5xl font-bold mb-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                Saint Joseph School of Fairview Inc.
-              </motion.h1>
-              <motion.p
-                className="text-xl text-white/90"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-              >
-                Human Resource Management System
-              </motion.p>
-            </motion.div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Right Side - Login Options */}
-      <div className="w-full md:w-1/2 bg-gray-50 flex items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-full max-w-md"
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">
-              Welcome Back
-            </h2>
-            <p className="text-gray-600">
-              Please select your role to continue
+      {/* Right side - Login panel */}
+      <div className="absolute right-0 w-full md:w-1/3 min-h-screen min-w-[360px] pt-[10vh] overflow-hidden bg-white/70 backdrop-blur-[20px] backdrop-saturate-[168%] shadow-md m-0 rounded-none flex flex-col bg-clip-border border border-transparent break-words mb-4">
+        <div className="flex flex-col items-center h-full w-full">
+          <div className="flex flex-col items-center justify-center w-full mb-4">
+            <Image
+              alt="SJSFI Logo"
+              src="/sjsfilogo.png"
+              width={90}
+              height={90}
+              className="mb-2"
+              priority
+            />
+            <h1 className="text-3xl text-center text-[#800000] w-full">
+              Welcome to <span className="font-bold">SJSFI-HRMS Portal</span>
+            </h1>
+          </div>
+          <div className="flex flex-col items-center justify-center w-full">
+            <p className="text-center text-black text-sm mb-4">
+              Please click or tap your role to sign in
             </p>
+            <div className="w-full px-4">
+              <div className="mb-4 w-full">
+                <button
+                  type="button"
+                  onClick={navigateToFaculty}
+                  className="relative bg-[#800000] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-50 hover:before:rounded-sm"
+                >
+                  <span className="relative z-10">Faculty</span>
+                </button>
+              </div>
+              <div className="mb-4 w-full">
+                <button
+                  type="button"
+                  onClick={navigateToAdmin}
+                  className="relative bg-[#B8860B] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-25 hover:before:rounded-sm"
+                >
+                  <span className="relative z-10">Admin</span>
+                </button>
+              </div>
+              <div className="flex items-center justify-center mb-4 w-full">
+                <p className="text-sm text-black text-center">
+                  By using this service, you understood and agree to the
+                  <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
+                  <a
+                    className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                    href="/terms-of-use"
+                  >
+                    Terms of Use
+                  </a>
+                  {' '}and{' '}
+                  <a
+                    className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                    href="/privacy-statement"
+                  >
+                    Privacy Statement
+                  </a>
+                  .
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div className="space-y-6">
-            {/* Faculty Option */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={navigateToFaculty}
-              className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-xl bg-[#800000]/10 flex items-center justify-center group-hover:bg-[#800000] transition-colors duration-300">
-                  <i className="fas fa-chalkboard-teacher text-xl text-[#800000] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-1">
-                    Faculty Portal
-                  </h3>
-                  <p className="text-gray-600 text-sm">
-                    Access your faculty dashboard
-                  </p>
-                </div>
-              </div>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-[#800000] transition-colors duration-300">
-                <i className="fas fa-chevron-right"></i>
-              </div>
-            </motion.div>
-
-            {/* Admin Option */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={navigateToAdmin}
-              className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-xl bg-[#800000]/10 flex items-center justify-center group-hover:bg-[#800000] transition-colors duration-300">
-                  <i className="fas fa-user-shield text-xl text-[#800000] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-1">
-                    Administrator Portal
-                  </h3>
-                  <p className="text-gray-600 text-sm">
-                    Access administrative controls
-                  </p>
-                </div>
-              </div>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-[#800000] transition-colors duration-300">
-                <i className="fas fa-chevron-right"></i>
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="mt-12 text-center text-gray-500 text-sm">
-            <p>© {currentYear} Saint Joseph School of Fairview Inc.</p>
-          </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
