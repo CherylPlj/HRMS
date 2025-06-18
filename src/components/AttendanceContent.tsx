@@ -481,7 +481,7 @@ const AttendanceContent: React.FC = () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Schedule Management
+            Schedule Assignment
           </button>
         </div>
         {activeTab === 'attendance' && (
