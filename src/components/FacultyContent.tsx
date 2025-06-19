@@ -7,11 +7,18 @@ import { fetchFacultyDocuments } from '../api/faculty-documents';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import JSZip from 'jszip';
-import { Document, Page, pdfjs } from 'react-pdf';
+import dynamic from 'next/dynamic';
+
+// Dynamically import react-pdf components to avoid SSR issues
+const Document = dynamic(() => import('react-pdf').then(mod => mod.Document), { ssr: false });
+const Page = dynamic(() => import('react-pdf').then(mod => mod.Page), { ssr: false });
+
+// Import CSS for react-pdf
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 // Set up PDF.js worker
+import { pdfjs } from 'react-pdf';
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface Faculty {
