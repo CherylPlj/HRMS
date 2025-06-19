@@ -89,8 +89,8 @@ model Document {
   DocumentID        Int       @id @default(autoincrement())
   FacultyID         Int
   DocumentTypeID    Int
-  UploadDate        DateTime  @default(now())
-  SubmissionStatus  SubmissionStatus @default(Pending)
+  UploadDate        DateTime?  @default(now())
+  SubmissionStatus  SubmissionStatus @default(Submitted)
   FilePath          String?   // Google Drive file ID
   FileUrl           String?   // Google Drive web view link
   DownloadUrl       String?   // Google Drive download link

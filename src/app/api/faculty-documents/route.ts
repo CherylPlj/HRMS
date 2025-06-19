@@ -45,6 +45,7 @@ export async function GET(request: Request) {
     // Get facultyId from query parameters
     const { searchParams } = new URL(request.url);
     const facultyId = searchParams.get('facultyId');
+    const documentTypeId = searchParams.get('documentTypeId');
 
     console.log('Fetching documents for faculty:', facultyId);
 
@@ -94,6 +95,10 @@ export async function GET(request: Request) {
 
     if (facultyId && facultyId !== 'all') {
       query = query.eq('FacultyID', facultyId);
+    }
+    
+    if (documentTypeId) {
+      query = query.eq('DocumentTypeID', documentTypeId);
     }
     
     const { data: documents, error: documentsError } = await query.order('UploadDate', { ascending: false });
@@ -209,14 +214,42 @@ export async function POST(request: Request) {
 
     console.log('Google Drive upload successful:', uploadResult);
 
-    // Create document record in Supabase
+    // Check if document already exists
+    const { data: existingDoc, error: checkError } = await supabaseAdmin
+      .from('Document')
+      .select('DocumentID, FilePath')
+      .eq('FacultyID', facultyData.FacultyID)
+      .eq('DocumentTypeID', parseInt(DocumentTypeID as string))
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error checking existing document:', checkError);
+      return NextResponse.json(
+        { error: 'Failed to check existing document: ' + checkError.message },
+        { status: 500 }
+      );
+    }
+
+    // If document exists, delete old file from Google Drive
+    if (existingDoc?.FilePath) {
+      try {
+        await googleDriveService.deleteFile(existingDoc.FilePath);
+        console.log('Deleted old file from Google Drive:', existingDoc.FilePath);
+      } catch (deleteError) {
+        console.error('Error deleting old file:', deleteError);
+        // Continue with update even if delete fails
+      }
+    }
+
+    // Update or insert document record
     const { data: document, error: documentError } = await supabaseAdmin
       .from('Document')
-      .insert([{
+      .upsert([{
+        ...(existingDoc?.DocumentID ? { DocumentID: existingDoc.DocumentID } : {}), // Only include DocumentID if it exists
         FacultyID: facultyData.FacultyID,
         DocumentTypeID: parseInt(DocumentTypeID as string),
         UploadDate: new Date().toISOString(),
-        SubmissionStatus: 'Pending',
+        SubmissionStatus: 'Submitted',
         FilePath: uploadResult.fileId,
         FileUrl: uploadResult.webViewLink,
         DownloadUrl: uploadResult.downloadLink
@@ -225,16 +258,16 @@ export async function POST(request: Request) {
       .single();
 
     if (documentError) {
-      console.error('Error creating document record:', documentError);
-      // If document record creation fails, delete the uploaded file from Google Drive
+      console.error('Error updating document record:', documentError);
+      // If document record update fails, delete the uploaded file from Google Drive
       await googleDriveService.deleteFile(uploadResult.fileId);
       return NextResponse.json(
-        { error: 'Failed to create document record: ' + documentError.message },
+        { error: 'Failed to update document record: ' + documentError.message },
         { status: 500 }
       );
     }
 
-    console.log('Document record created successfully:', document);
+    console.log('Document record updated successfully:', document);
     return NextResponse.json(document);
   } catch (error) {
     console.error('Error in faculty-documents POST:', error);

@@ -3,24 +3,32 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET() {
   try {
+    console.log('Fetching document types from Supabase...');
+    
     const { data: documentTypes, error } = await supabaseAdmin
       .from('DocumentType')
       .select('*')
       .order('DocumentTypeName');
 
     if (error) {
-      console.error('Error fetching document types:', error);
+      console.error('Supabase error fetching document types:', error);
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
       );
     }
 
+    if (!documentTypes || documentTypes.length === 0) {
+      console.log('No document types found');
+      return NextResponse.json([]);
+    }
+
+    console.log('Successfully fetched document types:', documentTypes);
     return NextResponse.json(documentTypes);
   } catch (error) {
-    console.error('Error in document-types GET:', error);
+    console.error('Unexpected error in document-types GET:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }
@@ -41,7 +49,7 @@ export async function POST(request: Request) {
       .from('DocumentType')
       .insert([{ 
         DocumentTypeName,
-        AllowedFileTypes: AllowedFileTypes || ['.pdf', '.doc', '.docx'],
+        AllowedFileTypes: AllowedFileTypes || ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg'],
         Template: Template || null
       }])
       .select()

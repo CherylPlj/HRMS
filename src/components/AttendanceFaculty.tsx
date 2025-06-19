@@ -9,7 +9,7 @@ import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
 
 // import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
@@ -321,28 +321,64 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
   }
 
   const handleDownloadSchedule = async () => {
-  try {
-    const FacultyID = facultyId; 
-    //const email = user?.emailAddresses?.[0]?.emailAddress ?? ''; 
-
-    const response = await fetch(`/api/schedule/${FacultyID}`);
-    const schedule = await response.json();
-
-    if (!Array.isArray(schedule) || schedule.length === 0) {
-      alert("No schedule data to download.");
-      return;
+    try {
+      const FacultyID = facultyId;
+  
+      const response = await fetch(`/api/schedule/${FacultyID}`);
+      const schedule = await response.json();
+  
+      if (!Array.isArray(schedule) || schedule.length === 0) {
+        alert("No schedule data to download.");
+        return;
+      }
+  
+      // Create a new Excel workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Schedule");
+  
+      // Define worksheet headers
+      worksheet.columns = [
+        { header: "Day", key: "day" },
+        { header: "Time In", key: "timeIn" },
+        { header: "Time Out", key: "timeOut" },
+        { header: "Subject", key: "subject" },
+        { header: "Class Section", key: "classSection" },
+        { header: "Status", key: "status" },
+      ];
+  
+      // Add data rows
+      schedule.forEach((s) => {
+        worksheet.addRow({
+          day: s.day,
+          timeIn: s.timeIn,
+          timeOut: s.timeOut,
+          subject: s.subject,
+          classSection: s.classSection,
+          status: s.status,
+        });
+      });
+  
+      // Generate Excel file in-memory and trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+  
+      const blob = new Blob([buffer], {
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+  
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Weekly_Schedule.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Excel download error:", error);
+      alert("Failed to export schedule.");
     }
-
-    // Convert to CSV
-    const headers = ["Day", "Time In", "Time Out", "Status"];
-    const rows = schedule.map(item => [
-      item.day,
-      item.timeIn,
-      item.timeOut,
-      item.subject,
-      item.classSection,
-      item.status
-    ]);
+  };
     
 //       const csvContent = [headers, ...rows].map(row =>
 //       row.map(value => `"${value}"`).join(",")
@@ -361,24 +397,6 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
 //     alert("Failed to download schedule.");
 //   }
 // };
-    const worksheet = XLSX.utils.json_to_sheet(schedule.map(s => ({
-      Day: s.day,
-      "Time In": s.timeIn,
-      "Time Out": s.timeOut,
-      Subject: s.subject,
-      "Class Section": s.classSection,
-      Status: s.status,
-    })));
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Schedule");
-
-    XLSX.writeFile(workbook, "Weekly_Schedule.xlsx");
-  } catch (error) {
-    console.error("Excel download error:", error);
-    alert("Failed to export schedule.");
-  }
-};
 
 
   return (

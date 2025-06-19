@@ -1,16 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaTimes, FaDownload, FaEye } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaEye, FaPaperclip, FaFilter, FaTrash, FaUpload } from 'react-icons/fa';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
-
-// Example: Replace with fetch from your backend if needed
-const DOCUMENT_TYPES = [
-  { DocumentTypeID: 1, DocumentTypeName: 'Resume' },
-  { DocumentTypeID: 2, DocumentTypeName: 'Certificate' },
-  { DocumentTypeID: 3, DocumentTypeName: 'Transcript' },
-  // ...add more as needed
-];
 
 interface DocumentFacultyRow {
   DocumentID: number;
@@ -32,16 +24,29 @@ const DocumentsFaculty: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showUploadInfo, setShowUploadInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<{
     DocumentTypeID: string;
     file: File | null;
+    fileName: string;
   }>({
     DocumentTypeID: '',
     file: null,
+    fileName: ''
   });
   const [error, setError] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
+  const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
+  const [selectedDocs, setSelectedDocs] = useState<number[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [isDeleteConfirmed, setIsDeleteConfirmed] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
+  const [uploadingStates, setUploadingStates] = useState<{ [key: number]: boolean }>({});
+  const [uploadSuccessStates, setUploadSuccessStates] = useState<{ [key: number]: boolean }>({});
 
   // Fetch faculty ID for the current user
   useEffect(() => {
@@ -154,11 +159,37 @@ const DocumentsFaculty: React.FC = () => {
     }
   }, [facultyId]);
 
+  // Fetch document types from backend
+  useEffect(() => {
+    const fetchDocumentTypes = async () => {
+      try {
+        console.log('Fetching document types...');
+        const res = await fetch('/api/document-types');
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error('Error fetching document types:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch document types');
+        }
+        const data = await res.json();
+        console.log('Received document types:', data);
+        setDocumentTypes(data);
+      } catch (err) {
+        console.error('Error in fetchDocumentTypes:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch document types');
+      }
+    };
+    fetchDocumentTypes();
+  }, []);
+
   // Handle form changes
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, files } = e.target as unknown as HTMLInputElement & HTMLSelectElement;
     if (name === 'file' && files) {
-      setForm(f => ({ ...f, file: files[0] }));
+      setForm(f => ({ 
+        ...f, 
+        file: files[0],
+        fileName: files[0].name
+      }));
     } else {
       setForm(f => ({ ...f, [name]: value }));
     }
@@ -169,7 +200,7 @@ const DocumentsFaculty: React.FC = () => {
     e.preventDefault();
     setError(null);
     if (!facultyId || !form.DocumentTypeID || !form.file) {
-      setError('Please fill all fields and select a file.');
+      setError('Please select a document type and file.');
       return;
     }
 
@@ -196,8 +227,11 @@ const DocumentsFaculty: React.FC = () => {
       setForm({
         DocumentTypeID: '',
         file: null,
+        fileName: ''
       });
       await fetchDocs();
+      setSuccessMessage('File uploaded successfully.');
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       console.error('Upload error:', err);
       if (err instanceof Error) {
@@ -212,8 +246,140 @@ const DocumentsFaculty: React.FC = () => {
 
   // Helper to get DocumentTypeName from ID
   const getDocumentTypeName = (id: number) => {
-    const type = DOCUMENT_TYPES.find(dt => dt.DocumentTypeID === id);
-    return type ? type.DocumentTypeName : id;
+    const type = documentTypes.find(dt => dt.DocumentTypeID === id);
+    return type ? type.DocumentTypeName : String(id);
+  };
+
+  // Handle select/deselect for delete
+  const handleSelectDoc = (docId: number) => {
+    setSelectedDocs(prev => prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]);
+  };
+  const handleSelectAll = () => {
+    if (selectedDocs.length === documents.length) {
+      setSelectedDocs([]);
+    } else {
+      setSelectedDocs(documents.map(doc => doc.DocumentID));
+    }
+  };
+  const handleDelete = async () => {
+    if (!isDeleteConfirmed) return;
+
+    try {
+      setLoading(true);
+      let allSuccess = true;
+      let errorDocs: number[] = [];
+      // Update each selected document
+      for (const docId of selectedDocs) {
+        const response = await fetch(`/api/faculty-documents/${docId}/delete`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        console.log('DELETE response for doc', docId, response.status, response.statusText);
+        if (!response.ok) {
+          allSuccess = false;
+          errorDocs.push(docId);
+        }
+      }
+      // Refresh the documents list
+      await fetchDocs();
+      setShowDeleteModal(false);
+      setSelectedDocs([]);
+      setDeleteConfirmation('');
+      setIsDeleteConfirmed(false);
+      if (allSuccess) {
+        setSuccessMessage('Files removed successfully. You can upload new files when ready.');
+        setTimeout(() => setSuccessMessage(null), 5000); // Show for 5 seconds
+      } else {
+        setError(`Failed to update some documents: ${errorDocs.join(', ')}`);
+      }
+    } catch (error) {
+      console.error('Error updating documents:', error);
+      setError('Failed to update documents. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // For edit modal, only show selected and editable (not Approved) documents
+  const editableSelectedDocs = documents.filter(doc => selectedDocs.includes(doc.DocumentID) && doc.SubmissionStatus !== 'Approved');
+
+  // Helper to get a better file name from URL
+  const getFileName = (url: string | undefined) => {
+    if (!url) return 'Unknown file';
+    try {
+      // Try to extract file name from query param (e.g., ?filename=...)
+      const match = url.match(/[?&]filename=([^&#]+)/);
+      if (match) return decodeURIComponent(match[1]);
+      // Try to extract from Google Drive 'id' param
+      const driveId = url.match(/\/d\/([\w-]+)/);
+      if (driveId) return `GoogleDriveFile_${driveId[1]}`;
+      // Try to extract from last path segment if it looks like a file
+      const last = url.split('/').pop() || '';
+      if (last && last.indexOf('.') > 0 && last.length < 100) return last;
+      // Fallback
+      return 'Unknown file';
+    } catch {
+      return 'Unknown file';
+    }
+  };
+  const truncateFileName = (name: string) => name.length > 30 ? name.slice(0, 27) + '...' : name;
+
+  // Only Pending documents for upload modal
+  const pendingDocs = documentTypes.filter(dt => 
+    !documents.some(doc => doc.DocumentTypeID === dt.DocumentTypeID && doc.SubmissionStatus === 'Approved')
+  );
+
+  // Calculate summary for submitted/complete
+  const submittedStatuses = ['Submitted', 'Approved', 'Approved'];
+  const displayedDocs = documents.filter(doc =>
+    String(getDocumentTypeName(doc.DocumentTypeID)).toLowerCase().includes(search.toLowerCase()) ||
+    (doc.FileUrl && String(doc.FileUrl).toLowerCase().includes(search.toLowerCase()))
+  );
+  const totalDisplayed = displayedDocs.length;
+  const submittedCount = displayedDocs.filter(doc => submittedStatuses.includes(doc.SubmissionStatus)).length;
+  const isComplete = totalDisplayed > 0 && submittedCount === totalDisplayed;
+
+  // Add effect to check if confirmation matches
+  useEffect(() => {
+    if (user?.fullName) {
+      setIsDeleteConfirmed(deleteConfirmation === user.fullName);
+    }
+  }, [deleteConfirmation, user?.fullName]);
+
+  // Update the upload form submission
+  const handleUpload = async (e: React.FormEvent<HTMLFormElement>, dt: any) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    formData.append('DocumentTypeID', dt.DocumentTypeID.toString());
+    formData.append('FacultyID', facultyId!.toString());
+    
+    try {
+      setUploadingStates(prev => ({ ...prev, [dt.DocumentTypeID]: true }));
+      setUploadSuccessStates(prev => ({ ...prev, [dt.DocumentTypeID]: false }));
+      setError(null);
+      
+      console.log('Uploading document:', {
+        documentType: dt.DocumentTypeName,
+        documentTypeId: dt.DocumentTypeID,
+        facultyId: facultyId
+      });
+      
+      await uploadFacultyDocument(formData);
+      await fetchDocs();
+      setUploadSuccessStates(prev => ({ ...prev, [dt.DocumentTypeID]: true }));
+      setSuccessMessage(`Successfully uploaded ${dt.DocumentTypeName}`);
+      setTimeout(() => {
+        setUploadSuccessStates(prev => ({ ...prev, [dt.DocumentTypeID]: false }));
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError(err instanceof Error ? err.message : `Failed to upload ${dt.DocumentTypeName}`);
+    } finally {
+      setUploadingStates(prev => ({ ...prev, [dt.DocumentTypeID]: false }));
+    }
   };
 
   if (!user) {
@@ -222,145 +388,467 @@ const DocumentsFaculty: React.FC = () => {
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-lg">
-      {/* Header Section */}
-      <div className="flex justify-end items-center mb-4">
-        <button
-          className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-[#a83232]"
-          onClick={() => setShowModal(true)}
-        >
-          <FaPlus /> Upload Document
-        </button>
+      {/* Success Message */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-800 px-4 py-2 rounded shadow-lg animate-fade-in">
+          {successMessage}
+        </div>
+      )}
+      {/* Error Message */}
+      {error && (
+        <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-800 px-4 py-2 rounded shadow-lg animate-fade-in">
+          {error}
+        </div>
+      )}
+      {/* Reminder Message */}
+      {documents.length > 0 && (
+        <div className={`flex items-center gap-2 mb-4 p-3 border-l-4 rounded ${
+          documents.every(doc => doc.SubmissionStatus === 'Approved')
+            ? 'bg-green-100 border-green-500 text-green-800'
+            : documents.every(doc => doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
+            ? 'bg-blue-100 border-blue-500 text-blue-800'
+            : 'bg-yellow-100 border-yellow-500 text-yellow-800'
+        }`}>
+          <span role="img" aria-label="Status">⚠️</span>
+          <span>
+            {documents.every(doc => doc.SubmissionStatus === 'Approved')
+              ? 'Well done! All of your submitted requirements were approved.'
+              : documents.every(doc => doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
+              ? 'Thank you for submitting your requirements. Wait for Admin approval for any changes.'
+              : 'Reminder: Please comply your document requirements as soon as possible.'}
+          </span>
+        </div>
+      )}
+      {/* Search and Upload Bar */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search documents..."
+            title="Search documents"
+            className="border rounded px-2 py-1"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            aria-label="Search documents"
+          />
+          <button className="p-2" title="Filter documents" aria-label="Filter documents"><FaFilter /></button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-[#a83232] disabled:opacity-50"
+            onClick={() => {
+              if (pendingDocs.length === 0 && documents.length > 0) {
+                setShowUploadInfo(true);
+              } else {
+                setShowModal(true);
+              }
+            }}
+            title="Upload Files"
+            aria-label="Upload Files"
+            disabled={pendingDocs.length === 0 && documents.length > 0}
+          >
+            <FaPlus /> Upload Files
+          </button>
+          <button
+            className="bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-900 disabled:opacity-50"
+            onClick={() => setShowDeleteModal(true)}
+            title="Delete Selected"
+            aria-label="Delete Selected"
+            disabled={selectedDocs.length === 0 || documents.some(doc => 
+              selectedDocs.includes(doc.DocumentID) && doc.SubmissionStatus === 'Approved'
+            )}
+          >
+            <FaTrash /> Delete
+          </button>
+        </div>
       </div>
-      {/* Modal for Upload */}
+      {/* Checklist Table */}
+      <table className="min-w-full text-sm border">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="p-3 text-left"><input type="checkbox" checked={selectedDocs.length === documents.length && documents.length > 0} onChange={handleSelectAll} aria-label="Select all documents" title="Select all documents" /></th>
+            <th className="p-3 text-left">Document</th>
+            <th className="p-3 text-left">File Uploaded</th>
+            <th className="p-3 text-left">Submission Status</th>
+            <th className="p-3 text-left">Last Modified</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
+            <tr>
+              <td colSpan={5} className="p-3 text-center">Loading...</td>
+            </tr>
+          ) : documentTypes.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="p-3 text-center">No document types found</td>
+            </tr>
+          ) : (
+            documentTypes
+              .filter(dt => String(dt.DocumentTypeName).toLowerCase().includes(search.toLowerCase()))
+              .map((dt, idx) => {
+                const doc = documents.find(d => d.DocumentTypeID === dt.DocumentTypeID);
+                return (
+                  <tr key={dt.DocumentTypeID} className="border-t hover:bg-gray-50">
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        checked={doc ? selectedDocs.includes(doc.DocumentID) : false}
+                        onChange={() => doc && handleSelectDoc(doc.DocumentID)}
+                        aria-label={`Select document ${dt.DocumentTypeName}`}
+                        title={`Select document ${dt.DocumentTypeName}`}
+                        disabled={!doc || doc.SubmissionStatus === 'Approved'}
+                      />
+                    </td>
+                    <td className="p-3">{dt.DocumentTypeName}</td>
+                    <td className="p-3 flex items-center gap-2">
+                      <FaPaperclip className="text-gray-500" />
+                      {doc && doc.FileUrl ? (
+                        <React.Fragment>
+                          <a href={doc.FileUrl} className="text-[#800000] underline" target="_blank" rel="noopener noreferrer" title={getFileName(doc.FileUrl)}>
+                            {truncateFileName(getFileName(doc.FileUrl))}
+                          </a>
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View file"
+                            aria-label="View file"
+                            type="button"
+                            onClick={() => setPreviewFileUrl(doc.FileUrl!)}
+                          >
+                            <FaEye />
+                          </button>
+                        </React.Fragment>
+                      ) : (
+                        <span className="text-gray-400">No file</span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+                        ${doc && doc.SubmissionStatus === 'Approved'
+                          ? 'bg-green-100 text-green-700'
+                          : doc && doc.SubmissionStatus === 'Rejected'
+                          ? 'bg-red-100 text-red-700'
+                          : doc && doc.FileUrl
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-700'}
+                      `}>
+                        {doc && doc.SubmissionStatus === 'Approved' ? 'Approved' :
+                         doc && doc.SubmissionStatus === 'Rejected' ? 'Rejected' :
+                         doc && doc.FileUrl ? 'Submitted' :
+                         'Pending'}
+                      </span>
+                    </td>
+                    <td className="p-3">{doc ? new Date(doc.UploadDate).toLocaleDateString() : '-'}</td>
+                  </tr>
+                );
+              })
+          )}
+        </tbody>
+      </table>
+      {/* Summary Row */}
+      <div className="flex justify-between items-center mt-2">
+        <span className={isComplete ? "text-green-700 font-semibold" : "text-yellow-700 font-semibold"}>{isComplete ? "Complete" : "Incomplete"}</span>
+        <span>Submitted: {submittedCount}/{documentTypes.length}</span>
+      </div>
+
+      {/* Upload Files Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
-              onClick={() => setShowModal(false)}
-              aria-label="Close"
-            >
-              <FaTimes />
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-black">Upload Document</h2>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div>
-                <label htmlFor="document-type-select" className="block text-black mb-1 font-medium">Document Type</label>
-                <select
-                  id="document-type-select"
-                  name="DocumentTypeID"
-                  value={form.DocumentTypeID}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                  required
-                >
-                  <option value="">Select document type</option>
-                  {DOCUMENT_TYPES.map(dt => (
-                    <option key={dt.DocumentTypeID} value={dt.DocumentTypeID}>
-                      {dt.DocumentTypeName}
-                    </option>
-                  ))}
-                </select>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col relative">
+            {/* Header - Fixed */}
+            <div className="p-6 border-b">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-[#800000] rounded flex items-center justify-center text-white font-bold">⬤</div>
+                <span className="font-bold text-lg text-[#800000]">UPLOAD FILES</span>
               </div>
-              <div>
-                <label className="block text-black mb-1 font-medium">File Upload</label>
-                <input
-                  type="file"
-                  name="file"
-                  accept=".pdf,.doc,.docx,.jpg,.png"
-                  onChange={handleFormChange}
-                  className="w-full"
-                  required
-                  title="Upload your document file"
-                  placeholder="Choose a file to upload"
-                />
-              </div>
-              {error && <div className="text-red-600">{error}</div>}
-              <button
-                type="submit"
-                className="bg-[#800000] text-white px-4 py-2 rounded hover:bg-[#a83232]"
-                disabled={uploading}
+              <button 
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700" 
+                onClick={() => setShowModal(false)} 
+                title="Close modal" 
+                aria-label="Close modal"
               >
-                {uploading ? 'Uploading...' : 'Submit'}
+                <FaTimes />
               </button>
-            </form>
+              <div className="mt-2 text-sm text-gray-600">
+                Upload your required documents. Files will be reviewed by the administration.
+              </div>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-auto p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="p-3 text-left">Document Type</th>
+                      <th className="p-3 text-left">Status</th>
+                      <th className="p-3 text-left">Current File</th>
+                      <th className="p-3 text-left">Upload New File</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documentTypes.map((dt) => {
+                      const existingDoc = documents.find(d => d.DocumentTypeID === dt.DocumentTypeID);
+                      const isApproved = existingDoc?.SubmissionStatus === 'Approved';
+                      
+                      return (
+                        <tr key={dt.DocumentTypeID} className="border-t">
+                          <td className="p-3">
+                            <div className="font-medium">{dt.DocumentTypeName}</div>
+                            <div className="text-xs text-gray-500">
+                              Accepted formats: {dt.AcceptedFileTypes || '.pdf, .doc, .docx, .jpg, .png'}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium
+                              ${isApproved ? 'bg-green-100 text-green-700' : 
+                                existingDoc?.SubmissionStatus === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                existingDoc?.FileUrl ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'}`}
+                            >
+                              {isApproved ? 'Approved' :
+                               existingDoc?.SubmissionStatus === 'Rejected' ? 'Rejected' :
+                               existingDoc?.FileUrl ? 'Submitted' :
+                               'Pending'}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            {existingDoc?.FileUrl ? (
+                              <div className="flex items-center gap-2">
+                                <FaPaperclip className="text-gray-500" />
+                                <a 
+                                  href={existingDoc.FileUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[#800000] hover:underline"
+                                >
+                                  {truncateFileName(getFileName(existingDoc.FileUrl))}
+                                </a>
+                                <button
+                                  onClick={() => setPreviewFileUrl(existingDoc.FileUrl!)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="View file"
+                                >
+                                  <FaEye />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">No file uploaded</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {!isApproved && (
+                              <form 
+                                onSubmit={(e) => handleUpload(e, dt)}
+                                className="flex items-center gap-2"
+                              >
+                                <label className={`cursor-pointer px-3 py-2 rounded border flex items-center gap-2 transition-colors
+                                  ${uploadingStates[dt.DocumentTypeID] 
+                                    ? 'bg-gray-100 cursor-not-allowed' 
+                                    : uploadSuccessStates[dt.DocumentTypeID]
+                                    ? 'bg-green-50 border-green-200'
+                                    : 'bg-gray-50 hover:bg-gray-100'}`}
+                                >
+                                  {uploadingStates[dt.DocumentTypeID] ? (
+                                    <>
+                                      <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      <span>Uploading...</span>
+                                    </>
+                                  ) : uploadSuccessStates[dt.DocumentTypeID] ? (
+                                    <>
+                                      <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                      </svg>
+                                      <span>Uploaded</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaUpload className="text-gray-500" />
+                                      <span>Choose File</span>
+                                    </>
+                                  )}
+                                  <input
+                                    type="file"
+                                    name="file"
+                                    className="hidden"
+                                    accept={dt.AcceptedFileTypes?.replace(/ /g, '')}
+                                    onChange={(e) => {
+                                      if (e.target.files?.[0]) {
+                                        e.target.form?.requestSubmit();
+                                      }
+                                    }}
+                                    disabled={uploadingStates[dt.DocumentTypeID]}
+                                  />
+                                </label>
+                              </form>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {error && (
+                <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Footer - Fixed */}
+            <div className="p-6 border-t bg-gray-50">
+              <div className="flex justify-end">
+                <button 
+                  className="border px-4 py-2 rounded hover:bg-gray-50" 
+                  onClick={() => setShowModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteConfirmation('');
+                setIsDeleteConfirmed(false);
+              }}
+              title="Close delete confirmation"
+              aria-label="Close delete confirmation"
+            >
+              <FaTimes />
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-black">Confirm Remove Files</h2>
+            
+            <div className="mb-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                <p className="text-yellow-800 mb-2">
+                  This will remove the uploaded files and set their status to Pending. You can upload new files later.
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Please type your full name <span className="font-semibold">{user?.fullName}</span> to confirm.
+                </p>
+              </div>
 
-      {/* Documents Table */}
-      <div className="overflow-x-auto rounded-lg">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left text-black">Document ID</th>
-              <th className="p-3 text-left text-black">Document Type</th>
-              <th className="p-3 text-left text-black">Upload Date</th>
-              <th className="p-3 text-left text-black">Status</th>
-              <th className="p-3 text-left text-black">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="p-3 text-center">Loading...</td>
-              </tr>
-            ) : documents.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-3 text-center">No documents found</td>
-              </tr>
-            ) : (
-              documents.map((doc) => (
-                <tr key={doc.DocumentID} className="border-t hover:bg-gray-50">
-                  <td className="p-3 text-left text-black">{doc.DocumentID}</td>
-                  <td className="p-3 text-left text-black">{doc.DocumentType?.DocumentTypeName || getDocumentTypeName(doc.DocumentTypeID)}</td>
-                  <td className="p-3 text-left text-black">{new Date(doc.UploadDate).toLocaleDateString()}</td>
-                  <td className="p-3 text-left text-black">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
-                      ${
-                        doc.SubmissionStatus === 'Approved'
-                          ? 'bg-green-100 text-green-700'
-                          : doc.SubmissionStatus === 'Rejected'
-                          ? 'bg-red-100 text-red-700'
-                          : doc.SubmissionStatus === 'Submitted'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }
-                    `}>
-                      {doc.SubmissionStatus}
-                    </span>
-                  </td>
-                  <td className="p-3 text-left text-black">
-                    <div className="flex space-x-2">
-                      {doc.FileUrl && (
-                        <a
-                          href={doc.FileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800"
-                          title="View document"
-                        >
-                          <FaEye />
-                        </a>
-                      )}
-                      {doc.DownloadUrl && (
-                        <a
-                          href={doc.DownloadUrl}
-                          download
-                          className="text-green-600 hover:text-green-800"
-                          title="Download document"
-                        >
-                          <FaDownload />
-                        </a>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Type your full name"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">Files to be removed:</p>
+                <ul className="list-disc pl-6 text-sm text-gray-700">
+                  {documents.filter(doc => selectedDocs.includes(doc.DocumentID)).map(doc => (
+                    <li key={doc.DocumentID}>
+                      {getDocumentTypeName(doc.DocumentTypeID)} 
+                      {doc.FileUrl ? ` (${doc.FileUrl.split('/').pop()})` : ' (No file)'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button 
+                className="border px-4 py-2 rounded hover:bg-gray-50" 
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmation('');
+                  setIsDeleteConfirmed(false);
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed" 
+                onClick={handleDelete}
+                disabled={!isDeleteConfirmed || loading}
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Updating...
+                  </span>
+                ) : (
+                  'Remove Files'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* File Preview Modal */}
+      {previewFileUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-3xl relative flex flex-col items-center">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => setPreviewFileUrl(null)}
+              title="Close preview"
+              aria-label="Close preview"
+            >
+              <FaTimes />
+            </button>
+            <div className="w-full h-[70vh] flex items-center justify-center">
+              {/* Google Drive preview logic */}
+              {(() => {
+                const url = previewFileUrl;
+                if (!url) return null;
+                // Google Drive file preview
+                if (url.includes('drive.google.com')) {
+                  // Try to extract file id
+                  const match = url.match(/\/d\/([\w-]+)/) || url.match(/id=([\w-]+)/);
+                  if (match) {
+                    const id = match[1];
+                    const drivePreview = `https://drive.google.com/file/d/${id}/preview`;
+                    return <iframe src={drivePreview} title="Google Drive Preview" className="w-full h-full" />;
+                  }
+                  // If not previewable, show fallback
+                  return <div className="text-gray-500">Cannot preview this Google Drive file.</div>;
+                }
+                if (url.endsWith('.pdf')) {
+                  return <iframe src={url} title="Document Preview" className="w-full h-full" />;
+                }
+                if (url.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                  return <img src={url} alt="Document Preview" className="max-h-full max-w-full" />;
+                }
+                return <div className="text-gray-500">Cannot preview this file type.</div>;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Info Modal for Upload Button when no pending */}
+      {showUploadInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => setShowUploadInfo(false)} title="Close info" aria-label="Close info"><FaTimes /></button>
+            <div className="flex flex-col items-center gap-4">
+              <span className="text-lg text-center">You already submitted the required documents. Select a Document to Edit if you need to make changes.</span>
+              <button className="bg-[#800000] text-white px-4 py-2 rounded" onClick={() => setShowUploadInfo(false)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

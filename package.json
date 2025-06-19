@@ -28,11 +28,13 @@
     "@types/uuid": "^10.0.0",
     "@vercel/speed-insights": "^1.2.0",
     "chart.js": "^4.0.0",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.12.1",
     "googleapis": "^150.0.1",
     "js-sha256": "^0.11.1",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.487.0",
     "luxon": "^3.6.1",
     "next": "^15.3.3",
@@ -48,7 +50,6 @@
     "resend": "^4.5.2",
     "svix": "^1.65.0",
     "uuid": "^9.0.1",
-    "xlsx": "^0.18.5",
     "zod": "^3.25.51"
   },
   "devDependencies": {

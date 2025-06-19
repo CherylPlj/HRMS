@@ -196,6 +196,10 @@ const UsersContent: React.FC = () => {
     }
   });
 
+  // Add new state for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [isDeleteConfirmed, setIsDeleteConfirmed] = useState(false);
+
   // Add action type options
   const actionTypeOptions = [
     { value: '', label: 'All Actions' },
@@ -766,9 +770,11 @@ const UsersContent: React.FC = () => {
   const closeDeleteModal = () => {
     setUserToDelete(null);
     setShowDeleteConfirmModal(false);
+    setDeleteConfirmation('');
+    setIsDeleteConfirmed(false);
   };
   const handleDeleteUser = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || !isDeleteConfirmed) return;
 
     try {
       setLoading(true);
@@ -792,6 +798,8 @@ const UsersContent: React.FC = () => {
 
       await fetchUsers();
       closeDeleteModal();
+      setDeleteConfirmation('');
+      setIsDeleteConfirmed(false);
       setNotification({
         type: 'success',
         message: 'User deleted successfully'
@@ -990,6 +998,14 @@ const UsersContent: React.FC = () => {
       }
     });
   };
+
+  // Add effect to check if confirmation matches
+  useEffect(() => {
+    if (userToDelete) {
+      const fullName = `${userToDelete.FirstName} ${userToDelete.LastName}`;
+      setIsDeleteConfirmed(deleteConfirmation === fullName);
+    }
+  }, [deleteConfirmation, userToDelete]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -1457,22 +1473,77 @@ const UsersContent: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Confirm Delete</h2>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete {userToDelete.FirstName} {userToDelete.LastName}?
-              </p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Delete User</h2>
+                <button
+                  onClick={closeDeleteModal}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="h-12 w-12 flex-shrink-0">
+                    <img
+                      className="h-12 w-12 rounded-full object-cover border-2 border-red-500"
+                      src={userToDelete.Photo || '/default-avatar.png'}
+                      alt={`${userToDelete.FirstName} ${userToDelete.LastName}`}
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {userToDelete.FirstName} {userToDelete.LastName}
+                    </h3>
+                    <p className="text-sm text-gray-500">{userToDelete.Email}</p>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                  <p className="text-red-800 mb-2">
+                    This action cannot be undone. This will permanently delete the user's account and remove their data from our servers.
+                  </p>
+                  <p className="text-sm text-red-700">
+                    Please type <span className="font-semibold">{userToDelete.FirstName} {userToDelete.LastName}</span> to confirm.
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder="Type the user's full name"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={closeDeleteModal}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                 >
-                  No, Cancel
+                  Cancel
                 </button>
                 <button
                   onClick={handleDeleteUser}
-                  className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                  className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!isDeleteConfirmed || loading}
                 >
-                  Yes, Delete
+                  {loading ? (
+                    <span className="flex items-center">
+                      <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Delete User'
+                  )}
                 </button>
               </div>
             </div>
