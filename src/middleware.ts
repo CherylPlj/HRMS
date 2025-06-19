@@ -14,6 +14,8 @@ const publicRoutes = [
     "/api/faculty-documents",
     "/api/faculty/user/[userId]",
     "/api/faculty-documents/[documentId]",
+    "/api/faculty-documents/[documentId]/delete",
+    "/api/document-types/[id]",
     "/api/leaves/[id]",
     "/api/webhooks/clerk"
 ];
@@ -30,6 +32,8 @@ const ignoredRoutes = [
     "/api/faculty-documents",
     "/api/faculty/user/[userId]",
     "/api/faculty-documents/[documentId]",
+    "/api/document-types/[id]",
+    "/api/faculty-documents/[documentId]/delete",
     "/api/leaves/[id]",
     "/api/webhooks/clerk"
 ];
