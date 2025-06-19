@@ -342,8 +342,8 @@ export default function Dashboard() {
                 onClick={() => handleButtonClick('attendance')}
               >
                 <i className="fas fa-calendar-alt text-xl"></i>
-                {/* <span className="text-[10px]">Attendance</span> */}
-                <span className="text-[10px]">Schedule</span>
+                <span className="text-[10px]">Attendance</span>
+                {/* <span className="text-[10px]">Schedule</span> */}
               </a>
               <a
                 href="#"
@@ -383,8 +383,8 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-red-700">
               {activeButton === 'dashboard' && 'DASHBOARD'}
               {activeButton === 'faculty' && 'FACULTY'}
-              {/* {activeButton === 'attendance' && 'ATTENDANCE'} */}
-              {activeButton === 'attendance' && 'SCHEDULE'}
+              {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
+              {/* {activeButton === 'attendance' && 'SCHEDULE'} */}
               {activeButton === 'leave' && 'LEAVE'}
               {activeButton === 'users' && 'USERS'}
             </h1>

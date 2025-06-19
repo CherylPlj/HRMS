@@ -1154,11 +1154,13 @@ const FacultyContent: React.FC = () => {
               <tbody className="divide-y divide-gray-200">
                 {filteredFacultyList.map((faculty) => {
                   const documentsForFaculty = documents.filter(doc => doc.FacultyID === faculty.FacultyID);
-                  const submittedDocs = documentsForFaculty.filter(doc => 
-                    doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved'
-                  );
-                  const submittedCount = submittedDocs.length;
-                  const totalCount = documentsForFaculty.length;
+                  const submittedCount = documentTypes.filter(dt =>
+                    documentsForFaculty.some(doc =>
+                      doc.DocumentTypeID === dt.DocumentTypeID &&
+                      (doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
+                    )
+                  ).length;
+                  const totalRequired = documentTypes.length;
 
                   // Add sorting function for documents
                   const getStatusOrder = (status: string) => {
@@ -1183,10 +1185,10 @@ const FacultyContent: React.FC = () => {
                   });
 
                   let facultySubmissionStatus = 'N/A';
-                  if (totalCount > 0) {
-                    if (submittedCount === totalCount) {
+                  if (totalRequired > 0) {
+                    if (submittedCount === totalRequired) {
                       facultySubmissionStatus = 'Complete';
-                    } else if (submittedCount > 0 && submittedCount < totalCount) {
+                    } else if (submittedCount > 0 && submittedCount < totalRequired) {
                       facultySubmissionStatus = 'Incomplete';
                     } else {
                       facultySubmissionStatus = 'Pending';
@@ -1230,8 +1232,8 @@ const FacultyContent: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center space-x-2">
-                            <span>Submitted: {submittedCount}/{totalCount}</span>
-                            {totalCount > 0 && (
+                            <span>Submitted: {submittedCount}/{totalRequired}</span>
+                            {totalRequired > 0 && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1277,46 +1279,98 @@ const FacultyContent: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                      {expandedFacultyId === faculty.FacultyID && ( /* Expanded row */
+                      {expandedFacultyId === faculty.FacultyID && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-4 bg-gray-50">
-                            <div className="p-2 border rounded-md">
-                              <h4 className="font-semibold text-gray-800 mb-2">Documents for {faculty.User?.FirstName} {faculty.User?.LastName}:</h4>
-                              <ul className="list-disc list-inside text-sm text-gray-700">
-                                {sortedDocuments.length > 0 ? (
-                                  sortedDocuments.map((doc) => (
-                                    <li key={doc.DocumentID} className="mb-1 flex justify-between items-center">
-                                      <span>
-                                        {doc.documentTypeName}: <span className={`font-medium ${
-                                          doc.SubmissionStatus === 'Approved' 
-                                            ? 'text-emerald-600'
-                                            : doc.SubmissionStatus === 'Submitted'
-                                            ? 'text-blue-600'
-                                            : doc.SubmissionStatus === 'Rejected'
-                                            ? 'text-red-600'
-                                            : 'text-slate-600'
-                                        }`}>{doc.SubmissionStatus}</span>
-                                        <span className="text-xs text-gray-500 ml-2">
-                                          ({new Date(doc.UploadDate).toLocaleDateString()})
-                                        </span>
-                                      </span>
-                                      {doc.DownloadUrl && (
-                                        <a
-                                          href={doc.DownloadUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-500 hover:underline flex items-center text-xs ml-auto"
-                                          title="Download Document"
-                                        >
-                                          <FaDownload className="mr-1" /> Download
-                                        </a>
-                                      )}
-                                    </li>
-                                  ))
-                                ) : (
-                                  <li>No documents found for this faculty.</li>
-                                )}
-                              </ul>
+                          <td colSpan={7} className="px-0 py-0 bg-gray-50">
+                            <div className="m-4 rounded-xl shadow-lg bg-white border border-gray-200 p-6">
+                              <h4 className="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 bg-[#800000] rounded-full"></span>
+                                Documents for {faculty.User?.FirstName} {faculty.User?.LastName}
+                              </h4>
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-gray-100 text-gray-700">
+                                      <th className="p-3 text-left font-semibold">Document Type</th>
+                                      <th className="p-3 text-left font-semibold">Status</th>
+                                      <th className="p-3 text-left font-semibold">Date</th>
+                                      <th className="p-3 text-left font-semibold">Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {documentTypes.length > 0 ? (
+                                      documentTypes.map((dt) => {
+                                        const doc = documentsForFaculty.find(d => d.DocumentTypeID === dt.DocumentTypeID);
+                                        return (
+                                          <tr key={dt.DocumentTypeID} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
+                                            <td className="p-3 font-medium text-gray-900">{dt.DocumentTypeName}</td>
+                                            <td className="p-3">
+                                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold
+                                                ${doc
+                                                  ? doc.SubmissionStatus === 'Approved'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : doc.SubmissionStatus === 'Submitted'
+                                                    ? 'bg-blue-100 text-blue-700'
+                                                    : doc.SubmissionStatus === 'Rejected'
+                                                    ? 'bg-red-100 text-red-700'
+                                                    : 'bg-gray-100 text-gray-700'
+                                                  : 'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                {doc ? doc.SubmissionStatus : 'Pending'}
+                                              </span>
+                                            </td>
+                                            <td className="p-3 text-gray-500">
+                                              {doc ? new Date(doc.UploadDate).toLocaleDateString() : '-'}
+                                            </td>
+                                            <td className="p-3">
+                                              {doc ? (
+                                                <div className="flex items-center gap-3">
+                                                  <button
+                                                    onClick={() => handleViewDocument(doc)}
+                                                    className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    title="View Document"
+                                                    type="button"
+                                                  >
+                                                    <FaEye />
+                                                  </button>
+                                                  {doc.FileUrl && (
+                                                    <a
+                                                      href={doc.FileUrl}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                      title="Open in New Tab"
+                                                    >
+                                                      <FaLink />
+                                                    </a>
+                                                  )}
+                                                  {doc.DownloadUrl && (
+                                                    <a
+                                                      href={doc.DownloadUrl}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                      title="Download Document"
+                                                    >
+                                                      <FaDownload />
+                                                    </a>
+                                                  )}
+                                                </div>
+                                              ) : (
+                                                <span className="text-gray-400 italic">No file</span>
+                                              )}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })
+                                    ) : (
+                                      <tr>
+                                        <td colSpan={4} className="p-3 text-center text-gray-400">No document types defined.</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           </td>
                         </tr>

@@ -48,6 +48,7 @@ const DocumentsFaculty: React.FC = () => {
   const [uploadingStates, setUploadingStates] = useState<{ [key: number]: boolean }>({});
   const [uploadSuccessStates, setUploadSuccessStates] = useState<{ [key: number]: boolean }>({});
 
+
   // Fetch faculty ID for the current user
   useEffect(() => {
     const fetchFacultyId = async () => {
@@ -332,15 +333,13 @@ const DocumentsFaculty: React.FC = () => {
   );
 
   // Calculate summary for submitted/complete
-  const submittedStatuses = ['Submitted', 'Approved', 'Approved'];
-  const displayedDocs = documents.filter(doc =>
-    String(getDocumentTypeName(doc.DocumentTypeID)).toLowerCase().includes(search.toLowerCase()) ||
-    (doc.FileUrl && String(doc.FileUrl).toLowerCase().includes(search.toLowerCase()))
-  );
-  const totalDisplayed = displayedDocs.length;
-  const submittedCount = displayedDocs.filter(doc => submittedStatuses.includes(doc.SubmissionStatus)).length;
-  const isComplete = totalDisplayed > 0 && submittedCount === totalDisplayed;
-
+  const submittedStatuses = ['Submitted', 'Approved'];
+  const submittedCount = documents.filter(doc => submittedStatuses.includes(doc.SubmissionStatus)).length;
+  const totalRequired = documentTypes.length;
+  const isComplete = totalRequired > 0 && submittedCount === totalRequired;
+  const allApproved = totalRequired > 0 && documents.length === totalRequired && documents.every(doc => doc.SubmissionStatus === 'Approved');
+  const allSubmittedOrApproved = totalRequired > 0 && documents.length === totalRequired && documents.every(doc => submittedStatuses.includes(doc.SubmissionStatus));
+  const anySubmitted = documents.some(doc => doc.SubmissionStatus === 'Submitted');
   // Add effect to check if confirmation matches
   useEffect(() => {
     if (user?.fullName) {
@@ -401,21 +400,27 @@ const DocumentsFaculty: React.FC = () => {
         </div>
       )}
       {/* Reminder Message */}
-      {documents.length > 0 && (
-        <div className={`flex items-center gap-2 mb-4 p-3 border-l-4 rounded ${
-          documents.every(doc => doc.SubmissionStatus === 'Approved')
-            ? 'bg-green-100 border-green-500 text-green-800'
-            : documents.every(doc => doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
-            ? 'bg-blue-100 border-blue-500 text-blue-800'
-            : 'bg-yellow-100 border-yellow-500 text-yellow-800'
-        }`}>
+      {allSubmittedOrApproved && anySubmitted && !allApproved && (
+        <div className="flex items-center gap-2 mb-4 p-3 border-l-4 rounded bg-blue-100 border-blue-500 text-blue-800">
+          <span role="img" aria-label="Status">⏳</span>
+          <span>
+            {`Thank you for submitting your requirements. Wait for Admin approval for any changes. (${submittedCount}/${totalRequired})`}
+          </span>
+        </div>
+      )}
+      {(totalRequired > 0 && submittedCount < totalRequired) && (
+        <div className="flex items-center gap-2 mb-4 p-3 border-l-4 rounded bg-yellow-100 border-yellow-500 text-yellow-800">
           <span role="img" aria-label="Status">⚠️</span>
           <span>
-            {documents.every(doc => doc.SubmissionStatus === 'Approved')
-              ? 'Well done! All of your submitted requirements were approved.'
-              : documents.every(doc => doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
-              ? 'Thank you for submitting your requirements. Wait for Admin approval for any changes.'
-              : 'Reminder: Please comply your document requirements as soon as possible.'}
+            {`Reminder: Please comply your document requirements as soon as possible. (${submittedCount}/${totalRequired} submitted)`}
+          </span>
+        </div>
+      )}
+      {allApproved && (
+        <div className="flex items-center gap-2 mb-4 p-3 border-l-4 rounded bg-green-100 border-green-500 text-green-800">
+          <span role="img" aria-label="Status">✅</span>
+          <span>
+            {`Well done! All of your submitted requirements were approved. (${submittedCount}/${totalRequired})`}
           </span>
         </div>
       )}
