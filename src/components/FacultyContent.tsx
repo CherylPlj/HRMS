@@ -6,11 +6,6 @@ import { Search } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import JSZip from 'jszip';
-import dynamic from 'next/dynamic';
-
-// Dynamically import PDFViewer component
-const PDFViewer = dynamic(() => import('./PDFViewer'), { ssr: false });
 
 interface Faculty {
   FacultyID: number;
@@ -1834,10 +1829,10 @@ const FacultyContent: React.FC = () => {
                   const exportUrl = getGoogleDocExportUrl(fileUrl, 'pdf');
                   if (!viewerError) {
                     return (
-                      <PDFViewer
-                        file={exportUrl}
-                        onLoadSuccess={onDocumentLoadSuccess}
-                        onError={() => setViewerError(true)}
+                      <iframe
+                        src={`https://docs.google.com/gview?url=${encodeURIComponent(exportUrl)}&embedded=true`}
+                        style={{ width: '100%', height: '70vh', border: 'none' }}
+                        title="PDF Viewer"
                       />
                     );
                   } else {
@@ -1846,7 +1841,6 @@ const FacultyContent: React.FC = () => {
                         src={`https://docs.google.com/gview?url=${encodeURIComponent(exportUrl)}&embedded=true`}
                         style={{ width: '100%', height: '70vh', border: 'none' }}
                         title="PDF Viewer"
-                        onError={() => setViewerError(true)}
                       />
                     );
                   }
@@ -1854,10 +1848,10 @@ const FacultyContent: React.FC = () => {
                   const pdfUrl = getDirectDriveUrl(fileUrl);
                   if (!viewerError) {
                     return (
-                      <PDFViewer
-                        file={pdfUrl}
-                        onLoadSuccess={onDocumentLoadSuccess}
-                        onError={() => setViewerError(true)}
+                      <iframe
+                        src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
+                        style={{ width: '100%', height: '70vh', border: 'none' }}
+                        title="PDF Viewer"
                       />
                     );
                   } else {
@@ -1866,7 +1860,6 @@ const FacultyContent: React.FC = () => {
                         src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
                         style={{ width: '100%', height: '70vh', border: 'none' }}
                         title="PDF Viewer"
-                        onError={() => setViewerError(true)}
                       />
                     );
                   }
@@ -1876,7 +1869,6 @@ const FacultyContent: React.FC = () => {
                       src={`https://docs.google.com/gview?url=${encodeURIComponent(getDirectDriveUrl(fileUrl))}&embedded=true`}
                       style={{ width: '100%', height: '70vh', border: 'none' }}
                       title="Word Document Viewer"
-                      onError={() => setViewerError(true)}
                     />
                   );
                 } else if (isImageFile(fileUrl)) {
@@ -1885,7 +1877,6 @@ const FacultyContent: React.FC = () => {
                       src={getDirectDriveUrl(fileUrl)}
                       alt="Document"
                       style={{ width: '100%', height: '70vh', objectFit: 'contain' }}
-                      onError={() => setViewerError(true)}
                     />
                   );
                 } else {
