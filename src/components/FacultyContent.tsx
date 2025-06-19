@@ -483,7 +483,7 @@ const FacultyContent: React.FC = () => {
       const res = await fetch(`/api/faculty-documents/${pendingStatusUpdate.docId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ SubmissionStatus: pendingStatusUpdate.newStatus }),
+        body: JSON.stringify({ SubmissionStatus: pendingStatusUpdate.newStatus })
       });
       if (!res.ok) throw new Error('Failed to update status');
       await fetchDocuments();
