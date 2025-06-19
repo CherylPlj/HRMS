@@ -9,17 +9,8 @@ import autoTable from 'jspdf-autotable';
 import JSZip from 'jszip';
 import dynamic from 'next/dynamic';
 
-// Dynamically import react-pdf components to avoid SSR issues
-const Document = dynamic(() => import('react-pdf').then(mod => mod.Document), { ssr: false });
-const Page = dynamic(() => import('react-pdf').then(mod => mod.Page), { ssr: false });
-
-// Import CSS for react-pdf
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-
-// Set up PDF.js worker
-import { pdfjs } from 'react-pdf';
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Dynamically import PDFViewer component
+const PDFViewer = dynamic(() => import('./PDFViewer'), { ssr: false });
 
 interface Faculty {
   FacultyID: number;
@@ -1843,19 +1834,11 @@ const FacultyContent: React.FC = () => {
                   const exportUrl = getGoogleDocExportUrl(fileUrl, 'pdf');
                   if (!viewerError) {
                     return (
-                      <Document
+                      <PDFViewer
                         file={exportUrl}
                         onLoadSuccess={onDocumentLoadSuccess}
                         onError={() => setViewerError(true)}
-                        className="flex justify-center"
-                      >
-                        <Page
-                          pageNumber={pageNumber}
-                          renderTextLayer={true}
-                          renderAnnotationLayer={true}
-                          className="shadow-lg"
-                        />
-                      </Document>
+                      />
                     );
                   } else {
                     return (
@@ -1871,19 +1854,11 @@ const FacultyContent: React.FC = () => {
                   const pdfUrl = getDirectDriveUrl(fileUrl);
                   if (!viewerError) {
                     return (
-                      <Document
+                      <PDFViewer
                         file={pdfUrl}
                         onLoadSuccess={onDocumentLoadSuccess}
                         onError={() => setViewerError(true)}
-                        className="flex justify-center"
-                      >
-                        <Page
-                          pageNumber={pageNumber}
-                          renderTextLayer={true}
-                          renderAnnotationLayer={true}
-                          className="shadow-lg"
-                        />
-                      </Document>
+                      />
                     );
                   } else {
                     return (
