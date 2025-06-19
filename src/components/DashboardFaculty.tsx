@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation'; // For Next.js 13+
 import AttendanceFaculty from '@/components/AttendanceFaculty';
-import { Line } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-// import { FaCalendarAlt } from "react-icons/fa";
 import Head from 'next/head';
 import { useAttendance } from '../contexts/AttendanceContext';
 import { attendanceService } from '../services/attendanceService';
@@ -13,11 +12,9 @@ import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import { DateTime } from 'luxon';
 
-
 export default function DashboardFaculty() {
   const { user } = useUser();
   const router = useRouter();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { currentRecord, setCurrentRecord, currentTime, currentDate, summary } = useAttendance();
   const [dateRange, setDateRange] = useState<[Date, Date]>([
     new Date(new Date().getFullYear(), new Date().getMonth() - 1, new Date().getDate()),
@@ -26,6 +23,7 @@ export default function DashboardFaculty() {
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'attendance'>('dashboard');
+
   type AttendanceRecord = {
     id?: string;
     facultyId?: number;
@@ -36,23 +34,50 @@ export default function DashboardFaculty() {
     createdAt?: string;
     updatedAt?: string;
   };
-  
+
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Placeholder data for new sections
+  const [personalData, setPersonalData] = useState({
+    Position: "",
+    DepartmentName: "",
+    EmploymentStatus: "",
+    HireDate: ""
+  });
+
+  const [documentRequirements, setDocumentRequirements] = useState({
+    pending: 0,
+    submitted: 0,
+    approved: 0
+  });
+
+  const [leaveData, setLeaveData] = useState({
+    available: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0
+  });
+
+  const [scheduleForWeek, setScheduleForWeek] = useState([
+    { day: "Monday", subject: "Computer Science 101", time: "8:00 AM - 10:00 AM" },
+    { day: "Tuesday", subject: "Data Structures", time: "1:00 PM - 3:00 PM" },
+    { day: "Wednesday", subject: "Algorithm Design", time: "9:30 AM - 11:00 AM" },
+    { day: "Thursday", subject: "Faculty Meeting", time: "2:00 PM - 4:00 PM" },
+    { day: "Friday", subject: "Office Hours", time: "8:00 AM - 11:00 AM" }
+  ]);
 
   // Fetch Supabase UserID and FacultyID when Clerk user is available
   useEffect(() => {
     const fetchUserAndFacultyId = async () => {
       if (!user?.emailAddresses?.[0]?.emailAddress) {
-        console.log('No Clerk user email available');
         setLoading(false);
         setError('No user email available');
         return;
       }
 
       try {
-        console.log('Fetching Supabase user for email:', user.emailAddresses[0].emailAddress);
         const { data: userData, error: userError } = await supabase
           .from('User')
           .select('UserID')
@@ -60,16 +85,13 @@ export default function DashboardFaculty() {
           .single();
 
         if (userError) {
-          console.error('Error fetching Supabase user:', userError);
           setError('Failed to fetch user data');
           return;
         }
 
         if (userData) {
-          console.log('Found Supabase user:', userData);
           setSupabaseUserId(userData.UserID);
 
-          // Fetch FacultyID using UserID
           const { data: facultyData, error: facultyError } = await supabase
             .from('Faculty')
             .select('FacultyID')
@@ -77,25 +99,20 @@ export default function DashboardFaculty() {
             .single();
 
           if (facultyError) {
-            console.error('Error fetching Faculty data:', facultyError);
             setError('Failed to fetch faculty data');
             return;
           }
 
           if (facultyData) {
-            console.log('Found Faculty ID:', facultyData);
             setFacultyId(facultyData.FacultyID);
             setError(null);
           } else {
-            console.log('No Faculty found for user:', userData.UserID);
             setError('Faculty record not found');
           }
         } else {
-          console.log('No Supabase user found for email:', user.emailAddresses[0].emailAddress);
           setError('User not found in database');
         }
       } catch (error) {
-        console.error('Error in fetchUserAndFacultyId:', error);
         setError('An unexpected error occurred');
       }
     };
@@ -106,16 +123,13 @@ export default function DashboardFaculty() {
   // Fetch attendance data when faculty ID is available
   useEffect(() => {
     if (facultyId) {
-      console.log('Faculty ID available, fetching attendance data');
       fetchAttendanceData();
-    } else {
-      console.log('No Faculty ID available yet');
+      fetchOtherData();
     }
   }, [dateRange, facultyId]);
 
   const fetchAttendanceData = async () => {
     if (!facultyId || !user?.emailAddresses?.[0]?.emailAddress) {
-      console.log('Cannot fetch attendance data: No Faculty ID or email available');
       setLoading(false);
       return;
     }
@@ -123,9 +137,7 @@ export default function DashboardFaculty() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching attendance history for faculty:', facultyId);
-      console.log('Date range:', dateRange[0].toISOString(), 'to', dateRange[1].toISOString());
-      
+
       const data = await attendanceService.getAttendanceHistory(
         facultyId.toString(),
         dateRange[0].toISOString(),
@@ -134,15 +146,11 @@ export default function DashboardFaculty() {
       );
 
       if (!data || !Array.isArray(data)) {
-        console.error('Invalid attendance data received:', data);
         setAttendanceData([]);
         return;
       }
 
-      type NewType = any;
-
-      // Convert nulls to undefined for timeIn and timeOut and ensure all required fields
-      const mappedData = data.map((record: NewType) => ({
+      const mappedData = data.map((record: any) => ({
         id: record.id,
         facultyId: record.facultyId,
         date: record.date || new Date().toISOString().split('T')[0],
@@ -153,10 +161,8 @@ export default function DashboardFaculty() {
         updatedAt: record.updatedAt
       }));
 
-      console.log('Mapped attendance data:', mappedData);
       setAttendanceData(mappedData);
 
-      // Find today's record and update currentRecord
       const today = new Date();
       const todayRecord = mappedData.find((rec) => {
         const recDate = new Date(rec.date);
@@ -168,14 +174,11 @@ export default function DashboardFaculty() {
       });
 
       if (todayRecord) {
-        console.log('Found today\'s record:', todayRecord);
         setCurrentRecord(todayRecord);
       } else {
-        console.log('No record found for today');
         setCurrentRecord(null);
       }
     } catch (error) {
-      console.error('Error fetching attendance data:', error);
       setAttendanceData([]);
       setCurrentRecord(null);
       setError('Failed to fetch attendance data');
@@ -184,11 +187,96 @@ export default function DashboardFaculty() {
     }
   };
 
-  // Add a refresh function
+  // Fetch other data for dashboard sections
+  const fetchOtherData = async () => {
+    try {
+      if (!user?.emailAddresses?.[0]?.emailAddress) return;
+
+      const { data: userData } = await supabase
+        .from('User')
+        .select('UserID')
+        .eq('Email', user.emailAddresses[0].emailAddress)
+        .single();
+
+      if (!userData) return;
+
+      // Replicating PersonalData.tsx fetching logic for faculty details
+      const { data: facultyData, error: facultyError } = await supabase
+        .from('Faculty')
+        .select(`
+          *,
+          Department (
+            DepartmentName
+          )
+        `)
+        .eq('UserID', userData.UserID)
+        .single();
+
+      if (facultyError) {
+        console.error('Error fetching faculty data:', facultyError);
+        return;
+      }
+
+      if (!facultyData) {
+        console.error('No faculty data found');
+        return;
+      }
+
+      setPersonalData({
+        Position: facultyData.Position || '',
+        DepartmentName: facultyData.Department?.DepartmentName || '',
+        EmploymentStatus: facultyData.EmploymentStatus || '',
+        HireDate: facultyData.HireDate || ''
+      });
+
+      const { data: documents } = await supabase
+        .from('FacultyDocuments')
+        .select('SubmissionStatus')
+        .eq('FacultyID', facultyId);
+
+      const pending = documents?.filter((d: any) => d.SubmissionStatus === 'Pending').length || 0;
+      const submitted = documents?.filter((d: any) => d.SubmissionStatus === 'Submitted').length || 0;
+      const approved = documents?.filter((d: any) => d.SubmissionStatus === 'Approved').length || 0;
+
+      setDocumentRequirements({ pending, submitted, approved });
+
+      const { data: leaves } = await supabase
+        .from('Leave')
+        .select('Status')
+        .eq('FacultyID', facultyId);
+
+      const available = 5; // Placeholder, adjust if real data available
+      const pendingLeave = leaves?.filter((l: any) => l.Status === 'Pending').length || 0;
+      const approvedLeave = leaves?.filter((l: any) => l.Status === 'Approved').length || 0;
+      const rejectedLeave = leaves?.filter((l: any) => l.Status === 'Rejected').length || 0;
+
+      setLeaveData({
+        available,
+        pending: pendingLeave,
+        approved: approvedLeave,
+        rejected: rejectedLeave
+      });
+
+      // Schedule for the week placeholder
+      const schedule = [
+        { day: "Monday", subject: "Computer Science 101", time: "8:00 AM - 10:00 AM" },
+        { day: "Tuesday", subject: "Data Structures", time: "1:00 PM - 3:00 PM" },
+        { day: "Wednesday", subject: "Algorithm Design", time: "9:30 AM - 11:00 AM" },
+        { day: "Thursday", subject: "Faculty Meeting", time: "2:00 PM - 4:00 PM" },
+        { day: "Friday", subject: "Office Hours", time: "8:00 AM - 11:00 AM" }
+      ];
+
+      setScheduleForWeek(schedule);
+
+    } catch (error) {
+      console.error('Error fetching other dashboard data:', error);
+    }
+  };
+
   const handleRefresh = () => {
-    console.log('Refreshing attendance data...');
     setError(null);
     fetchAttendanceData();
+    fetchOtherData();
   };
 
   const handleDateChange = (dates: [Date | null, Date | null]) => {
@@ -204,77 +292,58 @@ export default function DashboardFaculty() {
   }
 
   function formatTimeWithAmPm(timeStr: string | null | undefined) {
-  if (!timeStr) return '-';
- // Use a fixed date and Asia/Manila timezone
-  return DateTime.fromFormat(timeStr, 'HH:mm:ss', { zone: 'Asia/Manila' })
-  .toFormat('hh:mm a');
-}
-  const lineData = {
-    labels: attendanceData.map(d => new Date(d.date).toLocaleDateString()),
+    if (!timeStr) return '-';
+    return DateTime.fromFormat(timeStr, 'HH:mm:ss', { zone: 'Asia/Manila' })
+      .toFormat('hh:mm a');
+  }
+
+  // Data for Attendance Record Bar Chart (Present/Absent)
+  // Compute present and absent counts per weekday from attendanceData
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const presentCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
+  const absentCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
+
+  attendanceData.forEach(record => {
+    const date = new Date(record.date);
+    const day = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    if (record.status === 'PRESENT') {
+      presentCounts[day]++;
+    } else if (record.status === 'ABSENT') {
+      absentCounts[day]++;
+    }
+  });
+
+  const barData = {
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     datasets: [
       {
-        label: 'Time In',
-        data: attendanceData.map(d => parseTimeString(d.timeIn)),
-        borderColor: '#4CAF50',
-        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-        tension: 0.1,
-        fill: true
+        label: 'Present',
+        data: [presentCounts[1], presentCounts[2], presentCounts[3], presentCounts[4], presentCounts[5]],
+        backgroundColor: '#4CAF50',
       },
       {
-        label: 'Time Out',
-        data: attendanceData.map(d => parseTimeString(d.timeOut)),
-        borderColor: '#f44336',
-        backgroundColor: 'rgba(244, 67, 54, 0.1)',
-        tension: 0.1,
-        fill: true
-      }
-    ]
+        label: 'Absent',
+        data: [absentCounts[1], absentCounts[2], absentCounts[3], absentCounts[4], absentCounts[5]],
+        backgroundColor: '#f44336',
+      },
+    ],
   };
 
-  const lineOptions = {
+  const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: 'Attendance Timeline'
-      },
-      tooltip: {
-        callbacks: {
-          label: function(tooltipItem: import("chart.js").TooltipItem<"line">) {
-            const value = tooltipItem.raw as number | null;
-            if (value === null || value === undefined) return 'Not recorded';
-            const hours = Math.floor(value);
-            const minutes = Math.round((value - hours) * 60);
-            return `${tooltipItem.dataset.label}: ${hours}:${minutes.toString().padStart(2, '0')}`;
-          }
-        }
-      }
-    },
     scales: {
-      y: {
-        title: {
-          display: true,
-          text: 'Hour of Day'
-        },
-        min: 6,
-        max: 20,
-        ticks: {
-          callback: function(value: unknown) {
-            return `${value}:00`;
-          }
-        }
-      },
       x: {
-        title: {
-          display: true,
-          text: 'Date'
-        }
-      }
-    }
+        stacked: true,
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+        },
+      },
+    },
   };
 
   if (currentView === 'attendance') {
@@ -302,167 +371,152 @@ export default function DashboardFaculty() {
     <>
       <Head>
         <title>Faculty Dashboard</title>
-        {/* <script src="https://cdn.tailwindcss.com"></script> */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
         />
       </Head>
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Top Bar with Date Picker */}
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">{currentDate}</div>
+          {/* Top Row: Personal Data, Employment Status, Date & Time */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {/* Personal Data */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Personal Data</h3>
+              <p><span className="font-medium">Position:</span> {personalData.Position}</p>
+              <p><span className="font-medium">Department:</span> {personalData.DepartmentName}</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setCurrentView('attendance')}
-                className="text-[#800000] hover:text-[#600000] transition-colors"
-              >
-                <i className="fas fa-clock mr-2"></i>
-                View Attendance
-              </button>
-              <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2">
-                <i className="fas fa-calendar-alt text-gray-400 mr-2"></i>
-                <DatePicker
-                  selected={dateRange[0]}
-                  onChange={handleDateChange}
-                  startDate={dateRange[0]}
-                  endDate={dateRange[1]}
-                  selectsRange
-                  dateFormat="yyyy-MM-dd"
-                  maxDate={new Date()}
-                  className="border-none focus:ring-0 text-sm"
-                  customInput={
-                    <input
-                      title='Select date range'
-                      className="border-none focus:ring-0 text-sm w-48"
-                      value={`${dateRange[0].toLocaleDateString()} - ${dateRange[1]?.toLocaleDateString() || ''}`}
-                      readOnly
-                    />
-                  }
-                />
+
+            {/* Employment Status */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Employment Status</h3>
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-semibold">{personalData.EmploymentStatus}</span>
               </div>
+              <p><span className="font-medium">Hire Date:</span> {personalData.HireDate}</p>
+            </div>
+
+            {/* Date & Time */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Date & Time</h3>
+              <p className="text-gray-700">{currentDate}</p>
+              <p className="text-gray-700">{currentTime}</p>
             </div>
           </div>
 
-          {/* Status Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setCurrentView('attendance')}
-              title="Go to Attendance">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Status</p>
-                  <p className={`text-2xl font-bold mt-2 ${
-                    currentRecord?.timeOut ? 'text-green-600' : 
-                    currentRecord?.timeIn ? 'text-blue-600' : 
-                    'text-red-600'
-                  }`}>
-                    {currentRecord?.timeOut ? 'CHECKED OUT' : currentRecord?.timeIn ? 'CHECKED IN' : 'NOT CHECKED IN'}
-                  </p>
+          {/* Second Row: Document Requirements, Leave */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Document Requirements */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Total Document Requirements</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-yellow-100 rounded-lg p-4">
+                  <p className="text-2xl font-bold">{documentRequirements.pending}</p>
+                  <p className="text-sm text-yellow-700">Pending</p>
                 </div>
-                <div className="p-3 rounded-full bg-gray-50">
-                  <i className={`fas ${
-                    currentRecord?.timeOut ? 'fa-sign-out-alt text-green-600' : 
-                    currentRecord?.timeIn ? 'fa-sign-in-alt text-blue-600' : 
-                    'fa-clock text-red-600'
-                  } text-xl`}></i>
+                <div className="bg-blue-100 rounded-lg p-4">
+                  <p className="text-2xl font-bold">{documentRequirements.submitted}</p>
+                  <p className="text-sm text-blue-700">Submitted</p>
+                </div>
+                <div className="bg-green-100 rounded-lg p-4">
+                  <p className="text-2xl font-bold">{documentRequirements.approved}</p>
+                  <p className="text-sm text-green-700">Approved</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Date</p>
-                  <p className="text-2xl font-bold mt-2 text-gray-900">{currentDate}</p>
-                </div>
-                <div className="p-3 rounded-full bg-gray-50">
-                  <i className="fas fa-calendar-day text-[#800000] text-xl"></i>
-                </div>
+            {/* Total Leave */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Total Leave</h3>
+              <p className="mb-2">Available Leave: {leaveData.available} days</p>
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
+                <div
+                  className="bg-blue-500 h-4 rounded-full"
+                  style={{ width: `${(leaveData.approved / leaveData.available) * 100}%` }}
+                ></div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Time</p>
-                  <p className="text-2xl font-bold mt-2 text-gray-900">{currentTime}</p>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-yellow-100 rounded-lg p-4">
+                  <p className="text-xl font-bold">{leaveData.pending}</p>
+                  <p className="text-sm text-yellow-700">Pending</p>
                 </div>
-                <div className="p-3 rounded-full bg-gray-50">
-                  <i className="fas fa-clock text-[#800000] text-xl"></i>
+                <div className="bg-green-100 rounded-lg p-4">
+                  <p className="text-xl font-bold">{leaveData.approved}</p>
+                  <p className="text-sm text-green-700">Approved</p>
+                </div>
+                <div className="bg-red-100 rounded-lg p-4">
+                  <p className="text-xl font-bold">{leaveData.rejected}</p>
+                  <p className="text-sm text-red-700">Rejected</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Main Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Attendance Timeline */}
-            <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Attendance Timeline</h2>
-                <button 
-                  onClick={handleRefresh}
-                  className="text-sm text-[#800000] hover:text-[#600000] transition-colors"
-                >
-                  <i className="fas fa-sync-alt mr-1"></i>
-                  Refresh
-                </button>
+          {/* Third Row: Attendance Record Bar Chart and Schedule */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            {/* Attendance Record Bar Chart */}
+            <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Attendance Record</h3>
+              <div className="h-64">
+                <Bar data={barData} options={barOptions} />
               </div>
-              {loading ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]"></div>
-                </div>
-              ) : (
-                <div className="h-96">
-                  <Line data={lineData} options={lineOptions} />
-                </div>
-              )}
+              <div className="mt-2 text-sm text-gray-600">Present and Absent counts per day</div>
             </div>
 
-            {/* Recent Attendance Records */}
-            <div className="lg:col-span-1 bg-white rounded-xl p-6 border border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent Records</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            {/* Schedule for the Week */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Schedule for the Week</h3>
+              <ul>
+                {scheduleForWeek.map((item, index) => (
+                  <li key={index} className="mb-3 p-3 rounded-md" style={{backgroundColor: ['#e0f7fa', '#f3e5f5', '#e8f5e9', '#fff3e0', '#fce4ec'][index]}}>
+                    <p className="font-semibold">{item.day}</p>
+                    <p>{item.subject}</p>
+                    <p className="text-sm text-gray-600">{item.time}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Fourth Row: Recent Attendance Records */}
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Recent Attendance Records</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {attendanceData.slice(0, 5).map((record, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(record.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {record.timeIn ? formatTimeWithAmPm(record.timeIn) : '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {record.timeOut ? formatTimeWithAmPm(record.timeOut) : '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          record.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
+                          record.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
+                          record.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {attendanceData.slice(0, 5).map((record, index) => (
-                      <tr key={index} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(record.date).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {record.timeIn ? formatTimeWithAmPm(record.timeIn) : '-'}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {record.timeOut ? formatTimeWithAmPm(record.timeOut) : '-'}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            record.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
-                            record.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
-                            record.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {record.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
