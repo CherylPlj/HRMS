@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { currentUser } from '@clerk/nextjs/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface User {
   UserID: number;
@@ -30,63 +34,76 @@ interface Faculty {
   Department: Department;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await currentUser();
-    if (!user) {
-      console.log('No authenticated user found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '10');
+    const department = searchParams.get('department');
+    const status = searchParams.get('status');
+    const search = searchParams.get('search') || '';
 
-    console.log('Fetching faculty data for user:', user.id);
+    // Calculate offset
+    const offset = (page - 1) * pageSize;
 
-    // First get all faculty
-    const { data: faculty, error } = await supabaseAdmin
+    // Build query
+    let query = supabase
       .from('Faculty')
       .select(`
-        *,
+        FacultyID,
+        UserID,
+        Position,
+        DepartmentID,
+        EmploymentStatus,
+        Resignation_Date,
+        Phone,
+        Address,
         User:UserID (
           UserID,
           FirstName,
           LastName,
           Email,
-          Photo,
           Status,
+          Photo,
           isDeleted
         ),
         Department:DepartmentID (
           DepartmentID,
           DepartmentName
         )
-      `)
-      .order('FacultyID', { ascending: true });
+      `, { count: 'exact' })
+      .eq('User.isDeleted', false)
+      .range(offset, offset + pageSize - 1);
 
-    if (error) {
-      console.error('Error fetching faculty:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch faculty data' },
-        { status: 500 }
-      );
+    // Add filters
+    if (department && department !== 'all') {
+      query = query.eq('DepartmentID', department);
+    }
+    if (status && status !== 'all') {
+      query = query.eq('EmploymentStatus', status);
+    }
+    if (search) {
+      query = query.or(`User.FirstName.ilike.%${search}%,User.LastName.ilike.%${search}%,User.Email.ilike.%${search}%`);
     }
 
-    console.log('Raw faculty data from database:', faculty);
+    // Execute query
+    const { data: faculty, error, count } = await query;
 
-    // Filter out faculty with deleted users on the server side
-    const activeFaculty = (faculty as Faculty[] || []).filter(f => !f.User?.isDeleted);
+    if (error) {
+      throw error;
+    }
 
-    console.log('Active faculty count:', activeFaculty.length);
-    console.log('Active faculty data:', activeFaculty.map(f => ({
-      id: f.FacultyID,
-      name: `${f.User?.FirstName} ${f.User?.LastName}`,
-      isDeleted: f.User?.isDeleted,
-      status: f.User?.Status
-    })));
+    return NextResponse.json({
+      faculty: faculty || [],
+      total: count || 0,
+      page,
+      pageSize
+    });
 
-    return NextResponse.json(activeFaculty);
   } catch (error) {
-    console.error('Error in faculty GET:', error);
+    console.error('Error fetching faculty:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch faculty data' },
       { status: 500 }
     );
   }

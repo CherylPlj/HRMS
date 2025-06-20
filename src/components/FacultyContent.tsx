@@ -146,31 +146,60 @@ const FacultyContent: React.FC = () => {
   // Add this line
   const [expandedFacultyId, setExpandedFacultyId] = useState<number | null>(null);
 
-  // Fetch faculty data from the API endpoint
+  // Add pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [cachedFacultyData, setCachedFacultyData] = useState<{ [key: string]: Faculty[] }>({});
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+  // Modify fetchFacultyData to use pagination
   const fetchFacultyData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching faculty data...'); // Debug log
-      const response = await fetch('/api/faculty');
+      
+      // Check cache first
+      const cacheKey = `${page}-${pageSize}-${selectedDepartment}-${selectedStatus}-${searchTerm}`;
+      const now = Date.now();
+      
+      if (
+        cachedFacultyData[cacheKey] && 
+        now - lastFetchTime < CACHE_DURATION
+      ) {
+        setFacultyList(cachedFacultyData[cacheKey]);
+        setLoading(false);
+        return;
+      }
+
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+        department: selectedDepartment.toString(),
+        status: selectedStatus.toString(),
+        search: searchTerm
+      });
+
+      const response = await fetch(`/api/faculty?${queryParams}`);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to load faculty data');
       }
       const data = await response.json();
-      console.log('Raw faculty data from API:', data); // Debug log
       
       // Filter out faculty with deleted users
-      const activeFaculty = data.filter((faculty: Faculty) => {
-        console.log('Checking faculty:', {
-          id: faculty.FacultyID,
-          isDeleted: faculty.User?.isDeleted,
-          status: faculty.User?.Status
-        }); // Debug log for each faculty member
-        return !faculty.User?.isDeleted;
-      });
+      const activeFaculty = data.faculty.filter((faculty: Faculty) => !faculty.User?.isDeleted);
       
-      console.log('Active faculty after filtering:', activeFaculty); // Debug log
       setFacultyList(activeFaculty);
+      setTotalItems(data.total);
+      
+      // Update cache
+      setCachedFacultyData(prev => ({
+        ...prev,
+        [cacheKey]: activeFaculty
+      }));
+      setLastFetchTime(now);
+      
       setNotification(null);
     } catch (error: unknown) {
       console.error('Error fetching faculty:', error);
@@ -595,6 +624,47 @@ const FacultyContent: React.FC = () => {
     setSelectedFaculty(faculty);
     setIsDeleteModalOpen(true);
   };
+
+  // Add pagination controls
+  const Pagination = () => (
+    <div className="flex justify-between items-center mt-4 p-4">
+      <div className="flex items-center gap-2">
+        <select
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.target.value))}
+          className="border rounded p-1"
+        >
+          <option value="10">10 per page</option>
+          <option value="25">25 per page</option>
+          <option value="50">50 per page</option>
+        </select>
+        <span className="text-sm text-gray-600">
+          Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalItems)} of {totalItems} entries
+        </span>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <button
+          onClick={() => setPage(p => p + 1)}
+          disabled={page * pageSize >= totalItems}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+
+  // Modify useEffect to depend on pagination state
+  useEffect(() => {
+    fetchFacultyData();
+  }, [page, pageSize, selectedDepartment, selectedStatus, searchTerm]);
 
   return (
     <div className="p-6">
@@ -1041,6 +1111,8 @@ const FacultyContent: React.FC = () => {
         </div>
       )}
       
+      <Pagination />
+
       {/* Add Faculty Modal */}
       {isFacultyModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">

@@ -1,11 +1,14 @@
 {
     "WillLuke.nextjs.hasPrompted": true,
     "cSpell.words": [
+        "autoincrement",
         "Fairview",
         "HRMS",
         "SJSFI",
         "sjsfilogo",
         "supabase",
-        "superadmin"
+        "superadmin",
+        "Undertime",
+        "vercel"
     ]
 }

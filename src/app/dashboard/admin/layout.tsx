@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
 import AttendanceContent from '@/components/AttendanceContent';
@@ -39,8 +41,45 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Lazy load components
+const DashboardContentLazy = dynamic(() => import('@/components/DashboardContent'), {
+  loading: () => <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+  </div>
+});
+
+const FacultyContentLazy = dynamic(() => import('@/components/FacultyContent'), {
+  loading: () => <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+  </div>
+});
+
+const AttendanceContentLazy = dynamic(() => import('@/components/AttendanceContent'), {
+  loading: () => <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+  </div>
+});
+
+const LeaveContentLazy = dynamic(() => import('@/components/LeaveContent'), {
+  loading: () => <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+  </div>
+});
+
+const UsersContentLazy = dynamic(() => import('@/components/UsersContent'), {
+  loading: () => <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+  </div>
+});
+
 export default function Dashboard() {
-  const [activeButton, setActiveButton] = useState('dashboard');
+  const [activeButton, setActiveButton] = useState(() => {
+    // Try to get the saved page from localStorage, default to 'dashboard' if not found
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('adminActivePage') || 'dashboard';
+    }
+    return 'dashboard';
+  });
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isAdminInfoVisible, setAdminInfoVisible] = useState(false); // State for Admin Info Modal
   const [isEditProfileVisible, setEditProfileVisible] = useState(false); // State for Edit Profile Modal
@@ -153,10 +192,17 @@ export default function Dashboard() {
 
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
+    // Save the active page to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adminActivePage', buttonName);
+    }
   };
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('adminActivePage');
+      }
       await signOut(); // Properly end the session
       console.log('User logged out');
       setActiveButton('dashboard'); // Reset state
@@ -279,20 +325,30 @@ export default function Dashboard() {
   };
 
   const renderContent = () => {
-    switch (activeButton) {
-      case 'dashboard':
-        return <DashboardContent />;
-      case 'faculty':
-        return <FacultyContent />;
-      case 'attendance':
-        return <AttendanceContent />;
-      case 'leave':
-        return <LeaveContent />;
-      case 'users':
-        return <UsersContent />;
-      default:
-        return <div>Select a menu item to view its content.</div>;
-    }
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+        </div>
+      }>
+        {(() => {
+          switch (activeButton) {
+            case 'dashboard':
+              return <DashboardContentLazy />;
+            case 'faculty':
+              return <FacultyContentLazy />;
+            case 'attendance':
+              return <AttendanceContentLazy />;
+            case 'leave':
+              return <LeaveContentLazy />;
+            case 'users':
+              return <UsersContentLazy />;
+            default:
+              return <div>Select a menu item to view its content.</div>;
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   return (

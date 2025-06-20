@@ -3,17 +3,72 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useUser, useAuth, useClerk } from "@clerk/nextjs";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Home() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(true);
+
+  // Clear any existing sessions on mount
+  useEffect(() => {
+    const clearSessions = async () => {
+      if (!isLoaded) return;
+      
+      try {
+        setIsCleaningUp(true);
+        // Clear Clerk session
+        if (isSignedIn) {
+          await signOut();
+        }
+        // Clear session storage
+        sessionStorage.clear();
+        // Clear Supabase session
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Error clearing sessions:', error);
+      } finally {
+        setIsCleaningUp(false);
+      }
+    };
+
+    clearSessions();
+  }, [isLoaded, isSignedIn, signOut]);
 
   const navigateToFaculty = () => {
-    router.push('/sign-in?portal=faculty');
+    if (!isRedirecting && isLoaded && !isCleaningUp) {
+      setIsRedirecting(true);
+      router.push('/sign-in?portal=faculty');
+    }
   };
 
   const navigateToAdmin = () => {
-    router.push('/sign-in?portal=admin');
+    if (!isRedirecting && isLoaded && !isCleaningUp) {
+      setIsRedirecting(true);
+      router.push('/sign-in?portal=admin');
+    }
   };
+
+  // Reset redirecting state when auth state changes
+  useEffect(() => {
+    if (isLoaded && !isCleaningUp) {
+      setIsRedirecting(false);
+    }
+  }, [isLoaded, isCleaningUp]);
+
+  // Show loading state until auth is loaded and cleanup is complete
+  if (!isLoaded || isCleaningUp) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -45,7 +100,8 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={navigateToFaculty}
-                  className="relative bg-[#800000] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-50 hover:before:rounded-sm"
+                  disabled={isRedirecting || !isLoaded || isCleaningUp}
+                  className="relative bg-[#800000] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-50 hover:before:rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="relative z-10">Faculty</span>
                 </button>
@@ -54,7 +110,8 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={navigateToAdmin}
-                  className="relative bg-[#B8860B] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-25 hover:before:rounded-sm"
+                  disabled={isRedirecting || !isLoaded || isCleaningUp}
+                  className="relative bg-[#B8860B] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-25 hover:before:rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="relative z-10">Admin</span>
                 </button>

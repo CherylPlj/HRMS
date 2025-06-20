@@ -69,8 +69,8 @@ export const supabaseAdmin = (() => {
       const { supabaseUrl, supabaseServiceRoleKey } = validateEnv();
       return createClient(supabaseUrl, supabaseServiceRoleKey, {
         auth: {
-          autoRefreshToken: true,
-          persistSession: true
+          autoRefreshToken: false,
+          persistSession: false
         }
       });
     } else {

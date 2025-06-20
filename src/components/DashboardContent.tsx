@@ -106,239 +106,142 @@ export default function DashboardContent() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch Faculty Stats
-        const { data: faculty, error: facultyError } = await supabase
-          .from("Faculty")
-          .select(`
-            *,
-            Contract (
-              ContractType
-            ),
-            User:UserID (
+        // Fetch all data in parallel
+        const [facultyResponse, departmentResponse, usersResponse, attendanceResponse, leaveResponse] = await Promise.all([
+          // Faculty Stats - Optimized query
+          supabase
+            .from("Faculty")
+            .select(`
+              FacultyID,
+              Contract (ContractType),
+              User:UserID (UserID, isDeleted, Status)
+            `)
+            .eq('User.isDeleted', false),
+
+          // Department Stats - Optimized query
+          supabase
+            .from("Department")
+            .select(`
+              DepartmentName,
+              Faculty!inner (
+                FacultyID,
+                User:UserID!inner (
+                  UserID,
+                  isDeleted
+                )
+              )
+            `)
+            .eq('Faculty.User.isDeleted', false),
+
+          // Active Users - Optimized query
+          supabase
+            .from("User")
+            .select(`
               UserID,
-              isDeleted,
-              Status
-            )
-          `) as { data: Faculty[] | null, error: any };
+              Status,
+              LastLogin,
+              UserRole!inner (
+                role:Role (name)
+              )
+            `)
+            .eq("Status", "Active")
+            .eq("isDeleted", false),
 
-        if (facultyError) {
-          console.error("Faculty fetch error:", facultyError.message || facultyError);
-          throw facultyError;
-        }
+          // Attendance Data - Optimized query with date range
+          supabase
+            .from("Attendance")
+            .select('Status')
+            .gte('Date', dateRange[0].toISOString().split('T')[0])
+            .lte('Date', dateRange[1].toISOString().split('T')[0]),
 
-        console.log('Raw faculty data from dashboard:', faculty); // Debug log
+          // Leave Requests - Optimized query
+          supabase
+            .from("Leave")
+            .select('Status')
+            .gte('StartDate', dateRange[0].toISOString().split('T')[0])
+            .lte('EndDate', dateRange[1].toISOString().split('T')[0])
+        ]);
 
-        // Filter out deleted faculty first
-        const activeFaculty = faculty?.filter(f => !f.User?.isDeleted) || [];
-        console.log('Active faculty after filtering:', activeFaculty); // Debug log
-
-        // Calculate stats only for active faculty
-        const regularCount = activeFaculty.filter((f) => f.Contract?.ContractType === "Full_Time").length;
-        const probationaryCount = activeFaculty.filter((f) => f.Contract?.ContractType === "Probationary").length;
-
-        console.log('Stats calculation:', {
-          total: activeFaculty.length,
-          regular: regularCount,
-          probationary: probationaryCount
-        }); // Debug log
+        // Process faculty stats
+        const faculty = facultyResponse.data || [];
+        const regularCount = faculty.filter((f) => f.Contract?.ContractType === "Full_Time").length;
+        const probationaryCount = faculty.filter((f) => f.Contract?.ContractType === "Probationary").length;
 
         setFacultyStats({
-          total: activeFaculty.length,
+          total: faculty.length,
           regular: regularCount,
           probationary: probationaryCount,
         });
 
-        // Fetch Department Stats
-        const { data: departments, error: deptError } = await supabase
-          .from("Department")
-          .select(`
-            DepartmentName,
-            Faculty (
-              FacultyID,
-              User:UserID (
-                UserID,
-                isDeleted,
-                Status
-              )
-            )
-          `) as { data: Department[] | null, error: any };
-
-        if (deptError) {
-          console.error("Department fetch error:", deptError.message || deptError);
-          throw deptError;
-        }
-
-        console.log('Raw department data:', departments); // Debug log
-
+        // Process department stats
+        const departments = departmentResponse.data || [];
         const deptStats: Record<string, number> = {};
-        departments?.forEach((dept) => {
-          // Only count faculty who are not deleted
-          const activeFacultyInDept = dept.Faculty?.filter(f => !f.User?.isDeleted) || [];
-          console.log(`Department ${dept.DepartmentName} active faculty:`, activeFacultyInDept.length); // Debug log
-          deptStats[dept.DepartmentName] = activeFacultyInDept.length;
+        departments.forEach((dept) => {
+          deptStats[dept.DepartmentName] = dept.Faculty?.length || 0;
         });
-
         setDepartmentStats(deptStats);
 
-        // Fetch Active Users
-        const { data: users, error: usersError } = await supabase
-          .from("User")
-          .select(`
-            UserID,
-            Status,
-            LastLogin,
-            isDeleted,
-            Role:UserRole (
-              role:Role (
-                name
-              )
-            )
-          `)
-          .eq("Status", "Active")
-          .eq("isDeleted", 'FALSE') as { data: User[] | null, error: any };
-
-        console.log('Raw users data:', users); // Debug log
-
-        if (usersError) {
-          console.error("Users fetch error:", usersError.message || usersError);
-          throw usersError;
-        }
-
-        console.log("All users from database:", users); // Debug log to see all users
-
-        // First get total active users
-        const totalActiveUsers = users?.length || 0;
+        // Process active users
+        const users = usersResponse.data || [];
+        const facultyUsers = users.filter(u => u.UserRole?.some(r => r.role.name === "faculty")).length;
+        const adminUsers = users.filter(u => u.UserRole?.some(r => r.role.name === "admin")).length;
         
-        // Then count users with specific roles
-        const facultyUsers = users?.filter((u) => u.Role?.some(r => (r.role as any).name === "Faculty")).length || 0;
-        const adminUsers = users?.filter((u) => u.Role?.some(r => (r.role as any).name === "Admin")).length || 0;
-
-        console.log("Total active users:", totalActiveUsers); // Debug log
-        console.log("Faculty users count:", facultyUsers); // Debug log
-        console.log("Admin users count:", adminUsers); // Debug log
-
         setActiveUsers({
           faculty: facultyUsers,
           admin: adminUsers,
-          total: totalActiveUsers, // Use total active users instead of sum of roles
+          total: users.length,
         });
 
-        // Fetch Attendance Data
-        const { data: attendance, error: attendanceError } = await supabase
-          .from("Attendance")
-          .select("*")
-          .gte("date", dateRange[0].toISOString())
-          .lte("date", dateRange[1].toISOString());
-
-        if (attendanceError) {
-          console.error("Attendance fetch error:", attendanceError.message || attendanceError);
-          throw attendanceError;
-        }
-
+        // Process attendance data
+        const attendance = attendanceResponse.data || [];
         setAttendanceData({
-          present: attendance?.filter((a) => a.status === "PRESENT").length || 0,
-          absent: attendance?.filter((a) => a.status === "ABSENT").length || 0,
-          late: attendance?.filter((a) => a.status === "LATE").length || 0,
+          present: attendance.filter(a => a.Status === "Present").length,
+          absent: attendance.filter(a => a.Status === "Absent").length,
+          late: attendance.filter(a => a.Status === "Late").length,
         });
 
-        // Fetch Monthly Attendance Data
-        const last6Months = Array.from({ length: 6 }, (_, i) => {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          return date;
-        }).reverse();
-
-        const monthlyData = await Promise.all(
-          last6Months.map(async (month) => {
-            const startDate = new Date(month.getFullYear(), month.getMonth(), 1);
-            const endDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-
-            const { data: monthAttendance, error: monthError } = await supabase
-              .from("Attendance")
-              .select("*")
-              .gte("date", startDate.toISOString())
-              .lte("date", endDate.toISOString());
-
-            if (monthError) {
-              console.error("Monthly attendance fetch error:", monthError.message || monthError);
-              throw monthError;
-            }
-
-            const totalDays = monthAttendance?.length || 0;
-            const presentDays = monthAttendance?.filter((a) => a.status === "PRESENT").length || 0;
-            return totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
-          })
-        );
-
-        setMonthlyAttendance(monthlyData);
-
-        // Fetch Leave Requests
-        const { data: leaves, error: leavesError } = await supabase
-          .from("Leave")
-          .select("*");
-          // .gte("CreatedAt", dateRange[0].toISOString())
-          // .lte("CreatedAt", dateRange[1].toISOString())
-          // .eq("Status", "Pending");
-            console.log(leaves);
-        if (leavesError) {
-          console.error("Leave requests fetch error:", leavesError.message || leavesError);
-          throw leavesError;
-        }
-
+        // Process leave requests
+        const leaves = leaveResponse.data || [];
         setLeaveRequests({
-          pending: leaves?.filter((l) => l.Status === "Pending").length || 0,
-          approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
-          rejected: leaves?.filter((l) => l.Status === "Rejected").length || 0,
+          pending: leaves.filter(l => l.Status === "Pending").length,
+          approved: leaves.filter(l => l.Status === "Approved").length,
+          rejected: leaves.filter(l => l.Status === "Rejected").length,
         });
-        console.log("Statuses:", leaves.map((l) => l.Status));
 
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Error fetching dashboard data:", error.message);
-        } else {
-          console.error("Error fetching dashboard data:", error);
-        }
+        console.error("Error fetching dashboard data:", error);
       }
     };
 
     fetchDashboardData();
   }, [dateRange]);
 
+  // Separate effect for logs which don't need to update as frequently
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const { data: activityLogs, error: logsError } = await supabase
+        const { data: logs } = await supabase
           .from("ActivityLog")
           .select(`
-            *,
-            User (
-              FirstName,
-              LastName
-            )
+            LogID,
+            UserID,
+            ActionType,
+            EntityAffected,
+            ActionDetails,
+            Timestamp,
+            User (FirstName, LastName)
           `)
-          .eq('UserID', user?.id)
-          .order("Timestamp", { ascending: false })
-          .limit(5);
+          .order('Timestamp', { ascending: false })
+          .limit(10);
 
-        if (logsError) {
-          console.error("Logs fetch error:", logsError.message || logsError);
-          throw logsError;
-        }
-
-        setLogs(activityLogs || []);
+        setLogs(logs || []);
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Error fetching dashboard data:", error.message);
-        } else {
-          console.error("Error fetching dashboard data:", error);
-        }
+        console.error("Error fetching logs:", error);
       }
     };
 
-    if (user?.id) {
-      fetchLogs();
-    }
-  }, [user?.id]);
+    fetchLogs();
+  }, []);
 
   const departmentData = {
     labels: Object.keys(departmentStats),
@@ -518,7 +421,7 @@ export default function DashboardContent() {
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaBriefcase className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Leave/Undertime Requests</h2>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">

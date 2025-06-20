@@ -92,27 +92,8 @@ export default function SignInPage() {
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [rememberMe, setRememberMe] = useState(() => {
-    // Initialize rememberMe from localStorage on component mount
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('rememberMe') === 'true';
-    }
-    return false;
-  });
 
-  // Load remembered email and state on component mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const rememberedEmail = localStorage.getItem('rememberedEmail');
-      const rememberedState = localStorage.getItem('rememberMe') === 'true';
-      
-      if (rememberedEmail && rememberedState) {
-        setFormData(prev => ({ ...prev, email: rememberedEmail }));
-        setRememberMe(true);
-      }
-    }
-  }, []);
-
+  // Validation functions
   const validateEmailCharacters = (email: string) => {
     // Regular expression to match only allowed characters
     const validEmailRegex = /^[a-zA-Z0-9._\-@ ]*$/;
@@ -146,6 +127,42 @@ export default function SignInPage() {
     return null;
   };
 
+  const validatePassword = (password: string) => {
+    if (password.length > 0 && password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    return null;
+  };
+
+  // Clear any existing sessions on mount
+  useEffect(() => {
+    const clearSessions = async () => {
+      try {
+        // Clear Clerk session
+        if (isSignedIn) {
+          await signOut();
+        }
+        // Clear session storage
+        sessionStorage.clear();
+        // Clear Supabase session
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Error clearing sessions:', error);
+      }
+    };
+
+    clearSessions();
+  }, []);
+
+  // Show loading state until auth is loaded
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
+      </div>
+    );
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
@@ -157,36 +174,38 @@ export default function SignInPage() {
         // Don't update the form if invalid characters are entered
         return;
       }
-      
-      if (value.length > 50) {
-        setFormData(prev => ({
-          ...prev,
-          [name]: value.slice(0, 50)
-        }));
-        return;
-      }
-    }
-    
-    if (name === 'password') {
-      if (value.length >= 50) {
-        setPasswordError('Password must not exceed 50 characters');
-        setFormData(prev => ({
-          ...prev,
-          [name]: value.slice(0, 50)
-        }));
-        return;
-      } else if (value.length < 6 && value.length > 0) {
-        setPasswordError('Password must be at least 6 characters');
-      } else {
-        setPasswordError(null);
-      }
+    } else if (name === 'password') {
+      const error = validatePassword(value);
+      setPasswordError(error);
     }
 
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-    // Clear any previous errors when user starts typing
+    setError(null);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const { name } = e.currentTarget;
+
+    let error = null;
+    if (name === 'email') {
+      error = validateEmailCharacters(pastedText);
+      setEmailError(error);
+    } else if (name === 'password') {
+      error = validatePassword(pastedText);
+      setPasswordError(error);
+    }
+
+    if (!error || (error && !error.includes('Only letters, numbers'))) {
+      setFormData(prev => ({
+        ...prev,
+        [name]: pastedText
+      }));
+    }
     setError(null);
   };
 
@@ -196,148 +215,62 @@ export default function SignInPage() {
     setError(null);
 
     try {
+      // Validate email and password
       if (!formData.email || !formData.password) {
+        setError('Please enter both email and password');
         setIsLoading(false);
-        throw new Error('Please fill in all fields');
-      }
-
-      if (formData.email.length < 6) {
-        setIsLoading(false);
-        throw new Error('Email must be at least 6 characters');
-      }
-
-      if (formData.email.length > 50) {
-        setIsLoading(false);
-        throw new Error('Email must not exceed 50 characters');
-      }
-
-      const emailError = validateEmailCharacters(formData.email);
-      if (emailError) {
-        setIsLoading(false);
-        throw new Error(emailError);
-      }
-
-      if (formData.password.length < 6) {
-        setIsLoading(false);
-        throw new Error('Password must be at least 6 characters');
-      }
-
-      if (formData.password.length > 50) {
-        setIsLoading(false);
-        throw new Error('Password must not exceed 50 characters');
-      }
-
-      if (!signIn) {
-        setIsLoading(false);
-        throw new Error('Authentication is not initialized');
-      }
-
-      // First verify the role before attempting to sign in
-      const { data: userCheck, error: userError } = await supabase
-        .from('User')
-        .select(`
-          UserID,
-          Status,
-          Email,
-          isDeleted,
-          UserRole!inner (
-            role:Role (
-              name
-            )
-          )
-        `)
-        .eq('Email', formData.email)
-        .single();
-
-      if (userError) {
-        setIsLoading(false);
-        throw new Error('Failed to verify user role');
-      }
-
-      if (!userCheck) {
-        setIsLoading(false);
-        throw new Error('User not found in the system');
-      }
-
-      const userRoles = (userCheck as unknown as UserCheck).UserRole;
-      if (!userRoles || userRoles.length === 0) {
-        setIsLoading(false);
-        throw new Error('User role not found');
-      }
-
-      const role = userRoles[0]?.role?.name;
-      if (!role) {
-        setIsLoading(false);
-        throw new Error('Invalid role configuration');
-      }
-
-      const portalRole = portal.toLowerCase();
-      if (role.toLowerCase() !== portalRole) {
-        setIsLoading(false);
-        setWarningModal({
-          isOpen: true,
-          message: `Your account has ${role.toLowerCase()} privileges. Please use the ${role.toLowerCase()} portal instead.`
-        });
-        setFormData({ email: '', password: '' }); // Clear form data when showing warning
         return;
       }
 
-      // Proceed with sign in only if role matches
+      // Sign in with Clerk
       const result = await signIn.create({
         identifier: formData.email,
         password: formData.password,
       });
 
-      if (result.status === "complete") {
-        await setActive({ 
-          session: result.createdSessionId,
-        });
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
         
-        // Handle remember me state persistence
-        if (rememberMe) {
-          localStorage.setItem('rememberedEmail', formData.email);
-          localStorage.setItem('rememberMe', 'true');
-        } else {
-          localStorage.removeItem('rememberedEmail');
-          localStorage.removeItem('rememberMe');
-        }
+        // Check user role and status
+        const { data: userCheck, error: userError } = await supabase
+          .from('User')
+          .select(`
+            UserID,
+            Status,
+            Email,
+            UserRole!inner (
+              role:Role (
+                name
+              )
+            )
+          `)
+          .eq('Email', formData.email.toLowerCase())
+          .single();
 
-        // After successful sign-in, verify user and redirect
-        const userEmail = formData.email;
-
-        if (userCheck.isDeleted) {
-          await signOut();
-          setIsLoading(false);
-          throw new Error('This account has been deleted');
+        if (userError || !userCheck) {
+          throw new Error('Failed to verify user access');
         }
 
         if (userCheck.Status !== 'Active') {
-          await signOut();
-          setIsLoading(false);
-          throw new Error('Your account is not active');
+          throw new Error('Your account is not active. Please contact the administrator.');
         }
 
-        // Update last login timestamp
-        await fetch('/api/updateLastLogin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: userCheck.UserID }),
-        });
+        const userRole = userCheck.UserRole[0]?.role?.name?.toLowerCase();
+        if (!userRole) {
+          throw new Error('No role assigned to user');
+        }
 
         // Redirect to the appropriate dashboard
-        router.push(`/dashboard/${role.toLowerCase()}`);
-      } else {
-        setIsLoading(false);
-        throw new Error('Sign in failed');
+        router.push(`/dashboard/${userRole}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Sign in error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to sign in. Please try again.');
-      if (isSignedIn) {
-        await signOut();
-      }
+      setError(err.message || 'An error occurred during sign in');
+      // Clear any existing sessions on error
+      await signOut();
+      sessionStorage.clear();
+      await supabase.auth.signOut();
+    } finally {
       setIsLoading(false);
     }
   };
@@ -353,29 +286,6 @@ export default function SignInPage() {
     setWarningModal({ isOpen: false, message: '' });
     setFormData({ email: '', password: '' }); // Clear the form
   };
-
-  const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setRememberMe(checked);
-    if (checked) {
-      localStorage.setItem('rememberMe', 'true');
-      if (formData.email) {
-        localStorage.setItem('rememberedEmail', formData.email);
-      }
-    } else {
-      localStorage.removeItem('rememberedEmail');
-      localStorage.removeItem('rememberMe');
-    }
-  };
-
-  // Return early if auth is not loaded
-  if (!isLoaded || !signIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -429,6 +339,9 @@ export default function SignInPage() {
                   <div className="relative w-full">
                     <input
                       autoComplete="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      autoCorrect="off"
                       placeholder="Email Address"
                       className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10 ${
                         emailError ? 'border-red-500' : ''
@@ -437,6 +350,7 @@ export default function SignInPage() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
+                      onPaste={handlePaste}
                       disabled={isLoading}
                     />
                   </div>
@@ -449,7 +363,10 @@ export default function SignInPage() {
                 <div className="mb-4 w-full">
                   <div className="relative w-full">
                     <input
-                      autoComplete="off"
+                      autoComplete="new-password"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      autoCorrect="off"
                       placeholder="Password"
                       className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10 ${
                         passwordError ? 'border-red-500' : ''
@@ -458,6 +375,7 @@ export default function SignInPage() {
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
+                      onPaste={handlePaste}
                       disabled={isLoading}
                     />
                     <button
@@ -474,18 +392,6 @@ export default function SignInPage() {
                       {passwordError}
                     </p>
                   )}
-                </div>
-                <div className="mb-4 w-full flex items-center">
-                  <label className="flex items-center cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={handleRememberMeChange}
-                      className="form-checkbox h-4 w-4 text-[#800000] rounded border-gray-300 focus:ring-[#800000]"
-                      disabled={isLoading}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Remember me</span>
-                  </label>
                 </div>
                 <div className="mb-4 w-full">
                   <button

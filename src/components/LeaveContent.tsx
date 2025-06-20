@@ -8,6 +8,7 @@ import type { Leave, Faculty, User as PrismaUser, Department } from '@/generated
 import { LeaveType, LeaveStatus } from '@/generated/prisma';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from '@/lib/supabaseClient';
 
 type LeaveWithRelations = Leave & {
     Faculty: (Faculty & {
@@ -22,6 +23,41 @@ type TransformedLeave = Omit<LeaveWithRelations, 'Faculty'> & {
         Department: string;
         UserID: string | null;
     };
+};
+
+// Add notification types
+type NotificationType = 'success' | 'error';
+
+interface NotificationProps {
+    type: NotificationType;
+    message: string;
+    onClose: () => void;
+}
+
+const Notification: React.FC<NotificationProps> = ({ type, message, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 flex items-center space-x-2 ${
+            type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+            {type === 'success' ? (
+                <Check className="h-5 w-5" />
+            ) : (
+                <X className="h-5 w-5" />
+            )}
+            <span>{message}</span>
+            <button onClick={onClose} className="ml-2">
+                <X className="h-4 w-4" />
+            </button>
+        </div>
+    );
 };
 
 const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
@@ -102,110 +138,85 @@ const LeaveContent: React.FC = () => {
         facultyName: '',
     });
     const [isAdmin, setIsAdmin] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [cachedLeaves, setCachedLeaves] = useState<{ [key: string]: TransformedLeave[] }>({});
+    const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    const [notification, setNotification] = useState<{ type: NotificationType; message: string } | null>(null);
 
-    useEffect(() => {
-        if (!isUserLoaded) {
-            return; // Wait for user to load
-        }
-
-        if (!user) {
-            console.log('No user found, redirecting to sign in...');
-            router.push('/sign-in');
-            return;
-        }
-
-        fetchLeaves();
-    }, [user, isUserLoaded, router]);
+    // Add a function to show notifications
+    const showNotification = (type: NotificationType, message: string) => {
+        setNotification({ type, message });
+    };
 
     const fetchLeaves = async () => {
         try {
-            setLoading(true);
             setError(null);
-            
-            console.log('Fetching leaves...');
-            const response = await fetch('/api/leaves', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-            });
-            
-            // Log the full response for debugging
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-            
-            // Handle different response types
-            const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
 
-            let data;
-            const responseText = await response.text();
-            console.log('Raw response:', responseText);
-
-            try {
-                data = JSON.parse(responseText);
-            } catch (e) {
-                console.error('Failed to parse response as JSON:', e);
-                console.error('Response text:', responseText);
-                throw new Error('Invalid server response format');
+            // Check cache first
+            const cacheKey = `leaves_${page}_${pageSize}`;
+            const now = Date.now();
+            if (
+                cachedLeaves[cacheKey] &&
+                now - lastFetchTime < CACHE_DURATION
+            ) {
+                setLeaves(cachedLeaves[cacheKey]);
+                return;
             }
-            
-            if (!response.ok) {
-                console.error('Error response from API:', data);
-                if (response.status === 401) {
-                    router.push('/sign-in');
-                    return;
+
+            const { data: { count } } = await supabase
+                .from('Leave')
+                .select('*', { count: 'exact' });
+
+            setTotalItems(count || 0);
+
+            const { data: leaves, error: leavesError } = await supabase
+                .from('Leave')
+                .select(`
+                    *,
+                    Faculty (
+                        User (
+                            FirstName,
+                            LastName,
+                            Photo
+                        ),
+                        Department (
+                            DepartmentName
+                        )
+                    )
+                `)
+                .order('CreatedAt', { ascending: false })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
+            if (leavesError) throw new Error(leavesError.message);
+
+            const transformedLeaves = leaves.map(leave => ({
+                ...leave,
+                Faculty: {
+                    Name: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
+                    Department: leave.Faculty.Department.DepartmentName,
+                    Photo: leave.Faculty.User.Photo
                 }
-                throw new Error(data.error || data.details || `Server error: ${response.status}`);
-            }
-            
-            if (!Array.isArray(data)) {
-                console.error('Invalid response format:', data);
-                throw new Error('Invalid response format from server');
-            }
-            
-            console.log('Number of leaves received:', data.length);
-            if (data.length > 0) {
-                console.log('First leave record:', data[0]);
-            }
-            
-            setLeaves(data);
-            setError(null);
+            }));
 
-            // Fetch profile photos for all faculty members
-            const photoPromises = data
-                .filter((leave: TransformedLeave) => leave.Faculty?.UserID)
-                .map(async (leave: TransformedLeave) => {
-                    if (leave.Faculty?.UserID) {
-                        try {
-                            const photoUrl = await fetchUserProfilePhoto(leave.Faculty.UserID);
-                            return [leave.Faculty.UserID, photoUrl];
-                        } catch (error) {
-                            console.error(`Failed to fetch photo for user ${leave.Faculty.UserID}:`, error);
-                            return [leave.Faculty.UserID, '/manprofileavatar.png'];
-                        }
-                    }
-                    return null;
-                });
-
-            const photoResults = await Promise.all(photoPromises);
-            const photos = Object.fromEntries(
-                photoResults.filter((result): result is [string, string] => result !== null)
-            );
-            setProfilePhotos(photos);
-        } catch (err) {
-            console.error('Error fetching leaves:', err);
-            setError(err instanceof Error ? err.message : 'Failed to fetch leaves');
-            setLeaves([]); // Reset leaves on error
-        } finally {
-            setLoading(false);
+            setLeaves(transformedLeaves);
+            setCachedLeaves({
+                ...cachedLeaves,
+                [cacheKey]: transformedLeaves
+            });
+            setLastFetchTime(now);
+        } catch (error) {
+            console.error('Error fetching leaves:', error);
+            setError(error instanceof Error ? error.message : 'Failed to fetch leaves');
+            showNotification('error', 'Failed to fetch leave requests');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
+            setLoading(true);
             const response = await fetch(`/api/leaves/${id}`, {
                 method: 'DELETE',
             });
@@ -214,17 +225,27 @@ const LeaveContent: React.FC = () => {
                 throw new Error('Failed to delete leave request');
             }
 
-            setLeaves(leaves.filter(leave => leave.LeaveID !== id));
+            // Clear cache to force a fresh fetch
+            setCachedLeaves({});
+            setLastFetchTime(0);
+            
+            // Fetch fresh data
+            await fetchLeaves();
+            
             setShowDeleteModal(false);
             setSelectedLeaveId(null);
+            showNotification('success', 'Leave request deleted successfully');
         } catch (err) {
             console.error('Error deleting leave:', err);
-            alert('Failed to delete leave request');
+            showNotification('error', err instanceof Error ? err.message : 'Failed to delete leave request');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleStatusUpdate = async (id: number, status: LeaveStatus) => {
         try {
+            setLoading(true);
             const response = await fetch(`/api/leaves/${id}`, {
                 method: 'PATCH',
                 headers: {
@@ -233,19 +254,26 @@ const LeaveContent: React.FC = () => {
                 body: JSON.stringify({ status }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error(`Failed to ${status.toLowerCase()} leave request`);
+                throw new Error(data.error || `Failed to ${status.toLowerCase()} leave request`);
             }
 
-            setLeaves(leaves.map(leave => 
-                leave.LeaveID === id 
-                    ? { ...leave, Status: status }
-                    : leave
-            ));
+            // Clear cache to force a fresh fetch
+            setCachedLeaves({});
+            setLastFetchTime(0);
+            
+            // Fetch fresh data
+            await fetchLeaves();
+            
             setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '' });
+            showNotification('success', `Leave request ${status.toLowerCase()} successfully`);
         } catch (err) {
             console.error('Error updating leave status:', err);
-            alert(`Failed to ${status.toLowerCase()} leave request`);
+            showNotification('error', err instanceof Error ? err.message : `Failed to ${status.toLowerCase()} leave request`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -319,6 +347,48 @@ const LeaveContent: React.FC = () => {
     }
     };
 
+    // Add pagination controls
+    const Pagination = () => (
+        <div className="flex justify-between items-center mt-4 p-4">
+            <div className="flex items-center gap-2">
+                <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="border rounded p-1"
+                >
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+                <span className="text-sm text-gray-600">
+                    Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalItems)} of {totalItems} entries
+                </span>
+            </div>
+            <div className="flex gap-2">
+                <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1 border rounded disabled:opacity-50"
+                >
+                    Previous
+                </button>
+                <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page * pageSize >= totalItems}
+                    className="px-3 py-1 border rounded disabled:opacity-50"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+    );
+
+    useEffect(() => {
+        if (isUserLoaded && user) {
+            fetchLeaves();
+        }
+    }, [user, isUserLoaded, page, pageSize]);
+
     if (!isUserLoaded) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -356,6 +426,13 @@ const LeaveContent: React.FC = () => {
 
     return (
         <div className="text-black p-6 min-h-screen bg-gray-50">
+            {notification && (
+                <Notification
+                    type={notification.type}
+                    message={notification.message}
+                    onClose={() => setNotification(null)}
+                />
+            )}
             {/* Header with Toggle Switch */}
             <div className="flex justify-between items-center mb-6">
                 <div className="flex space-x-6">
@@ -367,7 +444,7 @@ const LeaveContent: React.FC = () => {
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
-                        Leave Requests
+                        Leave/Undertime Requests
                     </button>
                     <button
                         onClick={() => setActiveTab('logs')}
@@ -407,6 +484,9 @@ const LeaveContent: React.FC = () => {
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Faculty
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Request Type
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Leave Type
@@ -461,7 +541,10 @@ const LeaveContent: React.FC = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {leave.LeaveType}
+                                                        {leave.TimeIn ? 'Undertime' : 'Leave'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {leave.TimeIn ? 'N/A' : leave.LeaveType}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                         {formatDate(leave.StartDate)}
@@ -543,6 +626,7 @@ const LeaveContent: React.FC = () => {
                                 <tr>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Picture</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Employee Name</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Request Type</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Leave Type</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Start Date</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">End Date</th>
@@ -577,7 +661,12 @@ const LeaveContent: React.FC = () => {
                                             <td className="px-4 py-3 font-medium">{leave.Faculty?.Name}</td>
                                             <td className="px-4 py-3">
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
-                                                    {leave.LeaveType}
+                                                    {leave.TimeIn ? 'Undertime' : 'Leave'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
+                                                    {leave.TimeIn ? 'N/A' : leave.LeaveType}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">{formatDate(leave.StartDate)}</td>
@@ -648,6 +737,8 @@ const LeaveContent: React.FC = () => {
                 status={statusUpdateModal.status || 'Approved'}
                 facultyName={statusUpdateModal.facultyName}
             />
+
+            <Pagination />
         </div>
     );
 };

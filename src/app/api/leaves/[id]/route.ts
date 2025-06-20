@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { LeaveStatus } from '@prisma/client';
 
 export async function DELETE(
     request: NextRequest,
@@ -58,9 +59,10 @@ export async function PATCH(
         const { status } = await request.json();
         console.log('Received status update request:', { id, status });
 
-        if (!status || !['Approved', 'Rejected'].includes(status)) {
+        // Validate status is a valid LeaveStatus enum value
+        if (!status || !Object.values(LeaveStatus).includes(status)) {
             return NextResponse.json(
-                { error: 'Invalid status' },
+                { error: `Invalid status. Must be one of: ${Object.values(LeaveStatus).join(', ')}` },
                 { status: 400 }
             );
         }
@@ -70,13 +72,16 @@ export async function PATCH(
                 LeaveID: parseInt(id)
             },
             data: {
-                Status: status,
+                Status: status as LeaveStatus,
                 UpdatedAt: new Date()
             }
         });
 
         console.log('Successfully updated leave status:', leave);
-        return NextResponse.json({ message: 'Leave status updated successfully' });
+        return NextResponse.json({ 
+            message: 'Leave status updated successfully',
+            leave // Return the updated leave data
+        });
     } catch (error) {
         console.error('Error in update leave status API:', error);
         // Handle Prisma-specific errors
@@ -85,6 +90,12 @@ export async function PATCH(
                 return NextResponse.json(
                     { error: 'Leave record not found' },
                     { status: 404 }
+                );
+            }
+            if (error.message.includes('Invalid `prisma.leave.update()` invocation')) {
+                return NextResponse.json(
+                    { error: 'Invalid leave status value' },
+                    { status: 400 }
                 );
             }
             if (error.message.includes('prisma')) {

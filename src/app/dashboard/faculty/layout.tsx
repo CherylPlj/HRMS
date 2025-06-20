@@ -8,7 +8,7 @@ import PersonalData from '@/components/PersonalData';
 import DocumentsFaculty from '@/components/DocumentsFaculty';
 import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
-import { useRouter } from 'next/navigation'; // <-- Add this
+import { useRouter, useSearchParams } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
 
 interface ChatMessage {
@@ -17,7 +17,12 @@ interface ChatMessage {
 }
 
 export default function Dashboard() {
-  const [activeButton, setActiveButton] = useState('dashboard');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeButton, setActiveButton] = useState(() => {
+    // Get initial state from URL or default to 'dashboard'
+    return searchParams.get('page') || 'dashboard';
+  });
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
@@ -26,7 +31,6 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
-  const router = useRouter();
   const [isProfileVisible, setProfileVisible] = useState(false); // Add this state
 
   const chatbotRef = useRef<HTMLDivElement | null>(null);
@@ -110,7 +114,23 @@ export default function Dashboard() {
 
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
+    // Update URL without causing a page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', buttonName);
+    window.history.pushState({}, '', url);
   };
+
+  // Add effect to sync URL with state
+  useEffect(() => {
+    // Listen for popstate (browser back/forward) events
+    const handlePopState = () => {
+      const page = new URL(window.location.href).searchParams.get('page') || 'dashboard';
+      setActiveButton(page);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -212,11 +232,11 @@ export default function Dashboard() {
                 className={`flex flex-col items-center ${
                   activeButton === 'leave' ? 'text-[#800000]' : 'text-black'
                 }`}
-                title="Leave Request"
+                title="Leave Request/Undertime"
                 onClick={() => handleButtonClick('leave')}
               >
                 <i className="fas fa-envelope text-xl"></i>
-                <span className="text-[10px] whitespace-nowrap">Leave Request</span>
+                <span className="text-[10px] text-center leading-tight">Leave/<br/>Undertime</span>
               </a>
             </nav>
           </div>
@@ -244,7 +264,7 @@ export default function Dashboard() {
                 {activeButton === 'documents' && 'DOCUMENTS'}
                 {/* {activeButton === 'attendance' && 'ATTENDANCE'} */}
                 {activeButton === 'attendance' && 'SCHEDULE'}
-                {activeButton === 'leave' && 'LEAVE REQUEST'}
+                {activeButton === 'leave' && 'REQUEST LEAVE/UNDERTIME'}
               </h1>
             {/* </div> */}
             <div className="flex items-center space-x-4">

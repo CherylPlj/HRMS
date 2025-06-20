@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -17,7 +16,6 @@ model UserIDSequence {
 
 model User {
   UserID       String         @id
-  ClerkID      String?        @unique
   FirstName    String
   LastName     String
   Email        String         @unique
@@ -27,10 +25,10 @@ model User {
   DateCreated  DateTime       @default(now())
   DateModified DateTime?      @updatedAt
   LastLogin    DateTime?
-  createdBy String?
-  updatedBy String?
-  isDeleted Boolean @default(false)
-
+  createdBy    String?
+  isDeleted    Boolean        @default(false)
+  updatedBy    String?
+  ClerkID      String?        @unique
   AIChat       AIChat[]
   ActivityLog  ActivityLog[]
   Cashier      Cashier?       @relation("UserCashier")
@@ -47,20 +45,21 @@ model Faculty {
   DateOfBirth      DateTime         @db.Date
   Phone            String?
   Address          String?
-  EmploymentStatus EmploymentStatus
+  EmploymentStatus EmploymentStatus @default(Regular)
   HireDate         DateTime         @db.Date
   ResignationDate  DateTime?        @db.Date
   Position         String
   DepartmentID     Int
   ContractID       Int?
   EmergencyContact String?
+  EmployeeType     EmployeeType     @default(Regular)
+  Attendance       Attendance[]
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
   Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
-  User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Restrict)
+  User             User             @relation("UserFaculty", fields: [UserID], references: [UserID])
   Leaves           Leave[]
   Schedules        Schedule[]
-  Attendance       Attendance[]
 }
 
 model Cashier {
@@ -86,16 +85,16 @@ model Department {
 }
 
 model Document {
-  DocumentID        Int       @id @default(autoincrement())
-  FacultyID         Int
-  DocumentTypeID    Int
-  UploadDate        DateTime  @default(now())
-  SubmissionStatus  SubmissionStatus @default(Pending)
-  FilePath          String?   // Google Drive file ID
-  FileUrl           String?   // Google Drive web view link
-  DownloadUrl       String?   // Google Drive download link
-  Faculty           Faculty   @relation(fields: [FacultyID], references: [FacultyID])
-  DocumentType      DocumentType @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
+  DocumentID       Int              @id @default(autoincrement())
+  FacultyID        Int
+  DocumentTypeID   Int
+  UploadDate       DateTime?        @default(now())
+  SubmissionStatus SubmissionStatus @default(Submitted)
+  FileUrl          String?
+  DownloadUrl      String?
+  FilePath         String?
+  DocumentType     DocumentType     @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
+  Faculty          Faculty          @relation(fields: [FacultyID], references: [FacultyID])
 
   @@index([FacultyID])
   @@index([DocumentTypeID])
@@ -104,9 +103,9 @@ model Document {
 model DocumentType {
   DocumentTypeID   Int        @id @default(autoincrement())
   DocumentTypeName String     @unique
-  AllowedFileTypes String[]   // Array of allowed file extensions
-  Template        String?     // Optional template file path
-  Document        Document[]
+  AllowedFileTypes String[]
+  Template         String?
+  Document         Document[]
 }
 
 model Contract {
@@ -118,16 +117,16 @@ model Contract {
 }
 
 model Attendance {
-  id         Int       @id @default(autoincrement())
-  facultyId  Int
-  date       DateTime  @default(now())  @db.Date
-  timeIn     DateTime?    @db.Time
-  timeOut    DateTime?   @db.Time
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime?  @updatedAt
-  status     AttendanceStatus @default(NOT_RECORDED)
-  Faculty    Faculty   @relation(fields: [facultyId], references: [FacultyID])
-
+  id        Int              @id @default(autoincrement())
+  date      DateTime         @default(now()) @db.Date
+  timeIn    DateTime?        @db.Time(6)
+  timeOut   DateTime?        @db.Time(6)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime?        @updatedAt
+  facultyId Int
+  status    AttendanceStatus @default(NOT_RECORDED)
+  remarks   String?
+  Faculty   Faculty          @relation(fields: [facultyId], references: [FacultyID])
 }
 
 model Schedule {
@@ -181,7 +180,6 @@ model ActivityLog {
   User           User?    @relation(fields: [UserID], references: [UserID])
 }
 
-
 model Role {
   id    Int        @id @default(autoincrement())
   name  String     @unique
@@ -198,28 +196,37 @@ model UserRole {
 }
 
 model Leave {
-  LeaveID     Int         @id @default(autoincrement())
-  FacultyID   Int
-  LeaveType   LeaveType
-  StartDate   DateTime
-  EndDate     DateTime
-  Reason      String
-  Status      LeaveStatus @default(Pending)
-  DocumentUrl String?
-  CreatedAt   DateTime    @default(now())
-  UpdatedAt   DateTime    @updatedAt
-  Faculty     Faculty     @relation(fields: [FacultyID], references: [FacultyID])
+  LeaveID                 Int         @id @default(autoincrement())
+  FacultyID               Int
+  LeaveType               LeaveType?
+  StartDate               DateTime?
+  EndDate                 DateTime?
+  TimeIn                  DateTime?
+  TimeOut                 DateTime?
+  Reason                  String
+  Status                  LeaveStatus @default(Pending)
+  EmploymentType          String?
+  employeeSignature       String?
+  departmentHeadSignature String?
+  CreatedAt              DateTime    @default(now())
+  UpdatedAt              DateTime    @updatedAt
+  Faculty                Faculty     @relation(fields: [FacultyID], references: [FacultyID])
+  requestType            String      @default("Leave")
+
+  @@index([FacultyID])
 }
 
 enum Status {
-  Invited
   Active
   Inactive
+  Invited
 }
 
 enum EmploymentStatus {
   Hired
   Resigned
+  Regular
+  Probationary
 }
 
 enum SubmissionStatus {
@@ -256,6 +263,11 @@ enum LeaveStatus {
   Pending
   Approved
   Rejected
+}
+
+enum EmployeeType {
+  Regular
+  Under_Probation
 }
 
 enum LeaveType {

@@ -15,7 +15,10 @@ const publicRoutes = [
     "/api/faculty/user/[userId]",
     "/api/faculty-documents/[documentId]",
     "/api/leaves/[id]",
-    "/api/webhooks/clerk"
+    "/api/webhooks/clerk",
+    "/terms-of-use",
+    "/privacy-statement",
+    "/api/auth/cleanup"
 ];
 
 // Routes that can be accessed while signed out
@@ -31,7 +34,10 @@ const ignoredRoutes = [
     "/api/faculty/user/[userId]",
     "/api/faculty-documents/[documentId]",
     "/api/leaves/[id]",
-    "/api/webhooks/clerk"
+    "/api/webhooks/clerk",
+    "/terms-of-use",
+    "/privacy-statement",
+    "/api/auth/cleanup"
 ];
 
 const isPublicRoute = createRouteMatcher(publicRoutes);
@@ -61,6 +67,12 @@ function checkRateLimit(ip: string): boolean {
 
 export default clerkMiddleware(async (auth, req) => {
     const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+    const url = new URL(req.url);
+    
+    // Always allow access to the home page
+    if (url.pathname === '/') {
+        return NextResponse.next();
+    }
     
     // Only apply rate limiting to authentication-related routes
     if (req.url.includes('/sign-in') || req.url.includes('/sign-up')) {
@@ -83,9 +95,8 @@ export default clerkMiddleware(async (auth, req) => {
         }
     }
 
-    const { userId } = await auth();
+    const { userId, sessionClaims } = await auth();
     const isAuthenticated = !!userId;
-    const url = new URL(req.url);
 
     // Add security headers
     const response = NextResponse.next();
@@ -122,34 +133,43 @@ export default clerkMiddleware(async (auth, req) => {
             return response;
         }
 
+        // If already on a dashboard route, allow access
+        if (url.pathname.startsWith('/dashboard/')) {
+            // Verify the user has access to this specific dashboard
+            try {
+                const userEmail = sessionClaims?.email as string;
+                if (!userEmail) {
+                    throw new Error("No email found in session");
+                }
+
+                const userRole = await getUserRole(userEmail);
+                const currentPath = url.pathname.toLowerCase();
+                const expectedPath = `/dashboard/${userRole.toLowerCase()}`;
+
+                // If on wrong dashboard, redirect to correct one
+                if (!currentPath.startsWith(expectedPath)) {
+                    return NextResponse.redirect(new URL(expectedPath, req.url));
+                }
+            } catch (error) {
+                console.error("Dashboard access error:", error);
+                return NextResponse.redirect(new URL('/sign-in?error=unauthorized', req.url));
+            }
+            return response;
+        }
+
         try {
-            // Redirect to appropriate dashboard based on role
-            const session = await auth();
-            const userEmail = session.sessionClaims?.email as string;
-            
+            const userEmail = sessionClaims?.email as string;
             if (!userEmail) {
                 throw new Error("No email found in session");
             }
 
             const userRole = await getUserRole(userEmail);
-            
             if (!userRole) {
                 throw new Error("No role found for user");
             }
-            
 
-            switch (userRole.toLowerCase()) {
-                case 'admin':
-                    return NextResponse.redirect(new URL('/dashboard/admin', req.url));
-                case 'faculty':
-                    return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
-                case 'registrar':
-                    return NextResponse.redirect(new URL('/dashboard/registrar', req.url));
-                case 'cashier':
-                    return NextResponse.redirect(new URL('/dashboard/cashier', req.url));
-                default:
-                    throw new Error("Invalid user role");
-            }
+            // Redirect to appropriate dashboard
+            return NextResponse.redirect(new URL(`/dashboard/${userRole.toLowerCase()}`, req.url));
         } catch (error) {
             console.error("Authentication error:", error);
             return NextResponse.redirect(new URL('/sign-in?error=unauthorized', req.url));

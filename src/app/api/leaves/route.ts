@@ -3,7 +3,13 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import type { Leave, Faculty, User, Department } from '@/generated/prisma';
-import { LeaveType, LeaveStatus } from '@/generated/prisma';
+import { LeaveType, LeaveStatus } from '@prisma/client';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Define a type for the transformed leave record
 type TransformedLeave = Leave & {
@@ -27,72 +33,71 @@ type LeaveWithRelations = Leave & {
     }) | null;
 };
 
-export async function GET() {
-    try {
-        // Add CORS headers
-        const headers = {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        };
+const validLeaveTypes = ['Sick', 'Vacation', 'Emergency'];
+const validEmploymentTypes = ['Regular', 'Under Probation'];
+const validRequestTypes = ['Leave', 'Undertime'];
 
-        const leaves = await prisma.leave.findMany({
-            include: {
-                Faculty: {
-                    include: {
-                        User: {
-                            select: {
-                                FirstName: true,
-                                LastName: true,
-                                UserID: true,
-                            }
-                        },
-                        Department: {
-                            select: {
-                                DepartmentName: true
-                            }
-                        }
-                    }
-                }
-            },
-            orderBy: {
-                CreatedAt: 'desc'
-            }
-        });
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '10');
 
-        // Transform the data to match the frontend structure
-        const transformedLeaves = leaves.map((leave: LeaveWithRelations) => ({
-            ...leave,
-            Faculty: {
-                Name: leave.Faculty?.User ? 
-                    `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}` : 
-                    'Unknown',
-                Department: leave.Faculty?.Department?.DepartmentName || 'Unknown',
-                UserID: leave.Faculty?.User?.UserID || null
-            }
-        }));
+    // Calculate offset
+    const offset = (page - 1) * pageSize;
 
-        return new NextResponse(JSON.stringify(transformedLeaves), {
-            status: 200,
-            headers
-        });
-    } catch (error) {
-        console.error('Error fetching leaves:', error);
-        return new NextResponse(
-            JSON.stringify({ 
-                error: 'Failed to fetch leaves',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            }),
-            { 
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                }
-            }
-        );
+    // Build query
+    let query = supabase
+      .from('Leave')
+      .select(`
+        *,
+        Faculty!inner (
+          FacultyID,
+          UserID,
+          User!inner (
+            FirstName,
+            LastName,
+            UserID
+          ),
+          Department!inner (
+            DepartmentName
+          )
+        )
+      `, { count: 'exact' })
+      .order('CreatedAt', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    // Execute query
+    const { data: leaves, error, count } = await query;
+
+    if (error) {
+      throw error;
     }
+
+    // Transform the data
+    const transformedLeaves = leaves?.map(leave => ({
+      ...leave,
+      Faculty: {
+        Name: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
+        Department: leave.Faculty.Department.DepartmentName,
+        UserID: leave.Faculty.User.UserID
+      }
+    })) || [];
+
+    return NextResponse.json({
+      leaves: transformedLeaves,
+      total: count || 0,
+      page,
+      pageSize
+    });
+
+  } catch (error) {
+    console.error('Error fetching leaves:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch leaves data' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -117,18 +122,24 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        console.log('Received leave request body:', JSON.stringify(body, null, 2));
+        console.log('Received request body:', JSON.stringify(body, null, 2));
 
-        const { FacultyID, LeaveType, StartDate, EndDate, Reason, DocumentUrl } = body;
+        const { 
+            FacultyID,
+            requestType,
+            Reason,
+            employeeSignature,
+            departmentHeadSignature
+        } = body;
 
-        // Validate required fields
-        if (!FacultyID || !LeaveType || !StartDate || !EndDate || !Reason) {
+        // Validate common required fields
+        if (!FacultyID || !requestType || !Reason || !employeeSignature || !departmentHeadSignature) {
             const missingFields = [];
             if (!FacultyID) missingFields.push('FacultyID');
-            if (!LeaveType) missingFields.push('LeaveType');
-            if (!StartDate) missingFields.push('StartDate');
-            if (!EndDate) missingFields.push('EndDate');
+            if (!requestType) missingFields.push('requestType');
             if (!Reason) missingFields.push('Reason');
+            if (!employeeSignature) missingFields.push('Employee Signature');
+            if (!departmentHeadSignature) missingFields.push('Department Head Signature');
             
             console.error('Missing required fields:', missingFields);
             return NextResponse.json(
@@ -137,99 +148,140 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validate leave type
-        const validLeaveTypes: LeaveType[] = ['Sick', 'Vacation', 'Emergency'];
-        if (!validLeaveTypes.includes(LeaveType)) {
-            console.error('Invalid leave type:', LeaveType);
+        // Validate request type
+        if (!validRequestTypes.includes(requestType)) {
+            console.error('Invalid request type:', requestType);
             return NextResponse.json(
-                { error: `Invalid leave type. Must be one of: ${validLeaveTypes.join(', ')}` },
+                { error: `Invalid request type. Must be one of: ${validRequestTypes.join(', ')}` },
                 { status: 400 }
             );
         }
 
-        // Validate dates
-        const start = new Date(StartDate);
-        const end = new Date(EndDate);
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-            console.error('Invalid date format:', { StartDate, EndDate });
-            return NextResponse.json(
-                { error: 'Invalid date format' },
-                { status: 400 }
-            );
+        if (requestType === 'Leave') {
+            const { LeaveType, StartDate, EndDate, EmploymentType } = body;
+
+            // Validate leave-specific fields
+            if (!LeaveType || !StartDate || !EndDate || !EmploymentType) {
+                const missingFields = [];
+                if (!LeaveType) missingFields.push('LeaveType');
+                if (!StartDate) missingFields.push('StartDate');
+                if (!EndDate) missingFields.push('EndDate');
+                if (!EmploymentType) missingFields.push('EmploymentType');
+                
+                console.error('Missing leave-specific fields:', missingFields);
+                return NextResponse.json(
+                    { error: `Missing required fields: ${missingFields.join(', ')}` },
+                    { status: 400 }
+                );
+            }
+
+            // Validate employment type
+            if (!validEmploymentTypes.includes(EmploymentType)) {
+                console.error('Invalid employment type:', EmploymentType);
+                return NextResponse.json(
+                    { error: `Invalid employment type. Must be one of: ${validEmploymentTypes.join(', ')}` },
+                    { status: 400 }
+                );
+            }
+
+            // Validate leave type
+            if (!validLeaveTypes.includes(LeaveType)) {
+                console.error('Invalid leave type:', LeaveType);
+                return NextResponse.json(
+                    { error: `Invalid leave type. Must be one of: ${validLeaveTypes.join(', ')}` },
+                    { status: 400 }
+                );
+            }
+
+            // Validate dates
+            const start = new Date(StartDate);
+            const end = new Date(EndDate);
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                console.error('Invalid date format:', { StartDate, EndDate });
+                return NextResponse.json(
+                    { error: 'Invalid date format' },
+                    { status: 400 }
+                );
+            }
+
+            if (start > end) {
+                console.error('Invalid date range:', { start, end });
+                return NextResponse.json(
+                    { error: 'Start date must be before end date' },
+                    { status: 400 }
+                );
+            }
+
+            // Create leave request
+            const leaveRequest = await prisma.leave.create({
+                data: {
+                    FacultyID,
+                    LeaveType,
+                    StartDate: new Date(StartDate),
+                    EndDate: new Date(EndDate),
+                    Reason,
+                    Status: LeaveStatus.Pending,
+                    EmploymentType,
+                    employeeSignature: employeeSignature,
+                    departmentHeadSignature: departmentHeadSignature,
+                }
+            });
+
+            return NextResponse.json(leaveRequest);
+        } else if (requestType === 'Undertime') {
+            const { TimeIn, TimeOut } = body;
+
+            // Validate undertime-specific fields
+            if (!TimeIn || !TimeOut) {
+                const missingFields = [];
+                if (!TimeIn) missingFields.push('TimeIn');
+                if (!TimeOut) missingFields.push('TimeOut');
+                
+                console.error('Missing undertime-specific fields:', missingFields);
+                return NextResponse.json(
+                    { error: `Missing required fields: ${missingFields.join(', ')}` },
+                    { status: 400 }
+                );
+            }
+
+            // Validate times
+            const timeIn = new Date(TimeIn);
+            const timeOut = new Date(TimeOut);
+            if (isNaN(timeIn.getTime()) || isNaN(timeOut.getTime())) {
+                console.error('Invalid time format:', { TimeIn, TimeOut });
+                return NextResponse.json(
+                    { error: 'Invalid time format' },
+                    { status: 400 }
+                );
+            }
+
+            // Create undertime request
+            const undertimeRequest = await prisma.leave.create({
+                data: {
+                    FacultyID,
+                    LeaveType: null,
+                    StartDate: timeIn,
+                    EndDate: timeOut,
+                    TimeIn: timeIn.toISOString(),
+                    TimeOut: timeOut.toISOString(),
+                    Reason,
+                    Status: LeaveStatus.Pending,
+                    EmploymentType: 'Regular',  // Default for undertime
+                    employeeSignature: employeeSignature,
+                    departmentHeadSignature: departmentHeadSignature,
+                    requestType: 'Undertime'  // Explicitly set to "Undertime"
+                }
+            });
+
+            return NextResponse.json(undertimeRequest);
         }
-
-        if (start > end) {
-            console.error('Invalid date range:', { start, end });
-            return NextResponse.json(
-                { error: 'Start date must be before end date' },
-                { status: 400 }
-            );
-        }
-
-        // Log the data we're about to insert
-        const leaveData = {
-            FacultyID: Number(FacultyID),
-            LeaveType,
-            StartDate: start,
-            EndDate: end,
-            Reason,
-            Status: 'Pending' as LeaveStatus,
-            DocumentUrl,
-            CreatedAt: new Date(),
-            UpdatedAt: new Date()
-        };
-        console.log('Attempting to create leave with data:', JSON.stringify(leaveData, null, 2));
-
-        // Create leave request using Prisma
-        const leave = await prisma.leave.create({
-            data: leaveData
-        });
-
-        // Log the activity
-        // await prisma.activityLog.create({
-        //     data: {
-        //         UserID: userId,
-        //         ActionType: 'leave_request_created',
-        //         EntityAffected: 'Leave',
-        //         ActionDetails: `Created leave request for faculty ID ${FacultyID}`,
-        //         Timestamp: new Date(),
-        //         IPAddress: request.headers.get('x-forwarded-for') || 'unknown'
-        //     }
-        // });
-
-        console.log('Successfully created leave request:', JSON.stringify(leave, null, 2));
-        return NextResponse.json(leave);
     } catch (error) {
-        console.error('Detailed error in create leave API:', {
-            error,
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined
-        });
-        
-        // Check for specific Prisma errors
-        if (error instanceof Error) {
-            if (error.message.includes('foreign key constraint')) {
-                return NextResponse.json(
-                    { error: 'Invalid faculty information', details: error.message },
-                    { status: 400 }
-                );
-            }
-            if (error.message.includes('unique constraint')) {
-                return NextResponse.json(
-                    { error: 'A leave request already exists for this period', details: error.message },
-                    { status: 400 }
-                );
-            }
-            if (error.message.includes('prisma')) {
-                return NextResponse.json(
-                    { error: 'Database error', details: error.message },
-                    { status: 500 }
-                );
-            }
-        }
-
+        console.error('Error processing request:', error);
         return NextResponse.json(
-            { error: 'Failed to submit leave request', details: error instanceof Error ? error.message : 'Unknown error' },
+            { 
+                error: 'Failed to process request',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         );
     }
