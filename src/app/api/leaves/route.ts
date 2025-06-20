@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { LeaveStatus, LeaveType } from '@prisma/client';
 import type { Leave, Faculty, User, Department } from '@/generated/prisma';
-import { LeaveType, LeaveStatus } from '@/generated/prisma';
 
 // Define a type for the transformed leave record
 type TransformedLeave = Leave & {
@@ -19,13 +18,6 @@ interface UserRole {
         name: string;
     };
 }
-
-type LeaveWithRelations = Leave & {
-    Faculty: (Faculty & {
-        User: Pick<User, 'FirstName' | 'LastName' | 'UserID'> | null;
-        Department: Pick<Department, 'DepartmentName'> | null;
-    }) | null;
-};
 
 export async function GET() {
     try {
@@ -62,7 +54,7 @@ export async function GET() {
         });
 
         // Transform the data to match the frontend structure
-        const transformedLeaves = leaves.map((leave: LeaveWithRelations) => ({
+        const transformedLeaves = leaves.map((leave: any) => ({
             ...leave,
             Faculty: {
                 Name: leave.Faculty?.User ? 

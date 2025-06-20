@@ -47,7 +47,8 @@ model Faculty {
   DateOfBirth      DateTime         @db.Date
   Phone            String?
   Address          String?
-  EmploymentStatus EmploymentStatus
+  EmploymentStatus EmploymentStatus @default(Regular)
+  EmployeeType     EmployeeType     @default(Regular)
   HireDate         DateTime         @db.Date
   ResignationDate  DateTime?        @db.Date
   Position         String
@@ -123,6 +124,7 @@ model Attendance {
   date       DateTime  @default(now())  @db.Date
   timeIn     DateTime?    @db.Time
   timeOut    DateTime?   @db.Time
+  remarks    String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime?  @updatedAt
   status     AttendanceStatus @default(NOT_RECORDED)
@@ -219,6 +221,14 @@ enum Status {
 
 enum EmploymentStatus {
   Hired
+  Regular
+  Probationary
+  Resigned
+}
+
+enum EmployeeType {
+  Regular
+  Probationary
   Resigned
 }
 

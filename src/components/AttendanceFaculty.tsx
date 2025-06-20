@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
+import { format } from 'date-fns';
 
 // import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
@@ -27,6 +28,10 @@ const AttendanceFaculty: React.FC<AttendanceFacultyProps> = ({ onBack }) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
+  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [attendancePeriod, setAttendancePeriod] = useState<'month' | 'week'>('month');
+  const [downloadingDTR, setDownloadingDTR] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -107,6 +112,30 @@ const AttendanceFaculty: React.FC<AttendanceFacultyProps> = ({ onBack }) => {
   }
   fetchCurrentRecord();
 }, [facultyId]);
+
+useEffect(() => {
+  if (facultyId && user?.emailAddresses?.[0]?.emailAddress) {
+    // Fetch attendance history for the selected period
+    const now = new Date();
+    let startDate: string, endDate: string;
+    if (attendancePeriod === 'week') {
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay()); // Sunday
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6); // Saturday
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(end, 'yyyy-MM-dd');
+    } else {
+      startDate = format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd');
+      endDate = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
+    }
+    setHistoryLoading(true);
+    attendanceService
+      .getAttendanceHistory(facultyId.toString(), startDate, endDate, user.emailAddresses[0].emailAddress)
+      .then((records) => setAttendanceHistory(records || []))
+      .finally(() => setHistoryLoading(false));
+  }
+}, [facultyId, user, attendancePeriod]);
 
 function isWithinTimeWindow(startHour: number, endHour: number) {
   const now = new Date();
@@ -308,6 +337,40 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
     }
   };
 
+  const handleDownloadDTR = async () => {
+    if (!facultyId || !user?.emailAddresses?.[0]?.emailAddress) return;
+    setDownloadingDTR(true);
+    const now = new Date();
+    let startDate: string, endDate: string;
+    if (attendancePeriod === 'week') {
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay()); // Sunday
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6); // Saturday
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(end, 'yyyy-MM-dd');
+    } else {
+      startDate = format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd');
+      endDate = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
+    }
+    try {
+      const url = `/api/dtr/download?facultyId=${facultyId}&startDate=${startDate}&endDate=${endDate}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to download DTR');
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `DTR_${startDate}_to_${endDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      toast.error('Failed to download DTR.');
+    } finally {
+      setDownloadingDTR(false);
+    }
+  };
+
   if (!mounted) {
     return null;
   }
@@ -415,7 +478,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
                   Back to Dashboard
                 </button>
               )}
-              <p className="text-sm text-gray-500">Track your schedule</p>
+              <p className="text-sm text-gray-500">Track your attendance records</p>
             </div>
             <div className="mt-4 sm:mt-0 text-right">
               <div className="text-sm font-medium text-gray-700">
@@ -432,7 +495,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
             <button 
-              onClick={() => {handleDownloadSchedule}}
+              onClick={handleDownloadSchedule}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -467,6 +530,74 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Attendance History Section */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Attendance History</h2>
+            <div className="flex gap-2 items-center">
+              <select
+                value={attendancePeriod}
+                onChange={e => setAttendancePeriod(e.target.value as 'week' | 'month')}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                title="Attendance Period"
+              >
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+              <button
+                onClick={handleDownloadDTR}
+                disabled={downloadingDTR}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
+              >
+                {downloadingDTR ? (
+                  <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Downloading...</span>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download DTR
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]" />
+            </div>
+          ) : attendanceHistory.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">No attendance records found for this period.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {attendanceHistory.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(record.date), 'yyyy-MM-dd')}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeWithAmPm(record.timeIn)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeWithAmPm(record.timeOut)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(record.status)}`}>
+                          {record.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

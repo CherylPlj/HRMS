@@ -1032,10 +1032,11 @@ const FacultyContent: React.FC = () => {
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
                   title="Select Employment Status"
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="Submitted">Submitted</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
+                  <option value="all">All Employment Statuses</option>
+                  <option value="Hired">Hired</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Under Probation">Under Probation</option>
+                  <option value="Resigned">Resigned</option>
                 </select>
               </div>
             <button
@@ -1141,6 +1142,9 @@ const FacultyContent: React.FC = () => {
                     Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Employment Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     List of Documents
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1231,6 +1235,9 @@ const FacultyContent: React.FC = () => {
                           {faculty.Department.DepartmentName}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {faculty.EmploymentStatus}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center space-x-2">
                             <span>Submitted: {submittedCount}/{totalRequired}</span>
                             {totalRequired > 0 && (
@@ -1281,7 +1288,7 @@ const FacultyContent: React.FC = () => {
                       </tr>
                       {expandedFacultyId === faculty.FacultyID && (
                         <tr>
-                          <td colSpan={7} className="px-0 py-0 bg-gray-50">
+                          <td colSpan={8} className="px-0 py-0 bg-gray-50">
                             <div className="m-4 rounded-xl shadow-lg bg-white border border-gray-200 p-6">
                               <h4 className="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2">
                                 <span className="inline-block w-2 h-2 bg-[#800000] rounded-full"></span>
@@ -1380,7 +1387,7 @@ const FacultyContent: React.FC = () => {
                 })}
                 {filteredFacultyList.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                       No faculty members found matching your search criteria
                     </td>
                   </tr>

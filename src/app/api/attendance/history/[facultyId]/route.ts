@@ -15,22 +15,13 @@ interface AttendanceRecord {
 
 export async function GET(
   request: Request,
-  // { params }: { params: { facultyId: number } }
-    context: { params: Promise<{ facultyId: string }> }
+  context: { params: Promise<{ facultyId: string }> }
 ) {
   try {
     const { params } = context;
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
 
     const { facultyId } = await params;
     if (!facultyId) {
@@ -44,34 +35,6 @@ export async function GET(
       return NextResponse.json(
         { error: 'Start date and end date are required' },
         { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // First get the UserID from Supabase using the email
-    const { data: userData, error: userError } = await supabase
-      .from('User')
-      .select('UserID')
-      .eq('Email', email)
-      .single();
-
-    if (userError || !userData) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Then verify the faculty record belongs to this user
-    const { data: facultyData, error: facultyError } = await supabase
-      .from('Faculty')
-      .select('FacultyID')
-      .eq('UserID', userData.UserID)
-      .single();
-
-    if (facultyError || !facultyData || facultyData.FacultyID.toString() !== facultyId) {
-      return NextResponse.json(
-        { error: 'Unauthorized access to faculty record' },
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
