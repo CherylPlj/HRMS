@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { hashWithSHA256 } from '@/lib/hash';
 import { randomUUID } from 'crypto';
+import { PrismaClient } from '@prisma/client';
+
+const prismaClient = new PrismaClient();
 
 // await prisma.role.createMany({
 //   data: [
@@ -159,11 +162,67 @@ async function createUserWithRole({
 }
 
 async function main() {
+    console.log('Seeding database...');
+
     // Create default departments first
     await createDefaultDepartments();
     await createDefaultDocumentTypes();
     console.log('Default departments created/verified');
     console.log('Default document types created/verified');
+
+    // Seed Subjects
+    const subjects = [
+        'Mathematics',
+        'Science',
+        'English',
+        'History',
+        'Filipino',
+        'MAPEH',
+        'Technology and Livelihood Education',
+        'Values Education',
+    ];
+
+    for (const name of subjects) {
+        await prisma.subject.upsert({
+            where: { name },
+            update: {},
+            create: { name },
+        });
+    }
+    console.log('Subjects seeded.');
+
+    // Seed Class Sections
+    const gemNames = [
+        'Ruby', 'Diamond', 'Sapphire', 'Emerald', 'Pearl', 'Garnet',
+        'Amethyst', 'Opal', 'Topaz', 'Peridot', 'Aquamarine', 'Tourmaline'
+    ];
+
+    const treeNames = [
+        'Narra', 'Mahogany', 'Acacia', 'Pine', 'Oak', 'Maple', 'Cherry', 'Willow',
+        'Aspen', 'Birch', 'Cedar', 'Cypress'
+    ];
+
+    // Kinder
+    await prisma.classSection.upsert({ where: { name: 'Kinder-Ruby' }, update: {}, create: { name: 'Kinder-Ruby' } });
+    await prisma.classSection.upsert({ where: { name: 'Kinder-Diamond' }, update: {}, create: { name: 'Kinder-Diamond' } });
+
+    // Grades 1-6 (Gems)
+    for (let grade = 1; grade <= 6; grade++) {
+        const section1Name = `${grade}-${gemNames[(grade - 1) * 2]}`;
+        const section2Name = `${grade}-${gemNames[(grade - 1) * 2 + 1]}`;
+        await prisma.classSection.upsert({ where: { name: section1Name }, update: {}, create: { name: section1Name } });
+        await prisma.classSection.upsert({ where: { name: section2Name }, update: {}, create: { name: section2Name } });
+    }
+
+    // Grades 7-12 (Trees)
+    for (let grade = 7; grade <= 12; grade++) {
+        const treeIndex = (grade - 7) * 2;
+        const section1Name = `${grade}-${treeNames[treeIndex]}`;
+        const section2Name = `${grade}-${treeNames[treeIndex + 1]}`;
+        await prisma.classSection.upsert({ where: { name: section1Name }, update: {}, create: { name: section1Name } });
+        await prisma.classSection.upsert({ where: { name: section2Name }, update: {}, create: { name: section2Name } });
+    }
+    console.log('Class sections seeded.');
 
     const users = [
         {
@@ -248,6 +307,8 @@ async function main() {
             console.log(`  - Faculty record created for department: ${user.facultyData.departmentName}`);
         }
     }
+
+    console.log('Seeding complete.');
 }
 
 main()

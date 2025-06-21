@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { useUser } from '@clerk/nextjs';
 import { format, isAfter, isBefore, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import ScheduleGridView from './ScheduleGridView';
 
 // Types
 interface AttendanceRecord {
@@ -39,12 +40,25 @@ interface AttendanceData {
 // Dummy for Schedule, replace with your actual type/model
 interface ScheduleRecord {
   id: string;
-  name: string;
+  facultyId: number;
+  subjectId: number;
+  classSectionId: number;
+  day: string;
+  time: string;
+  duration: number; // in minutes
+  subject?: { name: string };
+  classSection?: { name: string };
+}
+
+// Legacy interface for backward compatibility
+interface LegacyScheduleRecord {
+  id: string;
+  facultyId: number;
   subject: string;
   classSection: string;
   day: string;
   time: string;
-  img: string;
+  duration: number;
 }
 
 interface AttendanceEdit {
@@ -72,18 +86,12 @@ const formatTime = (timeString: string | null): string => {
   if (!timeString) return '-';
   
   try {
-    // Parse the time string which comes in format "HH:mm:ss"
-    const [hours, minutes] = timeString.split(':');
-    
-    // Convert to 12-hour format with AM/PM
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    
-    // Ensure minutes are always two digits
-    const formattedMinutes = minutes.padStart(2, '0');
-    
-    return `${hour12}:${formattedMinutes} ${ampm}`;
+    const date = new Date(`1970-01-01T${timeString}`);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   } catch (error) {
     console.error('Error formatting time:', error);
     return '-';
@@ -184,49 +192,90 @@ const downloadDTR = async (facultyId: string, name: string, startDate: string, e
   link.remove();
 };
 
-const initialSchedules: ScheduleRecord[] = [
-  {
-    id: "1",
-    img: "/manprofileavatar.png",
-    name: "John Doe",
-    subject: "Mathematics",
-    classSection: "Grade 9 - A",
-    day: "Monday",
-    time: "10:00 AM",
-  },
-];
+// Remove initialSchedules, data will be loaded from Supabase
+// const initialSchedules: ScheduleRecord[] = [ ... ];
 
 // Add this new component before the AttendanceContent component
 interface ScheduleModalProps {
   isEdit: boolean;
   editSchedule: ScheduleRecord | null;
   onClose: () => void;
-  onSave: (schedule: ScheduleRecord) => void;
+  onSave: (schedule: Omit<ScheduleRecord, 'id'>) => void;
+  facultyList: any[]; // Pass faculty list for dropdown
 }
 
-const ScheduleModal: React.FC<ScheduleModalProps> = ({ isEdit, editSchedule, onClose, onSave }) => {
-  const [form, setForm] = useState<ScheduleRecord>(
+const ScheduleModal: React.FC<ScheduleModalProps> = ({ isEdit, editSchedule, onClose, onSave, facultyList }) => {
+  const [form, setForm] = useState(
     isEdit && editSchedule
-      ? editSchedule
+      ? { ...editSchedule }
       : {
-          id: "",
-          img: "/manprofileavatar.png",
-          name: "",
-          subject: "",
-          classSection: "",
-          day: "",
-          time: "",
+          facultyId: facultyList[0]?.FacultyID || 0,
+          subjectId: 0,
+          classSectionId: 0,
+          day: "Monday",
+          time: "07:00",
+          duration: 60,
         }
   );
 
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [classSections, setClassSections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch subjects and class sections
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [subjectsRes, classSectionsRes] = await Promise.all([
+          fetch('/api/subjects'),
+          fetch('/api/class-sections')
+        ]);
+
+        if (subjectsRes.ok) {
+          const subjectsData = await subjectsRes.json();
+          setSubjects(subjectsData);
+        }
+
+        if (classSectionsRes.ok) {
+          const classSectionsData = await classSectionsRes.json();
+          setClassSections(classSectionsData);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm(prev => ({ 
+      ...prev, 
+      [name]: ['facultyId', 'subjectId', 'classSectionId', 'duration'].includes(name) 
+        ? parseInt(value) 
+        : value 
+    }));
   };
 
   const handleSave = () => {
     onSave(form);
   };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="bg-white rounded-lg shadow-lg w-1/2 p-6 relative">
+          <div className="flex items-center justify-center">
+            <Loader2 className="animate-spin h-8 w-8 text-[#800000]" />
+            <span className="ml-2">Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -243,28 +292,50 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isEdit, editSchedule, onC
         <div className="space-y-6">
           <div className="flex space-x-4">
             <div className="flex-1 pb-6">
-              <label htmlFor="name" className="block mb-1 font-semibold">Name</label>
-              <input
-                id="name" name="name" type="text"
+              <label htmlFor="facultyId" className="block mb-1 font-semibold">Faculty</label>
+              <select
+                id="facultyId" name="facultyId"
                 className="w-full border border-gray-300 rounded p-2"
-                value={form.name} onChange={handleChange}
-              />
+                value={form.facultyId} onChange={handleChange}
+                disabled={isEdit} // Prevent changing faculty when editing
+              >
+                <option value="">Select Faculty</option>
+                {facultyList.map(f => (
+                  <option key={f.FacultyID} value={f.FacultyID}>
+                    {f.User.FirstName} {f.User.LastName}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex-1 pb-6">
-              <label htmlFor="classSection" className="block mb-1 font-semibold">Class and Section</label>
-              <input
-                id="classSection" name="classSection" type="text"
+              <label htmlFor="classSectionId" className="block mb-1 font-semibold">Class and Section</label>
+              <select
+                id="classSectionId" name="classSectionId"
                 className="w-full border border-gray-300 rounded p-2"
-                value={form.classSection} onChange={handleChange}
-              />
+                value={form.classSectionId} onChange={handleChange}
+              >
+                <option value="">Select Class Section</option>
+                {classSections.map(cs => (
+                  <option key={cs.id} value={cs.id}>
+                    {cs.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex-1 pb-6">
-              <label htmlFor="subject" className="block mb-1 font-semibold">Subject</label>
-              <input
-                id="subject" name="subject" type="text"
+              <label htmlFor="subjectId" className="block mb-1 font-semibold">Subject</label>
+              <select
+                id="subjectId" name="subjectId"
                 className="w-full border border-gray-300 rounded p-2"
-                value={form.subject} onChange={handleChange}
-              />
+                value={form.subjectId} onChange={handleChange}
+              >
+                <option value="">Select Subject</option>
+                {subjects.map(subject => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="flex space-x-4">
@@ -276,7 +347,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isEdit, editSchedule, onC
                 value={form.day} onChange={handleChange}
               >
                 <option value="">Select Day</option>
-                {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(day => (
+                {['Monday','Tuesday','Wednesday','Thursday','Friday'].map(day => (
                   <option key={day} value={day}>{day}</option>
                 ))}
               </select>
@@ -287,6 +358,16 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isEdit, editSchedule, onC
                 id="time" name="time" type="time"
                 className="w-full border border-gray-300 rounded p-2"
                 value={form.time} onChange={handleChange}
+              />
+            </div>
+            <div className="flex-1 pb-6">
+              <label htmlFor="duration" className="block mb-1 font-semibold">Duration (mins)</label>
+              <input
+                id="duration" name="duration" type="number"
+                step="15"
+                className="w-full border border-gray-300 rounded p-2"
+                value={form.duration} 
+                onChange={handleChange}
               />
             </div>
           </div>
@@ -347,8 +428,9 @@ const AttendanceContent: React.FC = () => {
   });
 
   // Schedule state
-  const [schedules, setSchedules] = useState<ScheduleRecord[]>(initialSchedules);
+  const [schedules, setSchedules] = useState<ScheduleRecord[]>([]);
   const [scheduleSearch, setScheduleSearch] = useState("");
+  const [selectedDay, setSelectedDay] = useState('Monday');
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -405,15 +487,21 @@ const AttendanceContent: React.FC = () => {
     loadAttendanceData();
   }, [activeTab, dateFilter]);
 
-  // Load schedules from Supabase
+  // Load schedules from API
   useEffect(() => {
     if (activeTab === 'schedule') {
       const fetchSchedules = async () => {
-        const { data, error } = await supabase
-          .from('Schedules')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!error && data) setSchedules(data as ScheduleRecord[]);
+        try {
+          const response = await fetch('/api/schedules');
+          if (response.ok) {
+            const data = await response.json();
+            setSchedules(data);
+          } else {
+            console.error('Failed to fetch schedules');
+          }
+        } catch (error) {
+          console.error('Error fetching schedules:', error);
+        }
       };
       fetchSchedules();
     }
@@ -502,12 +590,18 @@ const AttendanceContent: React.FC = () => {
   });
 
   // Schedule filter
-  const filteredSchedules = schedules.filter(s =>
-    s.name.toLowerCase().includes(scheduleSearch.toLowerCase()) ||
-    s.subject.toLowerCase().includes(scheduleSearch.toLowerCase()) ||
-    s.classSection.toLowerCase().includes(scheduleSearch.toLowerCase()) ||
-    s.day.toLowerCase().includes(scheduleSearch.toLowerCase())
-  );
+  const filteredSchedules = schedules.filter(s => {
+    const faculty = facultyList.find(f => f.facultyId === s.facultyId);
+    const facultyName = faculty ? `${faculty.User.FirstName} ${faculty.User.LastName}` : '';
+    const search = scheduleSearch.toLowerCase();
+
+    return (
+      facultyName.toLowerCase().includes(search) ||
+      (s.subject?.name || '').toLowerCase().includes(search) ||
+      (s.classSection?.name || '').toLowerCase().includes(search) ||
+      s.day.toLowerCase().includes(search)
+    );
+  });
 
   // Schedule modal helpers
   const handleOpenModal = () => { setEditSchedule(null); setIsModalOpen(true);}
@@ -517,43 +611,113 @@ const AttendanceContent: React.FC = () => {
   const handleOpenDeleteModal = (schedId: string) => { setDeleteScheduleId(schedId); setIsDeleteModalOpen(true);}
   const handleCloseDeleteModal = () => setIsDeleteModalOpen(false);
 
-// Handle schedule save (add or edit)
-  const handleScheduleSave = async (sched: ScheduleRecord) => {
+  const handleAddNewSchedule = (day: string, time: string) => {
+    setEditSchedule(null); // Important: signify that this is a new schedule
+    setIsModalOpen(true); // Open the generic modal
+    // Note: You might want to pre-fill the modal state here if the modal supports it
+  };
+
+  // Handle schedule save (add or edit)
+  const handleScheduleSave = async (sched: Omit<ScheduleRecord, 'id'> & { id?: string }) => {
+    // Validation
+    if (!sched.time || !sched.duration || !sched.facultyId || !sched.day) {
+      alert('Please fill all required fields: Faculty, Day, Time, and Duration.');
+      return;
+    }
+
+    const [startHours, startMinutes] = sched.time.split(':').map(Number);
+    
+    // Using a fixed date for comparison purposes
+    const scheduleStart = new Date(2024, 1, 1, startHours, startMinutes);
+    const scheduleEnd = new Date(scheduleStart.getTime() + (sched.duration || 0) * 60000);
+
+    const classStart = new Date(2024, 1, 1, 7, 0); // 7:00 AM
+    const classEnd = new Date(2024, 1, 1, 15, 30); // 3:30 PM
+    const lunchStart = new Date(2024, 1, 1, 12, 0); // 12:00 PM
+    const lunchEnd = new Date(2024, 1, 1, 12, 30); // 12:30 PM
+
+    if (scheduleStart < classStart || scheduleEnd > classEnd) {
+      alert('Schedule must be between 7:00 AM and 3:30 PM.');
+      return;
+    }
+
+    if (scheduleStart < lunchEnd && scheduleEnd > lunchStart) {
+      alert('Schedule conflicts with the 12:00 PM - 12:30 PM lunch break.');
+      return;
+    }
+
+    // Check for conflicts with other schedules
+    const conflictingSchedule = schedules.find(s => {
+      // Don't compare with itself during an edit
+      if (editSchedule && s.id === sched.id) return false;
+
+      if (s.facultyId === sched.facultyId && s.day === sched.day) {
+        const [existingStartHours, existingStartMinutes] = s.time.split(':').map(Number);
+        const existingStart = new Date(2024, 1, 1, existingStartHours, existingStartMinutes);
+        const existingEnd = new Date(existingStart.getTime() + (s.duration || 0) * 60000);
+        
+        // Check for overlap
+        return scheduleStart < existingEnd && scheduleEnd > existingStart;
+      }
+      return false;
+    });
+
+    if (conflictingSchedule) {
+      const faculty = facultyList.find(f => f.facultyId === sched.facultyId);
+      const facultyName = faculty ? `${faculty.User.FirstName} ${faculty.User.LastName}` : 'the selected faculty';
+      alert(`This schedule conflicts with an existing schedule for ${facultyName} on ${sched.day}.`);
+      return;
+    }
+
     if (editSchedule) {
       // Edit
-      const { data, error } = await supabase
-        .from('Schedules')
-        .update({
-          name: sched.name,
-          subject: sched.subject,
-          classSection: sched.classSection,
-          day: sched.day,
-          time: sched.time,
-          img: sched.img,
-        })
-        .eq('id', sched.id)
-        .select()
-        .single();
-      if (!error && data) {
-        setSchedules(prev => prev.map(s => (s.id === data.id ? data : s)));
+      try {
+        const response = await fetch(`/api/schedules/${sched.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subjectId: sched.subjectId,
+            classSectionId: sched.classSectionId,
+            day: sched.day,
+            time: sched.time,
+            duration: sched.duration,
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSchedules(prev => prev.map(s => (s.id === data.id ? data : s)));
+        } else {
+          console.error('Failed to update schedule');
+        }
+      } catch (error) {
+        console.error('Error updating schedule:', error);
       }
       setIsEditModalOpen(false);
     } else {      
       // Add
- const { data, error } = await supabase
-        .from('Schedules')
-        .insert([{
-          name: sched.name,
-          subject: sched.subject,
-          classSection: sched.classSection,
-          day: sched.day,
-          time: sched.time,
-          img: sched.img || '/manprofileavatar.png',
-        }])
-        .select()
-        .single();
-      if (!error && data) {
-        setSchedules(prev => [data, ...prev]);
+      try {
+        const response = await fetch('/api/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            facultyId: sched.facultyId,
+            subjectId: sched.subjectId,
+            classSectionId: sched.classSectionId,
+            day: sched.day,
+            time: sched.time,
+            duration: sched.duration,
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSchedules(prev => [data, ...prev]);
+        } else {
+          console.error('Failed to create schedule');
+        }
+      } catch (error) {
+        console.error('Error creating schedule:', error);
       }
       setIsModalOpen(false);
     }
@@ -562,12 +726,18 @@ const AttendanceContent: React.FC = () => {
  // Handle schedule delete
   const handleConfirmDelete = async () => {
     if (deleteScheduleId) {
-      const { error } = await supabase
-        .from('Schedules')
-        .delete()
-        .eq('id', deleteScheduleId);
-      if (!error) {
-        setSchedules(prev => prev.filter(s => s.id !== deleteScheduleId));
+      try {
+        const response = await fetch(`/api/schedules/${deleteScheduleId}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          setSchedules(prev => prev.filter(s => s.id !== deleteScheduleId));
+        } else {
+          console.error('Failed to delete schedule');
+        }
+      } catch (error) {
+        console.error('Error deleting schedule:', error);
       }
     }
     setIsDeleteModalOpen(false);
@@ -869,6 +1039,24 @@ const AttendanceContent: React.FC = () => {
     );
   };
 
+  const getEndTime = (startTime: string, duration: number): string => {
+    if (!startTime || duration === undefined) return '-';
+    try {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0, 0);
+      const endDate = new Date(startDate.getTime() + duration * 60000);
+      return endDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      console.error('Error calculating end time:', error);
+      return '-';
+    }
+  };
+
   return (
     <div className="text-black p-6 min-h-screen bg-gray-50">
       <div className="flex justify-between items-center mb-6">
@@ -1017,7 +1205,7 @@ const AttendanceContent: React.FC = () => {
                               <Edit2 size={16} />
                             </button>
                           </td> */}
-                          <td className="px-4 py-3">
+                          {/* <td className="px-4 py-3">
                             <button
                               className="bg-[#800000] hover:bg-red-800 text-white text-xs rounded-lg px-3 py-1.5 transition-all duration-200 shadow-sm hover:shadow-md"
                               aria-label={`Download ${faculty.User?.FirstName} ${faculty.User?.LastName} DTR`}
@@ -1032,7 +1220,7 @@ const AttendanceContent: React.FC = () => {
                             >
                               Download DTR
                             </button>
-                          </td>
+                          </td> */}
                           <td className="px-4 py-3">
                             <button
                               onClick={() => handleExpandFaculty(facultyId)}
@@ -1047,36 +1235,105 @@ const AttendanceContent: React.FC = () => {
                         </tr>
                         {expandedFaculty === facultyId && (
                           <tr id={`attendance-row-${facultyId}`}>
-                            <td colSpan={8} className="bg-gray-50 px-8 py-4">
-                              <div className="overflow-x-auto">
-                                {facultyHistoryLoading[facultyId] ? (
-                                  <div className="text-center text-gray-400 py-4">Loading records...</div>
-                                ) : (
-                                  <table className="min-w-full text-xs">
-                                    <thead>
-                                      <tr>
-                                        <th className="px-2 py-1 text-left font-semibold text-gray-600">Date</th>
-                                        <th className="px-2 py-1 text-left font-semibold text-gray-600">Time In</th>
-                                        <th className="px-2 py-1 text-left font-semibold text-gray-600">Time Out</th>
-                                        <th className="px-2 py-1 text-left font-semibold text-gray-600">Status</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {(facultyAttendanceMap[facultyId] || []).length === 0 ? (
-                                        <tr><td colSpan={4} className="text-center text-gray-400 py-4">No records found.</td></tr>
-                                      ) : (
-                                        facultyAttendanceMap[facultyId].map((rec: any) => (
-                                          <tr key={rec.id}>
-                                            <td className="px-2 py-1">{rec.date}</td>
-                                            <td className="px-2 py-1">{rec.timeIn ? formatTime(rec.timeIn) : '-'}</td>
-                                            <td className="px-2 py-1">{rec.timeOut ? formatTime(rec.timeOut) : '-'}</td>
-                                            <td className="px-2 py-1">{rec.status}</td>
+                            <td colSpan={8} className="bg-gray-50 px-8 py-6">
+                              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                                <div className="px-6 py-4 border-b border-gray-200">
+                                  <h3 className="text-lg font-semibold text-gray-800">
+                                    Attendance History for {faculty.User?.FirstName} {faculty.User?.LastName}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    Showing records for the selected date range
+                                  </p>
+                                </div>
+                                <div className="overflow-x-auto">
+                                  {facultyHistoryLoading[facultyId] ? (
+                                    <div className="flex items-center justify-center py-8">
+                                      <Loader2 className="animate-spin h-6 w-6 text-[#800000] mr-3" />
+                                      <span className="text-gray-600">Loading attendance records...</span>
+                                    </div>
+                                  ) : (
+                                    <table className="w-full">
+                                      <thead className="bg-gray-50">
+                                        <tr>
+                                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time In</th>
+                                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time Out</th>
+                                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="bg-white divide-y divide-gray-200">
+                                        {(facultyAttendanceMap[facultyId] || []).length === 0 ? (
+                                          <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center">
+                                              <div className="text-gray-500">
+                                                <div className="text-lg font-medium mb-2">No records found</div>
+                                                <div className="text-sm">No attendance records available for the selected date range.</div>
+                                              </div>
+                                            </td>
                                           </tr>
-                                        ))
-                                      )}
-                                    </tbody>
-                                  </table>
-                                )}
+                                        ) : (
+                                          facultyAttendanceMap[facultyId].map((rec: any) => {
+                                            const timeIn = rec.timeIn ? formatTime(rec.timeIn) : '-';
+                                            const timeOut = rec.timeOut ? formatTime(rec.timeOut) : '-';
+                                            
+                                            // Calculate duration if both times are available
+                                            let duration = '-';
+                                            if (rec.timeIn && rec.timeOut) {
+                                              try {
+                                                const [inHours, inMinutes] = rec.timeIn.split(':').map(Number);
+                                                const [outHours, outMinutes] = rec.timeOut.split(':').map(Number);
+                                                const inTotal = inHours * 60 + inMinutes;
+                                                const outTotal = outHours * 60 + outMinutes;
+                                                const diffMinutes = outTotal - inTotal;
+                                                const hours = Math.floor(diffMinutes / 60);
+                                                const minutes = diffMinutes % 60;
+                                                duration = `${hours}h ${minutes}m`;
+                                              } catch (error) {
+                                                duration = '-';
+                                              }
+                                            }
+
+                                            // Status styling
+                                            const statusStyles = {
+                                              'PRESENT': 'bg-green-100 text-green-800',
+                                              'LATE': 'bg-yellow-100 text-yellow-800',
+                                              'ABSENT': 'bg-red-100 text-red-800',
+                                              'NOT_RECORDED': 'bg-gray-100 text-gray-800'
+                                            };
+
+                                            return (
+                                              <tr key={rec.id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                  {new Date(rec.date).toLocaleDateString('en-US', {
+                                                    weekday: 'short',
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric'
+                                                  })}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                                                  {timeIn}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                                                  {timeOut}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[rec.status as keyof typeof statusStyles] || statusStyles['NOT_RECORDED']}`}>
+                                                    {rec.status.replace('_', ' ')}
+                                                  </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                                                  {duration}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                </div>
                               </div>
                             </td>
                           </tr>
@@ -1097,176 +1354,206 @@ const AttendanceContent: React.FC = () => {
           </>
       )}
           
-          {isAttendanceModalOpen && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl p-8 relative">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-[#800000]">Record Attendance</h2>
-                  <button
-                    onClick={() => setIsAttendanceModalOpen(false)}
-                    className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
-                  >
-                    &times;
-                  </button>
-                </div>
-                <div className="mb-4 flex gap-4 items-center">
-                  <label className="font-semibold">Date:</label>
-                  <input
-                    ref={attendanceDateRef}
-                    type="date"
-                    min={minDate}
-                    max={maxDate}
-                    value={attendanceDate}
-                    onChange={e => setAttendanceDate(e.target.value)}
-                    className="border border-gray-300 rounded p-2"
-                    title="Attendance Date (Cannot select future dates)"
-                    aria-label="Attendance Date (Cannot select future dates)"
-                    placeholder="Select date"
-                  />
-                  {(() => {
-                    if (!attendanceDate) return null;
-                    
-                    const today = new Date();
-                    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-                    
-                    return attendanceDate > todayString ? (
-                      <span className="text-sm text-red-500">(Cannot set attendance for future dates)</span>
-                    ) : null;
-                  })()}
-                </div>
-                <div className="overflow-x-auto max-h-[60vh]">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Faculty</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Time In</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Time Out</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Remarks</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {attendanceLoading ? (
-                        <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>
-                      ) : mergedAttendance.map(row => {
-                        const isAbsent = row.status === 'ABSENT';
-                        // Always use the latest edit value for validation
-                        const edit = attendanceEdits[row.facultyId] || {};
-                        const fieldErrors = getAttendanceFieldErrors({
-                          timeIn: edit.timeIn ?? '',
-                          timeOut: edit.timeOut ?? '',
-                          status: edit.status ?? row.status,
-                          remarks: edit.remarks ?? '',
-                        });
-                        return (
-                          <tr key={row.facultyId}>
-                            <td className="px-4 py-2 flex items-center gap-2">
-                              <img src={row.photo} alt="profile" className="w-8 h-8 rounded-full" />
-                              <span>{row.name}</span>
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="time"
-                                value={edit.timeIn ?? ''}
-                                disabled={isAbsent}
-                                onChange={e => {
-                                  handleAttendanceEdit(row.facultyId, 'timeIn', e.target.value);
-                                  handleAttendanceStatusAuto(row.facultyId, e.target.value);
-                                }}
-                                className="border border-gray-300 rounded p-1"
-                                title={`Time In for ${row.name}`}
-                                aria-label={`Time In for ${row.name}`}
-                                placeholder="Time In"
-                              />
-                              {fieldErrors.timeIn && <div className="text-xs text-red-600 mt-1">{fieldErrors.timeIn}</div>}
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="time"
-                                value={edit.timeOut ?? ''}
-                                disabled={isAbsent}
-                                onChange={e => handleAttendanceEdit(row.facultyId, 'timeOut', e.target.value)}
-                                className="border border-gray-300 rounded p-1"
-                                title={`Time Out for ${row.name}`}
-                                aria-label={`Time Out for ${row.name}`}
-                                placeholder="Time Out"
-                              />
-                              {fieldErrors.timeOut && <div className="text-xs text-red-600 mt-1">{fieldErrors.timeOut}</div>}
-                            </td>
-                            <td className="px-4 py-2">
-                              <select
-                                value={edit.status ?? row.status}
-                                onChange={e => handleAttendanceEdit(row.facultyId, 'status', e.target.value)}
-                                className="border border-gray-300 rounded p-1"
-                                title={`Status for ${row.name}`}
-                                aria-label={`Status for ${row.name}`}
-                              >
-                                <option value="PRESENT">Present</option>
-                                <option value="LATE">Late</option>
-                                <option value="ABSENT">Absent</option>
-                                <option value="NOT_RECORDED">Not Recorded</option>
-                              </select>
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="text"
-                                value={edit.remarks ?? ''}
-                                maxLength={100}
-                                onChange={e => {
-                                  const value = e.target.value;
-                                  // Alphanumeric, spaces, basic punctuation, no more than 3 repeating symbols
-                                  const valid = /^[a-zA-Z0-9 .,!?'-]*$/.test(value) && !/(.)\1{3,}/.test(value);
-                                  if (valid || value === '') {
-                                    handleAttendanceEdit(row.facultyId, 'remarks', value);
-                                  }
-                                }}
-                                className="border border-gray-300 rounded p-1"
-                                title={`Remarks for ${row.name}`}
-                                aria-label={`Remarks for ${row.name}`}
-                                placeholder="Remarks"
-                              />
-                              {fieldErrors.remarks && <div className="text-xs text-red-600 mt-1">{fieldErrors.remarks}</div>}
-                            </td>
-                            <td className="px-4 py-2">
-                              <button
-                                onClick={() => handleAttendanceSave(row.facultyId)}
-                                className={`px-4 py-1 rounded flex items-center gap-1 min-w-[120px] justify-center
-                                  ${attendanceSaveStatus[row.facultyId] === 'saved'
-                                    ? 'bg-green-600 text-white'
-                                    : !hasChanges(row.facultyId) || Object.values(fieldErrors).some(Boolean) || attendanceSaveStatus[row.facultyId] === 'saving'
-                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                      : 'bg-[#800000] hover:bg-red-800 text-white'}`}
-                                disabled={!hasChanges(row.facultyId) || attendanceSaveStatus[row.facultyId] === 'saving' || Object.values(fieldErrors).some(Boolean)}
-                              >
-                                {attendanceSaveStatus[row.facultyId] === 'saving' ? (
-                                  <>
-                                    <Loader2 className="animate-spin" size={16} /> Saving...
-                                  </>
-                                ) : attendanceSaveStatus[row.facultyId] === 'saved' ? (
-                                  <>
-                                    <CheckCircle size={16} /> Saved!
-                                  </>
-                                ) : !hasChanges(row.facultyId) ? (
-                                  'No Changes'
-                                ) : (
-                                  'Save'
-                                )}
-                              </button>
-                              {attendanceErrors[row.facultyId] && !Object.values(fieldErrors).some(Boolean) && (
-                                <div className="text-xs text-red-600 mt-1">{attendanceErrors[row.facultyId]}</div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+      {activeTab === 'schedule' && (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search by name, subject, class..."
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all duration-200"
+                value={scheduleSearch}
+                onChange={e => setScheduleSearch(e.target.value)}
+              />
             </div>
-          )}
+            <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    selectedDay === day 
+                      ? 'bg-[#800000] text-white shadow' 
+                      : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <ScheduleGridView
+            schedules={schedules}
+            facultyList={facultyList}
+            profilePhotos={profilePhotos}
+            scheduleSearch={scheduleSearch}
+            selectedDay={selectedDay}
+            onEdit={handleOpenEditModal}
+            onAdd={handleAddNewSchedule}
+          />
+        </>
+      )}
+
+      {isModalOpen && <ScheduleModal isEdit={false} editSchedule={null} onClose={handleCloseModal} onSave={handleScheduleSave} facultyList={facultyList} />}
+      {isEditModalOpen && <ScheduleModal isEdit={true} editSchedule={editSchedule} onClose={handleCloseEditModal} onSave={handleScheduleSave} facultyList={facultyList} />}
+      {isDeleteModalOpen && <DeleteModal onConfirm={handleConfirmDelete} onClose={handleCloseDeleteModal} />}
+
+      {isAttendanceModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl p-8 relative">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#800000]">Record Attendance</h2>
+              <button 
+                onClick={() => setIsAttendanceModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <label htmlFor="attendanceDate" className="block mb-2 font-semibold">Date</label>
+              <input
+                ref={attendanceDateRef}
+                id="attendanceDate"
+                type="date"
+                className="border border-gray-300 rounded p-2"
+                value={attendanceDate}
+                onChange={e => setAttendanceDate(e.target.value)}
+                min={minDate}
+                max={maxDate}
+              />
+            </div>
+
+            {attendanceLoading ? (
+              <div className="text-center py-8">
+                <Loader2 className="animate-spin h-8 w-8 text-[#800000] mx-auto mb-4" />
+                <p>Loading attendance records...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Faculty</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Time In</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Time Out</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Remarks</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {mergedAttendance.map((row) => {
+                      const errors = getRowValidationError(row);
+                      const hasError = attendanceErrors[row.facultyId];
+                      const saveStatus = attendanceSaveStatus[row.facultyId] || 'idle';
+                      
+                      return (
+                        <tr key={row.facultyId} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 flex items-center gap-3">
+                            <Image
+                              src={row.photo}
+                              alt={`${row.name} profile`}
+                              width={32}
+                              height={32}
+                              className="rounded-full"
+                            />
+                            <span className="font-medium">{row.name}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="time"
+                              className={`border rounded p-2 w-32 ${errors.timeIn ? 'border-red-500' : 'border-gray-300'}`}
+                              value={row.timeIn}
+                              onChange={e => handleAttendanceEdit(row.facultyId, 'timeIn', e.target.value)}
+                              onBlur={() => handleAttendanceStatusAuto(row.facultyId, row.timeIn)}
+                              title="Time In"
+                              aria-label={`Time In for ${row.name}`}
+                            />
+                            {errors.timeIn && <div className="text-red-500 text-xs mt-1">{errors.timeIn}</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="time"
+                              className={`border rounded p-2 w-32 ${errors.timeOut ? 'border-red-500' : 'border-gray-300'}`}
+                              value={row.timeOut}
+                              onChange={e => handleAttendanceEdit(row.facultyId, 'timeOut', e.target.value)}
+                              title="Time Out"
+                              aria-label={`Time Out for ${row.name}`}
+                            />
+                            {errors.timeOut && <div className="text-red-500 text-xs mt-1">{errors.timeOut}</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              className="border border-gray-300 rounded p-2"
+                              value={row.status}
+                              onChange={e => handleAttendanceEdit(row.facultyId, 'status', e.target.value)}
+                              title="Attendance Status"
+                              aria-label={`Status for ${row.name}`}
+                            >
+                              <option value="NOT_RECORDED">Not Recorded</option>
+                              <option value="PRESENT">Present</option>
+                              <option value="LATE">Late</option>
+                              <option value="ABSENT">Absent</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              className="border border-gray-300 rounded p-2 w-32"
+                              placeholder="Optional remarks"
+                              value={row.remarks}
+                              onChange={e => handleAttendanceEdit(row.facultyId, 'remarks', e.target.value)}
+                              maxLength={100}
+                            />
+                            {errors.remarks && <div className="text-red-500 text-xs mt-1">{errors.remarks}</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleAttendanceSave(row.facultyId)}
+                              disabled={saveStatus === 'saving' || !hasChanges(row.facultyId)}
+                              className={`px-4 py-2 rounded text-sm font-medium transition-all duration-200 ${
+                                saveStatus === 'saving'
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : saveStatus === 'saved'
+                                  ? 'bg-green-600 text-white'
+                                  : hasChanges(row.facultyId)
+                                  ? 'bg-[#800000] hover:bg-red-800 text-white'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              }`}
+                            >
+                              {saveStatus === 'saving' ? (
+                                <div className="flex items-center gap-2">
+                                  <Loader2 className="animate-spin h-4 w-4" />
+                                  Saving...
+                                </div>
+                              ) : saveStatus === 'saved' ? (
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4" />
+                                  Saved
+                                </div>
+                              ) : (
+                                'Save'
+                              )}
+                            </button>
+                            {hasError && (
+                              <div className="text-red-500 text-xs mt-2 max-w-48">{hasError}</div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
+      )}
+    </div>
   );
 };
 

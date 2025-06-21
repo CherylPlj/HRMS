@@ -320,14 +320,23 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
       console.log('Fetched schedule data:', scheduleData);
       console.log('Fetched today\'s record:', todayRecord);
 
-      if (!summaryData || !scheduleData) {
-        console.error('Missing data in response:', { summaryData, scheduleData });
-        toast.error('Failed to fetch complete attendance data');
+      // Only require scheduleData to be present
+      if (!scheduleData) {
+        console.error('Missing schedule data in response');
+        toast.error('Failed to fetch schedule data');
         return;
       }
 
-      setSummary(summaryData);
+      // Set summary data if available, otherwise use default values
+      if (summaryData) {
+        setSummary(summaryData);
+      } else {
+        console.log('Summary data not available, using default values');
+        setSummary({ present: 0, absent: 0, late: 0, total: 0 });
+      }
+
       setSchedule(scheduleData);
+      console.log('Set schedule state with:', scheduleData);
       setCurrentRecord(todayRecord);
     } catch (error) {
       console.error('Data fetch error:', error);
@@ -402,8 +411,9 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
       // Define worksheet headers
       worksheet.columns = [
         { header: "Day", key: "day" },
-        { header: "Time In", key: "timeIn" },
-        { header: "Time Out", key: "timeOut" },
+        { header: "Start", key: "timeIn" },
+        { header: "End", key: "timeOut" },
+        { header: "Duration (min)", key: "duration" },
         { header: "Subject", key: "subject" },
         { header: "Class Section", key: "classSection" },
         { header: "Status", key: "status" },
@@ -415,6 +425,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
           day: s.day,
           timeIn: s.timeIn,
           timeOut: s.timeOut,
+          duration: s.duration,
           subject: s.subject,
           classSection: s.classSection,
           status: s.status,
@@ -504,29 +515,44 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
               Download Schedule
             </button>
           </div>
+          
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (min)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class Section</th>
+                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {schedule.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.day}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeIn}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeOut}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(item.status)}`}>
-                        {item.status}
-                      </span>
+                {schedule.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No schedule data available
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  schedule.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.day}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeIn}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeOut}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.duration}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.subject}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.classSection}</td>
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </td> */}
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -546,7 +572,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
               </select>
-              <button
+              {/* <button
                 onClick={handleDownloadDTR}
                 disabled={downloadingDTR}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
@@ -561,7 +587,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
                     Download DTR
                   </>
                 )}
-              </button>
+              </button> */}
             </div>
           </div>
           {historyLoading ? (

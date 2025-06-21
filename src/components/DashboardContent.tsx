@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar, Line, Pie } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -10,6 +10,7 @@ import {
   FaUserClock, 
   FaHistory,
   FaUserCheck,
+  FaFile,
   FaClock,
   FaGraduationCap,
   FaBriefcase
@@ -32,6 +33,7 @@ interface User {
 
 interface Faculty {
   FacultyID: number;
+  EmploymentStatus?: string;
   Contract?: {
     ContractType: string;
   };
@@ -62,6 +64,8 @@ export default function DashboardContent() {
     total: 0,
     regular: 0,
     probationary: 0,
+    resigned: 0,
+    underProbation: 0,
   });
   const [activeUsers, setActiveUsers] = useState({
     faculty: 0,
@@ -80,6 +84,8 @@ export default function DashboardContent() {
     approved: 0,
     rejected: 0,
   });
+  const [documentStats, setDocumentStats] = useState({ submitted: 0 });
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
 
   interface Log {
     LogID: number;
@@ -129,23 +135,31 @@ export default function DashboardContent() {
         console.log('Raw faculty data from dashboard:', faculty); // Debug log
 
         // Filter out deleted faculty first
-        const activeFaculty = faculty?.filter(f => !f.User?.isDeleted) || [];
-        console.log('Active faculty after filtering:', activeFaculty); // Debug log
+        const allNonDeletedFaculty = faculty?.filter(f => !f.User?.isDeleted) || [];
+        console.log('All non-deleted faculty data (check for EmploymentStatus here):', allNonDeletedFaculty); // Debug log
 
-        // Calculate stats only for active faculty
-        const regularCount = activeFaculty.filter((f) => f.Contract?.ContractType === "Full_Time").length;
-        const probationaryCount = activeFaculty.filter((f) => f.Contract?.ContractType === "Probationary").length;
+        // Calculate stats based on EmploymentStatus
+        const hiredCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Hired").length;
+        const regularCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Regular").length;
+        const probationaryCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Probationary").length;
+        const resignedCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Resigned").length;
+        
+        const totalActiveFaculty = hiredCount + regularCount + probationaryCount;
 
-        console.log('Stats calculation:', {
-          total: activeFaculty.length,
+        console.log('Stats calculation from EmploymentStatus:', {
+          total: totalActiveFaculty,
           regular: regularCount,
-          probationary: probationaryCount
+          probationary: probationaryCount,
+          hired: hiredCount,
+          resigned: resignedCount,
         }); // Debug log
 
         setFacultyStats({
-          total: activeFaculty.length,
+          total: totalActiveFaculty,
           regular: regularCount,
           probationary: probationaryCount,
+          resigned: resignedCount,
+          underProbation: probationaryCount, // UI uses this for 'Under Probation'
         });
 
         // Fetch Department Stats
@@ -235,6 +249,7 @@ export default function DashboardContent() {
           throw attendanceError;
         }
 
+        setAttendanceRecords(attendance || []);
         setAttendanceData({
           present: attendance?.filter((a) => a.status === "PRESENT").length || 0,
           absent: attendance?.filter((a) => a.status === "ABSENT").length || 0,
@@ -292,6 +307,14 @@ export default function DashboardContent() {
         });
         console.log("Statuses:", leaves.map((l) => l.Status));
 
+        // Fetch Documents Status
+        const { data: documents, error: documentsError } = await supabase
+          .from("Document")
+          .select("*");
+        if (documentsError) throw documentsError;
+        const submittedCount = documents?.filter(doc => doc.SubmissionStatus === "Submitted").length || 0;
+        setDocumentStats({ submitted: submittedCount });
+
       } catch (error) {
         if (error instanceof Error) {
           console.error("Error fetching dashboard data:", error.message);
@@ -340,13 +363,75 @@ export default function DashboardContent() {
     }
   }, [user?.id]);
 
+  // Build per-day present/absent arrays for the graph
+  const daysCount = Math.floor((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const presentPerDay: number[] = Array(daysCount).fill(0);
+  const absentPerDay: number[] = Array(daysCount).fill(0);
+  for (let i = 0; i < daysCount; i++) {
+    const day = new Date(dateRange[0]);
+    day.setDate(day.getDate() + i);
+    const dayStr = day.toISOString().split('T')[0];
+    let present = 0;
+    let absent = 0;
+    // For each faculty, check if they have a record for this day
+    for (const faculty of Object.values(facultyStats.total ? facultyStats : { total: 0 })) {
+      // We'll use the activeFaculty list from above, but since it's not in state, let's get all unique faculty IDs from attendanceRecords
+      // Instead, let's get all unique faculty IDs from attendanceRecords
+      break;
+    }
+  }
+  // Instead, get all unique faculty IDs from attendanceRecords
+  const facultyIds = Array.from(new Set(attendanceRecords.map((rec) => rec.facultyId)));
+  for (let i = 0; i < daysCount; i++) {
+    const day = new Date(dateRange[0]);
+    day.setDate(day.getDate() + i);
+    const dayStr = day.toISOString().split('T')[0];
+    let present = 0;
+    let absent = 0;
+    for (const facultyId of facultyIds) {
+      const rec = attendanceRecords.find((r) => r.facultyId === facultyId && r.date === dayStr);
+      if (rec) {
+        if (rec.status === 'PRESENT') present++;
+        else absent++;
+      } else {
+        absent++;
+      }
+    }
+    presentPerDay[i] = present;
+    absentPerDay[i] = absent;
+  }
+  const attendanceOverviewData = {
+    labels: Array.from({ length: daysCount }, (_, i) => {
+      const d = new Date(dateRange[0]);
+      d.setDate(d.getDate() + i);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    }),
+    datasets: [
+      {
+        label: "Present",
+        data: presentPerDay,
+        borderColor: "#43a047",
+        backgroundColor: "#43a047",
+        fill: false,
+      },
+      {
+        label: "Absent",
+        data: absentPerDay,
+        borderColor: "#e53935",
+        backgroundColor: "#e53935",
+        fill: false,
+      },
+    ],
+  };
+
+  const departmentColors = ["#800000", "#9C27B0", "#2196F3", "#FF9800", "#43a047", "#e53935", "#ffb300"];
   const departmentData = {
     labels: Object.keys(departmentStats),
     datasets: [
       {
         label: "Faculty by Department",
         data: Object.values(departmentStats),
-        backgroundColor: ["#800000", "#9C27B0", "#2196F3", "#FF9800"],
+        backgroundColor: departmentColors.slice(0, Object.keys(departmentStats).length),
       },
     ],
   };
@@ -360,6 +445,17 @@ export default function DashboardContent() {
         borderColor: "#800000",
         tension: 0.4,
         fill: false,
+      },
+    ],
+  };
+
+  const leavePieData = {
+    labels: ["Pending", "Approved", "Rejected"],
+    datasets: [
+      {
+        data: [leaveRequests.pending, leaveRequests.approved, leaveRequests.rejected],
+        backgroundColor: ["#ffb300", "#43a047", "#e53935"],
+        hoverOffset: 4,
       },
     ],
   };
@@ -420,7 +516,7 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -430,24 +526,7 @@ export default function DashboardContent() {
             <FaUsers className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
-        {/* <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Present Today</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{attendanceData.present}</h3>
-            </div>
-            <FaUserCheck className="text-4xl text-[#800000] opacity-50" />
-          </div>
-        </div> */}
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Pending Leaves</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveRequests.pending}</h3>
-            </div>
-            <FaClock className="text-4xl text-[#800000] opacity-50" />
-          </div>
-        </div>
+
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -457,6 +536,27 @@ export default function DashboardContent() {
             <FaUserTie className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Documents Requiring Approval</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{documentStats.submitted}</h3>
+            </div>
+            <FaFile className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Pending Leaves</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveRequests.pending}</h3>
+            </div>
+            <FaClock className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -465,14 +565,18 @@ export default function DashboardContent() {
             <FaGraduationCap className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Faculty Overview</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
               <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.regular}</p>
               <p className="text-gray-600 font-medium">Regular Faculty</p>
             </div>
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.probationary}</p>
-              <p className="text-gray-600 font-medium">Probationary</p>
+              <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.underProbation}</p>
+              <p className="text-gray-600 font-medium">Under Probation</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.resigned}</p>
+              <p className="text-gray-600 font-medium">Resigned</p>
             </div>
           </div>
           <div className="mt-6">
@@ -486,41 +590,28 @@ export default function DashboardContent() {
             }} />
           </div>
         </div>
-{/*  Attendance Overview
+
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaUserClock className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{attendanceData.absent}</p>
-              <p className="text-gray-600 font-medium">Absent</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{attendanceData.late}</p>
-              <p className="text-gray-600 font-medium">Late</p>
-            </div>
-          </div>
-          <div className="h-[200px]">
-            <Line data={monthlyAttendanceData} options={{
+          <div className="h-[350px]">
+            <Line data={attendanceOverviewData} options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false
-                }
-              }
+              plugins: { legend: { display: true } },
+              scales: { y: { beginAtZero: true } },
             }} />
           </div>
-        </div> */}
+        </div>
 
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaBriefcase className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
               <p className="text-4xl font-bold text-[#800000] mb-2">{leaveRequests.pending}</p>
               <p className="text-gray-600 font-medium">Pending</p>
@@ -534,36 +625,10 @@ export default function DashboardContent() {
               <p className="text-gray-600 font-medium">Rejected</p>
             </div>
           </div>
+          <div className="h-[200px] flex items-center justify-center">
+            <Pie data={leavePieData} options={{ plugins: { legend: { display: true, position: 'bottom' } } }} />
+          </div>
         </div>
-{/* ACtivity Logs
-        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-          <div className="flex items-center mb-6">
-            <FaHistory className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Recent Activity Logs</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">#</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">User</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Action</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {logs.map((log, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors duration-200">
-                    <td className="px-6 py-4 text-sm text-gray-600">{index + 1}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{log.User.FirstName} {log.User.LastName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{log.ActionType}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{new Date(log.Timestamp).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>  */}
       </div>
     </div>
   );

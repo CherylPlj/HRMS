@@ -13,7 +13,7 @@ interface Faculty {
   Position: string;
   DepartmentID: number;
   EmploymentStatus: string;
-  Resignation_Date: string | null;
+  ResignationDate: string | null;
   Phone: string | null;
   Address: string | null;
   User: {
@@ -306,6 +306,7 @@ const FacultyContent: React.FC = () => {
   useEffect(() => {
     console.log('FacultyContent mounted, fetching data...'); // Debug log
     fetchFacultyData();
+    fetchDocumentTypes();
     fetchDocuments('all'); // Fetch all documents on initial mount for both views
   }, []);
 
@@ -701,7 +702,7 @@ const FacultyContent: React.FC = () => {
       Position: faculty.Position,
       DepartmentID: faculty.DepartmentID,
       EmploymentStatus: faculty.EmploymentStatus,
-      Resignation_Date: faculty.Resignation_Date,
+      ResignationDate: faculty.ResignationDate,
       Phone: faculty.Phone,
       Address: faculty.Address,
     });
@@ -1626,8 +1627,8 @@ const FacultyContent: React.FC = () => {
                     <input
                       id="ResignationDate"
                       type="date"
-                      value={editFaculty.Resignation_Date || ''}
-                      onChange={(e) => setEditFaculty({...editFaculty, Resignation_Date: e.target.value})}
+                      value={editFaculty.ResignationDate || ''}
+                      onChange={(e) => setEditFaculty({...editFaculty, ResignationDate: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                       required
                     />

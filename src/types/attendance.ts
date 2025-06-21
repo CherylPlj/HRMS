@@ -25,6 +25,7 @@ export interface Schedule {
   day: string;
   timeIn: string;
   timeOut: string;
+  duration: number;
   status: string;
 }
 

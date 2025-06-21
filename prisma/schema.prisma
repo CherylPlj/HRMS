@@ -30,7 +30,6 @@ model User {
   createdBy String?
   updatedBy String?
   isDeleted Boolean @default(false)
-
   AIChat       AIChat[]
   ActivityLog  ActivityLog[]
   Cashier      Cashier?       @relation("UserCashier")
@@ -48,20 +47,20 @@ model Faculty {
   Phone            String?
   Address          String?
   EmploymentStatus EmploymentStatus @default(Regular)
-  EmployeeType     EmployeeType     @default(Regular)
   HireDate         DateTime         @db.Date
   ResignationDate  DateTime?        @db.Date
   Position         String
   DepartmentID     Int
   ContractID       Int?
   EmergencyContact String?
+  EmployeeType     EmployeeType     @default(Regular)
+  Attendance       Attendance[]
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
   Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Restrict)
   Leaves           Leave[]
-  Schedules        Schedule[]
-  Attendance       Attendance[]
+  Schedules        Schedules[]
 }
 
 model Cashier {
@@ -129,18 +128,6 @@ model Attendance {
   updatedAt  DateTime?  @updatedAt
   status     AttendanceStatus @default(NOT_RECORDED)
   Faculty    Faculty   @relation(fields: [facultyId], references: [FacultyID])
-
-}
-
-model Schedule {
-  ScheduleID   Int       @id @default(autoincrement())
-  FacultyID    Int
-  StartTime    DateTime
-  EndTime      DateTime
-  Subject      String
-  ClassSection String
-  DayOfWeek    DayOfWeek
-  Faculty      Faculty   @relation(fields: [FacultyID], references: [FacultyID])
 }
 
 model AIChat {
@@ -183,7 +170,6 @@ model ActivityLog {
   User           User?    @relation(fields: [UserID], references: [UserID])
 }
 
-
 model Role {
   id    Int        @id @default(autoincrement())
   name  String     @unique
@@ -200,18 +186,26 @@ model UserRole {
 }
 
 model Leave {
-  LeaveID     Int         @id @default(autoincrement())
-  FacultyID   Int
-  LeaveType   LeaveType
-  StartDate   DateTime
-  EndDate     DateTime
-  Reason      String
-  Status      LeaveStatus @default(Pending)
-  DocumentUrl String?
-  CreatedAt   DateTime    @default(now())
-  UpdatedAt   DateTime    @updatedAt
-  Faculty     Faculty     @relation(fields: [FacultyID], references: [FacultyID])
+  LeaveID                 Int         @id @default(autoincrement())
+  FacultyID               Int
+  LeaveType               LeaveType?
+  StartDate               DateTime?
+  EndDate                 DateTime?
+  TimeIn                  DateTime?
+  TimeOut                 DateTime?
+  Reason                  String
+  Status                  LeaveStatus @default(Pending)
+  EmploymentType          String?
+  employeeSignature       String?
+  departmentHeadSignature String?
+  CreatedAt              DateTime    @default(now())
+  UpdatedAt              DateTime    @updatedAt
+  Faculty                Faculty     @relation(fields: [FacultyID], references: [FacultyID])
+  requestType            String      @default("Leave")
+
+  @@index([FacultyID])
 }
+
 
 enum Status {
   Invited
@@ -221,9 +215,9 @@ enum Status {
 
 enum EmploymentStatus {
   Hired
+  Resigned
   Regular
   Probationary
-  Resigned
 }
 
 enum EmployeeType {
@@ -272,4 +266,33 @@ enum LeaveType {
   Sick
   Vacation
   Emergency
+  Undertime
+}
+
+model Subject {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  schedules Schedules[]
+}
+
+model ClassSection {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  schedules Schedules[]
+}
+
+model Schedules {
+  id             Int          @id @default(autoincrement())
+  facultyId      Int
+  subjectId      Int
+  classSectionId Int
+  day            String
+  time           String
+  duration       Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  faculty      Faculty      @relation(fields: [facultyId], references: [FacultyID])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  classSection ClassSection @relation(fields: [classSectionId], references: [id])
 }
