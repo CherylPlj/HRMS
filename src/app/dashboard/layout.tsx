@@ -98,8 +98,29 @@ export default function DashboardLayout({
         const path = pathname.toLowerCase();
 
         // Check if user has access to the current path
-        const hasAccess = Boolean(role && path.includes(`/dashboard/${role}`));
+        // Allow access to base dashboard path and role-specific paths
+        const hasAccess = Boolean(
+          role && (
+            path === '/dashboard' || 
+            path === '/dashboard/' || 
+            path.includes(`/dashboard/${role}`)
+          )
+        );
+
+        if (!hasAccess) {
+          console.error('Access denied:', {
+            role,
+            path,
+            userEmail: user.primaryEmailAddress?.emailAddress
+          });
+        }
+
         setIsAuthorized(hasAccess);
+
+        // If on base dashboard path, redirect to role-specific dashboard
+        if (hasAccess && (path === '/dashboard' || path === '/dashboard/')) {
+          window.location.href = `/dashboard/${role}`;
+        }
       } catch (error) {
         console.error('Error in authorization check:', error);
         setIsAuthorized(false);

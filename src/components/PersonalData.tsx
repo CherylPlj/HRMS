@@ -248,51 +248,42 @@ const PersonalData: React.FC = () => {
         if (!subscription) {
           const newSubscription = supabase
             .channel('faculty_changes')
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'Faculty',
-                filter: `UserID=eq.${userData.UserID}`
-              },
-              async (payload) => {
-                console.log('Real-time update received:', payload);
-                // Refetch the data to ensure we have the latest
-                const { data: updatedData, error: updateError } = await supabase
-                  .from('Faculty')
-                  .select(`
-                    *,
-                    Department (
-                      DepartmentName
-                    )
-                  `)
-                  .eq('UserID', userData.UserID)
-                  .single();
+            .on('postgres_changes', {
+              event: '*',
+              schema: 'public',
+              table: 'Faculty',
+              filter: `UserID=eq.${userData.UserID}`
+            }, async (payload) => {
+              // Fetch updated faculty data
+              const { data: updatedFacultyData, error: updateError } = await supabase
+                .from('Faculty')
+                .select(`
+                  *,
+                  Department (
+                    DepartmentName
+                  )
+                `)
+                .eq('UserID', userData.UserID)
+                .single();
 
-                if (!updateError && updatedData) {
-                  const transformedUpdatedData: FacultyDetails = {
-                    ...updatedData,
-                    DepartmentName: updatedData.Department?.DepartmentName || 'Unknown Department'
-                  };
-                  setFacultyDetails(transformedUpdatedData);
-                  setEditedDetails(transformedUpdatedData);
-                  setNotification({
-                    type: 'success',
-                    message: 'Your profile has been updated.'
-                  });
-                }
+              if (!updateError && updatedFacultyData) {
+                const transformedUpdatedData: FacultyDetails = {
+                  ...updatedFacultyData,
+                  DepartmentName: updatedFacultyData.Department?.DepartmentName || 'Unknown Department'
+                };
+                setFacultyDetails(transformedUpdatedData);
+                setEditedDetails(transformedUpdatedData);
               }
-            )
+            })
             .subscribe();
 
           setSubscription(newSubscription);
         }
-      } catch (error: unknown) {
-        console.error('Unexpected error:', error);
+      } catch (error) {
+        console.error('Error fetching faculty details:', error);
         setNotification({
           type: 'error',
-          message: 'System error. Please try again later or contact IT support.'
+          message: 'An error occurred while loading your data. Please try again later.'
         });
       } finally {
         setLoading(false);
@@ -301,14 +292,14 @@ const PersonalData: React.FC = () => {
 
     fetchFacultyDetails();
 
-    // Cleanup subscription on unmount
+    // Cleanup subscription when component unmounts
     return () => {
       if (subscription) {
-        subscription.unsubscribe();
+        supabase.removeChannel(subscription);
         setSubscription(null);
       }
     };
-  }, [user, subscription]);
+  }, [user]);  // Only depend on user changes
 
 const handleDownload = () => {
   if (!facultyDetails) return;

@@ -124,24 +124,51 @@ const LeaveRequestFaculty: React.FC = () => {
             setIsLoading(true);
             setError(null);
 
+            // First try the API endpoint
+            try {
+                const response = await fetch(`/api/leaves/${facultyId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (!Array.isArray(data)) {
+                        throw new Error('Invalid response format from API');
+                    }
+
+                    const formattedLeaves: LeaveRequest[] = data.map(leave => ({
+                        ...leave,
+                        StartDate: new Date(leave.StartDate),
+                        EndDate: new Date(leave.EndDate),
+                        CreatedAt: new Date(leave.CreatedAt),
+                        Faculty: {
+                            Name: leave.Faculty.Name,
+                            Department: leave.Faculty.Department
+                        }
+                    }));
+
+                    setLeaveRequests(formattedLeaves);
+                    return;
+                }
+            } catch (apiError) {
+                console.error('API error:', apiError);
+                // Continue to Supabase fallback
+            }
+
+            // Fallback to Supabase query
             const { data: leaves, error: leavesError } = await supabase
                 .from('Leave')
                 .select(`
-                    LeaveID,
-                    FacultyID,
-                    LeaveType,
-                    StartDate,
-                    EndDate,
-                    Reason,
-                    Status,
-                    DocumentUrl,
-                    CreatedAt,
-                    Faculty (
-                        User (
+                    *,
+                    Faculty:FacultyID (
+                        User:UserID (
                             FirstName,
                             LastName
                         ),
-                        Department (
+                        Department:DepartmentID (
                             DepartmentName
                         )
                     )
@@ -150,6 +177,7 @@ const LeaveRequestFaculty: React.FC = () => {
                 .order('CreatedAt', { ascending: false });
 
             if (leavesError) {
+                console.error('Supabase error:', leavesError);
                 throw new Error('Failed to fetch leave requests');
             }
 
@@ -158,15 +186,22 @@ const LeaveRequestFaculty: React.FC = () => {
                 return;
             }
 
-            // Type assertion to unknown first, then to SupabaseLeave[]
-            const formattedLeaves: LeaveRequest[] = (leaves as unknown as SupabaseLeave[]).map(leave => ({
-                ...leave,
+            // Transform the data
+            const formattedLeaves: LeaveRequest[] = leaves.map(leave => ({
+                LeaveID: leave.LeaveID,
+                FacultyID: leave.FacultyID,
+                LeaveType: leave.LeaveType as LeaveType,
                 StartDate: new Date(leave.StartDate),
                 EndDate: new Date(leave.EndDate),
+                Reason: leave.Reason,
+                Status: leave.Status as LeaveStatus,
+                DocumentUrl: leave.DocumentUrl,
                 CreatedAt: new Date(leave.CreatedAt),
                 Faculty: {
-                    Name: `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`,
-                    Department: leave.Faculty.Department.DepartmentName
+                    Name: leave.Faculty?.User 
+                        ? `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`
+                        : 'Unknown',
+                    Department: leave.Faculty?.Department?.DepartmentName || 'Unknown'
                 }
             }));
 

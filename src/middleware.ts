@@ -38,59 +38,22 @@ const ignoredRoutes = [
     "/api/webhooks/clerk"
 ];
 
+// Add dashboard routes that require authentication
+const dashboardRoutes = [
+    "/dashboard",
+    "/dashboard/(.*)"
+];
+
 const isPublicRoute = createRouteMatcher(publicRoutes);
 const isIgnoredRoute = createRouteMatcher(ignoredRoutes);
-
-// Simple in-memory rate limiting
-const rateLimit = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS = 30; // 30 requests per minute
-
-function checkRateLimit(ip: string): boolean {
-    const now = Date.now();
-    const userLimit = rateLimit.get(ip);
-
-    if (!userLimit || now > userLimit.resetTime) {
-        rateLimit.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-        return true;
-    }
-
-    if (userLimit.count >= MAX_REQUESTS) {
-        return false;
-    }
-
-    userLimit.count++;
-    return true;
-}
+const isDashboardRoute = createRouteMatcher(dashboardRoutes);
 
 export default clerkMiddleware(async (auth, req) => {
     const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
-    
-    // Only apply rate limiting to authentication-related routes
-    if (req.url.includes('/sign-in') || req.url.includes('/sign-up')) {
-        // Check rate limit
-        if (!checkRateLimit(ip)) {
-            const response = new NextResponse(
-                JSON.stringify({
-                    error: "Too many requests. Please try again in a minute.",
-                    retryAfter: 60
-                }),
-                {
-                    status: 429,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Retry-After": "60",
-                    },
-                }
-            );
-            return response;
-        }
-    }
-
     const { userId } = await auth();
     const isAuthenticated = !!userId;
     const url = new URL(req.url);
-
+    
     // Add security headers
     const response = NextResponse.next();
     response.headers.set("X-Frame-Options", "DENY");
@@ -109,9 +72,16 @@ export default clerkMiddleware(async (auth, req) => {
         "child-src 'self' blob:;"
     );
 
-    // Allow access to ignored routes
+    // Always allow access to ignored routes
     if (isIgnoredRoute(req)) {
         return response;
+    }
+
+    // Check for dashboard routes specifically
+    if (isDashboardRoute(req)) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL('/sign-in', req.url));
+        }
     }
 
     // If trying to access a protected route while not authenticated
@@ -126,37 +96,9 @@ export default clerkMiddleware(async (auth, req) => {
             return response;
         }
 
-        try {
-            // Redirect to appropriate dashboard based on role
-            const session = await auth();
-            const userEmail = session.sessionClaims?.email as string;
-            
-            if (!userEmail) {
-                throw new Error("No email found in session");
-            }
-
-            const userRole = await getUserRole(userEmail);
-            
-            if (!userRole) {
-                throw new Error("No role found for user");
-            }
-            
-
-            switch (userRole.toLowerCase()) {
-                case 'admin':
-                    return NextResponse.redirect(new URL('/dashboard/admin', req.url));
-                case 'faculty':
-                    return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
-                case 'registrar':
-                    return NextResponse.redirect(new URL('/dashboard/registrar', req.url));
-                case 'cashier':
-                    return NextResponse.redirect(new URL('/dashboard/cashier', req.url));
-                default:
-                    throw new Error("Invalid user role");
-            }
-        } catch (error) {
-            console.error("Authentication error:", error);
-            return NextResponse.redirect(new URL('/sign-in?error=unauthorized', req.url));
+        // If accessing sign-in page while authenticated, immediately redirect to /dashboard
+        if (url.pathname.startsWith('/sign-in')) {
+            return NextResponse.redirect(new URL('/dashboard', req.url));
         }
     }
 

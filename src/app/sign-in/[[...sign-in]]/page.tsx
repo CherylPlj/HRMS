@@ -86,32 +86,52 @@ export default function SignInPage() {
     email: '',
     password: ''
   });
-  const [warningModal, setWarningModal] = useState({
-    isOpen: false,
-    message: ''
-  });
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [rememberMe, setRememberMe] = useState(() => {
-    // Initialize rememberMe from localStorage on component mount
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('rememberMe') === 'true';
-    }
-    return false;
-  });
 
-  // Load remembered email and state on component mount
+  // Add check for authenticated state
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const rememberedEmail = localStorage.getItem('rememberedEmail');
-      const rememberedState = localStorage.getItem('rememberMe') === 'true';
-      
-      if (rememberedEmail && rememberedState) {
-        setFormData(prev => ({ ...prev, email: rememberedEmail }));
-        setRememberMe(true);
+    const checkUserRole = async () => {
+      if (isLoaded && isSignedIn && user) {
+        try {
+          const { data: userCheck, error: userError } = await supabase
+            .from('User')
+            .select(`
+              UserRole!inner (
+                role:Role (
+                  name
+                )
+              )
+            `)
+            .eq('Email', user.primaryEmailAddress?.emailAddress)
+            .single();
+
+          if (userError || !userCheck) {
+            console.error('Error getting user role:', userError);
+            return;
+          }
+
+          const userRoles = (userCheck as unknown as UserCheck).UserRole;
+          const role = userRoles?.[0]?.role?.name?.toLowerCase();
+
+          if (role) {
+            router.push(`/dashboard/${role}`);
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+        }
       }
-    }
-  }, []);
+    };
+
+    checkUserRole();
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // If still loading or already signed in, show loading state
+  if (!isLoaded || isSignedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
+      </div>
+    );
+  }
 
   const validateEmailCharacters = (email: string) => {
     // Regular expression to match only allowed characters
@@ -151,7 +171,7 @@ export default function SignInPage() {
     
     if (name === 'email') {
       const error = validateEmailCharacters(value);
-      setEmailError(error);
+      // setEmailError(error); // Removed as per instructions
       
       if (error && error.includes('Only letters, numbers')) {
         // Don't update the form if invalid characters are entered
@@ -169,16 +189,16 @@ export default function SignInPage() {
     
     if (name === 'password') {
       if (value.length >= 50) {
-        setPasswordError('Password must not exceed 50 characters');
+        // setPasswordError('Password must not exceed 50 characters'); // Removed as per instructions
         setFormData(prev => ({
           ...prev,
           [name]: value.slice(0, 50)
         }));
         return;
       } else if (value.length < 6 && value.length > 0) {
-        setPasswordError('Password must be at least 6 characters');
+        // setPasswordError('Password must be at least 6 characters'); // Removed as per instructions
       } else {
-        setPasswordError(null);
+        // setPasswordError(null); // Removed as per instructions
       }
     }
 
@@ -274,11 +294,11 @@ export default function SignInPage() {
       const portalRole = portal.toLowerCase();
       if (role.toLowerCase() !== portalRole) {
         setIsLoading(false);
-        setWarningModal({
-          isOpen: true,
-          message: `Your account has ${role.toLowerCase()} privileges. Please use the ${role.toLowerCase()} portal instead.`
-        });
-        setFormData({ email: '', password: '' }); // Clear form data when showing warning
+        // setWarningModal({ // Removed as per instructions
+        //   isOpen: true,
+        //   message: `Your account has ${role.toLowerCase()} privileges. Please use the ${role.toLowerCase()} portal instead.`
+        // });
+        // setFormData({ email: '', password: '' }); // Clear form data when showing warning // Removed as per instructions
         return;
       }
 
@@ -293,14 +313,14 @@ export default function SignInPage() {
           session: result.createdSessionId,
         });
         
-        // Handle remember me state persistence
-        if (rememberMe) {
-          localStorage.setItem('rememberedEmail', formData.email);
-          localStorage.setItem('rememberMe', 'true');
-        } else {
-          localStorage.removeItem('rememberedEmail');
-          localStorage.removeItem('rememberMe');
-        }
+        // Handle remember me state persistence // Removed as per instructions
+        // if (rememberMe) { // Removed as per instructions
+        //   localStorage.setItem('rememberedEmail', formData.email); // Removed as per instructions
+        //   localStorage.setItem('rememberMe', 'true'); // Removed as per instructions
+        // } else { // Removed as per instructions
+        //   localStorage.removeItem('rememberedEmail'); // Removed as per instructions
+        //   localStorage.removeItem('rememberMe'); // Removed as per instructions
+        // }
 
         // After successful sign-in, verify user and redirect
         const userEmail = formData.email;
@@ -349,41 +369,32 @@ export default function SignInPage() {
     router.push('/');
   };
 
-  const closeWarningModal = () => {
-    setWarningModal({ isOpen: false, message: '' });
-    setFormData({ email: '', password: '' }); // Clear the form
-  };
+  // const closeWarningModal = () => { // Removed as per instructions
+  //   setWarningModal({ isOpen: false, message: '' }); // Removed as per instructions
+  //   setFormData({ email: '', password: '' }); // Clear the form // Removed as per instructions
+  // };
 
-  const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setRememberMe(checked);
-    if (checked) {
-      localStorage.setItem('rememberMe', 'true');
-      if (formData.email) {
-        localStorage.setItem('rememberedEmail', formData.email);
-      }
-    } else {
-      localStorage.removeItem('rememberedEmail');
-      localStorage.removeItem('rememberMe');
-    }
-  };
-
-  // Return early if auth is not loaded
-  if (!isLoaded || !signIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
-      </div>
-    );
-  }
+  // const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => { // Removed as per instructions
+  //   const checked = e.target.checked; // Removed as per instructions
+  //   setRememberMe(checked); // Removed as per instructions
+  //   if (checked) { // Removed as per instructions
+  //     localStorage.setItem('rememberMe', 'true'); // Removed as per instructions
+  //     if (formData.email) { // Removed as per instructions
+  //       localStorage.setItem('rememberedEmail', formData.email); // Removed as per instructions
+  //     }
+  //   } else { // Removed as per instructions
+  //     localStorage.removeItem('rememberedEmail'); // Removed as per instructions
+  //     localStorage.removeItem('rememberMe'); // Removed as per instructions
+  //   }
+  // };
 
   return (
     <>
-      <WarningModal 
-        isOpen={warningModal.isOpen}
-        message={warningModal.message}
-        onClose={closeWarningModal}
-      />
+      {/* <WarningModal  // Removed as per instructions */}
+      {/*   isOpen={warningModal.isOpen} // Removed as per instructions */}
+      {/*   message={warningModal.message} // Removed as per instructions */}
+      {/*   onClose={closeWarningModal} // Removed as per instructions */}
+      {/* /> */}
 
       <div className="min-h-screen flex">
         {/* Left side - Background */}
@@ -430,9 +441,7 @@ export default function SignInPage() {
                     <input
                       autoComplete="off"
                       placeholder="Email Address"
-                      className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10 ${
-                        emailError ? 'border-red-500' : ''
-                      }`}
+                      className="bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10"
                       type="text"
                       name="email"
                       value={formData.email}
@@ -440,20 +449,18 @@ export default function SignInPage() {
                       disabled={isLoading}
                     />
                   </div>
-                  {emailError && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {emailError}
-                    </p>
-                  )}
+                  {/* {emailError && ( // Removed as per instructions */}
+                  {/*   <p className="mt-1 text-xs text-red-600"> // Removed as per instructions */}
+                  {/*     {emailError} // Removed as per instructions */}
+                  {/*   </p> // Removed as per instructions */}
+                  {/* )} */}
                 </div>
                 <div className="mb-4 w-full">
                   <div className="relative w-full">
                     <input
                       autoComplete="off"
                       placeholder="Password"
-                      className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10 ${
-                        passwordError ? 'border-red-500' : ''
-                      }`}
+                      className="bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 focus:ring-[#800000] focus:border-transparent pr-10"
                       type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
@@ -469,24 +476,24 @@ export default function SignInPage() {
                       <Eye className="h-[18px] w-[18px]" />
                     </button>
                   </div>
-                  {passwordError && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {passwordError}
-                    </p>
-                  )}
+                  {/* {passwordError && ( // Removed as per instructions */}
+                  {/*   <p className="mt-1 text-xs text-red-600"> // Removed as per instructions */}
+                  {/*     {passwordError} // Removed as per instructions */}
+                  {/*   </p> // Removed as per instructions */}
+                  {/* )} */}
                 </div>
-                <div className="mb-4 w-full flex items-center">
-                  <label className="flex items-center cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={handleRememberMeChange}
-                      className="form-checkbox h-4 w-4 text-[#800000] rounded border-gray-300 focus:ring-[#800000]"
-                      disabled={isLoading}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Remember me</span>
-                  </label>
-                </div>
+                {/* <div className="mb-4 w-full flex items-center"> // Removed as per instructions */}
+                {/*   <label className="flex items-center cursor-pointer select-none"> // Removed as per instructions */}
+                {/*     <input // Removed as per instructions */}
+                {/*       type="checkbox" // Removed as per instructions */}
+                {/*       checked={rememberMe} // Removed as per instructions */}
+                {/*       onChange={handleRememberMeChange} // Removed as per instructions */}
+                {/*       className="form-checkbox h-4 w-4 text-[#800000] rounded border-gray-300 focus:ring-[#800000]" // Removed as per instructions */}
+                {/*       disabled={isLoading} // Removed as per instructions */}
+                {/*     /> // Removed as per instructions */}
+                {/*     <span className="ml-2 text-sm text-gray-700">Remember me</span> // Removed as per instructions */}
+                {/*   </label> // Removed as per instructions */}
+                {/* </div> */}
                 <div className="mb-4 w-full">
                   <button
                     type="submit"

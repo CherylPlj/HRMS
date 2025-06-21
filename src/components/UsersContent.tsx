@@ -1390,6 +1390,8 @@ const UsersContent: React.FC = () => {
                             type="date"
                             value={newUser.DateOfBirth}
                             onChange={(e) => setNewUser({ ...newUser, DateOfBirth: e.target.value })}
+                            min="1960-01-01"
+                            max="2006-12-31"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                             required
                           />
