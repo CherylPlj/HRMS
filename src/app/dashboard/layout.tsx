@@ -1,10 +1,8 @@
 'use client';
 
-// import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs"; // Import ClerkProvider
 import { Inter, JetBrains_Mono, Poppins } from "next/font/google";
 import "./globals.css";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
@@ -55,13 +53,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user, isLoaded, isSignedIn } = useUser();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuthorization = async () => {
-      if (!isLoaded || !isSignedIn || !user) {
+    const checkUserRole = async () => {
+      if (!isLoaded || !user?.primaryEmailAddress?.emailAddress) {
         setIsLoading(false);
         return;
       }
@@ -79,58 +78,46 @@ export default function DashboardLayout({
               )
             )
           `)
-          .eq('Email', user.primaryEmailAddress?.emailAddress)
+          .eq('Email', user.primaryEmailAddress.emailAddress)
           .single();
 
-        if (error) {
-          console.error('Error checking authorization:', error);
-          setIsAuthorized(false);
-          return;
-        }
-
-        if (!userCheck || userCheck.Status !== 'Active') {
-          setIsAuthorized(false);
+        if (error || !userCheck || userCheck.Status !== 'Active') {
+          console.error('Error or inactive user:', error || 'User inactive/not found');
+          router.push('/sign-in');
           return;
         }
 
         const userRoles = (userCheck as unknown as UserCheck).UserRole;
         const role = userRoles?.[0]?.role?.name?.toLowerCase();
-        const path = pathname.toLowerCase();
 
-        // Check if user has access to the current path
-        // Allow access to base dashboard path and role-specific paths
-        const hasAccess = Boolean(
-          role && (
-            path === '/dashboard' || 
-            path === '/dashboard/' || 
-            path.includes(`/dashboard/${role}`)
-          )
-        );
-
-        if (!hasAccess) {
-          console.error('Access denied:', {
-            role,
-            path,
-            userEmail: user.primaryEmailAddress?.emailAddress
-          });
+        if (!role) {
+          console.error('No role found for user');
+          router.push('/sign-in');
+          return;
         }
 
-        setIsAuthorized(hasAccess);
+        setCurrentRole(role);
 
-        // If on base dashboard path, redirect to role-specific dashboard
-        if (hasAccess && (path === '/dashboard' || path === '/dashboard/')) {
-          window.location.href = `/dashboard/${role}`;
+        // Only redirect if we're at the base dashboard path
+        if (pathname === '/dashboard' || pathname === '/dashboard/') {
+          router.push(`/dashboard/${role}`);
+        }
+        // If trying to access wrong role's dashboard, redirect to correct one
+        else if (pathname.startsWith('/dashboard/') && !pathname.includes(`/dashboard/${role}`)) {
+          router.push(`/dashboard/${role}`);
         }
       } catch (error) {
-        console.error('Error in authorization check:', error);
-        setIsAuthorized(false);
+        console.error('Error in role check:', error);
+        router.push('/sign-in');
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkAuthorization();
-  }, [isLoaded, isSignedIn, user, pathname]);
+    if (isLoaded && !currentRole) {
+      checkUserRole();
+    }
+  }, [isLoaded, user, pathname, router, currentRole]);
 
   if (isLoading) {
     return (
@@ -140,22 +127,9 @@ export default function DashboardLayout({
     );
   }
 
-  if (!isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You do not have permission to access this page.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <ClerkProvider>
-      <div className={`min-h-screen ${inter.variable} ${jetbrainsMono.variable} ${poppins.variable}`}>
-        {children}
-      </div>
-    </ClerkProvider>
+    <div className={`min-h-screen ${inter.variable} ${jetbrainsMono.variable} ${poppins.variable}`}>
+      {children}
+    </div>
   );
 }

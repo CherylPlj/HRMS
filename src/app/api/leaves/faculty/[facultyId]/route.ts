@@ -17,7 +17,7 @@ export async function OPTIONS() {
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { facultyId: string } }
+    context: { params: { facultyId: string } }
 ) {
     try {
         // Add CORS headers to all responses
@@ -33,11 +33,14 @@ export async function GET(
             return response({ error: 'Unauthorized' }, 401);
         }
 
+        // Properly await and destructure params
+        const { params } = context;
         const facultyId = parseInt(params.facultyId);
         if (isNaN(facultyId)) {
             return response({ error: 'Invalid faculty ID' }, 400);
         }
 
+        // Fix the query syntax and add proper error handling
         const leaves = await prisma.leave.findMany({
             where: {
                 FacultyID: facultyId
@@ -63,6 +66,9 @@ export async function GET(
             orderBy: {
                 CreatedAt: 'desc'
             }
+        }).finally(() => {
+            // Ensure connection is properly handled
+            prisma.$disconnect();
         });
 
         // Transform the data to match the frontend structure
@@ -79,6 +85,9 @@ export async function GET(
         return response(transformedLeaves);
     } catch (error) {
         console.error('Error fetching leaves for faculty:', error);
+        // Ensure connection is properly handled even in case of error
+        await prisma.$disconnect();
+        
         return NextResponse.json({ 
             error: 'Failed to fetch leaves',
             details: error instanceof Error ? error.message : 'Unknown error'

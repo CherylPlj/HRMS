@@ -12,6 +12,50 @@ import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import { DateTime } from 'luxon';
 
+interface Schedule {
+  id: number;
+  facultyId: number;
+  subjectId: number;
+  classSectionId: number;
+  day: string;
+  time: string;
+  duration: number;
+  subject: {
+    name: string;
+  };
+  classSection: {
+    name: string;
+  };
+}
+
+interface RawSchedule {
+  id: number;
+  facultyId: number;
+  subjectId: number;
+  classSectionId: number;
+  day: string;
+  time: string;
+  duration: number;
+  subject: {
+    name: string;
+  };
+  classSection: {
+    name: string;
+  };
+}
+
+interface Department {
+  DepartmentName: string;
+}
+
+interface FacultyData {
+  FacultyID: number;
+  Position: string;
+  EmploymentStatus: string;
+  HireDate: string;
+  Department: Department;
+}
+
 export default function DashboardFaculty() {
   const { user } = useUser();
   const router = useRouter();
@@ -23,6 +67,9 @@ export default function DashboardFaculty() {
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'attendance'>('dashboard');
+  const [scheduleForWeek, setScheduleForWeek] = useState<Schedule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   type AttendanceRecord = {
     id?: string;
@@ -36,8 +83,6 @@ export default function DashboardFaculty() {
   };
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Placeholder data for new sections
   const [personalData, setPersonalData] = useState({
@@ -50,7 +95,9 @@ export default function DashboardFaculty() {
   const [documentRequirements, setDocumentRequirements] = useState({
     pending: 0,
     submitted: 0,
-    approved: 0
+    approved: 0,
+    rejected: 0,
+    total: 0
   });
 
   const [leaveData, setLeaveData] = useState({
@@ -59,14 +106,6 @@ export default function DashboardFaculty() {
     approved: 0,
     rejected: 0
   });
-
-  const [scheduleForWeek, setScheduleForWeek] = useState([
-    { day: "Monday", subject: "Computer Science 101", time: "8:00 AM - 10:00 AM" },
-    { day: "Tuesday", subject: "Data Structures", time: "1:00 PM - 3:00 PM" },
-    { day: "Wednesday", subject: "Algorithm Design", time: "9:30 AM - 11:00 AM" },
-    { day: "Thursday", subject: "Faculty Meeting", time: "2:00 PM - 4:00 PM" },
-    { day: "Friday", subject: "Office Hours", time: "8:00 AM - 11:00 AM" }
-  ]);
 
   // Fetch Supabase UserID and FacultyID when Clerk user is available
   useEffect(() => {
@@ -119,6 +158,67 @@ export default function DashboardFaculty() {
 
     fetchUserAndFacultyId();
   }, [user]);
+
+  // Fetch schedule data when faculty ID is available
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      if (!facultyId) return;
+
+      try {
+        interface SupabaseSchedule {
+          id: number;
+          facultyId: number;
+          subjectId: number;
+          classSectionId: number;
+          day: string;
+          time: string;
+          duration: number;
+          subject: {
+            name: string;
+          };
+          classSection: {
+            name: string;
+          };
+        }
+
+        const { data, error } = await supabase
+          .from('Schedules')
+          .select(`
+            id,
+            facultyId,
+            subjectId,
+            classSectionId,
+            day,
+            time,
+            duration,
+            subject:Subject!inner (
+              name
+            ),
+            classSection:ClassSection!inner (
+              name
+            )
+          `)
+          .eq('facultyId', facultyId)
+          .returns<SupabaseSchedule[]>();
+
+        if (error) {
+          console.error('Error fetching schedules:', error);
+          return;
+        }
+
+        // The data is already correctly typed, so we can use it directly
+        setScheduleForWeek(data || []);
+      } catch (error) {
+        console.error('Error in schedule fetch:', error);
+      }
+    };
+
+    if (facultyId) {
+      fetchSchedule();
+      fetchAttendanceData();
+      fetchOtherData();
+    }
+  }, [facultyId]);
 
   // Fetch attendance data when faculty ID is available
   useEffect(() => {
@@ -192,6 +292,7 @@ export default function DashboardFaculty() {
     try {
       if (!user?.emailAddresses?.[0]?.emailAddress) return;
 
+      // Fetch user data
       const { data: userData } = await supabase
         .from('User')
         .select('UserID')
@@ -200,74 +301,77 @@ export default function DashboardFaculty() {
 
       if (!userData) return;
 
-      // Replicating PersonalData.tsx fetching logic for faculty details
-      const { data: facultyData, error: facultyError } = await supabase
+      // Fetch faculty data
+      const { data: facultyData } = await supabase
         .from('Faculty')
         .select(`
-          *,
-          Department (
+          FacultyID,
+          Position,
+          EmploymentStatus,
+          HireDate,
+          Department:Department (
             DepartmentName
           )
         `)
         .eq('UserID', userData.UserID)
-        .single();
+        .single() as { data: FacultyData | null };
 
-      if (facultyError) {
-        console.error('Error fetching faculty data:', facultyError);
-        return;
+      if (facultyData) {
+        setPersonalData({
+          Position: facultyData.Position,
+          DepartmentName: facultyData.Department?.DepartmentName || '',
+          EmploymentStatus: facultyData.EmploymentStatus,
+          HireDate: new Date(facultyData.HireDate).toLocaleDateString()
+        });
+
+        // Fetch document types and documents
+        const { data: documentTypes } = await supabase
+          .from('DocumentType')
+          .select('DocumentTypeID');
+
+        const totalRequired = documentTypes?.length || 0;
+
+        const { data: documents } = await supabase
+          .from('Document')
+          .select('DocumentID, DocumentTypeID, SubmissionStatus')
+          .eq('FacultyID', facultyData.FacultyID);
+
+        // Count submitted, approved, and rejected documents
+        const submitted = documents?.filter(doc => doc.SubmissionStatus === 'Submitted').length || 0;
+        const approved = documents?.filter(doc => doc.SubmissionStatus === 'Approved').length || 0;
+        const rejected = documents?.filter(doc => doc.SubmissionStatus === 'Rejected').length || 0;
+
+        // Calculate pending as total required minus documents that exist
+        const existingDocumentTypes = new Set(documents?.map(doc => doc.DocumentTypeID) || []);
+        const pending = (documentTypes?.filter(dt => !existingDocumentTypes.has(dt.DocumentTypeID)).length || 0) +
+                       (documents?.filter(doc => doc.SubmissionStatus === 'Pending').length || 0);
+
+        setDocumentRequirements({
+          pending,
+          submitted,
+          approved,
+          rejected,
+          total: totalRequired
+        });
+
+        // Fetch leave data
+        const { data: leaves } = await supabase
+          .from('Leave')
+          .select('LeaveID, Status')
+          .eq('FacultyID', facultyData.FacultyID);
+
+        const availableLeaves = 15; // This should be fetched from a configuration or calculated based on policy
+        const pendingLeaves = leaves?.filter(leave => leave.Status === 'Pending').length || 0;
+        const approvedLeaves = leaves?.filter(leave => leave.Status === 'Approved').length || 0;
+        const rejectedLeaves = leaves?.filter(leave => leave.Status === 'Rejected').length || 0;
+
+        setLeaveData({
+          available: availableLeaves - approvedLeaves,
+          pending: pendingLeaves,
+          approved: approvedLeaves,
+          rejected: rejectedLeaves
+        });
       }
-
-      if (!facultyData) {
-        console.error('No faculty data found');
-        return;
-      }
-
-      setPersonalData({
-        Position: facultyData.Position || '',
-        DepartmentName: facultyData.Department?.DepartmentName || '',
-        EmploymentStatus: facultyData.EmploymentStatus || '',
-        HireDate: facultyData.HireDate || ''
-      });
-
-      const { data: documents } = await supabase
-        .from('FacultyDocuments')
-        .select('SubmissionStatus')
-        .eq('FacultyID', facultyId);
-
-      const pending = documents?.filter((d: any) => d.SubmissionStatus === 'Pending').length || 0;
-      const submitted = documents?.filter((d: any) => d.SubmissionStatus === 'Submitted').length || 0;
-      const approved = documents?.filter((d: any) => d.SubmissionStatus === 'Approved').length || 0;
-
-      setDocumentRequirements({ pending, submitted, approved });
-
-      const { data: leaves } = await supabase
-        .from('Leave')
-        .select('Status')
-        .eq('FacultyID', facultyId);
-
-      const available = 5; // Placeholder, adjust if real data available
-      const pendingLeave = leaves?.filter((l: any) => l.Status === 'Pending').length || 0;
-      const approvedLeave = leaves?.filter((l: any) => l.Status === 'Approved').length || 0;
-      const rejectedLeave = leaves?.filter((l: any) => l.Status === 'Rejected').length || 0;
-
-      setLeaveData({
-        available,
-        pending: pendingLeave,
-        approved: approvedLeave,
-        rejected: rejectedLeave
-      });
-
-      // Schedule for the week placeholder
-      const schedule = [
-        { day: "Monday", subject: "Computer Science 101", time: "8:00 AM - 10:00 AM" },
-        { day: "Tuesday", subject: "Data Structures", time: "1:00 PM - 3:00 PM" },
-        { day: "Wednesday", subject: "Algorithm Design", time: "9:30 AM - 11:00 AM" },
-        { day: "Thursday", subject: "Faculty Meeting", time: "2:00 PM - 4:00 PM" },
-        { day: "Friday", subject: "Office Hours", time: "8:00 AM - 11:00 AM" }
-      ];
-
-      setScheduleForWeek(schedule);
-
     } catch (error) {
       console.error('Error fetching other dashboard data:', error);
     }
@@ -406,10 +510,10 @@ export default function DashboardFaculty() {
 
           {/* Second Row: Document Requirements, Leave */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Document Requirements */}
+            {/* Document Requirements Card */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
               <h3 className="text-lg font-semibold mb-4">Total Document Requirements</h3>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div className="bg-yellow-100 rounded-lg p-4">
                   <p className="text-2xl font-bold">{documentRequirements.pending}</p>
                   <p className="text-sm text-yellow-700">Pending</p>
@@ -422,6 +526,13 @@ export default function DashboardFaculty() {
                   <p className="text-2xl font-bold">{documentRequirements.approved}</p>
                   <p className="text-sm text-green-700">Approved</p>
                 </div>
+                <div className="bg-red-100 rounded-lg p-4">
+                  <p className="text-2xl font-bold">{documentRequirements.rejected}</p>
+                  <p className="text-sm text-red-700">Rejected</p>
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-gray-600 text-center">
+                Total Required: {documentRequirements.total}
               </div>
             </div>
 
@@ -466,15 +577,24 @@ export default function DashboardFaculty() {
             {/* Schedule for the Week */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
               <h3 className="text-lg font-semibold mb-4">Schedule for the Week</h3>
-              <ul>
-                {scheduleForWeek.map((item, index) => (
-                  <li key={index} className="mb-3 p-3 rounded-md" style={{backgroundColor: ['#e0f7fa', '#f3e5f5', '#e8f5e9', '#fff3e0', '#fce4ec'][index]}}>
-                    <p className="font-semibold">{item.day}</p>
-                    <p>{item.subject}</p>
-                    <p className="text-sm text-gray-600">{item.time}</p>
-                  </li>
+              <div className="space-y-4">
+                {scheduleForWeek.map((schedule) => (
+                  <div key={schedule.id} className="border-b pb-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{schedule.subject.name}</h3>
+                        <p className="text-sm text-gray-600">{schedule.classSection.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {schedule.day} • {schedule.time} ({schedule.duration} mins)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+                {scheduleForWeek.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">No schedules found for this week</p>
+                )}
+              </div>
             </div>
           </div>
 

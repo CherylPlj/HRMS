@@ -188,6 +188,7 @@ model UserRole {
 model Leave {
   LeaveID                 Int         @id @default(autoincrement())
   FacultyID               Int
+  RequestType             RequestType @default(Leave)
   LeaveType               LeaveType?
   StartDate               DateTime?
   EndDate                 DateTime?
@@ -201,9 +202,6 @@ model Leave {
   CreatedAt              DateTime    @default(now())
   UpdatedAt              DateTime    @updatedAt
   Faculty                Faculty     @relation(fields: [FacultyID], references: [FacultyID])
-  requestType            String      @default("Leave")
-
-  @@index([FacultyID])
 }
 
 
@@ -266,6 +264,11 @@ enum LeaveType {
   Sick
   Vacation
   Emergency
+  Undertime
+}
+
+enum RequestType {
+  Leave
   Undertime
 }
 

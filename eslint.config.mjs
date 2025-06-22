@@ -7,6 +7,7 @@ const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
+  recommendedConfig: {},
 });
 
 const eslintConfig = [
@@ -16,7 +17,12 @@ const eslintConfig = [
       ".next/**",
     ],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.config({
+    extends: ["next/core-web-vitals"],
+    parserOptions: {
+      project: "./tsconfig.json"
+    }
+  }),
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {

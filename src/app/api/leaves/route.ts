@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
-import { LeaveStatus, LeaveType } from '@prisma/client';
+import { LeaveStatus, LeaveType, RequestType } from '@prisma/client';
 import type { Leave, Faculty, User, Department } from '@/generated/prisma';
 
 // Define a type for the transformed leave record
@@ -19,16 +19,22 @@ interface UserRole {
     };
 }
 
+// Define CORS headers
+const corsHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export async function GET() {
     try {
-        // Add CORS headers
-        const headers = {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        };
+        const { userId } = await auth();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
 
+        // Fetch all leaves with faculty and department information
         const leaves = await prisma.leave.findMany({
             include: {
                 Faculty: {
@@ -54,7 +60,7 @@ export async function GET() {
         });
 
         // Transform the data to match the frontend structure
-        const transformedLeaves = leaves.map((leave: any) => ({
+        const transformedLeaves = leaves.map(leave => ({
             ...leave,
             Faculty: {
                 Name: leave.Faculty?.User ? 
@@ -65,25 +71,15 @@ export async function GET() {
             }
         }));
 
-        return new NextResponse(JSON.stringify(transformedLeaves), {
-            status: 200,
-            headers
-        });
+        return NextResponse.json(transformedLeaves, { headers: corsHeaders });
     } catch (error) {
         console.error('Error fetching leaves:', error);
-        return new NextResponse(
-            JSON.stringify({ 
-                error: 'Failed to fetch leaves',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            }),
-            { 
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                }
-            }
+        return NextResponse.json(
+            { error: 'Failed to fetch leaves', details: error instanceof Error ? error.message : 'Unknown error' },
+            { status: 500, headers: corsHeaders }
         );
+    } finally {
+        await prisma.$disconnect();
     }
 }
 
@@ -111,7 +107,18 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         console.log('Received leave request body:', JSON.stringify(body, null, 2));
 
-        const { FacultyID, LeaveType, StartDate, EndDate, Reason, DocumentUrl } = body;
+        const { 
+            FacultyID, 
+            RequestType, 
+            LeaveType, 
+            StartDate, 
+            EndDate, 
+            TimeIn,
+            TimeOut,
+            Reason, 
+            employeeSignature,
+            departmentHeadSignature 
+        } = body;
 
         // Validate required fields
         if (!FacultyID || !LeaveType || !StartDate || !EndDate || !Reason) {
@@ -130,8 +137,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate leave type
-        const validLeaveTypes: LeaveType[] = ['Sick', 'Vacation', 'Emergency'];
-        if (!validLeaveTypes.includes(LeaveType)) {
+        const validLeaveTypes = ['Sick', 'Vacation', 'Emergency'];
+        if (LeaveType && !validLeaveTypes.includes(LeaveType)) {
             console.error('Invalid leave type:', LeaveType);
             return NextResponse.json(
                 { error: `Invalid leave type. Must be one of: ${validLeaveTypes.join(', ')}` },
@@ -161,12 +168,16 @@ export async function POST(request: NextRequest) {
         // Log the data we're about to insert
         const leaveData = {
             FacultyID: Number(FacultyID),
-            LeaveType,
+            RequestType: RequestType as RequestType,
+            LeaveType: LeaveType as LeaveType,
             StartDate: start,
             EndDate: end,
+            TimeIn: TimeIn ? new Date(TimeIn) : null,
+            TimeOut: TimeOut ? new Date(TimeOut) : null,
             Reason,
             Status: 'Pending' as LeaveStatus,
-            DocumentUrl,
+            employeeSignature,
+            departmentHeadSignature,
             CreatedAt: new Date(),
             UpdatedAt: new Date()
         };

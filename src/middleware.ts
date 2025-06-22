@@ -7,7 +7,7 @@ const publicRoutes = [
     "/",
     "/sign-in(.*)",
     "/sign-up(.*)",
-    "/api/webhooks/clerk",
+    "/api/webhooks/(.*)",
     "/api/updateUserStatus",
     "/api/getUserRole",
     "/api/xr/user-access-lookup",
@@ -17,6 +17,7 @@ const publicRoutes = [
     "/api/faculty-documents/[documentId]/delete",
     "/api/document-types/[id]",
     "/api/leaves/[id]",
+    "/api/leaves/faculty/[facultyId]",
     "/api/webhooks/clerk"
 ];
 
@@ -25,7 +26,7 @@ const ignoredRoutes = [
     "/",
     "/sign-in(.*)",
     "/sign-up(.*)",
-    "/api/webhooks/clerk",
+    "/api/webhooks/(.*)",
     "/api/updateUserStatus",
     "/api/getUserRole",
     "/api/xr/user-access-lookup",
@@ -35,6 +36,7 @@ const ignoredRoutes = [
     "/api/document-types/[id]",
     "/api/faculty-documents/[documentId]/delete",
     "/api/leaves/[id]",
+    "/api/leaves/faculty/[facultyId]",
     "/api/webhooks/clerk"
 ];
 
@@ -49,7 +51,6 @@ const isIgnoredRoute = createRouteMatcher(ignoredRoutes);
 const isDashboardRoute = createRouteMatcher(dashboardRoutes);
 
 export default clerkMiddleware(async (auth, req) => {
-    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
     const { userId } = await auth();
     const isAuthenticated = !!userId;
     const url = new URL(req.url);
@@ -66,7 +67,7 @@ export default clerkMiddleware(async (auth, req) => {
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
         "img-src 'self' data: https: blob:; " +
         "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-        "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co; " +
+        "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co; " +
         "frame-src 'self' https://*.clerk.accounts.dev; " +
         "worker-src 'self' blob:; " +
         "child-src 'self' blob:;"
@@ -77,11 +78,27 @@ export default clerkMiddleware(async (auth, req) => {
         return response;
     }
 
+    // Handle API routes
+    if (url.pathname.startsWith('/api/')) {
+        // Allow authenticated API requests
+        if (isAuthenticated) {
+            return response;
+        }
+        // For unauthenticated API requests to protected routes, return 401
+        if (!isPublicRoute(req)) {
+            return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+
     // Check for dashboard routes specifically
     if (isDashboardRoute(req)) {
         if (!isAuthenticated) {
             return NextResponse.redirect(new URL('/sign-in', req.url));
         }
+        return response;
     }
 
     // If trying to access a protected route while not authenticated

@@ -26,6 +26,7 @@
 //     "/api/faculty-documents",
 //     "/api/faculty/user/[userId]",
 //     "/api/leaves/[id]",
+//     "/api/leaves/faculty/[facultyId]",
 //     "/api/webhooks/clerk"
 // ];
 

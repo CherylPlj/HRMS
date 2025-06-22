@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Trash2, Download, Calendar, Check, X } from 'lucide-react';
+import { ExternalLink, Trash2, Download, Calendar, Check, X, Eye } from 'lucide-react';
 import Image from 'next/image';
 import { User } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
@@ -22,6 +22,21 @@ type TransformedLeave = Omit<LeaveWithRelations, 'Faculty'> & {
         Department: string;
         UserID: string | null;
     };
+    DocumentUrl?: string | null;
+    RequestType: 'Leave' | 'Undertime';
+    LeaveType?: 'Sick' | 'Vacation' | 'Emergency' | null;
+    employeeSignature?: string | null;
+    departmentHeadSignature?: string | null;
+    TimeIn?: string | null;
+    TimeOut?: string | null;
+};
+
+// Helper function to format request type display
+const formatRequestType = (requestType: string, leaveType: string | null | undefined): string => {
+    if (requestType === 'Undertime') {
+        return 'Undertime';
+    }
+    return `${leaveType} Leave`;
 };
 
 const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
@@ -38,46 +53,263 @@ const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
     }
 };
 
+// Helper functions
+const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString();
+};
+
+const calculateDuration = (startDate: string | Date, endDate: string | Date) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+};
+
+// Helper function to format time
+const formatTime = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 // Add this new component before the LeaveContent component
 interface StatusUpdateModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  status: LeaveStatus;
-  facultyName: string;
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    status: LeaveStatus;
+    facultyName: string;
+    leaveType: string;
+    requestType: 'Leave' | 'Undertime';
 }
 
-const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({ isOpen, onClose, onConfirm, status, facultyName }) => {
-  if (!isOpen) return null;
+const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    onConfirm, 
+    status, 
+    facultyName,
+    leaveType,
+    requestType
+}) => {
+    const [confirmInput, setConfirmInput] = useState('');
+    const [confirmError, setConfirmError] = useState('');
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
-        <h2 className="text-2xl font-bold mb-4 text-[#800000]">Confirm Status Update</h2>
-        <p className="mb-6 text-gray-700">
-          Are you sure you want to {status.toLowerCase()} the leave request for {facultyName}?
-        </p>
-        <div className="flex justify-center space-x-4">
-          <button
-            onClick={onConfirm}
-            className={`${
-              status === 'Approved' 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-red-600 hover:bg-red-700'
-            } text-white px-4 py-2 rounded`}
-          >
-            Yes, {status}
-          </button>
-          <button
-            onClick={onClose}
-            className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
-          >
-            Cancel
-          </button>
+    const handleConfirm = () => {
+        if (status === 'Rejected') {
+            const expectedInput = requestType === 'Undertime' ? 'Undertime' : `${leaveType} Leave`;
+            if (confirmInput.trim() !== expectedInput) {
+                setConfirmError(`Please type "${expectedInput}" to confirm rejection`);
+                return;
+            }
+        }
+        onConfirm();
+    };
+
+    // Reset input and error when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setConfirmInput('');
+            setConfirmError('');
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
+                <h2 className="text-2xl font-bold mb-4 text-[#800000]">Confirm Status Update</h2>
+                <p className="mb-4 text-gray-700">
+                    Are you sure you want to {status === 'Approved' ? 'approve' : 'reject'} the leave request for {facultyName}?
+                </p>
+
+                {status === 'Rejected' && (
+                    <div className="mb-4">
+                        <p className="text-sm text-gray-500 mb-2">
+                            Please type{' '}
+                            <span className="font-semibold">
+                                {requestType === 'Undertime' ? 'Undertime' : `${leaveType} Leave`}
+                            </span>{' '}
+                            to confirm rejection.
+                        </p>
+                        <input
+                            type="text"
+                            value={confirmInput}
+                            onChange={(e) => {
+                                setConfirmInput(e.target.value);
+                                setConfirmError('');
+                            }}
+                            placeholder="Type to confirm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#800000] focus:border-[#800000]"
+                        />
+                        {confirmError && (
+                            <p className="mt-1 text-sm text-red-600">{confirmError}</p>
+                        )}
+                    </div>
+                )}
+
+                <div className="flex justify-center space-x-4">
+                    <button
+                        onClick={handleConfirm}
+                        className={`${
+                            status === 'Approved' 
+                                ? 'bg-green-600 hover:bg-green-700' 
+                                : 'bg-red-600 hover:bg-red-700'
+                        } text-white px-4 py-2 rounded`}
+                    >
+                        Yes, {status}
+                    </button>
+                    <button
+                        onClick={() => {
+                            onClose();
+                            setConfirmInput('');
+                            setConfirmError('');
+                        }}
+                        className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
+};
+
+// Add this new component for viewing leave details
+interface ViewLeaveModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    leave: TransformedLeave | null;
+}
+
+const ViewLeaveModal: React.FC<ViewLeaveModalProps> = ({ isOpen, onClose, leave }) => {
+    if (!isOpen || !leave) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#800000]">Leave Request Details</h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                        <X className="h-6 w-6" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <h3 className="font-semibold text-gray-600">Faculty Information</h3>
+                            <p className="text-gray-800">{leave.Faculty.Name}</p>
+                            <p className="text-gray-600">{leave.Faculty.Department}</p>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-600">Request Type</h3>
+                            <p className="text-gray-800">{formatRequestType(leave.RequestType, leave.LeaveType)}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <h3 className="font-semibold text-gray-600">Start Date</h3>
+                            <p className="text-gray-800">{new Date(leave.StartDate).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-600">End Date</h3>
+                            <p className="text-gray-800">{new Date(leave.EndDate).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+
+                    {leave.RequestType === 'Undertime' && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 className="font-semibold text-gray-600">Time In</h3>
+                                <p className="text-gray-800">{formatTime(leave.TimeIn)}</p>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-600">Time Out</h3>
+                                <p className="text-gray-800">{formatTime(leave.TimeOut)}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <h3 className="font-semibold text-gray-600">Duration</h3>
+                        <p className="text-gray-800">
+                            {calculateDuration(leave.StartDate, leave.EndDate)}
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 className="font-semibold text-gray-600">Reason</h3>
+                        <p className="text-gray-800">{leave.Reason}</p>
+                    </div>
+
+                    <div>
+                        <h3 className="font-semibold text-gray-600">Status</h3>
+                        <span className={`px-2 inline-flex text-sm leading-5 font-semibold rounded-full ${
+                            leave.Status === 'Approved' 
+                                ? 'bg-green-100 text-green-800'
+                                : leave.Status === 'Rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                            {leave.Status}
+                        </span>
+                    </div>
+
+                    {/* Signatures section */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <h3 className="font-semibold text-gray-600">Employee Signature</h3>
+                            {leave.employeeSignature ? (
+                                <div className="mt-2">
+                                    <img 
+                                        src={leave.employeeSignature} 
+                                        alt="Employee Signature" 
+                                        className="max-h-20 border border-gray-200 rounded"
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 italic">No signature provided</p>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-600">Department Head Signature</h3>
+                            {leave.departmentHeadSignature ? (
+                                <div className="mt-2">
+                                    <img 
+                                        src={leave.departmentHeadSignature} 
+                                        alt="Department Head Signature" 
+                                        className="max-h-20 border border-gray-200 rounded"
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 italic">No signature provided</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-semibold text-gray-600">Request Information</h3>
+                        <p className="text-gray-600">Submitted on: {new Date(leave.CreatedAt).toLocaleString()}</p>
+                        {leave.UpdatedAt && (
+                            <p className="text-gray-600">Last updated: {new Date(leave.UpdatedAt).toLocaleString()}</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const LeaveContent: React.FC = () => {
@@ -95,13 +327,20 @@ const LeaveContent: React.FC = () => {
         leaveId: number | null;
         status: LeaveStatus | null;
         facultyName: string;
+        leaveType: string;
+        requestType: 'Leave' | 'Undertime';
     }>({
         isOpen: false,
         leaveId: null,
         status: null,
         facultyName: '',
+        leaveType: '',
+        requestType: 'Leave'
     });
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [selectedLeave, setSelectedLeave] = useState<TransformedLeave | null>(null);
+    const [viewModalOpen, setViewModalOpen] = useState(false);
+    const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+    const [deleteConfirmError, setDeleteConfirmError] = useState('');
 
     useEffect(() => {
         if (!isUserLoaded) {
@@ -119,10 +358,15 @@ const LeaveContent: React.FC = () => {
 
     const fetchLeaves = async () => {
         try {
+            if (!user?.id) {
+                console.error('No user ID found');
+                return;
+            }
+
             setLoading(true);
             setError(null);
             
-            console.log('Fetching leaves...');
+            console.log('Fetching all leaves...');
             const response = await fetch('/api/leaves', {
                 method: 'GET',
                 headers: {
@@ -206,6 +450,20 @@ const LeaveContent: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
+            const leaveToDelete = leaves.find(leave => leave.LeaveID === id);
+            if (!leaveToDelete) {
+                throw new Error('Leave request not found');
+            }
+
+            const expectedInput = leaveToDelete.RequestType === 'Undertime' 
+                ? 'Undertime' 
+                : `${leaveToDelete.LeaveType} Leave`;
+
+            if (deleteConfirmInput.trim() !== expectedInput) {
+                setDeleteConfirmError(`Please type "${expectedInput}" to confirm deletion`);
+                return;
+            }
+
             const response = await fetch(`/api/leaves/${id}`, {
                 method: 'DELETE',
             });
@@ -217,6 +475,8 @@ const LeaveContent: React.FC = () => {
             setLeaves(leaves.filter(leave => leave.LeaveID !== id));
             setShowDeleteModal(false);
             setSelectedLeaveId(null);
+            setDeleteConfirmInput('');
+            setDeleteConfirmError('');
         } catch (err) {
             console.error('Error deleting leave:', err);
             alert('Failed to delete leave request');
@@ -242,23 +502,11 @@ const LeaveContent: React.FC = () => {
                     ? { ...leave, Status: status }
                     : leave
             ));
-            setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '' });
+            setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '', leaveType: '', requestType: 'Leave' });
         } catch (err) {
             console.error('Error updating leave status:', err);
             alert(`Failed to ${status.toLowerCase()} leave request`);
         }
-    };
-
-    const formatDate = (date: string | Date) => {
-        return new Date(date).toLocaleDateString();
-    };
-
-    const calculateDuration = (startDate: string | Date, endDate: string | Date) => {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
     };
 
     const handleDownloadPDF = () => {
@@ -328,7 +576,8 @@ const LeaveContent: React.FC = () => {
     }
 
     if (!user) {
-        return null; // Will redirect in useEffect
+        console.error('No user found');
+        return;
     }
 
     if (loading) {
@@ -409,7 +658,7 @@ const LeaveContent: React.FC = () => {
                                                 Faculty
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Leave Type
+                                                Request Type
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Start Date
@@ -461,7 +710,7 @@ const LeaveContent: React.FC = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {leave.LeaveType}
+                                                        {formatRequestType(leave.RequestType, leave.LeaveType)}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                         {formatDate(leave.StartDate)}
@@ -482,6 +731,16 @@ const LeaveContent: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <div className="flex space-x-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedLeave(leave);
+                                                                    setViewModalOpen(true);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-900 transition-colors"
+                                                                title="View details"
+                                                            >
+                                                                <Eye className="h-5 w-5" />
+                                                            </button>
                                                             {leave.Status === 'Pending' && (
                                                                 <>
                                                                     <button
@@ -489,7 +748,9 @@ const LeaveContent: React.FC = () => {
                                                                             isOpen: true,
                                                                             leaveId: leave.LeaveID,
                                                                             status: 'Approved',
-                                                                            facultyName: leave.Faculty?.Name || 'Unknown'
+                                                                            facultyName: leave.Faculty?.Name || 'Unknown',
+                                                                            leaveType: leave.LeaveType || '',
+                                                                            requestType: leave.RequestType
                                                                         })}
                                                                         className="text-green-600 hover:text-green-900 transition-colors"
                                                                         title="Approve leave"
@@ -501,7 +762,9 @@ const LeaveContent: React.FC = () => {
                                                                             isOpen: true,
                                                                             leaveId: leave.LeaveID,
                                                                             status: 'Rejected',
-                                                                            facultyName: leave.Faculty?.Name || 'Unknown'
+                                                                            facultyName: leave.Faculty?.Name || 'Unknown',
+                                                                            leaveType: leave.LeaveType || '',
+                                                                            requestType: leave.RequestType
                                                                         })}
                                                                         className="text-red-600 hover:text-red-900 transition-colors"
                                                                         title="Reject leave"
@@ -510,11 +773,13 @@ const LeaveContent: React.FC = () => {
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            { (
+                                                            {leave.Status !== 'Pending' && (
                                                                 <button
                                                                     onClick={() => {
                                                                         setSelectedLeaveId(leave.LeaveID);
                                                                         setShowDeleteModal(true);
+                                                                        setDeleteConfirmInput('');
+                                                                        setDeleteConfirmError('');
                                                                     }}
                                                                     className="text-red-600 hover:text-red-900 transition-colors"
                                                                     title="Delete leave"
@@ -543,7 +808,7 @@ const LeaveContent: React.FC = () => {
                                 <tr>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Picture</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Employee Name</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Leave Type</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Request Type</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Start Date</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">End Date</th>
                                     <th className="px-4 py-3 text-left font-semibold text-gray-600">Duration</th>
@@ -577,7 +842,7 @@ const LeaveContent: React.FC = () => {
                                             <td className="px-4 py-3 font-medium">{leave.Faculty?.Name}</td>
                                             <td className="px-4 py-3">
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
-                                                    {leave.LeaveType}
+                                                    {formatRequestType(leave.RequestType, leave.LeaveType)}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">{formatDate(leave.StartDate)}</td>
@@ -615,14 +880,37 @@ const LeaveContent: React.FC = () => {
                         <h3 className="text-lg font-medium text-gray-900 mb-4">
                             Delete Leave Request
                         </h3>
-                        <p className="text-sm text-gray-500 mb-6">
-                            Are you sure you want to delete this leave request? This action cannot be undone.
+                        <p className="text-sm text-gray-500 mb-4">
+                            This action cannot be undone. Please type{' '}
+                            <span className="font-semibold">
+                                {selectedLeaveId && leaves.find(l => l.LeaveID === selectedLeaveId)?.RequestType === 'Undertime'
+                                    ? 'Undertime'
+                                    : `${leaves.find(l => l.LeaveID === selectedLeaveId)?.LeaveType} Leave`}
+                            </span>{' '}
+                            to confirm deletion.
                         </p>
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                value={deleteConfirmInput}
+                                onChange={(e) => {
+                                    setDeleteConfirmInput(e.target.value);
+                                    setDeleteConfirmError('');
+                                }}
+                                placeholder="Type to confirm"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#800000] focus:border-[#800000]"
+                            />
+                            {deleteConfirmError && (
+                                <p className="mt-1 text-sm text-red-600">{deleteConfirmError}</p>
+                            )}
+                        </div>
                         <div className="flex justify-end space-x-3">
                             <button
                                 onClick={() => {
                                     setShowDeleteModal(false);
                                     setSelectedLeaveId(null);
+                                    setDeleteConfirmInput('');
+                                    setDeleteConfirmError('');
                                 }}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                             >
@@ -642,11 +930,30 @@ const LeaveContent: React.FC = () => {
             {/* Add the StatusUpdateModal */}
             <StatusUpdateModal
                 isOpen={statusUpdateModal.isOpen}
-                onClose={() => setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '' })}
+                onClose={() => setStatusUpdateModal({ 
+                    isOpen: false, 
+                    leaveId: null, 
+                    status: null, 
+                    facultyName: '',
+                    leaveType: '',
+                    requestType: 'Leave'
+                })}
                 onConfirm={() => statusUpdateModal.leaveId && statusUpdateModal.status && 
                     handleStatusUpdate(statusUpdateModal.leaveId, statusUpdateModal.status)}
                 status={statusUpdateModal.status || 'Approved'}
                 facultyName={statusUpdateModal.facultyName}
+                leaveType={statusUpdateModal.leaveType}
+                requestType={statusUpdateModal.requestType}
+            />
+
+            {/* Add the ViewLeaveModal component */}
+            <ViewLeaveModal
+                isOpen={viewModalOpen}
+                onClose={() => {
+                    setViewModalOpen(false);
+                    setSelectedLeave(null);
+                }}
+                leave={selectedLeave}
             />
         </div>
     );
