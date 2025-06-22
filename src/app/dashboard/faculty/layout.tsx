@@ -134,13 +134,13 @@ export default function Dashboard() {
       case 'dashboard':
         return <DashboardFaculty />;
       case 'personal-data':
-        return <PersonalData />;
+        return <PersonalData onBack={() => setActiveButton('dashboard')} />;
       case 'documents':
-        return <DocumentsFaculty />;
+        return <DocumentsFaculty onBack={() => setActiveButton('dashboard')} />;
       case 'attendance':
-        return <AttendanceFaculty />;
+        return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
       case 'leave':
-        return <LeaveRequestFaculty />;
+        return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
       default:
         return <div>Select a menu item to view its content.</div>;
     }

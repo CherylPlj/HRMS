@@ -25,7 +25,7 @@ class AttendanceService {
     return data;
   }
 
-  async markTimeIn(facultyId: string, email: string): Promise<AttendanceRecord> {
+  async markTimeIn(facultyId: string, email: string, timeIn: string, date: string): Promise<AttendanceRecord> {
     try {
       console.log('Sending time-in request for faculty:', facultyId);
       const response = await fetch(`${this.baseUrl}/attendance/time-in`, {
@@ -33,7 +33,7 @@ class AttendanceService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ facultyId, email }),
+        body: JSON.stringify({ facultyId, email, timeIn, date }),
       });
       
       return this.handleResponse<AttendanceRecord>(response, 'Failed to mark time in');
@@ -43,7 +43,7 @@ class AttendanceService {
     }
   }
 
-  async markTimeOut(facultyId: string, email: string): Promise<AttendanceRecord> {
+  async markTimeOut(facultyId: string, email: string, timeOut: string, date: string): Promise<AttendanceRecord> {
     try {
       console.log('Sending time-out request for faculty:', facultyId);
       const response = await fetch(`${this.baseUrl}/attendance/time-out`, {
@@ -51,7 +51,7 @@ class AttendanceService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ facultyId, email }),
+        body: JSON.stringify({ facultyId, email, timeOut, date }),
       });
       
       return this.handleResponse<AttendanceRecord>(response, 'Failed to mark time out');

@@ -579,18 +579,73 @@ export default function DashboardContent() {
               <p className="text-gray-600 font-medium">Resigned</p>
             </div>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 h-[200px]">
             <Bar data={departmentData} options={{
               responsive: true,
+              maintainAspectRatio: true,
               plugins: {
                 legend: {
                   display: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    display: true
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  }
                 }
               }
             }} />
           </div>
         </div>
 
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <FaBriefcase className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
+          </div>
+          <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.pending}</p>
+              <p className="text-gray-600 font-medium text-center">Pending</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.approved}</p>
+              <p className="text-gray-600 font-medium text-center">Approved</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.rejected}</p>
+              <p className="text-gray-600 font-medium text-center">Rejected</p>
+            </div>
+          </div>
+          <div className="h-[200px] flex items-center justify-center">
+            <Pie data={leavePieData} options={{ 
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { 
+                legend: { 
+                  display: true, 
+                  position: 'bottom',
+                  align: 'center',
+                  labels: {
+                    boxWidth: 20,
+                    padding: 15,
+                    usePointStyle: true
+                  }
+                } 
+              } 
+            }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8">
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaUserClock className="text-[#800000] text-2xl mr-3" />
@@ -603,30 +658,6 @@ export default function DashboardContent() {
               plugins: { legend: { display: true } },
               scales: { y: { beginAtZero: true } },
             }} />
-          </div>
-        </div>
-
-        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-          <div className="flex items-center mb-6">
-            <FaBriefcase className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
-          </div>
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{leaveRequests.pending}</p>
-              <p className="text-gray-600 font-medium">Pending</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{leaveRequests.approved}</p>
-              <p className="text-gray-600 font-medium">Approved</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{leaveRequests.rejected}</p>
-              <p className="text-gray-600 font-medium">Rejected</p>
-            </div>
-          </div>
-          <div className="h-[200px] flex items-center justify-center">
-            <Pie data={leavePieData} options={{ plugins: { legend: { display: true, position: 'bottom' } } }} />
           </div>
         </div>
       </div>

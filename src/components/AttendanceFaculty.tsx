@@ -10,12 +10,12 @@ import { supabase } from '@/lib/supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
-import { format } from 'date-fns';
+import { format, isAfter, startOfToday } from 'date-fns';
 
 // import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
 interface AttendanceFacultyProps {
-  onBack?: () => void;
+  onBack: () => void;
 }
 
 const AttendanceFaculty: React.FC<AttendanceFacultyProps> = ({ onBack }) => {
@@ -32,9 +32,26 @@ const AttendanceFaculty: React.FC<AttendanceFacultyProps> = ({ onBack }) => {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [attendancePeriod, setAttendancePeriod] = useState<'month' | 'week'>('month');
   const [downloadingDTR, setDownloadingDTR] = useState(false);
+  const [timeInValue, setTimeInValue] = useState('');
+  const [timeOutValue, setTimeOutValue] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 5;
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Set initial date to today if it's a weekday, or previous Friday if it's a weekend
+    const today = new Date();
+    const day = today.getDay(); // 0 is Sunday, 6 is Saturday
+    if (day === 0) { // Sunday
+      today.setDate(today.getDate() - 2); // Set to Friday
+    } else if (day === 6) { // Saturday
+      today.setDate(today.getDate() - 1); // Set to Friday
+    }
+    setSelectedDate(format(today, 'yyyy-MM-dd'));
   }, []);
 
   // Fetch Supabase UserID and FacultyID when Clerk user is available
@@ -229,20 +246,55 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
     return true;
   };
 
+  const validateDate = (date: string): boolean => {
+    const selectedDay = new Date(date);
+    const today = startOfToday();
+
+    // Check if date is in the future
+    if (isAfter(selectedDay, today)) {
+      toast.error('Cannot select future dates');
+      return false;
+    }
+
+    // Check if it's a weekend
+    const dayOfWeek = selectedDay.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      toast.error('Please select a date from Monday to Friday');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleTimeIn = async () => {
-    if (isProcessing || !facultyId || !user?.emailAddresses?.[0]?.emailAddress) return;
+    if (isProcessing || !facultyId || !user?.emailAddresses?.[0]?.emailAddress || !timeInValue || !selectedDate) return;
+    
+    if (!validateDate(selectedDate)) return;
     
     try {
       const confirmed = await confirmAction('time-in');
       if (!confirmed) return;
       
+      // Validate time format
+      const [hours, minutes] = timeInValue.split(':').map(Number);
+      if (hours < 6) {
+        toast.error('Time in cannot be earlier than 06:00');
+        return;
+      }
+      if (hours > 18) {
+        toast.error('Time in cannot be later than 18:00');
+        return;
+      }
+      
       setIsProcessing(true);
       console.log('Attempting to mark time in for faculty:', facultyId);
-      // Pass both facultyId and email!
       const record = await attendanceService.markTimeIn(
         facultyId.toString(),
-        user.emailAddresses[0].emailAddress
-      );      console.log('Time in response:', record);
+        user.emailAddresses[0].emailAddress,
+        timeInValue,
+        selectedDate
+      );
+      console.log('Time in response:', record);
       
       setCurrentRecord({
         ...record,
@@ -254,7 +306,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
     } catch (error) {
       console.error('Time in error:', error);
       if (error instanceof Error && error.message.includes('already recorded')) {
-        toast.error('You have already marked your time in for today');
+        toast.error('You have already marked your time in for this date');
       } else {
         toast.error('Failed to mark time in. Please try again.');
       }
@@ -264,16 +316,33 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
   };
 
   const handleTimeOut = async () => {
-    if (isProcessing || !facultyId || !user?.emailAddresses?.[0]?.emailAddress) return;
+    if (isProcessing || !facultyId || !user?.emailAddresses?.[0]?.emailAddress || !timeOutValue || !selectedDate) return;
+    
+    if (!validateDate(selectedDate)) return;
     
     try {
       const confirmed = await confirmAction('time-out');
       if (!confirmed) return;
       
+      // Validate time format
+      const [hours, minutes] = timeOutValue.split(':').map(Number);
+      if (hours < 6) {
+        toast.error('Time out cannot be earlier than 06:00');
+        return;
+      }
+      if (hours > 18) {
+        toast.error('Time out cannot be later than 18:00');
+        return;
+      }
+      
       setIsProcessing(true);
       console.log('Attempting to mark time out for faculty:', facultyId);
-      const record = await attendanceService.markTimeOut(facultyId.toString(), user.emailAddresses[0].emailAddress // <-- pass email here!
-);
+      const record = await attendanceService.markTimeOut(
+        facultyId.toString(),
+        user.emailAddresses[0].emailAddress,
+        timeOutValue,
+        selectedDate
+      );
       console.log('Time out response:', record);
       
       setCurrentRecord({
@@ -287,7 +356,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
       console.error('Time out error:', error);
       if (error instanceof Error) {
         if (error.message.includes('already recorded')) {
-          toast.error('You have already marked your time out for today');
+          toast.error('You have already marked your time out for this date');
         } else if (error.message.includes('No time-in record')) {
           toast.error('Please mark your time in first');
         } else {
@@ -378,6 +447,22 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
     } finally {
       setDownloadingDTR(false);
     }
+  };
+
+  // Add pagination calculation
+  const paginatedHistory = attendanceHistory.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage
+  );
+
+  const totalPages = Math.ceil(attendanceHistory.length / recordsPerPage);
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages, prev + 1));
   };
 
   if (!mounted) {
@@ -479,8 +564,8 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
         {/* Header Section */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <div className="flex items-center space-x-4">
-              {onBack && (
+            <div>
+              {/* {onBack && (
                 <button
                   onClick={onBack}
                   className="text-[#800000] hover:text-[#600000] transition-colors"
@@ -488,7 +573,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
                   <i className="fas fa-arrow-left mr-2"></i>
                   Back to Dashboard
                 </button>
-              )}
+              )} */}
               <p className="text-sm text-gray-500">Track your attendance records</p>
             </div>
             <div className="mt-4 sm:mt-0 text-right">
@@ -498,11 +583,157 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
               </div>
             </div>
           </div>
-  
+
+          {/* Time In/Out Section */}
+          <div className="grid grid-cols-1 gap-4 mt-4">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="date" className="text-sm font-medium text-gray-700">Select Date (Monday-Friday only)</label>
+              <input
+                type="date"
+                id="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  if (validateDate(newDate)) {
+                    setSelectedDate(newDate);
+                  }
+                }}
+                max={format(new Date(), 'yyyy-MM-dd')}
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-2">
+                <label htmlFor="timeIn" className="text-sm font-medium text-gray-700">Time In</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="time"
+                    id="timeIn"
+                    value={timeInValue}
+                    onChange={(e) => setTimeInValue(e.target.value)}
+                    min="06:00"
+                    max="18:00"
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                  />
+                  <button
+                    onClick={handleTimeIn}
+                    disabled={isProcessing || !timeInValue || !selectedDate}
+                    className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Processing...' : 'Time In'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col space-y-2">
+                <label htmlFor="timeOut" className="text-sm font-medium text-gray-700">Time Out</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="time"
+                    id="timeOut"
+                    value={timeOutValue}
+                    onChange={(e) => setTimeOutValue(e.target.value)}
+                    min="06:00"
+                    max="18:00"
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                  />
+                  <button
+                    onClick={handleTimeOut}
+                    disabled={isProcessing || !timeOutValue || !selectedDate}
+                    className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Processing...' : 'Time Out'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Schedule Section */}
+     
+
+        {/* Attendance History Section */}
         <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Attendance History</h2>
+            <div className="flex gap-2 items-center">
+              <select
+                value={attendancePeriod}
+                onChange={e => setAttendancePeriod(e.target.value as 'week' | 'month')}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                title="Attendance Period"
+              >
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+          </div>
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]" />
+            </div>
+          ) : attendanceHistory.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">No attendance records found for this period.</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <div className="max-h-[400px] overflow-y-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {paginatedHistory.map((record) => (
+                        <tr key={record.id} className="hover:bg-gray-50 transition-colors duration-150">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(record.date), 'yyyy-MM-dd')}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeWithAmPm(record.timeIn)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeWithAmPm(record.timeOut)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(record.status)}`}>
+                              {record.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between mt-4 border-t pt-4">
+                <div className="text-sm text-gray-500">
+                  Showing {((currentPage - 1) * recordsPerPage) + 1} to {Math.min(currentPage * recordsPerPage, attendanceHistory.length)} of {attendanceHistory.length} records
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border rounded text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-3 py-1 text-sm text-gray-700">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border rounded text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+           {/* Schedule Section */}
+           <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
             <button 
@@ -557,78 +788,12 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
             </table>
           </div>
         </div>
-
-        {/* Attendance History Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Attendance History</h2>
-            <div className="flex gap-2 items-center">
-              <select
-                value={attendancePeriod}
-                onChange={e => setAttendancePeriod(e.target.value as 'week' | 'month')}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
-                title="Attendance Period"
-              >
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-              </select>
-              {/* <button
-                onClick={handleDownloadDTR}
-                disabled={downloadingDTR}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
-              >
-                {downloadingDTR ? (
-                  <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Downloading...</span>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download DTR
-                  </>
-                )}
-              </button> */}
-            </div>
-          </div>
-          {historyLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]" />
-            </div>
-          ) : attendanceHistory.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">No attendance records found for this period.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {attendanceHistory.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(record.date), 'yyyy-MM-dd')}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeWithAmPm(record.timeIn)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTimeWithAmPm(record.timeOut)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(record.status)}`}>
-                          {record.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        
       </div>
     </div>
   );
 };
+
 
 const getStatusBadgeColor = (status: string | undefined) => {
   switch (status) {
@@ -643,4 +808,4 @@ const getStatusBadgeColor = (status: string | undefined) => {
   }
 };
 
-export default AttendanceFaculty;
+export default AttendanceFaculty;                                                         `                                         `

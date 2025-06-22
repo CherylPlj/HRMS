@@ -13,6 +13,10 @@ type RequestType = 'Leave' | 'Undertime';
 type LeaveType = 'Sick' | 'Vacation' | 'Emergency';
 type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 
+interface ComponentWithBackButton {
+    onBack: () => void;
+}
+
 interface FacultyDetails {
     fullName: string;
     department: string;
@@ -69,7 +73,9 @@ interface Department {
 interface FacultyResponse {
     FacultyID: number;
     EmploymentStatus: string;
-    Department: Department;
+    Department: {
+        DepartmentName: string;
+    };
 }
 
 // Add helper function to check date overlaps
@@ -116,7 +122,7 @@ const calculateDuration = (request: LeaveRequest) => {
     }
 };
 
-const LeaveRequestFaculty = (): JSX.Element => {
+const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const { user } = useUser();
     const [showModal, setShowModal] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
@@ -213,7 +219,7 @@ const LeaveRequestFaculty = (): JSX.Element => {
                         .select(`
                             FacultyID,
                             EmploymentStatus,
-                            Department!inner (
+                            Department:DepartmentID (
                                 DepartmentName
                             )
                         `)
@@ -230,7 +236,7 @@ const LeaveRequestFaculty = (): JSX.Element => {
                         setFacultyId(facultyData.FacultyID);
                         setFacultyDetails({
                             fullName: `${userData.FirstName} ${userData.LastName}`,
-                            department: facultyData.Department.DepartmentName,
+                            department: facultyData.Department?.DepartmentName || 'Unknown Department',
                             employmentStatus: facultyData.EmploymentStatus
                         });
                         fetchLeaveRequests(facultyData.FacultyID);
@@ -672,6 +678,50 @@ const LeaveRequestFaculty = (): JSX.Element => {
 
     return (
         <div className="container mx-auto p-4">
+            {/* Leave Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-[#800000]">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Total Leaves</h3>
+                    <p className="text-2xl font-bold text-[#800000]">15</p>
+                    <p className="text-xs text-gray-600">Days Per Year</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-blue-500">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Remaining</h3>
+                    <p className="text-2xl font-bold text-blue-500">
+                        {15 - leaveRequests
+                            .filter(request => request.Status === 'Approved' && request.RequestType === 'Leave')
+                            .reduce((total, leave) => {
+                                const start = new Date(leave.StartDate);
+                                const end = new Date(leave.EndDate);
+                                const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                return total + days;
+                            }, 0)}
+                    </p>
+                    <p className="text-xs text-gray-600">Days Left</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-yellow-500">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Pending</h3>
+                    <p className="text-2xl font-bold text-yellow-500">
+                        {leaveRequests.filter(request => request.Status === 'Pending').length}
+                    </p>
+                    <p className="text-xs text-gray-600">Requests</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-green-500">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Approved</h3>
+                    <p className="text-2xl font-bold text-green-500">
+                        {leaveRequests.filter(request => request.Status === 'Approved').length}
+                    </p>
+                    <p className="text-xs text-gray-600">Requests</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-red-500">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Rejected</h3>
+                    <p className="text-2xl font-bold text-red-500">
+                        {leaveRequests.filter(request => request.Status === 'Rejected').length}
+                    </p>
+                    <p className="text-xs text-gray-600">Requests</p>
+                </div>
+            </div>
+
             <div className="mb-8 flex justify-end">
                 <button
                     onClick={handleModalOpen}

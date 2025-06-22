@@ -4,6 +4,10 @@ import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-doc
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
 
+interface ComponentWithBackButton {
+  onBack: () => void;
+}
+
 interface DocumentFacultyRow {
   DocumentID: number;
   FacultyID: number;
@@ -19,7 +23,7 @@ interface DocumentFacultyRow {
   };
 }
 
-const DocumentsFaculty: React.FC = () => {
+const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   const { user } = useUser();
   const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
   const [loading, setLoading] = useState(true);

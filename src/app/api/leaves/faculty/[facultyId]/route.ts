@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
 
 // Define CORS headers
 const corsHeaders = {
@@ -12,88 +11,54 @@ const corsHeaders = {
 
 // Handle OPTIONS request for CORS
 export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+    return Response.json({}, { headers: corsHeaders });
 }
 
-export async function GET(
-    request: NextRequest,
-    context: { params: { facultyId: string } }
-) {
+export async function GET(request: NextRequest, context: { params: { facultyId: string } }) {
     try {
-        // Add CORS headers to all responses
-        const response = (data: any, status = 200) => {
-            return NextResponse.json(data, { 
-                status,
-                headers: corsHeaders
-            });
-        };
-
-        const { userId } = await auth();
-        if (!userId) {
-            return response({ error: 'Unauthorized' }, 401);
-        }
-
         // Properly await and destructure params
-        const { params } = context;
-        const facultyId = parseInt(params.facultyId);
+        const facultyId = parseInt(context.params.facultyId);
+        
         if (isNaN(facultyId)) {
-            return response({ error: 'Invalid faculty ID' }, 400);
+            return Response.json({ error: 'Invalid faculty ID' }, { status: 400 });
         }
 
-        // Fix the query syntax and add proper error handling
-        const leaves = await prisma.leave.findMany({
-            where: {
-                FacultyID: facultyId
-            },
-            include: {
-                Faculty: {
-                    include: {
-                        User: {
-                            select: {
-                                FirstName: true,
-                                LastName: true,
-                                UserID: true,
-                            }
-                        },
-                        Department: {
-                            select: {
-                                DepartmentName: true
-                            }
-                        }
-                    }
-                }
-            },
-            orderBy: {
-                CreatedAt: 'desc'
-            }
-        }).finally(() => {
-            // Ensure connection is properly handled
-            prisma.$disconnect();
-        });
+        const { data: leaves, error } = await supabase
+            .from('Leave')
+            .select(`
+                *,
+                Faculty:FacultyID (
+                    User:UserID (
+                        FirstName,
+                        LastName
+                    ),
+                    Department:DepartmentID (
+                        DepartmentName
+                    )
+                )
+            `)
+            .eq('FacultyID', facultyId)
+            .order('CreatedAt', { ascending: false });
 
-        // Transform the data to match the frontend structure
-        const transformedLeaves = leaves.map(leave => ({
+        if (error) {
+            console.error('Error fetching leaves:', error);
+            return Response.json({ error: 'Failed to fetch leaves' }, { status: 500 });
+        }
+
+        // Transform the data
+        const formattedLeaves = leaves.map(leave => ({
             ...leave,
             Faculty: {
-                Name: leave.Faculty?.User ? 
-                    `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}` : 
-                    'Unknown',
-                Department: leave.Faculty?.Department?.DepartmentName || 'Unknown'
+                Name: leave.Faculty?.User 
+                    ? `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`
+                    : 'Unknown',
+                Department: leave.Faculty?.Department?.DepartmentName || 'Unknown Department'
             }
         }));
 
-        return response(transformedLeaves);
+        return Response.json(formattedLeaves);
     } catch (error) {
-        console.error('Error fetching leaves for faculty:', error);
-        // Ensure connection is properly handled even in case of error
-        await prisma.$disconnect();
-        
-        return NextResponse.json({ 
-            error: 'Failed to fetch leaves',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { 
-            status: 500,
-            headers: corsHeaders
-        });
+        console.error('Error in leave request handler:', error);
+        return Response.json({ error: 'Internal server error' }, { status: 500 });
     }
 } 

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation'; // For Next.js 13+
 import AttendanceFaculty from '@/components/AttendanceFaculty';
+import PersonalData from '@/components/PersonalData';
+import DocumentsFaculty from '@/components/DocumentsFaculty';
+import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
@@ -11,6 +14,11 @@ import { attendanceService } from '../services/attendanceService';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import { DateTime } from 'luxon';
+
+// Add interfaces for component props
+interface ComponentWithBackButton {
+  onBack: () => void;
+}
 
 interface Schedule {
   id: number;
@@ -66,7 +74,7 @@ export default function DashboardFaculty() {
   ]);
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'attendance'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'attendance' | 'personal' | 'documents' | 'leave'>('dashboard');
   const [scheduleForWeek, setScheduleForWeek] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -450,8 +458,73 @@ export default function DashboardFaculty() {
     },
   };
 
+  // Add component view conditionals
   if (currentView === 'attendance') {
-    return <AttendanceFaculty onBack={() => setCurrentView('dashboard')} />;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
+          >
+            <i className="fas fa-arrow-left mr-2"></i>
+            Back to Dashboard
+          </button>
+          <AttendanceFaculty onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'personal') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
+          >
+            <i className="fas fa-arrow-left mr-2"></i>
+            Back to Dashboard
+          </button>
+          <PersonalData onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'documents') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
+          >
+            <i className="fas fa-arrow-left mr-2"></i>
+            Back to Dashboard
+          </button>
+          <DocumentsFaculty onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'leave') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
+          >
+            <i className="fas fa-arrow-left mr-2"></i>
+            Back to Dashboard
+          </button>
+          <LeaveRequestFaculty onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -485,61 +558,115 @@ export default function DashboardFaculty() {
           {/* Top Row: Personal Data, Employment Status, Date & Time */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Personal Data */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Personal Data</h3>
-              <p><span className="font-medium">Position:</span> {personalData.Position}</p>
-              <p><span className="font-medium">Department:</span> {personalData.DepartmentName}</p>
+            <div 
+              onClick={() => setCurrentView('personal')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-user-circle mr-2 text-[#800000]"></i>
+                  Personal Data
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
+              <p><span className="font-medium"><i className="fas fa-briefcase mr-2 text-gray-500"></i>Position:</span> {personalData.Position}</p>
+              <p><span className="font-medium"><i className="fas fa-building mr-2 text-gray-500"></i>Department:</span> {personalData.DepartmentName}</p>
             </div>
 
             {/* Employment Status */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Employment Status</h3>
+            <div 
+              onClick={() => setCurrentView('personal')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-id-badge mr-2 text-[#800000]"></i>
+                  Employment Status
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
               <div className="flex items-center space-x-2 mb-2">
+                <i className="fas fa-check-circle text-green-500"></i>
                 <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-semibold">{personalData.EmploymentStatus}</span>
               </div>
-              <p><span className="font-medium">Hire Date:</span> {personalData.HireDate}</p>
+              <p><span className="font-medium"><i className="fas fa-calendar-alt mr-2 text-gray-500"></i>Hire Date:</span> {personalData.HireDate}</p>
             </div>
 
             {/* Date & Time */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Date & Time</h3>
-              <p className="text-gray-700">{currentDate}</p>
-              <p className="text-gray-700">{currentTime}</p>
+            <div 
+              onClick={() => setCurrentView('attendance')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-clock mr-2 text-[#800000]"></i>
+                  Date & Time
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
+              <p className="text-gray-700"><i className="fas fa-calendar mr-2"></i>{currentDate}</p>
+              <p className="text-gray-700"><i className="fas fa-clock mr-2"></i>{currentTime}</p>
             </div>
           </div>
 
           {/* Second Row: Document Requirements, Leave */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Document Requirements Card */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Total Document Requirements</h3>
+            <div 
+              onClick={() => setCurrentView('documents')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-file-alt mr-2 text-[#800000]"></i>
+                  Total Document Requirements
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div className="bg-yellow-100 rounded-lg p-4">
+                  <i className="fas fa-hourglass-half text-yellow-700 mb-2"></i>
                   <p className="text-2xl font-bold">{documentRequirements.pending}</p>
                   <p className="text-sm text-yellow-700">Pending</p>
                 </div>
                 <div className="bg-blue-100 rounded-lg p-4">
+                  <i className="fas fa-paper-plane text-blue-700 mb-2"></i>
                   <p className="text-2xl font-bold">{documentRequirements.submitted}</p>
                   <p className="text-sm text-blue-700">Submitted</p>
                 </div>
                 <div className="bg-green-100 rounded-lg p-4">
+                  <i className="fas fa-check-circle text-green-700 mb-2"></i>
                   <p className="text-2xl font-bold">{documentRequirements.approved}</p>
                   <p className="text-sm text-green-700">Approved</p>
                 </div>
                 <div className="bg-red-100 rounded-lg p-4">
+                  <i className="fas fa-times-circle text-red-700 mb-2"></i>
                   <p className="text-2xl font-bold">{documentRequirements.rejected}</p>
                   <p className="text-sm text-red-700">Rejected</p>
                 </div>
               </div>
               <div className="mt-4 text-sm text-gray-600 text-center">
+                <i className="fas fa-file-alt mr-2"></i>
                 Total Required: {documentRequirements.total}
               </div>
             </div>
 
             {/* Total Leave */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Total Leave</h3>
-              <p className="mb-2">Available Leave: {leaveData.available} days</p>
+            <div 
+              onClick={() => setCurrentView('leave')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-calendar-minus mr-2 text-[#800000]"></i>
+                  Total Leave
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
+              <p className="mb-2">
+                <i className="fas fa-calendar-check mr-2"></i>
+                Available Leave: {leaveData.available} days
+              </p>
               <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
                 <div
                   className="bg-blue-500 h-4 rounded-full"
@@ -548,14 +675,17 @@ export default function DashboardFaculty() {
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="bg-yellow-100 rounded-lg p-4">
+                  <i className="fas fa-hourglass-half text-yellow-700 mb-2"></i>
                   <p className="text-xl font-bold">{leaveData.pending}</p>
                   <p className="text-sm text-yellow-700">Pending</p>
                 </div>
                 <div className="bg-green-100 rounded-lg p-4">
+                  <i className="fas fa-check-circle text-green-700 mb-2"></i>
                   <p className="text-xl font-bold">{leaveData.approved}</p>
                   <p className="text-sm text-green-700">Approved</p>
                 </div>
                 <div className="bg-red-100 rounded-lg p-4">
+                  <i className="fas fa-times-circle text-red-700 mb-2"></i>
                   <p className="text-xl font-bold">{leaveData.rejected}</p>
                   <p className="text-sm text-red-700">Rejected</p>
                 </div>
@@ -566,25 +696,53 @@ export default function DashboardFaculty() {
           {/* Third Row: Attendance Record Bar Chart and Schedule */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Attendance Record Bar Chart */}
-            <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Attendance Record</h3>
+            <div 
+              onClick={() => setCurrentView('attendance')}
+              className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-chart-bar mr-2 text-[#800000]"></i>
+                  Attendance Record
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
               <div className="h-64">
                 <Bar data={barData} options={barOptions} />
               </div>
-              <div className="mt-2 text-sm text-gray-600">Present and Absent counts per day</div>
+              <div className="mt-2 text-sm text-gray-600">
+                <i className="fas fa-info-circle mr-2"></i>
+                Present and Absent counts per day
+              </div>
             </div>
 
             {/* Schedule for the Week */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Schedule for the Week</h3>
+            <div 
+              onClick={() => setCurrentView('attendance')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  <i className="fas fa-calendar-week mr-2 text-[#800000]"></i>
+                  Schedule for the Week
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
               <div className="space-y-4">
                 {scheduleForWeek.map((schedule) => (
                   <div key={schedule.id} className="border-b pb-2">
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="font-medium text-gray-900">{schedule.subject.name}</h3>
-                        <p className="text-sm text-gray-600">{schedule.classSection.name}</p>
+                        <h3 className="font-medium text-gray-900">
+                          <i className="fas fa-book mr-2 text-gray-500"></i>
+                          {schedule.subject.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          <i className="fas fa-users mr-2"></i>
+                          {schedule.classSection.name}
+                        </p>
                         <p className="text-sm text-gray-500">
+                          <i className="fas fa-clock mr-2"></i>
                           {schedule.day} • {schedule.time} ({schedule.duration} mins)
                         </p>
                       </div>
@@ -592,23 +750,43 @@ export default function DashboardFaculty() {
                   </div>
                 ))}
                 {scheduleForWeek.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No schedules found for this week</p>
+                  <p className="text-gray-500 text-center py-4">
+                    <i className="fas fa-calendar-times mr-2"></i>
+                    No schedules found for this week
+                  </p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Fourth Row: Recent Attendance Records */}
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Recent Attendance Records</h3>
+          <div 
+            onClick={() => setCurrentView('attendance')}
+            className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                <i className="fas fa-history mr-2 text-[#800000]"></i>
+                Recent Attendance Records
+              </h3>
+              <i className="fas fa-chevron-right text-gray-400"></i>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <i className="fas fa-calendar-day mr-2"></i>Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <i className="fas fa-sign-in-alt mr-2"></i>Time In
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <i className="fas fa-sign-out-alt mr-2"></i>Time Out
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <i className="fas fa-info-circle mr-2"></i>Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">

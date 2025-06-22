@@ -2,12 +2,25 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { DateTime } from 'luxon';
 
-
 export async function POST(request: Request) {
   try {
-    const { email, facultyId } = await request.json();
-    if (!email || !facultyId) {
-      return NextResponse.json({ error: 'Email and Faculty ID are required' }, { status: 400 });
+    const { email, facultyId, timeIn, date } = await request.json();
+    if (!email || !facultyId || !timeIn || !date) {
+      return NextResponse.json({ error: 'Email, Faculty ID, Time In and Date are required' }, { status: 400 });
+    }
+
+    // Validate that the date is not in the future
+    const selectedDate = new Date(date);
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    if (selectedDate > now) {
+      return NextResponse.json({ error: 'Cannot set attendance for future dates' }, { status: 400 });
+    }
+
+    // Validate that the date is a weekday
+    const dayOfWeek = selectedDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return NextResponse.json({ error: 'Can only set attendance for Monday to Friday' }, { status: 400 });
     }
 
     // First get the UserID from Supabase using the email
@@ -32,26 +45,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized access to faculty record' }, { status: 403 });
     }
 
+    // Get the date in Asia/Manila timezone
+    const manilaDate = DateTime.fromISO(date).setZone('Asia/Manila');
+    const dateStr = manilaDate.toFormat('yyyy-MM-dd');
     
-    // Get today's date in Asia/Manila timezone
-    const now = DateTime.now().setZone('Asia/Manila');
-    const todayStr = now.toFormat('yyyy-MM-dd');
-    const timeStr = now.toFormat('HH:mm:ss');
-    
+    // Validate time format and range
+    const [hours, minutes] = timeIn.split(':').map(Number);
+    if (hours < 6 || hours > 18 || (hours === 18 && minutes > 0)) {
+      return NextResponse.json({ error: 'Time must be between 06:00 and 18:00' }, { status: 400 });
+    }
+
     // Set status based on time in
-    const lateThreshold = now.set({ hour: 8, minute: 15, second: 0, millisecond: 0 });
-    const status = now >= lateThreshold ? 'LATE' : 'PRESENT';
+    const lateThreshold = manilaDate.set({ hour: 8, minute: 15, second: 0, millisecond: 0 });
+    const timeInDateTime = manilaDate.set({ hour: hours, minute: minutes, second: 0, millisecond: 0 });
+    const status = timeInDateTime >= lateThreshold ? 'LATE' : 'PRESENT';
 
+    console.log('Selected date:', dateStr); // Debug log
+    console.log('Time in:', timeIn); // Debug log
 
-    console.log('Current date in Manila:', todayStr); // Debug log
-    console.log('Current time in Manila:', timeStr); // Debug log
-
-    // Check if there's already a record for today
+    // Check if there's already a record for the selected date
     const { data: existingRecord, error: existingError } = await supabase
       .from('Attendance')
       .select('*')
       .eq('facultyId', facultyId)
-      .eq('date', todayStr)
+      .eq('date', dateStr)
       .single();
 
     if (existingError && existingError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -59,9 +76,9 @@ export async function POST(request: Request) {
     }
 
     if (existingRecord?.timeIn) {
-      console.log('Time in already recorded for today');
+      console.log('Time in already recorded for this date');
       return NextResponse.json(
-        { error: 'Time in already recorded for today' },
+        { error: 'Time in already recorded for this date' },
         { status: 400 }
       );
     }
@@ -73,9 +90,9 @@ export async function POST(request: Request) {
       const { data: updatedRecord, error: updateError } = await supabase
         .from('Attendance')
         .update({
-          timeIn: timeStr,
-          status: 'PRESENT',
-          updatedAt: now.toISO()
+          timeIn: timeIn,
+          status: status,
+          updatedAt: DateTime.now().setZone('Asia/Manila').toISO()
         })
         .eq('id', existingRecord.id)
         .select()
@@ -89,12 +106,11 @@ export async function POST(request: Request) {
         .from('Attendance')
         .insert({
           facultyId: parseInt(facultyId),
-          date: todayStr,
-          timeIn: timeStr,
-          // status: 'PRESENT',
-          status,
-          createdAt: now.toISO(),
-          updatedAt: now.toISO()
+          date: dateStr,
+          timeIn: timeIn,
+          status: status,
+          createdAt: DateTime.now().setZone('Asia/Manila').toISO(),
+          updatedAt: DateTime.now().setZone('Asia/Manila').toISO()
         })
         .select()
         .single();
@@ -106,7 +122,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: record.id.toString(),
       facultyId: record.facultyId.toString(),
-      // date: DateTime.fromISO(record.date).setZone('Asia/Manila').toFormat('MMMM d, yyyy'),
       date: DateTime.fromISO(record.date).setZone('Asia/Manila').toISO(),
       timeIn: record.timeIn ?? null,
       timeOut: record.timeOut ?? null,
