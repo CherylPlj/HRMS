@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Download, Plus, Edit2, Trash2, Calendar, CheckCircle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Download, Plus, Edit2, Trash2, Calendar, CheckCircle, Loader2, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { useUser } from '@clerk/nextjs';
@@ -464,6 +464,13 @@ const AttendanceContent: React.FC = () => {
 
   // New states for attendance errors
   const [attendanceErrors, setAttendanceErrors] = useState<Record<number, string>>({});
+
+  // Add new state for import modal and loading
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<any | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load attendance from backend
   const loadAttendanceData = () => {
@@ -1057,6 +1064,139 @@ const AttendanceContent: React.FC = () => {
     }
   };
 
+  // Add new function to handle file import
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportLoading(true);
+    setImportError(null);
+    setImportResult(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/attendance/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import file');
+      }
+
+      setImportResult(result);
+      
+      // Reload attendance data after successful import
+      loadAttendanceData();
+      
+    } catch (error) {
+      console.error('Import error:', error);
+      setImportError(error instanceof Error ? error.message : 'Failed to import file');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // Update the template download function to include faculty data
+  const handleDownloadTemplate = async () => {
+    try {
+      // Get current date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Create CSV content with proper escaping
+      const csvRows = [
+        // Headers
+        ['facultyId', 'date', 'timeIn', 'timeOut', 'status', 'remarks'].join(','),
+        // Comments
+        '# Available Faculty IDs and Names:',
+        ...facultyList.map(faculty => 
+          `# ${faculty.FacultyID} - ${faculty.User?.FirstName} ${faculty.User?.LastName}`
+        ),
+        '', // Empty line to separate comments from data
+        // Template rows
+        ...facultyList.map(faculty => {
+          const fields = [
+            faculty.FacultyID,
+            today,
+            '', // timeIn
+            '', // timeOut
+            '', // status
+            ''  // remarks
+          ].map(field => `"${field}"`); // Wrap each field in quotes
+          return fields.join(',');
+        })
+      ].join('\r\n'); // Use Windows line endings for better Excel compatibility
+
+      const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'attendance_import_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating template:', error);
+      setImportError('Failed to generate template with faculty data');
+    }
+  };
+
+  // Update the sample download function to use actual faculty data
+  const handleDownloadSample = async () => {
+    try {
+      // Get current date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Create CSV content with proper escaping
+      const csvRows = [
+        // Headers
+        ['facultyId', 'date', 'timeIn', 'timeOut', 'status', 'remarks'].join(','),
+        // Comments
+        '# Available Faculty IDs and Names:',
+        ...facultyList.map(faculty => 
+          `# ${faculty.FacultyID} - ${faculty.User?.FirstName} ${faculty.User?.LastName}`
+        ),
+        '', // Empty line to separate comments from data
+        // Sample rows
+        ...facultyList.slice(0, 3).map((faculty, index) => {
+          let fields;
+          switch(index) {
+            case 0:
+              fields = [faculty.FacultyID, today, '07:00', '16:00', 'PRESENT', 'Regular attendance'];
+              break;
+            case 1:
+              fields = [faculty.FacultyID, today, '08:30', '16:30', 'LATE', 'Traffic delay'];
+              break;
+            case 2:
+              fields = [faculty.FacultyID, today, '', '', 'ABSENT', 'Sick leave'];
+              break;
+            default:
+              return '';
+          }
+          return fields.map(field => `"${field}"`).join(','); // Wrap each field in quotes
+        }).filter(Boolean)
+      ].join('\r\n'); // Use Windows line endings for better Excel compatibility
+
+      const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'attendance_import_sample.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating sample:', error);
+      setImportError('Failed to generate sample with faculty data');
+    }
+  };
+
   return (
     <div className="text-black p-6 min-h-screen bg-gray-50">
       <div className="flex justify-between items-center mb-6">
@@ -1093,6 +1233,13 @@ const AttendanceContent: React.FC = () => {
             >
               <Download size={18} />
               Download
+            </button>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              <Upload size={18} />
+              Import
             </button>
             <button
               onClick={() => setIsAttendanceModalOpen(true)}
@@ -1550,6 +1697,108 @@ const AttendanceContent: React.FC = () => {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-2xl font-bold text-[#800000]">Import Attendance Records</h2>
+              <button 
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setImportError(null);
+                  setImportResult(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-gray-600 mb-4">
+                    Upload a CSV file containing attendance records. The file should have the following columns:
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-gray-600 mb-4 space-y-1">
+                    <li>facultyId (required)</li>
+                    <li>date (required, format: YYYY-MM-DD)</li>
+                    <li>timeIn (format: HH:mm)</li>
+                    <li>timeOut (format: HH:mm)</li>
+                    <li>status (PRESENT, ABSENT, LATE, or NOT_RECORDED)</li>
+                    <li>remarks (optional)</li>
+                  </ul>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={handleDownloadTemplate}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Download Empty Template
+                    </button>
+                    <button
+                      onClick={handleDownloadSample}
+                      className="text-green-600 hover:text-green-800 text-sm font-medium"
+                    >
+                      Download Sample with Data
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.xls,.xlsx"
+                    onChange={handleFileImport}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-[#800000] file:text-white
+                      hover:file:bg-red-800"
+                  />
+                </div>
+
+                {importLoading && (
+                  <div className="flex items-center justify-center space-x-2 text-[#800000]">
+                    <Loader2 className="animate-spin h-5 w-5" />
+                    <span>Importing...</span>
+                  </div>
+                )}
+
+                {importError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-800 text-sm">{importError}</p>
+                  </div>
+                )}
+
+                {importResult && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+                    <p className="text-green-800 font-medium">Import successful!</p>
+                    <p className="text-sm text-green-600">Total rows: {importResult.totalRows}</p>
+                    <p className="text-sm text-green-600">Imported rows: {importResult.importedRows}</p>
+                    {importResult.invalidRows?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-yellow-600 font-medium mt-2">Warnings:</p>
+                        <ul className="list-disc list-inside text-sm text-yellow-600">
+                          {importResult.invalidRows.map((row: any, index: number) => (
+                            <li key={index}>Row {row.row}: {row.error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
