@@ -151,77 +151,80 @@ export default function Dashboard() {
       </Head>
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
         {/* Sidebar */}
-        <div className="bg-white w-20 p-4 flex flex-col justify-between border-r border-gray-200">
-          <div>
-            <img src="/sjsfilogo.png" alt="Logo" className="w-10 h-10 mx-auto mb-6" />
-            <nav className="space-y-6">
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'dashboard' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Dashboard"
-                onClick={() => handleButtonClick('dashboard')}
-              >
-                <i className="fas fa-tachometer-alt text-xl"></i>
-                <span className="text-[10px]">Dashboard</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'personal-data' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Personal Data"
-                onClick={() => handleButtonClick('personal-data')}
-              >
-                <i className="fas fa-user text-xl"></i>
-                <span className="text-[10px] whitespace-nowrap">Personal Data</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'documents' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Documents"
-                onClick={() => handleButtonClick('documents')}
-              >
-                <i className="fas fa-file-alt text-xl"></i>
-                <span className="text-[10px]">Documents</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'attendance' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Attendance"
-                onClick={() => handleButtonClick('attendance')}
-              >
-                <i className="fas fa-calendar-check text-xl"></i>
-                <span className="text-[10px]">Attendance</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'leave' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Leave Request"
-                onClick={() => handleButtonClick('leave')}
-              >
-                <i className="fas fa-envelope text-xl"></i>
-                <span className="text-[10px] whitespace-nowrap">Leave Request</span>
-              </a>
-            </nav>
+        <div className="bg-white w-60 p-6 flex flex-col justify-between border-r border-gray-200">
+          <div className="flex flex-col items-center mb-8">
+            <img src="/sjsfilogo.png" alt="Logo" className="w-24 h-24 mb-4" />
+            <span className="text-[#800000] font-extrabold text-xl">SJSFI-HRMS</span>
           </div>
+
+          <nav className="flex flex-col space-y-5">
+            <a
+              href="#"
+              className={`flex items-center justify-start px-5 py-3 rounded-md cursor-pointer space-x-4 ${
+                activeButton === 'dashboard' ? 'text-[#800000] font-semibold bg-gray-100' : 'text-black hover:bg-gray-100'
+              }`}
+              title="Dashboard"
+              onClick={() => handleButtonClick('dashboard')}
+            >
+              <i className="fas fa-tachometer-alt text-3xl w-12 text-center"></i>
+              <span className="text-base w-[140px] text-left">Dashboard</span>
+            </a>
+            <a
+              href="#"
+              className={`flex items-center justify-start px-5 py-3 rounded-md cursor-pointer space-x-4 ${
+                activeButton === 'personal-data' ? 'text-[#800000] font-semibold bg-gray-100' : 'text-black hover:bg-gray-100'
+              }`}
+              title="Personal Data"
+              onClick={() => handleButtonClick('personal-data')}
+            >
+              <i className="fas fa-user text-3xl w-12 text-center"></i>
+              <span className="text-base whitespace-nowrap w-[140px] text-left">Personal Data</span>
+            </a>
+            <a
+              href="#"
+              className={`flex items-center justify-start px-5 py-3 rounded-md cursor-pointer space-x-3 ${
+                activeButton === 'documents' ? 'text-[#800000] font-semibold bg-gray-100' : 'text-black hover:bg-gray-100'
+              }`}
+              title="Documents"
+              onClick={() => handleButtonClick('documents')}
+            >
+              <i className="fas fa-file-alt text-3xl w-12 text-center"></i>
+              <span className="text-base w-[140px] text-left">Documents</span>
+            </a>
+            <a
+              href="#"
+              className={`flex items-center justify-start px-5 py-3 rounded-md cursor-pointer space-x-3 ${
+                activeButton === 'attendance' ? 'text-[#800000] font-semibold bg-gray-100' : 'text-black hover:bg-gray-100'
+              }`}
+              title="Attendance"
+              onClick={() => handleButtonClick('attendance')}
+            >
+              <i className="fas fa-calendar-check text-3xl w-12 text-center"></i>
+              <span className="text-base w-[140px] text-left">Attendance</span>
+            </a>
+            <a
+              href="#"
+              className={`flex items-center justify-start px-5 py-3 rounded-md cursor-pointer space-x-3 ${
+                activeButton === 'leave' ? 'text-[#800000] font-semibold bg-gray-100' : 'text-black hover:bg-gray-100'
+              }`}
+              title="Leave Request"
+              onClick={() => handleButtonClick('leave')}
+            >
+              <i className="fas fa-envelope text-3xl w-12 text-center"></i>
+              <span className="text-base whitespace-nowrap w-[140px] text-left">Leave Request</span>
+            </a>
+          </nav>
+
           <a
             href="#"
-            className={`flex flex-col items-center ${
-              activeButton === 'logout' ? 'text-[#800000]' : 'text-black'
+            className={`flex items-center space-x-3 mt-auto px-5 py-3 rounded-md cursor-pointer ${
+              activeButton === 'logout' ? 'text-[#800000] font-semibold bg-gray-100' : 'text-black hover:bg-gray-100'
             }`}
             title="Log Out"
             onClick={() => setLogoutModalVisible(true)} // Show the logout modal
           >
-            <i className="fas fa-sign-out-alt text-xl"></i>
-            <span className="text-[10px]">Log Out</span>
+            <i className="fas fa-sign-out-alt text-3xl w-12 text-center"></i>
+            <span className="text-base w-[140px]">Log Out</span>
           </a>
         </div>
  {/* Header and Main Content */}
