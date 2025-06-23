@@ -15,6 +15,7 @@ const MAX_AUTO_RESEND_ATTEMPTS = 3;
 // Define webhook event types
 type WebhookEventType = 
   | 'user.created'
+  | 'user.updated'
   | 'user.deleted'
   | 'invitation.expired'
   | 'session.created'
@@ -26,6 +27,15 @@ interface UserCreatedEvent {
   email_addresses: Array<{ email_address: string }>;
   first_name: string;
   last_name: string;
+  image_url: string;
+}
+
+interface UserUpdatedEvent {
+  id: string;
+  email_addresses: Array<{ email_address: string }>;
+  first_name: string;
+  last_name: string;
+  image_url: string;
 }
 
 interface SessionCreatedEvent {
@@ -150,7 +160,7 @@ export async function POST(req: Request) {
 
     switch (eventType) {
       case 'user.created': {
-        const { id, email_addresses, first_name, last_name } = evt.data as UserCreatedEvent;
+        const { id, email_addresses, first_name, last_name, image_url } = evt.data as UserCreatedEvent;
         const email = email_addresses[0]?.email_address;
 
         if (!email) {
@@ -171,13 +181,14 @@ export async function POST(req: Request) {
             ipAddress
           );
 
-          // Update user status in Supabase
+          // Update user status and photo in Supabase
           const { error: updateError } = await supabaseAdmin
             .from('User')
             .update({ 
               Status: 'Active',
               DateModified: new Date().toISOString(),
-              LastLogin: new Date().toISOString()
+              LastLogin: new Date().toISOString(),
+              Photo: image_url || null
             })
             .eq('UserID', id);
 
@@ -226,6 +237,50 @@ export async function POST(req: Request) {
           return NextResponse.json({ success: true });
         } catch (error) {
           console.error('Error processing user.created webhook:', error);
+          return NextResponse.json(
+            { 
+              error: 'Internal Server Error',
+              details: error instanceof Error ? error.message : 'Unknown error'
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      case 'user.updated': {
+        const { id, email_addresses, first_name, last_name, image_url } = evt.data as UserUpdatedEvent;
+        const email = email_addresses[0]?.email_address;
+
+        try {
+          // Update user data in Supabase
+          const { error: updateError } = await supabaseAdmin
+            .from('User')
+            .update({ 
+              DateModified: new Date().toISOString(),
+              Photo: image_url || null
+            })
+            .eq('UserID', id);
+
+          if (updateError) {
+            console.error('Error updating user data in Supabase:', updateError);
+            return NextResponse.json(
+              { error: 'Failed to update user data' },
+              { status: 500 }
+            );
+          }
+
+          // Log the user update
+          await logActivity(
+            id,
+            'user_updated',
+            'User',
+            `User profile updated: ${first_name} ${last_name} (${email})`,
+            ipAddress
+          );
+
+          return NextResponse.json({ success: true });
+        } catch (error) {
+          console.error('Error processing user.updated webhook:', error);
           return NextResponse.json(
             { 
               error: 'Internal Server Error',

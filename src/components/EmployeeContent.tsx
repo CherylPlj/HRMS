@@ -1,0 +1,2554 @@
+// 'use client';
+
+// import React, { useState, useEffect, useRef } from 'react';
+// import { FaTrash, FaPen, FaDownload, FaPlus, FaFile, FaEye, FaLink } from 'react-icons/fa';
+// import { Search } from 'lucide-react';
+// import { fetchFacultyDocuments } from '../api/faculty-documents';
+// import jsPDF from 'jspdf';
+// import autoTable from 'jspdf-autotable';
+// import { useUser } from '@clerk/nextjs';
+
+// interface Employee {
+//   EmployeeID: number;
+//   UserID: string;
+//   // Personal Information
+//   DateOfBirth: string | null;
+//   PlaceOfBirth: string | null;
+//   Gender: string | null;
+//   CivilStatus: string | null;
+//   Height: number | null;
+//   Weight: number | null;
+//   BloodType: string | null;
+//   GSIS: string | null;
+//   SSS: string | null;
+//   PhilHealth: string | null;
+//   PagIbig: string | null;
+//   TIN: string | null;
+  
+//   // Contact Information
+//   Phone: string | null;
+//   MobilePhone: string | null;
+//   Email: string | null;
+//   Address: string | null;
+  
+//   // Employment Information
+//   Position: string;
+//   DepartmentID: number;
+//   EmploymentStatus: string;
+//   EmployeeType: 'Faculty' | 'HRManager' | 'Admin' | 'Registrar' | 'Cashier' | 'Regular';
+//   HireDate: string | null;
+//   ResignationDate: string | null;
+  
+//   // Emergency Contact
+//   EmergencyContact: string | null;
+//   EmergencyRelation: string | null;
+//   EmergencyPhone: string | null;
+  
+//   // System Relations
+//   User: {
+//     UserID: string;
+//     FirstName: string;
+//     LastName: string;
+//     Email: string;
+//     Status: string;
+//     Photo: string;
+//     isDeleted: string;
+//   };
+//   Department: {
+//     DepartmentID: number;
+//     DepartmentName: string;
+//   };
+// }
+
+// interface NewEmployee {
+//   FirstName: string;
+//   LastName: string;
+//   Email: string;
+//   Position: string;
+//   DepartmentId: number;
+//   EmploymentStatus: string;
+//   HireDate: string;
+//   DateOfBirth: string;
+//   Phone: string | null;
+//   Address: string | null;
+//   Photo: string;
+// }
+
+// interface Notification {
+//   type: 'success' | 'error';
+//   message: string;
+// }
+
+// interface DocumentFacultyRow {
+//   DocumentID: number;
+//   FacultyID: number;
+//   DocumentTypeID: number;
+//   UploadDate: string;
+//   SubmissionStatus: string;
+//   file?: string;
+//   facultyName: string;
+//   documentTypeName: string;
+//   FilePath?: string;
+//   FileUrl?: string;
+//   DownloadUrl?: string;
+//   Faculty: {
+//     User: {
+//       FirstName: string;
+//       LastName: string;
+//       Email: string;
+//     };
+//   };
+//   DocumentType: {
+//     DocumentTypeID: number;
+//     DocumentTypeName: string;
+//   };
+// }
+
+// interface DocumentType {
+//   DocumentTypeID: number;
+//   DocumentTypeName: string;
+//   AllowedFileTypes: string[] | null;
+//   Template: string | null;
+// }
+
+// interface Department {
+//   DepartmentID: number;
+//   DepartmentName: string;
+// }
+
+// // Add this helper function near the top, after other helpers
+// const getDirectImageUrl = (url: string) => {
+//   // Google Drive share link pattern
+//   const match = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\/view.*/);
+//   if (match && match[1]) {
+//     return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+//   }
+//   // Already a direct link or not a Drive link
+//   return url;
+// };
+
+// // Add this helper to detect doc/docx files
+// const isDocFile = (url: string) => {
+//   return /\.(docx?|DOCX?)$/i.test(url) || url.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') || url.includes('application/msword');
+// };
+
+// // Add this helper to get a direct download link for Google Drive docs
+// const getDirectDocUrl = (url: string) => {
+//   // Google Drive share link pattern
+//   const match = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\/view.*/);
+//   if (match && match[1]) {
+//     return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+//   }
+//   return url;
+// };
+
+// // Add this helper to convert Google Docs edit links to export links
+// const getGoogleDocsExportUrl = (url: string, format: 'pdf' | 'docx') => {
+//   // Match Google Docs edit link
+//   const match = url.match(/https?:\/\/docs\.google\.com\/document\/d\/([\w-]+)\//);
+//   if (match && match[1]) {
+//     return `https://docs.google.com/document/d/${match[1]}/export?format=${format}`;
+//   }
+//   return url;
+// };
+
+// const getDirectDriveUrl = (url: string) => {
+//   const match = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\/view/);
+//   if (match && match[1]) {
+//     return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+//   }
+//   return url;
+// };
+
+// // Add helper to detect Google Docs edit links
+// const isGoogleDoc = (url: string) => {
+//   return /https?:\/\/docs\.google\.com\/document\/d\//.test(url);
+// };
+
+// // Add helper to get Google Docs export link
+// const getGoogleDocExportUrl = (url: string, format: 'pdf' | 'docx') => {
+//   const match = url.match(/https?:\/\/docs\.google\.com\/document\/d\/([\w-]+)/);
+//   if (match && match[1]) {
+//     return `https://docs.google.com/document/d/${match[1]}/export?format=${format}`;
+//   }
+//   return url;
+// };
+
+// // Helper functions
+// const isPdfFile = (url: string) => {
+//   return /\.pdf$/i.test(url) || url.includes('application/pdf');
+// };
+
+// const isImageFile = (url: string) => {
+//   return /\.(jpe?g|png|gif|bmp|webp)$/i.test(url) || url.includes('image/');
+// };
+
+// const validateDocTypeName = (value: string) => {
+//   if (!value.trim()) {
+//     return 'Document type name is required.';
+//   }
+//   if (value.length < 3) {
+//     return 'Document type name must be at least 3 characters long.';
+//   }
+//   if (value.length > 50) {
+//     return 'Document type name must not exceed 50 characters.';
+//   }
+//   if (!/^[a-zA-Z0-9\s\-_]+$/.test(value)) {
+//     return 'Only letters, numbers, spaces, hyphens, and underscores are allowed.';
+//   }
+//   if (/(.)\1{3,}/.test(value.replace(/ /g, ''))) {
+//     return 'No more than three repeated characters or symbols in a row.';
+//   }
+//   return null;
+// };
+
+// const getStatusOrder = (status: string) => {
+//   switch (status) {
+//     case 'Submitted': return 1;
+//     case 'Rejected': return 2;
+//     case 'Approved': return 3;
+//     default: return 4;
+//   }
+// };
+
+// const FacultyContent = () => {
+//   const { user } = useUser();
+//   const fileInputRef = useRef<HTMLInputElement>(null);
+
+//   // View and loading state
+//   const [activeView, setActiveView] = useState<'facultyManagement' | 'documentManagement'>('facultyManagement');
+//   const [loading, setLoading] = useState(true);
+
+//   // Faculty list and filters
+//   const [facultyList, setFacultyList] = useState<Faculty[]>([]);
+//   const [filteredFacultyList, setFilteredFacultyList] = useState<Faculty[]>([]);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [selectedDepartment, setSelectedDepartment] = useState<number | 'all'>('all');
+//   const [selectedStatus, setSelectedStatus] = useState<string | 'all'>('all');
+//   const [departments, setDepartments] = useState<Department[]>([]);
+
+//   // Faculty modals and selection
+//   const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
+//   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
+//   const [editFaculty, setEditFaculty] = useState<Partial<Faculty>>({});
+//   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+//   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+//   const [selectedRows, setSelectedRows] = useState<number[]>([]);
+//   const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
+//   const [selectedFacultyDetails, setSelectedFacultyDetails] = useState<Faculty | null>(null);
+//   const [selectAll, setSelectAll] = useState(false);
+//   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+//   const [isDeleteConfirmed, setIsDeleteConfirmed] = useState(false);
+
+//   // Document management
+//   const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
+//   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+//   const [selectedDocument, setSelectedDocument] = useState<DocumentFacultyRow | null>(null);
+//   const [isViewerOpen, setIsViewerOpen] = useState(false);
+//   const [numPages, setNumPages] = useState<number>(0);
+//   const [pageNumber, setPageNumber] = useState<number>(1);
+//   const [docLoading, setDocLoading] = useState(false);
+//   const [viewerError, setViewerError] = useState<string | null>(null);
+//   const [documentSearchTerm, setDocumentSearchTerm] = useState('');
+//   const [selectedDocumentType, setSelectedDocumentType] = useState<number | 'all'>('all');
+//   const [selectedDocumentStatus, setSelectedDocumentStatus] = useState<string>('all');
+//   const [showDocTypeListModal, setShowDocTypeListModal] = useState(false);
+//   const [expandedFacultyId, setExpandedFacultyId] = useState<number | null>(null);
+
+//   // Document status management
+//   const [isStatusUpdateModalOpen, setIsStatusUpdateModalOpen] = useState(false);
+//   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+//   const [newStatus, setNewStatus] = useState<string>('');
+//   const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
+//   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{
+//     docId: number;
+//     newStatus: string;
+//     facultyName: string;
+//     documentType: string;
+//   } | null>(null);
+
+//   // Document type management
+//   const [isDocTypeModalOpen, setIsDocTypeModalOpen] = useState(false);
+//   const [editingDocType, setEditingDocType] = useState<DocumentType | null>(null);
+//   const [docTypeName, setDocTypeName] = useState('');
+//   const [docTypeError, setDocTypeError] = useState<string | null>(null);
+//   const [isDocTypeReferenced, setIsDocTypeReferenced] = useState(false);
+//   const [addingDocType, setAddingDocType] = useState(false);
+//   const [showDocTypeSuccessModal, setShowDocTypeSuccessModal] = useState(false);
+//   const [docTypeSuccessMessage, setDocTypeSuccessMessage] = useState('');
+//   const [isDeletingDocType, setIsDeletingDocType] = useState(false);
+//   const [isDeleteDocTypeModalOpen, setIsDeleteDocTypeModalOpen] = useState(false);
+//   const [docTypeToDelete, setDocTypeToDelete] = useState<DocumentType | null>(null);
+//   const [deleteDocTypeConfirmation, setDeleteDocTypeConfirmation] = useState('');
+//   const [isDeleteDocTypeConfirmed, setIsDeleteDocTypeConfirmed] = useState(false);
+
+//   // CSV import and notifications
+//   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+//   const [importLoading, setImportLoading] = useState(false);
+//   const [importError, setImportError] = useState<string | null>(null);
+//   const [importResult, setImportResult] = useState<any | null>(null);
+//   const [notification, setNotification] = useState<Notification | null>(null);
+
+//   // Add Faculty modal and form
+//   const [isAddFacultyModalOpen, setIsAddFacultyModalOpen] = useState(false);
+//   const [newFaculty, setNewFaculty] = useState<NewFaculty>({
+//     FirstName: '',
+//     LastName: '',
+//     Email: '',
+//     Position: '',
+//     DepartmentId: 1,
+//     EmploymentStatus: 'Regular',
+//     HireDate: new Date().toISOString().split('T')[0],
+//     DateOfBirth: new Date().toISOString().split('T')[0],
+//     Phone: null,
+//     Address: null,
+//     Photo: ''
+//   });
+
+//   // Document type validation function
+//   const validateDocumentType = (value: string) => {
+//     // Only allow alphanumeric and spaces, min 3 chars, no repeated letters/symbols (4+), must be unique
+//     if (!/^[a-zA-Z0-9 ]+$/.test(value)) {
+//       return 'Only alphanumeric characters and spaces are allowed.';
+//     }
+//     if (value.length < 3) {
+//       return 'Document Type must be at least 3 characters.';
+//     }
+//     // Prevent 4 or more repeated letters or symbols (e.g., "aaaa", "!!!!", "aaaaa")
+//     if (/(.)\1{3,}/.test(value.replace(/ /g, ''))) {
+//       return 'No more than three repeated characters or symbols in a row.';
+//     }
+//     // Must be unique (case-insensitive)
+//     if (documentTypes.some(dt => dt.DocumentTypeName.toLowerCase() === value.trim().toLowerCase())) {
+//       return 'This document type already exists.';
+//     }
+//     return null;
+//   };
+
+//   // Fetch faculty data from the API endpoint
+//   const fetchFacultyData = async () => {
+//     try {
+//       setLoading(true);
+//       console.log('Fetching faculty data...'); // Debug log
+//       const response = await fetch('/api/faculty');
+//       if (!response.ok) {
+//         const error = await response.json();
+//         throw new Error(error.message || 'Failed to load faculty data');
+//       }
+//       const data = await response.json();
+//       console.log('Raw faculty data from API:', data); // Debug log
+      
+//       // Filter out faculty with deleted users
+//       const activeFaculty = data.filter((faculty: Faculty) => {
+//         console.log('Checking faculty:', {
+//           id: faculty.FacultyID,
+//           isDeleted: faculty.User?.isDeleted,
+//           status: faculty.User?.Status
+//         }); // Debug log for each faculty member
+//         return !faculty.User?.isDeleted;
+//       });
+      
+//       console.log('Active faculty after filtering:', activeFaculty); // Debug log
+//       setFacultyList(activeFaculty);
+//       setNotification(null);
+//     } catch (error: unknown) {
+//       console.error('Error fetching faculty:', error);
+//       setNotification({
+//         type: 'error',
+//         message: (error && typeof error === 'object' && 'message' in error)
+//           ? (error as { message?: string }).message || 'Failed to load faculty data'
+//           : 'Failed to load faculty data'
+//       });
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Load faculty data on component mount
+//   useEffect(() => {
+//     console.log('FacultyContent mounted, fetching data...'); // Debug log
+//     fetchFacultyData();
+//     fetchDocumentTypes();
+//     fetchDocuments('all'); // Fetch all documents on initial mount for both views
+//   }, []);
+
+//   // Add debug logging for facultyList changes
+//   useEffect(() => {
+//     console.log('facultyList updated:', facultyList); // Debug log
+//   }, [facultyList]);
+
+//   // Fetch departments
+//   const fetchDepartments = async () => {
+//     try {
+//       const response = await fetch('/api/departments');
+//       if (!response.ok) {
+//         throw new Error('Failed to fetch departments');
+//       }
+//       const data = await response.json();
+//       setDepartments(data);
+//     } catch (error) {
+//       console.error('Error fetching departments:', error);
+//       setNotification({
+//         type: 'error',
+//         message: 'Failed to load departments'
+//       });
+//     }
+//   };
+
+//   // Load departments on component mount
+//   useEffect(() => {
+//     fetchDepartments();
+//   }, []);
+
+//   // Add filter and search functionality
+//   useEffect(() => {
+//     let filtered = [...facultyList];
+
+//     // Apply search filter
+//     if (searchTerm) {
+//       const searchLower = searchTerm.toLowerCase();
+//       filtered = filtered.filter(faculty => 
+//         faculty.User?.FirstName?.toLowerCase().includes(searchLower) ||
+//         faculty.User?.LastName?.toLowerCase().includes(searchLower) ||
+//         faculty.User?.Email?.toLowerCase().includes(searchLower) ||
+//         faculty.Position?.toLowerCase().includes(searchLower)
+//       );
+//     }
+
+//     // Apply department filter
+//     if (selectedDepartment !== 'all') {
+//       filtered = filtered.filter(faculty => 
+//         faculty.DepartmentID === selectedDepartment
+//       );
+//     }
+
+//     // Apply status filter
+//     if (selectedStatus !== 'all') {
+//       filtered = filtered.filter(faculty => 
+//         faculty.EmploymentStatus === selectedStatus
+//       );
+//     }
+
+//     setFilteredFacultyList(filtered);
+//   }, [facultyList, searchTerm, selectedDepartment, selectedStatus]);
+
+//   const handleAddFaculty = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     try {
+//       setLoading(true);
+//       const response = await fetch('/api/createUser', {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           firstName: newFaculty.FirstName,
+//           lastName: newFaculty.LastName,
+//           Email: newFaculty.Email,
+//           role: 'Faculty',
+//           facultyData: {
+//             Position: newFaculty.Position,
+//             DepartmentId: newFaculty.DepartmentId,
+//             EmploymentStatus: newFaculty.EmploymentStatus,
+//             HireDate: newFaculty.HireDate,
+//             DateOfBirth: newFaculty.DateOfBirth,
+//             Phone: newFaculty.Phone,
+//             Address: newFaculty.Address
+//           }
+//         }),
+//       });
+
+//       const data = await response.json();
+
+//       if (!response.ok) {
+//         throw new Error(data.error || 'Failed to create faculty member');
+//       }
+
+//       setNewFaculty({
+//         FirstName: '',
+//         LastName: '',
+//         Email: '',
+//         Position: '',
+//         DepartmentId: 1,
+//         EmploymentStatus: 'Regular',
+//         HireDate: new Date().toISOString().split('T')[0],
+//         DateOfBirth: new Date().toISOString().split('T')[0],
+//         Phone: null,
+//         Address: null,
+//         Photo: ''
+//       });
+//       setIsFacultyModalOpen(false);
+
+//       await fetchFacultyData();
+
+//       setNotification({
+//         type: 'success',
+//         message: 'Faculty invitation sent successfully! The faculty member will receive an Email to complete their registration.'
+//       });
+//     } catch (error: unknown) {
+//       console.error('Error creating faculty:', error);
+//       setNotification({
+//         type: 'error',
+//         message: (error && typeof error === 'object' && 'message' in error)
+//           ? (error as { message?: string }).message || 'Failed to create faculty member'
+//           : 'Failed to create faculty member'
+//       });
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleOpenFacultyModal = () => {
+//     setIsFacultyModalOpen(true);
+//   };
+
+//   // Document management: fetch documents
+//   const fetchDocuments = async (facultyId: number | 'all' = 'all') => {
+//     setDocLoading(true);
+//     try {
+//       const data = await fetchFacultyDocuments(facultyId);
+//       console.log('Received documents data:', data);
+//       setDocuments(data);
+//     } catch (err) {
+//       console.error('Error fetching documents:', err);
+//       setDocuments([]);
+//     }
+//     setDocLoading(false);
+//   };
+
+//   // Modify the status change handler
+//   const handleStatusChange = (docId: number, newStatus: string) => {
+//     const doc = documents.find(d => d.DocumentID === docId);
+//     if (!doc) return;
+
+//     setSelectedDocumentId(docId);
+//     setNewStatus(newStatus);
+//     setIsStatusUpdateModalOpen(true);
+//   };
+
+//   // Add new handler for confirmed status update
+//   const handleConfirmedStatusUpdate = async () => {
+//     if (!selectedDocumentId || !newStatus) return;
+
+//     try {
+//       const response = await fetch(`/api/faculty/documents/${selectedDocumentId}/status`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ status: newStatus }),
+//       });
+
+//       if (!response.ok) {
+//         throw new Error('Failed to update document status');
+//       }
+
+//       // Refresh documents list
+//       await fetchDocuments();
+//       setNotification({
+//         type: 'success',
+//         message: 'Document status updated successfully'
+//       });
+//     } catch (error) {
+//       console.error('Error updating document status:', error);
+//       setNotification({
+//         type: 'error',
+//         message: 'Failed to update document status'
+//       });
+//     } finally {
+//       setIsStatusUpdateModalOpen(false);
+//       setSelectedDocumentId(null);
+//       setNewStatus('');
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (activeView === 'documentManagement') {
+//       fetchDocuments();
+//       fetchDocumentTypes(); // Fetch document types when document management is active
+//     }
+//   }, [activeView]);
+
+//   const handleDownloadPDF = () => {
+//     const doc = new jsPDF();
+    
+//     if (activeView === 'facultyManagement') {
+//       // Add title for faculty list
+//       doc.setFontSize(16);
+//       doc.text('Faculty List', 14, 15);
+      
+//       // Add date
+//       doc.setFontSize(10);
+//       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+//       // Add department filter info
+//       doc.setFontSize(10);
+//       doc.text('Department: All Departments', 14, 29);
+
+//       // Prepare faculty table data with more details
+//       const tableData = facultyList.map(faculty => [
+//         `${faculty.User?.FirstName || 'Unknown'} ${faculty.User?.LastName || 'User'}`,
+//         faculty.User?.Email || 'No email',
+//         faculty.Position,
+//         faculty.Department.DepartmentName,
+//         faculty.EmploymentStatus,
+//         faculty.Phone || 'N/A',
+//         faculty.Address || 'N/A'
+//       ]);
+
+//       // Add faculty table with more columns
+//       autoTable(doc, {
+//         head: [['Name', 'Email', 'Position', 'Department', 'Status', 'Phone', 'Address']],
+//         body: tableData,
+//         startY: 35,
+//         styles: { fontSize: 8 },
+//         headStyles: { fillColor: [128, 0, 0] }, // Maroon color
+//         columnStyles: {
+//           0: { cellWidth: 30 }, // Name
+//           1: { cellWidth: 35 }, // Email
+//           2: { cellWidth: 25 }, // Position
+//           3: { cellWidth: 25 }, // Department
+//           4: { cellWidth: 20 }, // Status
+//           5: { cellWidth: 25 }, // Phone
+//           6: { cellWidth: 35 }  // Address
+//         }
+//       });
+
+//       // Add footer with total count
+//       const finalY = (doc as any).lastAutoTable.finalY || 35;
+//       doc.setFontSize(10);
+//       doc.text(`Total Faculty: ${facultyList.length}`, 14, finalY + 10);
+
+//       // Save the PDF
+//       doc.save('faculty-list.pdf');
+//     } else {
+//       // Add title for documents list
+//       doc.setFontSize(16);
+//       doc.text('Documents List', 14, 15);
+      
+//       // Add date
+//       doc.setFontSize(10);
+//       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+//       // Prepare documents table data
+//       const tableData = documents.map(doc => [
+//         doc.facultyName,
+//         doc.documentTypeName,
+//         new Date(doc.UploadDate).toLocaleDateString(),
+//         doc.SubmissionStatus
+//       ]);
+
+//       // Add documents table
+//       autoTable(doc, {
+//         head: [['Faculty Name', 'Document Type', 'Upload Date', 'Status']],
+//         body: tableData,
+//         startY: 30,
+//         styles: { fontSize: 8 },
+//         headStyles: { fillColor: [128, 0, 0] } // Maroon color
+//       });
+
+//       // Save the PDF
+//       doc.save('documents-list.pdf');
+//     }
+//   };
+
+//   // Fetch document types
+//   const fetchDocumentTypes = async () => {
+//     try {
+//       const response = await fetch('/api/document-types');
+//       if (!response.ok) throw new Error('Failed to fetch document types');
+//       const data = await response.json();
+//       setDocumentTypes(data);
+//     } catch (error) {
+//       console.error('Error fetching document types:', error);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (isFacultyModalOpen) {
+//       fetchDocumentTypes();
+//     }
+//   }, [isFacultyModalOpen]);
+
+//   const handleEditFaculty = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!selectedFaculty) return;
+
+//     try {
+//       setLoading(true);
+//       const response = await fetch(`/api/faculty/${selectedFaculty.FacultyID}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           Position: selectedFaculty.Position,
+//           DepartmentId: selectedFaculty.DepartmentID,
+//           EmploymentStatus: selectedFaculty.EmploymentStatus,
+//           HireDate: selectedFaculty.HireDate,
+//           DateOfBirth: selectedFaculty.DateOfBirth,
+//           Phone: selectedFaculty.Phone,
+//           Address: selectedFaculty.Address
+//         }),
+//       });
+
+//       if (!response.ok) {
+//         throw new Error('Failed to update faculty member');
+//       }
+
+//       await fetchFacultyData();
+//       setIsEditModalOpen(false);
+//       setSelectedFaculty(null);
+//       setNotification({
+//         type: 'success',
+//         message: 'Faculty member updated successfully'
+//       });
+//     } catch (error) {
+//       console.error('Error updating faculty:', error);
+//       setNotification({
+//         type: 'error',
+//         message: 'Failed to update faculty member'
+//       });
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleDeleteFaculty = async () => {
+//     if (!selectedFaculty || !isDeleteConfirmed) {
+//       setNotification({
+//         type: 'error',
+//         message: 'Please confirm deletion by entering the faculty name'
+//       });
+//       return;
+//     }
+
+//     try {
+//       setLoading(true);
+//       const response = await fetch(`/api/faculty/${selectedFaculty.FacultyID}`, {
+//         method: 'DELETE',
+//       });
+
+//       if (!response.ok) {
+//         throw new Error('Failed to fetch faculty details');
+//       }
+//       const data = await response.json();
+//       return data;
+//     } catch (error) {
+//       console.error('Error fetching faculty details:', error);
+//       setNotification({
+//         type: 'error',
+//         message: 'Failed to load faculty details'
+//       });
+//       return null;
+//     }
+//   };
+
+//   // Add function to handle opening view details modal
+//   const openViewDetailsModal = async (faculty: Faculty) => {
+//     try {
+//       const response = await fetch(`/api/faculty/${faculty.FacultyID}`);
+//       if (!response.ok) {
+//         throw new Error('Failed to fetch faculty details');
+//       }
+//       const details = await response.json();
+      
+//       // If the current user is viewing their own profile, use their Clerk photo
+//       if (user && user.id === details.User.UserID) {
+//         details.User.Photo = user.imageUrl;
+//       }
+      
+//       setSelectedFacultyDetails(details);
+//       setIsViewDetailsModalOpen(true);
+//     } catch (error) {
+//       console.error('Error fetching faculty details:', error);
+//       setNotification({
+//         type: 'error',
+//         message: 'Failed to load faculty details'
+//       });
+//     }
+//   };
+
+//   // Add function to get profile photo
+//   const getProfilePhoto = (facultyUserId: string) => {
+//     // If the current user is viewing their own profile, use their Clerk photo
+//     if (user && user.id === facultyUserId) {
+//       return user.imageUrl;
+//     }
+//     // Otherwise return a default avatar
+//     return '/default-avatar.png';
+//   };
+
+//   // Add CSV import handlers
+//   const handleImportCSV = async (file: File) => {
+//     setImportLoading(true);
+//     setImportError(null);
+
+//     const formData = new FormData();
+//     formData.append('file', file);
+
+//     try {
+//       const response = await fetch('/api/faculty/import', {
+//         method: 'POST',
+//         body: formData
+//       });
+
+//       const result = await response.json();
+
+//       if (!response.ok) {
+//         throw new Error(result.error || 'Failed to import faculty data');
+//       }
+
+//       await fetchFacultyData(); // Refresh faculty list
+//       setNotification({
+//         type: 'success',
+//         message: result.message
+//       });
+//       setIsImportModalOpen(false);
+//     } catch (error) {
+//       setImportError(error instanceof Error ? error.message : 'Failed to import faculty data');
+//     } finally {
+//       setImportLoading(false);
+//     }
+//   };
+
+//   const handleDownloadTemplate = () => {
+//     const headers = [
+//       'FirstName',
+//       'LastName',
+//       'Email',
+//       'Position',
+//       'DepartmentId',
+//       'EmploymentStatus',
+//       'HireDate',
+//       'DateOfBirth',
+//       'Phone',
+//       'Address'
+//     ];
+
+//     const csvContent = [
+//       headers.join(','),
+//       'John,Doe,john.doe@example.com,Professor,1,Regular,2024-01-01,1980-01-01,+1234567890,"123 Main St"'
+//     ].join('\n');
+
+//     const blob = new Blob([csvContent], { type: 'text/csv' });
+//     const url = window.URL.createObjectURL(blob);
+//     const a = document.createElement('a');
+//     a.href = url;
+//     a.download = 'faculty_import_template.csv';
+//     document.body.appendChild(a);
+//     a.click();
+//     document.body.removeChild(a);
+//     window.URL.revokeObjectURL(url);
+//   };
+
+//   const handleDownloadSelected = () => {
+//     // Implementation for downloading selected documents
+//   };
+
+//   const openAddDocTypeModal = () => {
+//     setIsDocTypeModalOpen(true);
+//     setEditingDocType(null);
+//     setDocTypeName('');
+//   };
+
+//   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const checked = e.target.checked;
+//     setSelectAll(checked);
+//     if (checked) {
+//       setSelectedRows(filteredFacultyList.map(faculty => faculty.FacultyID));
+//     } else {
+//       setSelectedRows([]);
+//     }
+//   };
+
+//   const handleRowSelect = (facultyId: number) => {
+//     setSelectedRows(prev => {
+//       if (prev.includes(facultyId)) {
+//         return prev.filter(id => id !== facultyId);
+//       } else {
+//         return [...prev, facultyId];
+//       }
+//     });
+//   };
+
+//   const openEditModal = (faculty: Faculty) => {
+//     setSelectedFaculty(faculty);
+//     setEditFaculty({
+//       Position: faculty.Position,
+//       DepartmentID: faculty.DepartmentID,
+//       EmploymentStatus: faculty.EmploymentStatus,
+//       ResignationDate: faculty.ResignationDate,
+//       Phone: faculty.Phone,
+//       Address: faculty.Address,
+//     });
+//     setIsEditModalOpen(true);
+//   };
+
+//   const openDeleteModal = (faculty: Faculty) => {
+//     setSelectedFaculty(faculty);
+//     setIsDeleteModalOpen(true);
+//   };
+
+//   const handleViewDocument = async (document: DocumentFacultyRow) => {
+//     setSelectedDocument(document);
+//     setIsViewerOpen(true);
+//     setDocLoading(true);
+
+//     try {
+//       // Implementation for viewing document
+//       setDocLoading(false);
+//     } catch (error) {
+//       console.error('Error loading document:', error);
+//       setNotification({
+//         type: 'error',
+//         message: 'Failed to load document'
+//       });
+//       setDocLoading(false);
+//     }
+//   };
+
+//   const handleCloseViewer = () => {
+//     setIsViewerOpen(false);
+//     setSelectedDocument(null);
+//     setPageNumber(1);
+//   };
+
+//   const handleAddOrEditDocType = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setAddingDocType(true);
+//     setDocTypeError(null);
+
+//     try {
+//       const validation = validateDocTypeName(docTypeName);
+//       if (validation) {
+//         setDocTypeError(validation);
+//         return;
+//       }
+
+//       const url = editingDocType
+//         ? `/api/document-types/${editingDocType.DocumentTypeID}`
+//         : '/api/document-types';
+
+//       const response = await fetch(url, {
+//         method: editingDocType ? 'PUT' : 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           DocumentTypeName: docTypeName,
+//         }),
+//       });
+
+//       if (!response.ok) {
+//         const error = await response.json();
+//         throw new Error(error.message || 'Failed to save document type');
+//       }
+
+//       const data = await response.json();
+
+//       if (editingDocType) {
+//         setDocumentTypes(prev => prev.map(dt => dt.DocumentTypeID === data.DocumentTypeID ? data : dt));
+//         setDocTypeSuccessMessage('Document type updated successfully!');
+//       } else {
+//         setDocumentTypes(prev => [...prev, data]);
+//         setDocTypeSuccessMessage('Document type added successfully!');
+//       }
+
+//       setShowDocTypeSuccessModal(true);
+//       setIsDocTypeModalOpen(false);
+//       setDocTypeName('');
+//       setEditingDocType(null);
+//     } catch (error) {
+//       setDocTypeError('Failed to save document type.');
+//     } finally {
+//       setAddingDocType(false);
+//     }
+//   };
+
+//   const openEditDocTypeModal = (docType: DocumentType) => {
+//     setEditingDocType(docType);
+//     setDocTypeName(docType.DocumentTypeName);
+//     setIsDocTypeModalOpen(true);
+//   };
+
+//   const handleDeleteDocType = async (docType: DocumentType) => {
+//     setIsDeletingDocType(true);
+//     try {
+//       const res = await fetch(`/api/document-types/${docType.DocumentTypeID}`, { method: 'DELETE' });
+//       const data = await res.json();
+//       if (!res.ok) {
+//         setNotification({ type: 'error', message: data.error || 'Failed to delete document type.' });
+//         setIsDeleteDocTypeModalOpen(false);
+//         setDocTypeToDelete(null);
+//         setDeleteDocTypeConfirmation('');
+//         setIsDeleteDocTypeConfirmed(false);
+//         setIsDocTypeReferenced(false);
+//         return;
+//       }
+//       setDocumentTypes(prev => prev.filter(dt => dt.DocumentTypeID !== docType.DocumentTypeID));
+//       setNotification({ type: 'success', message: 'Document type deleted successfully!' });
+//       setIsDeleteDocTypeModalOpen(false);
+//       setDocTypeToDelete(null);
+//       setDeleteDocTypeConfirmation('');
+//       setIsDeleteDocTypeConfirmed(false);
+//       setIsDocTypeReferenced(false);
+//     } catch (err) {
+//       setNotification({ type: 'error', message: 'Failed to delete document type.' });
+//       setIsDeleteDocTypeModalOpen(false);
+//       setDocTypeToDelete(null);
+//       setDeleteDocTypeConfirmation('');
+//       setIsDeleteDocTypeConfirmed(false);
+//       setIsDocTypeReferenced(false);
+//     } finally {
+//       setIsDeletingDocType(false);
+//     }
+//   };
+
+//   return (
+//     <div className="p-6">
+//       {notification && (
+//         <div className={`mb-4 p-4 rounded flex items-center justify-between ${
+//           notification.type === 'success' 
+//             ? 'bg-green-100 text-green-700' 
+//             : 'bg-red-100 text-red-700'
+//         }`}>
+//           <span>{notification.message}</span>
+//           <button
+//             onClick={() => setNotification(null)}
+//             className="ml-4 text-xl font-bold focus:outline-none hover:text-black"
+//             title="Close notification"
+//             aria-label="Close notification"
+//             type="button"
+//           >
+//             ×
+//           </button>
+//         </div>
+//       )}
+
+//       <div className="flex justify-between items-center mb-6">
+//         <div className="flex space-x-4">
+//           <button
+//             onClick={() => setActiveView('facultyManagement')}
+//             className={`px-4 py-2 rounded ${
+//               activeView === 'facultyManagement'
+//                 ? 'bg-[#800000] text-white'
+//                 : 'bg-gray-200 text-gray-700'
+//             }`}
+//           >
+//             Faculty Information
+//           </button>
+//           <button
+//             onClick={() => setActiveView('documentManagement')}
+//             className={`px-4 py-2 rounded ${
+//               activeView === 'documentManagement'
+//                 ? 'bg-[#800000] text-white'
+//                 : 'bg-gray-200 text-gray-700'
+//             }`}
+//           >
+//             Document Requirements
+//           </button>
+//         </div>
+//         <div className="flex space-x-2">
+          
+//           <div className="flex space-x-2">
+//             <button
+//               onClick={() => setIsAddFacultyModalOpen(true)}
+//               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+//             >
+//               <FaPlus /> Add Faculty
+//             </button>
+//             <button
+//               onClick={() => setIsImportModalOpen(true)}
+//               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+//             >
+//               <FaFile /> Import CSV
+//             </button>
+//             <button
+//               onClick={handleDownloadPDF}
+//               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+//             >
+//               <FaDownload /> Download {activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'}
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Faculty Management: Search and Filter Section */}
+//       {activeView === 'facultyManagement' && (
+//         <div className="mb-6 flex items-center gap-4">
+//           <div className="relative w-80">
+//             <input
+//               type="text"
+//               placeholder="Search faculty..."
+//               value={searchTerm}
+//               onChange={(e) => setSearchTerm(e.target.value)}
+//               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+//             />
+//             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+//           </div>
+
+//           {/* Filter Options for Faculty (always visible) */}
+//           <div className="flex items-center gap-4 flex-grow">
+//             <div className="w-64">
+//                 <select
+//                   value={selectedDepartment}
+//                   onChange={(e) => setSelectedDepartment(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+//                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
+//                   title="Select Department"
+//                 >
+//                   <option value="all">All Departments</option>
+//                   {departments.map((dept) => (
+//                     <option key={dept.DepartmentID} value={dept.DepartmentID}>
+//                       {dept.DepartmentName}
+//                     </option>
+//                   ))}
+//                 </select>
+//               </div>
+//             <div className="w-64">
+//                 <select
+//                   value={selectedStatus}
+//                   onChange={(e) => setSelectedStatus(e.target.value)}
+//                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
+//                   title="Select Employment Status"
+//                 >
+//                   <option value="all">All Employment Statuses</option>
+//                   <option value="Hired">Hired</option>
+//                   <option value="Regular">Regular</option>
+//                   <option value="Under Probation">Under Probation</option>
+//                   <option value="Resigned">Resigned</option>
+//                 </select>
+//               </div>
+//             <button
+//               onClick={handleDownloadSelected}
+//               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800 ml-auto"
+//               disabled={selectedRows.length === 0}
+//             >
+//               <FaDownload /> Download Selected ({selectedRows.length})
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Document Management: Search and Filter Section */}
+//       {activeView === 'documentManagement' && (
+//         <div className="mb-6 flex items-center gap-4">
+//           <div className="relative w-80">
+//             <input
+//               type="text"
+//               placeholder="Search documents..."
+//               value={documentSearchTerm}
+//               onChange={(e) => setDocumentSearchTerm(e.target.value)}
+//               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+//             />
+//             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+//           </div>
+
+//           {/* Filter Options for Documents (always visible) */}
+//           <div className="flex items-center gap-4 flex-grow">
+//             <div className="w-64">
+//                 <select
+//                   id="documentTypeFilter"
+//                   value={selectedDocumentType}
+//                   onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+//                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
+//                   title="Filter by Document Type"
+//                 >
+//                   <option value="all">All Document Types</option>
+//                   {documentTypes.map((type) => (
+//                     <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
+//                       {type.DocumentTypeName}
+//                     </option>
+//                   ))}
+//                 </select>
+//               </div>
+//             <div className="w-64">
+//                 <select
+//                   id="documentStatusFilter"
+//                   value={selectedDocumentStatus}
+//                   onChange={(e) => setSelectedDocumentStatus(e.target.value)}
+//                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
+//                   title="Filter by Submission Status"
+//                 >
+//                   <option value="all">All Statuses</option>
+//                   <option value="Submitted">Submitted</option>
+//                   <option value="Approved">Approved</option>
+//                   <option value="Rejected">Rejected</option>
+//                 </select>
+//               </div>
+//             <button
+//               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+//               onClick={openAddDocTypeModal}
+//             >
+//               <FaPlus /> Add New Document Type
+//             </button>
+//             <button
+//               className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300"
+//               onClick={() => setShowDocTypeListModal(true)}
+//               title="Manage Document Types"
+//               type="button"
+//             >
+//               <FaPen /> / <FaTrash/>
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Faculty Table */}
+//       {activeView === 'facultyManagement' && (
+//         loading ? (
+//           <div className="text-center py-4">Loading...</div>
+//         ) : (
+//           <div className="overflow-x-auto">
+//             <table className="min-w-full bg-white border rounded-lg">
+//               <thead className="bg-gray-50">
+//                 <tr>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <input
+//                       type="checkbox"
+//                       checked={selectAll}
+//                       onChange={handleSelectAll}
+//                       className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+//                       title="Select all faculty members"
+//                     />
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     Faculty
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     Position
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     Department
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     Employment Status
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     List of Documents
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     Submission Status
+//                   </th>
+//                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     Actions
+//                   </th>
+//                 </tr>
+//               </thead>
+//               <tbody className="divide-y divide-gray-200">
+//                 {filteredFacultyList.map((faculty) => {
+//                   const documentsForFaculty = documents.filter(doc => doc.FacultyID === faculty.FacultyID);
+//                   const submittedCount = documentTypes.filter(dt =>
+//                     documentsForFaculty.some(doc =>
+//                       doc.DocumentTypeID === dt.DocumentTypeID &&
+//                       (doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
+//                     )
+//                   ).length;
+//                   const totalRequired = documentTypes.length;
+
+//                   // Add sorting function for documents
+//                   const getStatusOrder = (status: string) => {
+//                     switch (status) {
+//                       case 'Submitted': return 1;
+//                       case 'Rejected': return 2;
+//                       case 'Approved': return 3;
+//                       default: return 4;
+//                     }
+//                   };
+
+//                   const sortedDocuments = [...documentsForFaculty].sort((a, b) => {
+//                     const statusOrderA = getStatusOrder(a.SubmissionStatus);
+//                     const statusOrderB = getStatusOrder(b.SubmissionStatus);
+                    
+//                     if (statusOrderA !== statusOrderB) {
+//                       return statusOrderA - statusOrderB;
+//                     }
+                    
+//                     // If status is the same, sort by date (newest first)
+//                     return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
+//                   });
+
+//                   let facultySubmissionStatus = 'N/A';
+//                   if (totalRequired > 0) {
+//                     if (submittedCount === totalRequired) {
+//                       facultySubmissionStatus = 'Complete';
+//                     } else if (submittedCount > 0 && submittedCount < totalRequired) {
+//                       facultySubmissionStatus = 'Incomplete';
+//                     } else {
+//                       facultySubmissionStatus = 'Pending';
+//                     }
+//                   }
+
+//                   return (
+//                     <React.Fragment key={faculty.FacultyID}>
+//                       <tr className={`hover:bg-gray-50 ${selectedRows.includes(faculty.FacultyID) ? 'bg-gray-100' : ''}`}>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <input
+//                             type="checkbox"
+//                             checked={selectedRows.includes(faculty.FacultyID)}
+//                             onChange={() => handleRowSelect(faculty.FacultyID)}
+//                             className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+//                             title={`Select ${faculty.User?.FirstName} ${faculty.User?.LastName}`}
+//                           />
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div className="flex items-center">
+//                             <div className="h-10 w-10 flex-shrink-0">
+//                               <img
+//                                 className="h-10 w-10 rounded-full object-cover"
+//                                 src={getProfilePhoto(faculty.User?.UserID)}
+//                                 alt={`${faculty.User?.FirstName || ''} ${faculty.User?.LastName || ''}`}
+//                               />
+//                             </div>
+//                             <div className="ml-4">
+//                               <div className="text-sm font-medium text-gray-900">
+//                                 {faculty.User?.FirstName || 'Unknown'} {faculty.User?.LastName || 'User'}
+//                               </div>
+//                               <div className="text-sm text-gray-500">{faculty.User?.Email || 'No email'}</div>
+//                             </div>
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                           {faculty.Position}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                           {faculty.Department.DepartmentName}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                           {faculty.EmploymentStatus}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                           <div className="flex items-center space-x-2">
+//                             <span>Submitted: {submittedCount}/{totalRequired}</span>
+//                             {totalRequired > 0 && (
+//                               <button
+//                                 onClick={(e) => {
+//                                   e.stopPropagation();
+//                                   setExpandedFacultyId(expandedFacultyId === faculty.FacultyID ? null : faculty.FacultyID);
+//                                 }}
+//                                 className="text-gray-500 hover:text-gray-700 focus:outline-none"
+//                                 title={expandedFacultyId === faculty.FacultyID ? 'Collapse documents' : 'Expand documents'}
+//                               >
+//                                 {expandedFacultyId === faculty.FacultyID ? '▲' : '▼'}
+//                               </button>
+//                             )}
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+//                             facultySubmissionStatus === 'Complete'
+//                               ? 'bg-emerald-100 text-emerald-800'
+//                               : facultySubmissionStatus === 'Incomplete'
+//                               ? 'bg-amber-100 text-amber-800'
+//                               : facultySubmissionStatus === 'Pending'
+//                               ? 'bg-slate-100 text-slate-800'
+//                               : 'bg-gray-100 text-gray-700' // For N/A
+//                           }`}>
+//                             {facultySubmissionStatus}
+//                           </span>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+//                           <div className="flex space-x-2">
+//                             <button 
+//                               onClick={() => openViewDetailsModal(faculty)}
+//                               title="View Details" 
+//                               className="text-blue-600 hover:text-blue-900"
+//                             >
+//                               <FaEye />
+//                             </button>
+//                             <button 
+//                               onClick={() => openEditModal(faculty)}
+//                               title="Edit" 
+//                               className="text-indigo-600 hover:text-indigo-900"
+//                             >
+//                               <FaPen />
+//                             </button>
+//                             <button 
+//                               onClick={() => openDeleteModal(faculty)}
+//                               title="Delete" 
+//                               className="text-red-600 hover:text-red-900"
+//                             >
+//                               <FaTrash />
+//                             </button>
+//                           </div>
+//                         </td>
+//                       </tr>
+//                       {expandedFacultyId === faculty.FacultyID && (
+//                         <tr>
+//                           <td colSpan={8} className="px-0 py-0 bg-gray-50">
+//                             <div className="m-4 rounded-xl shadow-lg bg-white border border-gray-200 p-6">
+//                               <h4 className="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2">
+//                                 <span className="inline-block w-2 h-2 bg-[#800000] rounded-full"></span>
+//                                 Documents for {faculty.User?.FirstName} {faculty.User?.LastName}
+//                               </h4>
+//                               <div className="overflow-x-auto">
+//                                 <table className="min-w-full text-sm">
+//                                   <thead>
+//                                     <tr className="bg-gray-100 text-gray-700">
+//                                       <th className="p-3 text-left font-semibold">Document Type</th>
+//                                       <th className="p-3 text-left font-semibold">Status</th>
+//                                       <th className="p-3 text-left font-semibold">Date</th>
+//                                       <th className="p-3 text-left font-semibold">Actions</th>
+//                                     </tr>
+//                                   </thead>
+//                                   <tbody>
+//                                     {documentTypes.length > 0 ? (
+//                                       documentTypes.map((dt) => {
+//                                         const doc = documentsForFaculty.find(d => d.DocumentTypeID === dt.DocumentTypeID);
+//                                         return (
+//                                           <tr key={dt.DocumentTypeID} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
+//                                             <td className="p-3 font-medium text-gray-900">{dt.DocumentTypeName}</td>
+//                                             <td className="p-3">
+//                                               <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold
+//                                                 ${doc
+//                                                   ? doc.SubmissionStatus === 'Approved'
+//                                                     ? 'bg-green-100 text-green-700'
+//                                                     : doc.SubmissionStatus === 'Submitted'
+//                                                     ? 'bg-blue-100 text-blue-700'
+//                                                     : doc.SubmissionStatus === 'Rejected'
+//                                                     ? 'bg-red-100 text-red-700'
+//                                                     : 'bg-gray-100 text-gray-700'
+//                                                   : 'bg-gray-100 text-gray-700'
+//                                                 }`}>
+//                                                 {doc ? doc.SubmissionStatus : 'Pending'}
+//                                               </span>
+//                                             </td>
+//                                             <td className="p-3 text-gray-500">
+//                                               {doc ? new Date(doc.UploadDate).toLocaleDateString() : '-'}
+//                                             </td>
+//                                             <td className="p-3">
+//                                               {doc ? (
+//                                                 <div className="flex items-center gap-3">
+//                                                   <button
+//                                                     onClick={() => handleViewDocument(doc)}
+//                                                     className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                                                     title="View Document"
+//                                                     type="button"
+//                                                   >
+//                                                     <FaEye />
+//                                                   </button>
+//                                                   {doc.FileUrl && (
+//                                                     <a
+//                                                       href={doc.FileUrl}
+//                                                       target="_blank"
+//                                                       rel="noopener noreferrer"
+//                                                       className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                                                       title="Open in New Tab"
+//                                                     >
+//                                                       <FaLink />
+//                                                     </a>
+//                                                   )}
+//                                                   {doc.DownloadUrl && (
+//                                                     <a
+//                                                       href={doc.DownloadUrl}
+//                                                       target="_blank"
+//                                                       rel="noopener noreferrer"
+//                                                       className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                                                       title="Download Document"
+//                                                     >
+//                                                       <FaDownload />
+//                                                     </a>
+//                                                   )}
+//                                                 </div>
+//                                               ) : (
+//                                                 <span className="text-gray-400 italic">No file</span>
+//                                               )}
+//                                             </td>
+//                                           </tr>
+//                                         );
+//                                       })
+//                                     ) : (
+//                                       <tr>
+//                                         <td colSpan={4} className="p-3 text-center text-gray-400">No document types defined.</td>
+//                                       </tr>
+//                                     )}
+//                                   </tbody>
+//                                 </table>
+//                               </div>
+//                             </div>
+//                           </td>
+//                         </tr>
+//                       )}
+//                     </React.Fragment>
+//                   );
+//                 })}
+//                 {filteredFacultyList.length === 0 && (
+//                   <tr>
+//                     <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+//                       No faculty members found matching your search criteria
+//                     </td>
+//                   </tr>
+//                 )}
+//               </tbody>
+//             </table>
+//           </div>
+//         )
+//       )}
+
+//       {/* Document Management Table */}
+//       {activeView === 'documentManagement' && (
+//         <div className="overflow-x-auto">
+//           <table className="min-w-full bg-white border rounded-lg">
+//             <thead className="bg-gray-50">
+//               <tr>
+//                 {/* Removed select all checkbox for documents */}
+//                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+//                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty Name</th>
+//                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
+//                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
+//                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+//                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+//               </tr>
+//             </thead>
+//             <tbody className="divide-y divide-gray-200">
+//               {docLoading ? (
+//                 <tr>
+//                   <td colSpan={6} className="py-8 text-center text-gray-400">Loading documents...</td>
+//                 </tr>
+//               ) : documents.length === 0 ? (
+//                 <tr>
+//                   <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
+//                 </tr>
+//               ) : (
+//                 documents
+//                   .filter(doc => 
+//                     (selectedDocumentStatus === 'all' || doc.SubmissionStatus === selectedDocumentStatus) &&
+//                     (selectedDocumentType === 'all' || doc.DocumentTypeID === selectedDocumentType) &&
+//                     (documentSearchTerm === '' || 
+//                      doc.facultyName.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+//                      doc.documentTypeName.toLowerCase().includes(documentSearchTerm.toLowerCase()))
+//                   )
+//                   .sort((a, b) => {
+//                     // Custom order: Submitted (1), Pending (2), Rejected (3), Approved (4)
+//                     const getStatusOrder = (status: string) => {
+//                       switch (status) {
+//                         case 'Submitted': return 1;
+//                         case 'Rejected': return 2;
+//                         case 'Approved': return 3;
+//                         default: return 4;
+//                       }
+//                     };
+//                     const orderA = getStatusOrder(a.SubmissionStatus);
+//                     const orderB = getStatusOrder(b.SubmissionStatus);
+//                     if (orderA !== orderB) {
+//                       return orderA - orderB;
+//                     }
+//                     // If same status, sort by date (newest first)
+//                     return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
+//                   })
+//                   .map((doc, idx) => {
+//                     return (
+//                       <tr
+//                         key={doc.DocumentID}
+//                         className="hover:bg-gray-100 transition-colors"
+//                       >
+//                         {/* Removed document selection checkbox */}
+//                         <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+//                         <td className="px-6 py-4 text-sm text-gray-700">{doc.facultyName || 'Unknown Faculty'}</td>
+//                         <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
+//                         <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
+//                         <td className="px-6 py-4">
+//                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+//                             ${
+//                               doc.SubmissionStatus === 'Approved'
+//                                 ? 'bg-green-100 text-green-800'
+//                                 : doc.SubmissionStatus === 'Rejected'
+//                                 ? 'bg-red-100 text-red-800'
+//                                 : doc.SubmissionStatus === 'Submitted'
+//                                 ? 'bg-blue-100 text-blue-800'
+//                                 : 'bg-gray-100 text-gray-900' // For Pending
+//                             }
+//                           `}>
+//                             {doc.SubmissionStatus}
+//                           </span>
+//                         </td>
+//                         <td className="px-6 py-4 flex items-center space-x-2">
+//                           <select
+//                             title="Change Submission Status"
+//                             value={doc.SubmissionStatus}
+//                             onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
+//                             disabled={statusUpdating === doc.DocumentID}
+//                             className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                           >
+//                             <option value="Submitted">Submitted</option>
+//                             <option value="Approved">Approved</option>
+//                             <option value="Rejected">Rejected</option>
+//                           </select>
+//                           {doc.FileUrl && (
+//                             <span className="flex items-center space-x-1">
+//                               <button
+//                                 onClick={() => handleViewDocument(doc)}
+//                                 className="text-gray-600 hover:text-gray-900"
+//                                 title="View Document"
+//                               >
+//                                 <FaEye className="w-5 h-5" />
+//                               </button>
+//                               <a
+//                                 href={doc.FileUrl}
+//                                 target="_blank"
+//                                 rel="noopener noreferrer"
+//                                 className="text-gray-600 hover:text-gray-900"
+//                                 title="Open in New Tab"
+//                               >
+//                                 <FaLink className="w-5 h-5" />
+//                               </a>
+//                             </span>
+//                           )}
+//                           {doc.DownloadUrl && (
+//                             <a
+//                               href={doc.DownloadUrl}
+//                               download
+//                               className="text-gray-600 hover:text-gray-900"
+//                               title="Download Document"
+//                             >
+//                               <FaDownload className="w-5 h-5" />
+//                             </a>
+//                           )}
+//                         </td>
+//                       </tr>
+//                     );
+//                   })
+//               )}
+//             </tbody>
+//           </table>
+//         </div>
+//       )}
+      
+
+//       {/* Edit Faculty Modal */}
+//       {isEditModalOpen && selectedFaculty && (
+//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+//             <div className="flex justify-between items-center mb-6">
+//               <h2 className="text-2xl font-bold text-gray-800">Edit Faculty</h2>
+//               <button
+//                 title="Close"
+//                 onClick={() => {
+//                   setIsEditModalOpen(false);
+//                   setSelectedFaculty(null);
+//                   setEditFaculty({});
+//                 }}
+//                 className="text-gray-500 hover:text-gray-700"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+
+//             {/* Faculty Info Header */}
+//             <div className="flex items-center space-x-4 mb-6 pb-4 border-b">
+//               <div className="h-16 w-16 flex-shrink-0">
+//                 <img
+//                   className="h-16 w-16 rounded-full object-cover border-2 border-[#800000]"
+//                   src={selectedFaculty.User?.Photo || '/default-avatar.png'}
+//                   alt={`${selectedFaculty.User?.FirstName || ''} ${selectedFaculty.User?.LastName || ''}`}
+//                 />
+//               </div>
+//               <div>
+//                 <h3 className="text-lg font-semibold text-gray-900">
+//                   {selectedFaculty.User?.FirstName || 'Unknown'} {selectedFaculty.User?.LastName || 'User'}
+//                 </h3>
+//                 <p className="text-sm text-gray-500">{selectedFaculty.User?.Email || 'No email'}</p>
+//               </div>
+//             </div>
+
+//             <form onSubmit={handleEditFaculty} className="space-y-6">
+//               <div className="grid grid-cols-1 gap-6">
+//                 <div>
+//                   <label htmlFor="Position" className="block text-sm font-medium text-gray-700 mb-1">
+//                     Position
+//                   </label>
+//                   <input
+//                     id="Position"
+//                     type="text"
+//                     value={editFaculty.Position || ''}
+//                     onChange={(e) => setEditFaculty({...editFaculty, Position: e.target.value})}
+//                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+//                     required
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <label htmlFor="Department" className="block text-sm font-medium text-gray-700 mb-1">
+//                     Department
+//                   </label>
+//                   <select
+//                     id="Department"
+//                     value={editFaculty.DepartmentID || ''}
+//                     onChange={(e) => setEditFaculty({...editFaculty, DepartmentID: parseInt(e.target.value)})}
+//                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+//                     required
+//                   >
+//                     <option value="">Select Department</option>
+//                     {departments.map((dept) => (
+//                       <option key={dept.DepartmentID} value={dept.DepartmentID}>
+//                         {dept.DepartmentName}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+
+//                 <div>
+//                   <label htmlFor="EmploymentStatus" className="block text-sm font-medium text-gray-700 mb-1">
+//                     Employment Status
+//                   </label>
+//                   <select
+//                     id="EmploymentStatus"
+//                     value={editFaculty.EmploymentStatus || ''}
+//                     onChange={(e) => setEditFaculty({...editFaculty, EmploymentStatus: e.target.value})}
+//                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+//                     required
+//                   >
+//                     <option value="Hired">Hired</option>
+//                     <option value="Resigned">Resigned</option>
+//                   </select>
+//                 </div>
+
+//                 {editFaculty.EmploymentStatus === 'Resigned' && (
+//                   <div className="transition-all duration-300 ease-in-out">
+//                     <label htmlFor="ResignationDate" className="block text-sm font-medium text-gray-700 mb-1">
+//                       Resignation Date
+//                     </label>
+//                     <input
+//                       id="ResignationDate"
+//                       type="date"
+//                       value={editFaculty.ResignationDate || ''}
+//                       onChange={(e) => setEditFaculty({...editFaculty, ResignationDate: e.target.value})}
+//                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+//                       required
+//                     />
+//                   </div>
+//                 )}
+//               </div>
+
+//               <div className="flex justify-end space-x-3 pt-4 border-t">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setIsEditModalOpen(false);
+//                     setSelectedFaculty(null);
+//                     setEditFaculty({});
+//                   }}
+//                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+//                 >
+//                   Cancel
+//                 </button>
+//                 <button
+//                   type="submit"
+//                   className="px-4 py-2 text-white bg-[#800000] rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+//                   disabled={loading}
+//                 >
+//                   {loading ? (
+//                     <span className="flex items-center">
+//                       <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24">
+//                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+//                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+//                       </svg>
+//                       Updating...
+//                     </span>
+//                   ) : (
+//                     'Update Faculty'
+//                   )}
+//                 </button>
+//               </div>
+//             </form>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Delete Faculty Modal */}
+//       {isDeleteModalOpen && selectedFaculty && (
+//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+//           <div className="bg-white rounded-lg p-6 max-w-md w-full">
+//             <div className="flex justify-between items-center mb-4">
+//               <h2 className="text-xl font-bold text-gray-800">Delete Faculty</h2>
+//               <button
+//                 onClick={() => {
+//                   setIsDeleteModalOpen(false);
+//                   setSelectedFaculty(null);
+//                   setDeleteConfirmation('');
+//                   setIsDeleteConfirmed(false);
+//                 }}
+//                 className="text-gray-500 hover:text-gray-700"
+//                 title="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+
+//             <div className="mb-6">
+//               <div className="flex items-center space-x-4 mb-4">
+//                 <div className="h-12 w-12 flex-shrink-0">
+//                   <img
+//                     className="h-12 w-12 rounded-full object-cover border-2 border-red-500"
+//                     src={selectedFaculty.User?.Photo || '/default-avatar.png'}
+//                     alt={`${selectedFaculty.User?.FirstName || ''} ${selectedFaculty.User?.LastName || ''}`}
+//                   />
+//                 </div>
+//                 <div>
+//                   <h3 className="text-lg font-semibold text-gray-900">
+//                     {selectedFaculty.User?.FirstName} {selectedFaculty.User?.LastName}
+//                   </h3>
+//                   <p className="text-sm text-gray-500">{selectedFaculty.User?.Email}</p>
+//                 </div>
+//               </div>
+
+//               <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+//                 <p className="text-red-800 mb-2">
+//                   This action cannot be undone. This will permanently delete the faculty member's account and remove their data from our servers.
+//                 </p>
+//                 <p className="text-sm text-red-700">
+//                   Please type <span className="font-semibold">{selectedFaculty.User?.FirstName} {selectedFaculty.User?.LastName}</span> to confirm.
+//                 </p>
+//               </div>
+
+//               <div className="mb-4">
+//                 <input
+//                   type="text"
+//                   value={deleteConfirmation}
+//                   onChange={(e) => setDeleteConfirmation(e.target.value)}
+//                   placeholder="Type the faculty member's full name"
+//                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="flex justify-end space-x-3">
+//               <button
+//                 onClick={() => {
+//                   setIsDeleteModalOpen(false);
+//                   setSelectedFaculty(null);
+//                   setDeleteConfirmation('');
+//                   setIsDeleteConfirmed(false);
+//                 }}
+//                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 onClick={handleDeleteFaculty}
+//                 className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+//                 disabled={!isDeleteConfirmed || loading}
+//               >
+//                 {loading ? (
+//                   <span className="flex items-center">
+//                     <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24">
+//                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+//                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+//                     </svg>
+//                     Deleting...
+//                   </span>
+//                 ) : (
+//                   'Delete Faculty'
+//                 )}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Status Update Confirmation Modal */}
+//       {isStatusUpdateModalOpen && pendingStatusUpdate && (
+//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+//             <div className="flex justify-between items-center mb-4">
+//               <h2 className="text-xl font-bold text-gray-800">Confirm Status Update</h2>
+//               <button
+//                 onClick={() => {
+//                   setIsStatusUpdateModalOpen(false);
+//                   setPendingStatusUpdate(null);
+//                 }}
+//                 className="text-gray-500 hover:text-gray-700"
+//                 title="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+            
+//             <div className="mb-6">
+//               <p className="text-gray-600 mb-2">
+//                 Are you sure you want to update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.facultyName}</span>?
+//               </p>
+//               <div className="bg-gray-50 p-4 rounded-md">
+//                 <p className="text-sm text-gray-600">
+//                   Current Status: <span className="font-medium text-gray-800">
+//                     {documents.find(d => d.DocumentID === pendingStatusUpdate.docId)?.SubmissionStatus}
+//                   </span>
+//                 </p>
+//                 <p className="text-sm text-gray-600 mt-1">
+//                   New Status: <span className="font-medium text-gray-800">{pendingStatusUpdate.newStatus}</span>
+//                 </p>
+//               </div>
+//             </div>
+
+//             <div className="flex justify-end space-x-3">
+//               <button
+//                 onClick={() => {
+//                   setIsStatusUpdateModalOpen(false);
+//                   setPendingStatusUpdate(null);
+//                 }}
+//                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 onClick={handleConfirmedStatusUpdate}
+//                 className="px-4 py-2 text-white bg-[#800000] rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+//                 disabled={statusUpdating === pendingStatusUpdate.docId}
+//               >
+//                 {statusUpdating === pendingStatusUpdate.docId ? (
+//                   <span className="flex items-center">
+//                     <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24">
+//                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+//                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+//                     </svg>
+//                     Updating...
+//                   </span>
+//                 ) : (
+//                   'Confirm Update'
+//                 )}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Document Viewer Modal */}
+//       {isViewerOpen && selectedDocument && selectedDocument.FileUrl && (
+//         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+//             {/* Header */}
+//             <div className="flex justify-between items-center p-4 border-b">
+//               <div>
+//                 <h2 className="text-xl font-semibold text-gray-800">
+//                   {selectedDocument.documentTypeName}
+//                 </h2>
+//                 <p className="text-sm text-gray-500">
+//                   {selectedDocument.facultyName} - {new Date(selectedDocument.UploadDate).toLocaleDateString()}
+//                 </p>
+//               </div>
+//               <div className="flex items-center space-x-4">
+//                 <a
+//                   href={selectedDocument.FileUrl}
+//                   target="_blank"
+//                   rel="noopener noreferrer"
+//                   className="text-gray-600 hover:text-gray-900"
+//                   title="Open in New Tab"
+//                 >
+//                   <FaLink className="w-5 h-5" />
+//                 </a>
+//                 <a
+//                   href={selectedDocument.DownloadUrl}
+//                   download
+//                   className="text-gray-600 hover:text-gray-900"
+//                   title="Download Document"
+//                 >
+//                   <FaDownload className="w-5 h-5" />
+//                 </a>
+//                 <button
+//                   onClick={handleCloseViewer}
+//                   className="text-gray-500 hover:text-gray-700"
+//                   title="Close"
+//                 >
+//                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                   </svg>
+//                 </button>
+//               </div>
+//             </div>
+
+//             {/* Document Viewer */}
+//             <div className="flex-1 p-4 overflow-auto">
+//               {(() => {
+//                 const fileUrl = selectedDocument.FileUrl;
+//                 if (!fileUrl) {
+//                   return (
+//                     <div className="flex flex-col items-center justify-center h-full">
+//                       <p className="text-gray-600 mb-2">No file URL provided.</p>
+//                     </div>
+//                   );
+//                 }
+//                 if (isGoogleDoc(fileUrl)) {
+//                   const exportUrl = getGoogleDocExportUrl(fileUrl, 'pdf');
+//                   if (!viewerError) {
+//                     return (
+//                       <iframe
+//                         src={`https://docs.google.com/gview?url=${encodeURIComponent(exportUrl)}&embedded=true`}
+//                         style={{ width: '100%', height: '70vh', border: 'none' }}
+//                         title="PDF Viewer"
+//                       />
+//                     );
+//                   } else {
+//                     return (
+//                       <iframe
+//                         src={`https://docs.google.com/gview?url=${encodeURIComponent(exportUrl)}&embedded=true`}
+//                         style={{ width: '100%', height: '70vh', border: 'none' }}
+//                         title="PDF Viewer"
+//                       />
+//                     );
+//                   }
+//                 } else if (isPdfFile(fileUrl)) {
+//                   const pdfUrl = getDirectDriveUrl(fileUrl);
+//                   if (!viewerError) {
+//                     return (
+//                       <iframe
+//                         src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
+//                         style={{ width: '100%', height: '70vh', border: 'none' }}
+//                         title="PDF Viewer"
+//                       />
+//                     );
+//                   } else {
+//                     return (
+//                       <iframe
+//                         src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
+//                         style={{ width: '100%', height: '70vh', border: 'none' }}
+//                         title="PDF Viewer"
+//                       />
+//                     );
+//                   }
+//                 } else if (isDocFile(fileUrl)) {
+//                   return (
+//                     <iframe
+//                       src={`https://docs.google.com/gview?url=${encodeURIComponent(getDirectDriveUrl(fileUrl))}&embedded=true`}
+//                       style={{ width: '100%', height: '70vh', border: 'none' }}
+//                       title="Word Document Viewer"
+//                     />
+//                   );
+//                 } else if (isImageFile(fileUrl)) {
+//                   return (
+//                     <img
+//                       src={getDirectDriveUrl(fileUrl)}
+//                       alt="Document"
+//                       style={{ width: '100%', height: '70vh', objectFit: 'contain' }}
+//                     />
+//                   );
+//                 } else {
+//                   return (
+//                     <div className="flex flex-col items-center justify-center h-full">
+//                       <p className="text-gray-600 mb-2">
+//                         This file type cannot be displayed directly in the viewer.
+//                       </p>
+//                       <a
+//                         href={fileUrl}
+//                         target="_blank"
+//                         rel="noopener noreferrer"
+//                         className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-md hover:bg-red-800 transition-colors"
+//                       >
+//                         <FaLink className="mr-2" />
+//                         Open File in New Tab
+//                       </a>
+//                     </div>
+//                   );
+//                 }
+//               })()}
+//               {/* Show fallback message only if all else fails */}
+//               {viewerError && selectedDocument.FileUrl && !isPdfFile(selectedDocument.FileUrl ?? '') && !isGoogleDoc(selectedDocument.FileUrl ?? '') && (
+//                 <div className="flex flex-col items-center justify-center h-full">
+//                   <p className="text-gray-600 mb-2">
+//                     This file type cannot be displayed directly in the viewer.
+//                   </p>
+//                   <a
+//                     href={selectedDocument.FileUrl}
+//                     target="_blank"
+//                     rel="noopener noreferrer"
+//                     className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-md hover:bg-red-800 transition-colors"
+//                   >
+//                     <FaLink className="mr-2" />
+//                     Open File in New Tab
+//                   </a>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Add New Document Type Modal */}
+//       {isDocTypeModalOpen && (
+//         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+//           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-0 overflow-hidden animate-fadeIn">
+//             <div className="flex items-center justify-between px-6 py-4 border-b">
+//               <h2 className="text-2xl font-bold text-gray-800">{editingDocType ? 'Edit Document Type' : 'Add New Document Type'}</h2>
+//               <button
+//                 onClick={() => {
+//                   setIsDocTypeModalOpen(false);
+//                   setDocTypeName('');
+//                   setDocTypeError(null);
+//                   setEditingDocType(null);
+//                 }}
+//                 className="text-gray-400 hover:text-gray-700 focus:outline-none"
+//                 aria-label="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+//             <form onSubmit={handleAddOrEditDocType} className="px-6 py-6 space-y-6">
+//               <div>
+//                 <label htmlFor="documentType" className="block text-sm font-semibold text-gray-700 mb-1">
+//                   Document Type <span className="text-red-600">*</span>
+//                 </label>
+//                 <input
+//                   id="documentType"
+//                   type="text"
+//                   value={docTypeName}
+//                   onChange={e => {
+//                     setDocTypeName(e.target.value);
+//                     setDocTypeError(validateDocTypeName(e.target.value));
+//                   }}
+//                   className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-base ${docTypeError ? 'border-red-500' : 'border-gray-300'}`}
+//                   required
+//                   title="Type a document type name"
+//                   list="documentTypeList"
+//                   placeholder="e.g. Contract, Resume, NBI Clearance"
+//                   autoComplete="off"
+//                   maxLength={50}
+//                 />
+//                 <datalist id="documentTypeList">
+//                   {documentTypes.map((type) => (
+//                     <option key={type.DocumentTypeID} value={type.DocumentTypeName} />
+//                   ))}
+//                 </datalist>
+//                 {/* Always show requirements, and show error if not unique */}
+//                 {docTypeError ? (
+//                   <>
+//                     <div className="text-red-600 text-xs mt-1">{docTypeError}</div>
+//                     <div className="text-gray-400 text-xs mt-1">Alphanumeric, min 3 chars, unique, no repeated symbols/letters.</div>
+//                   </>
+//                 ) : (
+//                   <div className="text-gray-400 text-xs mt-1">Alphanumeric, min 3 chars, unique, no repeated symbols/letters.</div>
+//                 )}
+//               </div>
+//               <div className="flex justify-end gap-3 pt-2">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setIsDocTypeModalOpen(false);
+//                     setDocTypeName('');
+//                     setDocTypeError(null);
+//                     setEditingDocType(null);
+//                   }}
+//                   className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+//                 >
+//                   Cancel
+//                 </button>
+//                 <button
+//                   type="submit"
+//                   className="bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-red-800 flex items-center gap-2 transition-colors disabled:opacity-50"
+//                   disabled={!!docTypeError || addingDocType}
+//                 >
+//                   {addingDocType ? (
+//                     <svg className="w-5 h-5 animate-spin mr-2" viewBox="0 0 24 24">
+//                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+//                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+//                     </svg>
+//                   ) : null}
+//                   {editingDocType ? 'Save Changes' : 'Save Document Type'}
+//                 </button>
+//               </div>
+//             </form>
+//           </div>
+//         </div>
+//       )}
+//       {/* Document Type List Modal */}
+//       {showDocTypeListModal && (
+//         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+//           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-0 overflow-hidden animate-fadeIn">
+//             <div className="flex items-center justify-between px-6 py-4 border-b">
+//               <h2 className="text-2xl font-bold text-gray-800">Manage Document Types</h2>
+//               <button
+//                 onClick={() => setShowDocTypeListModal(false)}
+//                 className="text-gray-400 hover:text-gray-700 focus:outline-none"
+//                 aria-label="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+//             <div className="px-6 py-6">
+//               <ul className="divide-y divide-gray-200">
+//                 {documentTypes.length === 0 ? (
+//                   <li className="py-4 text-gray-500 text-center">No document types found.</li>
+//                 ) : (
+//                   documentTypes.map((type) => (
+//                     <li key={type.DocumentTypeID} className="flex items-center justify-between py-3">
+//                       <span className="text-gray-800">{type.DocumentTypeName}</span>
+//                       <span className="flex items-center gap-2">
+//                         <button
+//                           className="text-indigo-600 hover:text-indigo-900"
+//                           title="Edit"
+//                           onClick={() => {
+//                             setShowDocTypeListModal(false);
+//                             openEditDocTypeModal(type);
+//                           }}
+//                         >
+//                           <FaPen />
+//                         </button>
+//                         <button
+//                           className="text-red-600 hover:text-red-900 ml-2"
+//                           title="Delete"
+//                           onClick={async () => {
+//                             setDocTypeToDelete(type);
+//                             setIsDeleteDocTypeModalOpen(true);
+//                             setDeleteDocTypeConfirmation('');
+//                             setIsDeleteDocTypeConfirmed(false);
+//                             // Check if this document type is referenced by any document
+//                             setIsDeletingDocType(true);
+//                             try {
+//                               const res = await fetch(`/api/faculty-documents?documentTypeId=${type.DocumentTypeID}`);
+//                               const data = await res.json();
+//                               setIsDocTypeReferenced(Array.isArray(data) && data.length > 0);
+//                             } catch (err) {
+//                               setIsDocTypeReferenced(false); // fallback: allow delete if check fails
+//                             } finally {
+//                               setIsDeletingDocType(false);
+//                             }
+//                           }}
+//                           disabled={isDeletingDocType}
+//                         >
+//                           <FaTrash />
+//                         </button>
+//                       </span>
+//                     </li>
+//                   ))
+//                 )}
+//               </ul>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//       {showDocTypeSuccessModal && (
+//         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+//           <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 flex flex-col items-center">
+//             <h2 className="text-2xl font-bold text-green-700 mb-4">Success</h2>
+//             <p className="text-gray-800 mb-6 text-center">{docTypeSuccessMessage}</p>
+//             <button
+//               className="bg-[#800000] text-white px-6 py-2 rounded hover:bg-red-800"
+//               onClick={() => {
+//                 setShowDocTypeSuccessModal(false);
+//                 setNotification({ type: 'success', message: docTypeSuccessMessage });
+//               }}
+//             >
+//               OK
+//             </button>
+//           </div>
+//         </div>
+//       )}
+//       {isDeleteDocTypeModalOpen && docTypeToDelete && (
+//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+//             <div className="flex justify-between items-center mb-4">
+//               <h2 className="text-xl font-bold text-gray-800">Delete Document Type</h2>
+//               <button
+//                 onClick={() => {
+//                   setIsDeleteDocTypeModalOpen(false);
+//                   setDocTypeToDelete(null);
+//                   setDeleteDocTypeConfirmation('');
+//                   setIsDeleteDocTypeConfirmed(false);
+//                   setIsDocTypeReferenced(false);
+//                 }}
+//                 className="text-gray-500 hover:text-gray-700"
+//                 title="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+
+//             <div className="mb-6">
+//               <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+//                 {isDocTypeReferenced ? (
+//                   <p className="text-red-800 font-semibold">This document type cannot be deleted.</p>
+//                 ) : (
+//                   <>
+//                     <p className="text-red-800 mb-2">
+//                       This action cannot be undone. This will permanently delete the document type <span className="font-semibold">{docTypeToDelete.DocumentTypeName}</span>.
+//                     </p>
+//                     <p className="text-sm text-red-700">
+//                       Please type <span className="font-semibold">{docTypeToDelete.DocumentTypeName}</span> to confirm.
+//                     </p>
+//                   </>
+//                 )}
+//               </div>
+//               <input
+//                 type="text"
+//                 value={deleteDocTypeConfirmation}
+//                 onChange={e => {
+//                   setDeleteDocTypeConfirmation(e.target.value);
+//                   setIsDeleteDocTypeConfirmed(e.target.value === docTypeToDelete.DocumentTypeName);
+//                 }}
+//                 placeholder="Type the document type name"
+//                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+//                 disabled={isDocTypeReferenced}
+//               />
+//             </div>
+
+//             <div className="flex justify-end space-x-3">
+//               <button
+//                 onClick={() => {
+//                   setIsDeleteDocTypeModalOpen(false);
+//                   setDocTypeToDelete(null);
+//                   setDeleteDocTypeConfirmation('');
+//                   setIsDeleteDocTypeConfirmed(false);
+//                   setIsDocTypeReferenced(false);
+//                 }}
+//                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 onClick={async () => {
+//                   setIsDeletingDocType(true);
+//                   await handleDeleteDocType(docTypeToDelete);
+//                   setIsDeletingDocType(false);
+//                   setIsDeleteDocTypeModalOpen(false);
+//                   setDocTypeToDelete(null);
+//                   setDeleteDocTypeConfirmation('');
+//                   setIsDeleteDocTypeConfirmed(false);
+//                   setIsDocTypeReferenced(false);
+//                 }}
+//                 className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+//                 disabled={!isDeleteDocTypeConfirmed || isDeletingDocType || isDocTypeReferenced}
+//               >
+//                 {isDeletingDocType ? (
+//                   <span className="flex items-center">
+//                     <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24">
+//                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+//                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+//                     </svg>
+//                     Deleting...
+//                   </span>
+//                 ) : (
+//                   'Delete Document Type'
+//                 )}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Add View Details Modal */}
+//       {isViewDetailsModalOpen && selectedFacultyDetails && (
+//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+//             <div className="flex justify-between items-center mb-6">
+//               <h2 className="text-2xl font-bold text-gray-800">Faculty Details</h2>
+//               <button
+//                 onClick={() => {
+//                   setIsViewDetailsModalOpen(false);
+//                   setSelectedFacultyDetails(null);
+//                 }}
+//                 className="text-gray-500 hover:text-gray-700"
+//                 title="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+//               {/* Personal Information */}
+//               <div className="bg-gray-50 p-4 rounded-lg">
+//                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Personal Information</h3>
+//                 <div className="space-y-3">
+//                   <div className="flex items-center">
+//                     <img
+//                       src={selectedFacultyDetails.User?.Photo || '/default-avatar.png'}
+//                       alt={`${selectedFacultyDetails.User?.FirstName} ${selectedFacultyDetails.User?.LastName}`}
+//                       className="w-20 h-20 rounded-full object-cover border-2 border-[#800000]"
+//                     />
+//                     <div className="ml-4">
+//                       <h4 className="text-xl font-semibold">
+//                         {selectedFacultyDetails.User?.FirstName} {selectedFacultyDetails.User?.LastName}
+//                       </h4>
+//                       <p className="text-gray-600">{selectedFacultyDetails.User?.Email}</p>
+//                     </div>
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4 mt-4">
+//                     <div>
+//                       <p className="text-sm text-gray-600">Date of Birth</p>
+//                       <p className="font-medium">{selectedFacultyDetails.DateOfBirth || 'Not specified'}</p>
+//                     </div>
+//                     <div>
+//                       <p className="text-sm text-gray-600">Gender</p>
+//                       <p className="font-medium">{selectedFacultyDetails.Gender || 'Not specified'}</p>
+//                     </div>
+//                     <div>
+//                       <p className="text-sm text-gray-600">Marital Status</p>
+//                       <p className="font-medium">{selectedFacultyDetails.MaritalStatus || 'Not specified'}</p>
+//                     </div>
+//                     <div>
+//                       <p className="text-sm text-gray-600">Nationality</p>
+//                       <p className="font-medium">{selectedFacultyDetails.Nationality || 'Not specified'}</p>
+//                     </div>
+//                   </div>
+//                 </div>
+//               </div>
+
+//               {/* Contact Information */}
+//               <div className="bg-gray-50 p-4 rounded-lg">
+//                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Contact Information</h3>
+//                 <div className="space-y-3">
+//                   <div>
+//                     <p className="text-sm text-gray-600">Phone</p>
+//                     <p className="font-medium">{selectedFacultyDetails.Phone || 'Not specified'}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-sm text-gray-600">Address</p>
+//                     <p className="font-medium">{selectedFacultyDetails.Address || 'Not specified'}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-sm text-gray-600">Emergency Contact</p>
+//                     <p className="font-medium">{selectedFacultyDetails.EmergencyContact || 'Not specified'}</p>
+//                   </div>
+
+//                 </div>
+
+//               </div>
+
+//               {/* Employment Information */}
+//               <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
+//                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Employment Information</h3>
+//                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+//                   <div>
+//                     <p className="text-sm text-gray-600">Position</p>
+//                     <p className="font-medium">{selectedFacultyDetails.Position}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-sm text-gray-600">Department</p>
+//                     <p className="font-medium">{selectedFacultyDetails.Department?.DepartmentName}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-sm text-gray-600">Employment Status</p>
+//                     <p className="font-medium">{selectedFacultyDetails.EmploymentStatus}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-sm text-gray-600">Hire Date</p>
+//                     <p className="font-medium">{selectedFacultyDetails.HireDate || 'Not specified'}</p>
+//                   </div>
+//                   {selectedFacultyDetails.EmploymentStatus === 'Resigned' && (
+//                     <div>
+//                       <p className="text-sm text-gray-600">Resignation Date</p>
+//                       <p className="font-medium">{selectedFacultyDetails.ResignationDate || 'Not specified'}</p>
+//                     </div>
+//                   )}
+//                   <div>
+//                     <p className="text-sm text-gray-600">Years of Service</p>
+//                     <p className="font-medium">
+//                       {selectedFacultyDetails.HireDate
+//                         ? `${Math.floor(
+//                             (new Date().getTime() - new Date(selectedFacultyDetails.HireDate).getTime()) /
+//                               (1000 * 60 * 60 * 24 * 365)
+//                           )} years`
+//                         : 'Not available'}
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+
+//             <div className="flex justify-end mt-6">
+//               <button
+//                 onClick={() => {
+//                   setIsViewDetailsModalOpen(false);
+//                   setSelectedFacultyDetails(null);
+//                 }}
+//                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+//               >
+//                 Close
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Add Import CSV Modal */}
+//       {isImportModalOpen && (
+//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white rounded-lg p-6 max-w-md w-full">
+//             <div className="flex justify-between items-center mb-4">
+//               <h2 className="text-xl font-bold text-gray-800">Import Faculty Data</h2>
+//               <button
+//                 onClick={() => {
+//                   setIsImportModalOpen(false);
+//                   setImportError(null);
+//                 }}
+//                 className="text-gray-500 hover:text-gray-700"
+//                 title="Close"
+//               >
+//                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+//                 </svg>
+//               </button>
+//             </div>
+
+//             <div className="mb-6">
+//               <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mb-4">
+//                 <p className="text-sm text-gray-600 mb-2">
+//                   Upload a CSV file containing faculty information. The file should follow the template format.
+//                 </p>
+//                 <button
+//                   onClick={handleDownloadTemplate}
+//                   className="text-[#800000] hover:text-red-800 text-sm font-medium"
+//                 >
+//                   Download Template
+//                 </button>
+//               </div>
+
+//               <input
+//                 type="file"
+//                 ref={fileInputRef}
+//                 accept=".csv"
+//                 onChange={(e) => {
+//                   const file = e.target.files?.[0];
+//                   if (file) {
+//                     handleImportCSV(file);
+//                   }
+//                 }}
+//                 className="hidden"
+//               />
+
+//               <button
+//                 onClick={() => fileInputRef.current?.click()}
+//                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center justify-center gap-2"
+//                 disabled={importLoading}
+//               >
+//                 <FaFile />
+//                 {importLoading ? 'Importing...' : 'Choose CSV File'}
+//               </button>
+
+//               {importError && (
+//                 <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md">
+//                   {importError}
+//                 </div>
+//               )}
+//             </div>
+
+//             <div className="flex justify-end">
+//               <button
+//                 onClick={() => {
+//                   setIsImportModalOpen(false);
+//                   setImportError(null);
+//                 }}
+//                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+//               >
+//                 Cancel
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default FacultyContent;

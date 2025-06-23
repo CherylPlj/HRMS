@@ -215,24 +215,23 @@ const UsersContent: React.FC = () => {
     { value: 'invitation_revoked', label: 'Invitation Revoked' }
   ];
 
-  // Filter users based on search, role, and date
+  // Filter users based on search, role, and date, and hide students
   const filteredUsers = users.filter((user) => {
+    // Exclude users with the 'Student' role
+    if (user.Role?.toLowerCase() === 'student') return false;
     const query = searchQuery.toLowerCase();
     const matchesQuery =
       user.FirstName.toLowerCase().includes(query) ||
       user.LastName.toLowerCase().includes(query) ||
       user.Email.toLowerCase().includes(query) ||
-      user.Role.toLowerCase().includes(query) ||
+      user.Role?.toLowerCase().includes(query) ||
       (user.Faculty?.Department?.DepartmentName?.toLowerCase().includes(query) ?? false);
-
     const matchesRole = selectedRole
-      ? user.Role.toLowerCase() === selectedRole.toLowerCase()
+      ? user.Role?.toLowerCase() === selectedRole.toLowerCase()
       : true;
-
     const matchesDate = selectedDate
       ? user.DateCreated && user.DateCreated.slice(0, 10) === selectedDate
       : true;
-
     return matchesQuery && matchesRole && matchesDate;
   });
 
@@ -286,6 +285,7 @@ const UsersContent: React.FC = () => {
           )
         `)
         .eq('isDeleted', false)
+        // .not('UserRole.role.name', 'eq', 'Student') // This line is the key!
         .order('DateCreated', { ascending: false });
 
       if (usersError) {
@@ -579,6 +579,12 @@ const UsersContent: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchDepartments();
+    // Listen for the custom event to reload users after migration
+    const handleUsersMigrated = () => fetchUsers();
+    window.addEventListener('users-migrated', handleUsersMigrated);
+    return () => {
+      window.removeEventListener('users-migrated', handleUsersMigrated);
+    };
   }, []);
 
   const handleAddUser = async () => {

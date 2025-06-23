@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { currentUser } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/clerk-sdk-node';
+import type { User as ClerkUser } from '@clerk/nextjs/server';
 
 interface User {
-  UserID: number;
+  UserID: string;  // Change to string since Clerk uses string IDs
   FirstName: string;
   LastName: string;
   Email: string;
@@ -19,7 +20,7 @@ interface Department {
 
 interface Faculty {
   FacultyID: number;
-  UserID: number;
+  UserID: string;  // Change to string since Clerk uses string IDs
   Position: string;
   DepartmentID: number;
   EmploymentStatus: string;
@@ -32,13 +33,13 @@ interface Faculty {
 
 export async function GET() {
   try {
-    const user = await currentUser();
-    if (!user) {
-      console.log('No authenticated user found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // const user = await currentUser();
+    // if (!user) {
+    //   console.log('No authenticated user found');
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
 
-    console.log('Fetching faculty data for user:', user.id);
+    // console.log('Fetching faculty data for user:', user.id);
 
     // First get all faculty
     const { data: faculty, error } = await supabaseAdmin
@@ -50,7 +51,6 @@ export async function GET() {
           FirstName,
           LastName,
           Email,
-          Photo,
           Status,
           isDeleted
         ),
@@ -69,20 +69,30 @@ export async function GET() {
       );
     }
 
-    console.log('Raw faculty data from database:', faculty);
-
-    // Filter out faculty with deleted users on the server side
+    // Filter out faculty with deleted users
     const activeFaculty = (faculty as Faculty[] || []).filter(f => !f.User?.isDeleted);
 
-    console.log('Active faculty count:', activeFaculty.length);
-    console.log('Active faculty data:', activeFaculty.map(f => ({
-      id: f.FacultyID,
-      name: `${f.User?.FirstName} ${f.User?.LastName}`,
-      isDeleted: f.User?.isDeleted,
-      status: f.User?.Status
-    })));
+    // Fetch Clerk user data for all active faculty
+    try {
+      const clerkUsers = await clerkClient.users.getUserList({
+        userId: activeFaculty.map(f => f.User.UserID),
+      });
+      const usersArray = clerkUsers.data;
+      const clerkUsersMap = new Map(usersArray.map(u => [u.id, u]));
 
-    return NextResponse.json(activeFaculty);
+      // Map Clerk user data to faculty
+      const facultyWithClerk = activeFaculty.map(faculty => ({
+        ...faculty,
+        ClerkUser: clerkUsersMap.get(faculty.User.UserID) || null,
+      }));
+
+      console.log('Enriched faculty with Clerk data:', facultyWithClerk.length);
+      return NextResponse.json(facultyWithClerk);
+    } catch (clerkError) {
+      console.error('Error fetching Clerk user data:', clerkError);
+      // Return faculty data without photos if Clerk fetch fails
+      return NextResponse.json(activeFaculty);
+    }
   } catch (error) {
     console.error('Error in faculty GET:', error);
     return NextResponse.json(

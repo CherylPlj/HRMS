@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher, getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -46,15 +46,8 @@ const ignoredRoutes = [
     "/privacy-statement"
 ];
 
-// Add dashboard routes that require authentication
-const dashboardRoutes = [
-    "/dashboard",
-    "/dashboard/(.*)"
-];
-
 const isPublicRoute = createRouteMatcher(publicRoutes);
 const isIgnoredRoute = createRouteMatcher(ignoredRoutes);
-const isDashboardRoute = createRouteMatcher(dashboardRoutes);
 
 export default clerkMiddleware(async (auth, req) => {
     const { userId } = await auth();
@@ -99,27 +92,30 @@ export default clerkMiddleware(async (auth, req) => {
         }
     }
 
-    // Check for dashboard routes specifically
-    if (isDashboardRoute(req)) {
-        if (!isAuthenticated) {
-            // Store the intended destination for after login
-            const redirectUrl = new URL('/sign-in', req.url);
-            redirectUrl.searchParams.set('redirect_url', url.pathname);
-            return NextResponse.redirect(redirectUrl);
+    // If user is authenticated, allow access to all routes except sign-in/sign-up
+    if (isAuthenticated) {
+        // Redirect from sign-in/sign-up to dashboard if already authenticated
+        if (url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) {
+            // Get user's role
+            const role = await getUserRole(userId ? userId : undefined);
+
+            // Redirect to appropriate dashboard based on role
+            if (role === 'admin') {
+                return NextResponse.redirect(new URL('/dashboard/admin', req.url));
+            } else if (role === 'faculty') {
+                return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
+            } else {
+                return NextResponse.redirect(new URL('/dashboard', req.url));
+            }
         }
         return response;
     }
 
-    // If trying to access a protected route while not authenticated
-    if (!isPublicRoute(req) && !isAuthenticated) {
+    // If not authenticated and trying to access a protected route, redirect to sign-in
+    if (!isPublicRoute(req)) {
         const redirectUrl = new URL('/sign-in', req.url);
         redirectUrl.searchParams.set('redirect_url', url.pathname);
         return NextResponse.redirect(redirectUrl);
-    }
-
-    // If trying to access sign-in/sign-up while authenticated
-    if ((url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) && isAuthenticated) {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
     return response;
@@ -129,8 +125,8 @@ export const config = {
     matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
 };
 
-async function getUserRole(email?: string): Promise<string> {
-    if (!email) return '';
+async function getUserRole(userId?: string): Promise<string> {
+    if (!userId) return '';
 
     try {
         const { data, error } = await supabase
@@ -142,7 +138,7 @@ async function getUserRole(email?: string): Promise<string> {
                     )
                 )
             `)
-            .eq('Email', email.toLowerCase().trim())
+            .eq('UserID', userId)
             .single();
 
         if (error) {

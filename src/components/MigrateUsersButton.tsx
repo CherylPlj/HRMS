@@ -31,6 +31,8 @@ export default function MigrateUsersButton() {
       }
 
       setResults(data.results);
+      // Dispatch a custom event to signal that users should be reloaded
+      window.dispatchEvent(new Event('users-migrated'));
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to migrate users');
     } finally {

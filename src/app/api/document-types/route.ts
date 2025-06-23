@@ -1,34 +1,29 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { currentUser } from '@clerk/nextjs/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log('Fetching document types from Supabase...');
-    
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get all document types from Supabase
     const { data: documentTypes, error } = await supabaseAdmin
       .from('DocumentType')
       .select('*')
-      .order('DocumentTypeName');
+      .order('DocumentTypeName', { ascending: true });
 
     if (error) {
-      console.error('Supabase error fetching document types:', error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      throw error;
     }
 
-    if (!documentTypes || documentTypes.length === 0) {
-      console.log('No document types found');
-      return NextResponse.json([]);
-    }
-
-    console.log('Successfully fetched document types:', documentTypes);
     return NextResponse.json(documentTypes);
   } catch (error) {
-    console.error('Unexpected error in document-types GET:', error);
+    console.error('Error fetching document types:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { error: 'Failed to fetch document types' },
       { status: 500 }
     );
   }
@@ -36,38 +31,45 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { DocumentTypeName, AllowedFileTypes, Template } = await request.json();
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!DocumentTypeName) {
+    const data = await request.json();
+    
+    // Validate required fields
+    if (!data.DocumentTypeName) {
       return NextResponse.json(
         { error: 'Document type name is required' },
         { status: 400 }
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    // Create document type in Supabase
+    const { data: newDocumentType, error } = await supabaseAdmin
       .from('DocumentType')
-      .insert([{ 
-        DocumentTypeName,
-        AllowedFileTypes: AllowedFileTypes || ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg'],
-        Template: Template || null
-      }])
+      .insert([
+        {
+          DocumentTypeName: data.DocumentTypeName,
+          Description: data.Description,
+          IsRequired: data.IsRequired || false,
+          CreatedBy: user.id,
+          CreatedDate: new Date().toISOString()
+        }
+      ])
       .select()
       .single();
 
     if (error) {
-      console.error('Error creating document type:', error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      throw error;
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(newDocumentType);
   } catch (error) {
-    console.error('Error in document-types POST:', error);
+    console.error('Error creating document type:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to create document type' },
       { status: 500 }
     );
   }

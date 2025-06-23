@@ -1,5 +1,4 @@
 "use client";
-import Head from 'next/head';
 import { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import { UserProfile } from '@clerk/nextjs'; // Add this import
@@ -10,13 +9,32 @@ import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import { useRouter } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface ChatMessage {
   type: 'user' | 'ai';
   content: string;
 }
 
-export default function Dashboard() {
+interface Role {
+  name: string;
+}
+
+interface UserRole {
+  role: Role;
+}
+
+interface UserRoleData {
+  UserRole: UserRole[];
+}
+
+export default function FacultyDashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
@@ -24,14 +42,60 @@ export default function Dashboard() {
   const [isChatbotVisible, setChatbotVisible] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
-  const { signOut } = useClerk(); // Access Clerk's signOut function
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const router = useRouter();
-  const [isProfileVisible, setProfileVisible] = useState(false); // Add this state
+  const [isProfileVisible, setProfileVisible] = useState(false);
 
   const chatbotRef = useRef<HTMLDivElement | null>(null);
   const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
   const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
+
+  // Check user's role and redirect if not faculty
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!isLoaded) return;
+      
+      if (!isSignedIn || !user) {
+        router.push('/sign-in');
+        return;
+      }
+
+      try {
+        const { data: userData, error } = await supabase
+          .from('User')
+          .select(`
+            UserRole!inner (
+              role:Role (
+                name
+              )
+            )
+          `)
+          .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
+          .single() as { data: UserRoleData | null; error: unknown };
+
+        if (error) {
+          console.error("Error fetching user role:", error);
+          return;
+        }
+
+        const role = (userData as UserRoleData)?.UserRole?.[0]?.role?.name?.toLowerCase();
+        
+        if (role !== 'faculty') {
+          if (role === 'admin') {
+            router.push('/dashboard/admin');
+          } else {
+            router.push('/dashboard');
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user role:", error);
+      }
+    };
+
+    checkUserRole();
+  }, [isLoaded, isSignedIn, user, router]);
 
   // Function to position chatbot below the chat icon
   const positionChatbot = () => {
@@ -148,126 +212,127 @@ export default function Dashboard() {
 
   return (
     <AttendanceProvider>
-      <Head>
-        <title>Faculty Dashboard</title>
-        {/* <script src="https://cdn.tailwindcss.com"></script> */}
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-        />
-      </Head>
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
-        {/* Sidebar */}
-        <div className="bg-white w-20 p-4 flex flex-col justify-between border-r border-gray-200">
-          <div>
-            <img src="/sjsfilogo.png" alt="Logo" className="w-10 h-10 mx-auto mb-6" />
-            <nav className="space-y-6">
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'dashboard' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Dashboard"
-                onClick={() => handleButtonClick('dashboard')}
-              >
-                <i className="fas fa-tachometer-alt text-xl"></i>
-                <span className="text-[10px]">Dashboard</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'personal-data' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Personal Data"
-                onClick={() => handleButtonClick('personal-data')}
-              >
-                <i className="fas fa-user text-xl"></i>
-                <span className="text-[10px] whitespace-nowrap">Personal Data</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'documents' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Documents"
-                onClick={() => handleButtonClick('documents')}
-              >
-                <i className="fas fa-file-alt text-xl"></i>
-                <span className="text-[10px]">Documents</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'attendance' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Attendance"
-                onClick={() => handleButtonClick('attendance')}
-              >
-                <i className="fas fa-calendar-check text-xl"></i>
-                <span className="text-[10px]">Attendance</span>
-                {/* <span className="text-[10px]">Schedule</span> */}
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${
-                  activeButton === 'leave' ? 'text-[#800000]' : 'text-black'
-                }`}
-                title="Leave Request"
-                onClick={() => handleButtonClick('leave')}
-              >
-                <i className="fas fa-envelope text-xl"></i>
-                <span className="text-[10px] whitespace-nowrap">Leave Request</span>
-              </a>
-            </nav>
+        {/* Sidebar - collapsible on all screen sizes */}
+        <div className={`bg-[#800000] text-white transition-all duration-300
+          ${isSidebarOpen ? 'w-64' : 'w-20'} 
+          flex-shrink-0 flex flex-col fixed h-full z-30`}>
+          
+          {/* Toggle Button - Above logo */}
+          <div className="flex justify-center py-2">
+            <button
+              className="text-white p-2 hover:bg-[#660000] rounded transition-colors"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              <i className={`fas ${isSidebarOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
+            </button>
           </div>
-          <a
-            href="#"
-            className={`flex flex-col items-center ${
-              activeButton === 'logout' ? 'text-[#800000]' : 'text-black'
-            }`}
-            title="Log Out"
-            onClick={() => setLogoutModalVisible(true)} // Show the logout modal
-          >
-            <i className="fas fa-sign-out-alt text-xl"></i>
-            <span className="text-[10px]">Log Out</span>
-          </a>
+
+          {/* Logo and Title - Made clickable */}
+          <div className={`flex flex-col items-center cursor-pointer
+            ${isSidebarOpen ? 'p-4' : 'p-2'}`}
+               onClick={() => {
+                 handleButtonClick('dashboard');
+                 router.push('/dashboard/faculty');
+               }}>
+            <img
+              src="/sjsfilogo.png"
+              alt="Logo"
+              className={`${isSidebarOpen ? 'w-12 h-12' : 'w-10 h-10'} mb-2 hover:opacity-80 transition-opacity`}
+            />
+            <span className={`text-white font-bold
+              ${isSidebarOpen ? 'text-xl' : 'hidden'} hover:text-[#ffd700] transition-colors`}>
+              SJSFI-HRMS
+            </span>
+          </div>
+          
+          {/* Navigation Menu */}
+          <nav className={`flex-1 flex flex-col overflow-y-auto
+            ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
+            {[
+              { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
+              { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
+              { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
+              { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
+              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' }
+            ].map((item) => (
+              <a
+                key={item.key}
+                href="#"
+                className={`flex items-center rounded-md cursor-pointer transition-colors
+                  ${isSidebarOpen 
+                    ? 'space-x-3 px-3 py-2' 
+                    : 'flex-col justify-center py-2 space-y-1'
+                  }
+                  ${activeButton === item.key ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
+                title={item.name}
+                onClick={() => handleButtonClick(item.key)}
+              >
+                <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
+                  <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+                </div>
+                <span className={`${isSidebarOpen ? 'text-base' : 'text-[8px] text-center w-full'}`}>
+                  {item.name}
+                </span>
+              </a>
+            ))}
+          </nav>
+
+          {/* Logout Button */}
+          <div className={`${isSidebarOpen ? 'p-3' : 'p-2'}`}>
+            <a
+              href="#"
+              className={`flex items-center rounded-md cursor-pointer transition-colors
+                ${isSidebarOpen 
+                  ? 'space-x-3 px-3 py-2' 
+                  : 'flex-col justify-center py-2 space-y-1'
+                }
+                ${activeButton === 'logout' ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
+              title="Log Out"
+              onClick={() => setLogoutModalVisible(true)}
+            >
+              <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
+                <i className={`fas fa-sign-out-alt ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+              </div>
+              <span className={`${isSidebarOpen ? 'text-base' : 'text-[8px] text-center w-full'}`}>
+                Log Out
+              </span>
+            </a>
+          </div>
         </div>
- {/* Header and Main Content */}
- <div className="flex flex-col flex-1">
-          {/* Header Container */}
-          {/* <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-[#800000]">DASHBOARD</h1> */}
-            <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-[#800000]">
-                {activeButton === 'dashboard' && 'DASHBOARD'}
-                {activeButton === 'personal-data' && 'PERSONAL DATA'}
-                {activeButton === 'documents' && 'DOCUMENTS'}
-                {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
-                {/* {activeButton === 'attendance' && 'SCHEDULE'} */}
-                {activeButton === 'leave' && 'LEAVE REQUEST'}
-              </h1>
-            {/* </div> */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-6">
-                {/* Icons Section */}
-                <div className="flex items-center space-x-4">
-                  <a
-                    ref={chatButtonRef}
-                    href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Comments"
-                    onClick={() => setChatbotVisible(!isChatbotVisible)}
-                  >
-                    <i className="fas fa-comments text-black text-lg"></i>
-                  </a>
-                  {/* <a
-                    href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Notifications"
-                    onClick={() => setNotificationsVisible(!isNotificationsVisible)}
-                  >
-                    <i className="fas fa-bell text-black text-lg"></i>
-                  </a> */}
+
+        {/* Main Content Area - Adjusted margin for sidebar */}
+        <div className={`flex-1 flex flex-col overflow-hidden
+          ${isSidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+          {/* Header */}
+          <header className="bg-white shadow-md sticky top-0 z-20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 space-y-4 sm:space-y-0">
+              {/* Title and Breadcrumb */}
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-red-700">
+                  {activeButton === 'dashboard' && 'DASHBOARD'}
+                  {activeButton === 'personal-data' && 'PERSONAL DATA'}
+                  {activeButton === 'documents' && 'DOCUMENTS'}
+                  {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
+                  {activeButton === 'leave' && 'LEAVE REQUEST'}
+                </h1>
+              </div>
+
+              {/* Right Side Icons and User Info */}
+              <div className="flex items-center justify-between sm:justify-end space-x-4">
+                {/* Chat Icon */}
+                <a
+                  ref={chatButtonRef}
+                  href="#"
+                  className="p-2 rounded-full hover:bg-gray-200 transition"
+                  title="Comments"
+                  onClick={() => setChatbotVisible(!isChatbotVisible)}
+                >
+                  <i className="fas fa-comments text-black text-lg"></i>
+                </a>
+
+                {/* Profile Section */}
+                <div className="flex items-center space-x-3">
                   <a
                     href="#"
                     className="p-1 rounded-full hover:bg-gray-200 transition"
@@ -278,40 +343,46 @@ export default function Dashboard() {
                       <img
                         src={user.imageUrl}
                         alt={`${user.firstName}'s profile`}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-8 sm:w-10 h-8 sm:h-10 rounded-full object-cover"
                       />
                     ) : (
-                      <i className="fas fa-user-circle text-black text-lg"></i>
+                      <i className="fas fa-user-circle text-black text-xl sm:text-2xl"></i>
                     )}
                   </a>
-                </div>
 
-                {/* User Information Section */}
-                {isLoaded && isSignedIn && user ? (
-                  <a
-                    href="#"
-                    onClick={toggleProfile}
-                    className="flex flex-col text-black hover:text-red-700 transition"
-                    title="User Profile"
-                  >
-                    <div className="font-semibold">{user.firstName} {user.lastName}</div>
-                    <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
-                  </a>
-                ) : (
-                  <div>Loading user info...</div>
-                )}
+                  {/* User Info - Responsive */}
+                  {isLoaded && isSignedIn && user && (
+                    <a
+                      href="#"
+                      onClick={toggleProfile}
+                      className="flex flex-col text-black hover:text-red-700 transition"
+                      title="User Profile"
+                    >
+                      <div className="font-semibold text-sm sm:text-base">{user.firstName} {user.lastName}</div>
+                      <div className="text-xs text-gray-600 hidden sm:block">{user.emailAddresses[0]?.emailAddress}</div>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </header>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
             {renderContent()}
-          </div>
+          </main>
         </div>
+
+        {/* Overlay for when sidebar is open */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20"
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
+        )}
       </div>
 
-      {/* Logout Confirmation Modal */}
+      {/* Modals and Popups */}
       {isLogoutModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
@@ -335,7 +406,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Notifications Popup */}
       {isNotificationsVisible && (
         <div className="absolute top-16 right-4 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200">
           <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
@@ -399,7 +469,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Chatbot Popup */}
       {isChatbotVisible && (
         <div
           ref={chatbotRef}
@@ -485,23 +554,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Add the UserProfile modal */}
       {isProfileVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-[1000px] max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h2 className="text-xl font-bold text-[#800000]">Profile Settings</h2>
-              <button
-                onClick={toggleProfile}
-                className="text-gray-500 hover:text-gray-700"
-                title="Close profile settings"
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="p-4">
-              <UserProfile />
-            </div>
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <UserProfile />
           </div>
         </div>
       )}

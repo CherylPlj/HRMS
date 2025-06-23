@@ -901,8 +901,8 @@ const FacultyContent = () => {
       const validation = validateDocTypeName(docTypeName);
       if (validation) {
         setDocTypeError(validation);
-      return;
-    }
+        return;
+      }
 
       const url = editingDocType
         ? `/api/document-types/${editingDocType.DocumentTypeID}`
@@ -1042,12 +1042,12 @@ const FacultyContent = () => {
             >
               <FaFile /> Import CSV
             </button>
-          <button
-            onClick={handleDownloadPDF}
-            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
-          >
-            <FaDownload /> Download {activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'}
-          </button>
+            <button
+              onClick={handleDownloadPDF}
+              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+            >
+              <FaDownload /> Download {activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'}
+            </button>
           </div>
         </div>
       </div>

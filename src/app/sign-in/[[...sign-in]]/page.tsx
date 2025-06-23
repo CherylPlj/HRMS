@@ -350,31 +350,62 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
 };
 
 export default function SignInPage() {
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { signIn } = useSignIn();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const { signIn, setActive } = useSignIn();
-  const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const portal = searchParams?.get('portal') || 'faculty';
   const redirectUrl = searchParams?.get('redirect_url');
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
-  // Force sign out when the component mounts only if we're not being redirected from a protected route
+  // Check if user is already signed in and redirect accordingly
   useEffect(() => {
-    if (isLoaded && isSignedIn && !redirectUrl) {
-      signOut();
-    }
-  }, [isLoaded, isSignedIn, signOut, redirectUrl]);
+    const checkAuthAndRedirect = async () => {
+      if (isLoaded && isSignedIn && user) {
+        try {
+          // Get user's role from Supabase
+          const { data: userData, error } = await supabase
+            .from('User')
+            .select(`
+              UserRole (
+                role:Role (
+                  name
+                )
+              )
+            `)
+            .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
+            .single();
+
+          if (error) {
+            console.error("Error fetching user role:", error);
+            return;
+          }
+
+          const role = userData?.UserRole?.[0]?.role?.[0]?.name?.toLowerCase() || '';
+
+          // Redirect based on role
+          if (role === 'admin') {
+            router.push('/dashboard/admin');
+          } else if (role === 'faculty') {
+            router.push('/dashboard/faculty');
+          } else {
+            router.push('/dashboard');
+          }
+        } catch (error) {
+          console.error("Error during role check:", error);
+        }
+      }
+    };
+
+    checkAuthAndRedirect();
+  }, [isLoaded, isSignedIn, user, router]);
 
   // If still loading, show loading state
   if (!isLoaded) {
@@ -398,32 +429,28 @@ export default function SignInPage() {
       }
       
       if (value.length > 50) {
-        setFormData(prev => ({
-          ...prev,
-          [name]: value.slice(0, 50)
-        }));
+        setEmail(value.slice(0, 50));
         return;
       }
+      setEmail(value);
     }
     
     if (name === 'password') {
       // Show password requirements immediately
       const error = validatePassword(value);
-      setPasswordError(error);
+      setError(error);
       
       // Only update form data if not exceeding max length
       if (value.length > 50) {
         return;
       }
+      setPassword(value);
     }
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
     
-    // Only clear the main error message
-    setError(null);
+    // Only clear the main error message if no validation errors
+    if (!error && !emailError) {
+      setError(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -450,29 +477,29 @@ export default function SignInPage() {
         throw new Error('Account temporarily locked due to too many failed attempts. Please try again later.');
       }
 
-      if (!formData.email || !formData.password) {
+      if (!email || !password) {
         setIsLoading(false);
         throw new Error('Please fill in all fields');
       }
 
-      if (formData.email.length < 6) {
+      if (email.length < 6) {
         setIsLoading(false);
         throw new Error('Email must be at least 6 characters');
       }
 
-      if (formData.email.length > 50) {
+      if (email.length > 50) {
         setIsLoading(false);
         throw new Error('Email must not exceed 50 characters');
       }
 
-      const emailError = validateEmailCharacters(formData.email);
+      const emailError = validateEmailCharacters(email);
       if (emailError) {
         setIsLoading(false);
         throw new Error(emailError);
       }
 
       // Validate password complexity
-      const passwordError = validatePassword(formData.password);
+      const passwordError = validatePassword(password);
       if (passwordError) {
         setIsLoading(false);
         throw new Error(passwordError);
@@ -497,7 +524,7 @@ export default function SignInPage() {
             )
           )
         `)
-        .eq('Email', formData.email)
+        .eq('Email', email)
         .single();
 
       if (userError) {
@@ -528,12 +555,11 @@ export default function SignInPage() {
 
       // Attempt to sign in with Clerk
       const result = await signIn.create({
-        identifier: formData.email,
-        password: formData.password,
+        identifier: email,
+        password: password,
       });
 
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
         resetLoginAttempts(userIP); // Reset attempts on successful login
         
         // Handle redirect
@@ -554,15 +580,16 @@ export default function SignInPage() {
   };
 
   const handleBack = () => {
-    if (isSignedIn) {
-      signOut();
-    }
     router.push('/');
   };
 
   const handleForgotPassword = async (email: string) => {
+    if (!signIn) {
+      throw new Error('Authentication is not initialized');
+    }
+
     try {
-      const result = await signIn?.create({
+      const result = await signIn.create({
         strategy: "reset_password_email_code",
         identifier: email,
       });
@@ -605,8 +632,16 @@ export default function SignInPage() {
                 priority
               />
               <h1 className="text-3xl text-center w-full mb-2 mx-1">
-                <span className="font-bold text-[#800000]">SJSFI-HRMS </span>
-                {portal.charAt(0).toUpperCase() + portal.slice(1)} Module
+                <span className="font-bold text-[#800000]">SJSFI-HRMS</span>
+                {redirectUrl ? (
+                  <span className="ml-1">
+                    {redirectUrl.includes('admin') ? 'Admin Module' : 
+                     redirectUrl.includes('faculty') ? 'Faculty Module' : 
+                     'Module'}
+                  </span>
+                ) : (
+                  <span className="ml-1">Module</span>
+                )}
               </h1>
             </div>
             <div className="flex flex-col items-center justify-center w-full">
@@ -629,7 +664,7 @@ export default function SignInPage() {
                       }`}
                       type="text"
                       name="email"
-                      value={formData.email}
+                      value={email}
                       onChange={handleInputChange}
                       disabled={isLoading}
                     />
@@ -644,11 +679,11 @@ export default function SignInPage() {
                       autoComplete="off"
                       placeholder="Password"
                       className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 ${
-                        passwordError ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
+                        error ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
                       }`}
                       type={showPassword ? "text" : "password"}
                       name="password"
-                      value={formData.password}
+                      value={password}
                       onChange={handleInputChange}
                       disabled={isLoading}
                     />
@@ -661,19 +696,19 @@ export default function SignInPage() {
                       <Eye className="h-[18px] w-[18px]" />
                     </button>
                   </div>
-                  {passwordError && (
-                    <p className="mt-1 text-xs text-red-600">{passwordError}</p>
+                  {error && (
+                    <p className="mt-1 text-xs text-red-600">{error}</p>
                   )}
                 </div>
                 <div className="mb-4 w-full">
                   <button
                     type="submit"
                     className={`text-sm rounded-sm px-4 py-2 w-full transition duration-200 ease-in-out ${
-                      isLoading || !!emailError || !!passwordError
+                      isLoading || !!emailError || !!error
                         ? 'bg-white text-red-600 cursor-not-allowed opacity-75'
                         : 'bg-[#800000] hover:bg-[#800000]/80 text-white'
                     }`}
-                    disabled={isLoading || !!emailError || !!passwordError}
+                    disabled={isLoading || !!emailError || !!error}
                   >
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </button>

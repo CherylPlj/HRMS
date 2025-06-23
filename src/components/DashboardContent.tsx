@@ -220,12 +220,15 @@ export default function DashboardContent() {
 
         console.log("All users from database:", users); // Debug log to see all users
 
-        // First get total active users
-        const totalActiveUsers = users?.length || 0;
+        // Exclude users with the 'Student' role
+        const nonStudentUsers = users?.filter(u => !u.Role?.some(r => (r.role as any).name === 'Student')) || [];
+
+        // First get total active users (excluding students)
+        const totalActiveUsers = nonStudentUsers.length;
         
-        // Then count users with specific roles
-        const facultyUsers = users?.filter((u) => u.Role?.some(r => (r.role as any).name === "Faculty")).length || 0;
-        const adminUsers = users?.filter((u) => u.Role?.some(r => (r.role as any).name === "Admin")).length || 0;
+        // Then count users with specific roles (excluding students)
+        const facultyUsers = nonStudentUsers.filter((u) => u.Role?.some(r => (r.role as any).name === 'Faculty')).length || 0;
+        const adminUsers = nonStudentUsers.filter((u) => u.Role?.some(r => (r.role as any).name === 'Admin')).length || 0;
 
         console.log("Total active users:", totalActiveUsers); // Debug log
         console.log("Faculty users count:", facultyUsers); // Debug log

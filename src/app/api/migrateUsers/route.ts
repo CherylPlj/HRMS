@@ -107,13 +107,39 @@ export async function POST() {
           continue;
         }
 
+        // --- NEW LOGIC: Try to match users without ClerkID ---
         if (!user.ClerkID) {
-          console.log(`Skipping user ${user.UserID} - No ClerkID found`);
-          results.skipped++;
-          results.failureReasons[user.UserID] = 'No ClerkID found';
-          results.userDetails[user.UserID].error = 'No ClerkID found';
-          continue;
+          // Try to find Clerk user by email
+          console.log(`Looking up Clerk user for email: ${user.Email}`);
+          const clerkUsers = await clerkClient.users.getUserList({ emailAddress: [user.Email] });
+          console.log('Clerk users found:', clerkUsers);
+          if (clerkUsers && clerkUsers.data.length > 0) {
+            const clerkUser = clerkUsers.data[0];
+            // Update Supabase with ClerkID
+            const { error: updateError } = await supabase
+              .from('User')
+              .update({ ClerkID: clerkUser.id })
+              .eq('UserID', user.UserID);
+            if (updateError) {
+              results.failed++;
+              results.failedUsers.push(user.UserID);
+              results.failureReasons[user.UserID] = 'Failed to update ClerkID in Supabase';
+              results.userDetails[user.UserID].error = 'Failed to update ClerkID in Supabase';
+              continue;
+            }
+            // Update local user object for further processing
+            user.ClerkID = clerkUser.id;
+            results.userDetails[user.UserID].clerkId = clerkUser.id;
+            // Continue to rest of sync logic
+          } else {
+            // No Clerk user found for this email
+            results.skipped++;
+            results.failureReasons[user.UserID] = 'No Clerk user found for email';
+            results.userDetails[user.UserID].error = 'No Clerk user found for email';
+            continue;
+          }
         }
+        // --- END NEW LOGIC ---
 
         // Skip if user is marked as Inactive in Supabase
         if (user.Status === 'Inactive') {

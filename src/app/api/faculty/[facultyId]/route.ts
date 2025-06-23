@@ -1,6 +1,73 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/clerk-sdk-node';
+
+export async function GET(
+  request: Request,
+  context: { params: { facultyId: string } }
+) {
+  try {
+    const { params } = context;
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const facultyId = parseInt((await params).facultyId);
+
+    // First get faculty data from Supabase
+    const { data: faculty, error } = await supabaseAdmin
+      .from('Faculty')
+      .select(`
+        *,
+        User:UserID (
+          UserID,
+          FirstName,
+          LastName,
+          Email,
+          Status
+        ),
+        Department:DepartmentID (
+          DepartmentID,
+          DepartmentName
+        )
+      `)
+      .eq('FacultyID', facultyId)
+      .single();
+
+    if (error || !faculty) {
+      return NextResponse.json(
+        { error: 'Faculty not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get Clerk user data
+    try {
+      const clerkUserData = await clerkClient.users.getUser(faculty.User.UserID);
+      // Merge Clerk user data with faculty data
+      const enrichedFaculty = {
+        ...faculty,
+        User: {
+          ...faculty.User,
+          Photo: clerkUserData.imageUrl,
+        }
+      };
+      return NextResponse.json(enrichedFaculty);
+    } catch (clerkError) {
+      console.error('Error fetching Clerk user:', clerkError);
+      // Still return faculty data even if Clerk fetch fails
+      return NextResponse.json(faculty);
+    }
+  } catch (error) {
+    console.error('Error fetching faculty:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch faculty details' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(
   request: Request,

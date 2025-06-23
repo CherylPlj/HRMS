@@ -127,7 +127,8 @@ export async function POST(request: Request) {
         Email: email,
         Status: 'Invited',
         PasswordHash: '', // Empty password hash since user will set it in Clerk
-        createdBy: createdBy
+        createdBy: createdBy,
+        Photo: null // Initialize photo as null, will be updated when user accepts invitation
       })
       .select()
       .single();
@@ -188,7 +189,8 @@ export async function POST(request: Request) {
           role: role.charAt(0).toUpperCase() + role.slice(1).toLowerCase(),
           firstName,
           lastName,
-          facultyData: facultyData || null
+          facultyData: facultyData || null,
+          userId: userId // Store our database UserID in Clerk metadata
         },
         redirectUrl: `${process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || 'https://pleased-jackal-93.accounts.dev/sign-up'}`
       });

@@ -1,5 +1,4 @@
 "use client";
-import Head from 'next/head';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
@@ -8,9 +7,22 @@ import FacultyContent from '@/components/FacultyContent';
 import AttendanceContent from '@/components/AttendanceContent';
 import LeaveContent from '@/components/LeaveContent';
 import UsersContent from '@/components/UsersContent';
+import EmployeeContentNew from '@/components/EmployeeContentNew';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '@clerk/nextjs'; // Add this import
+
+interface Role {
+  name: string;
+}
+
+interface UserRole {
+  role: Role;
+}
+
+interface UserRoleData {
+  UserRole: UserRole[];
+}
 
 interface ChatMessage {
   type: 'user' | 'ai';
@@ -39,7 +51,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function Dashboard() {
+export default function AdminDashboard() {
   const [activeButton, setActiveButton] = useState('dashboard');
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isAdminInfoVisible, setAdminInfoVisible] = useState(false); // State for Admin Info Modal
@@ -61,6 +73,7 @@ export default function Dashboard() {
   const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Function to position chatbot below the chat icon
   const positionChatbot = () => {
@@ -137,18 +150,49 @@ export default function Dashboard() {
     }
   };
 
-  // Redirect to admin layout if user is an admin
+  // Check user's role and redirect if not admin
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role;
-
-      if (userRole === 'admin') {
-        router.push('/dashboard/admin');
-      } else if (userRole === 'faculty') {
-        router.push('/dashboard/faculty');
+    const checkUserRole = async () => {
+      if (!isLoaded) return;
+      
+      if (!isSignedIn || !user) {
+        router.push('/sign-in');
+        return;
       }
-      // Else: stay on dashboard
-    }
+
+      try {
+        const { data: userData, error } = await supabase
+          .from('User')
+          .select(`
+            UserRole!inner (
+              role:Role (
+                name
+              )
+            )
+          `)
+          .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
+          .single() as { data: UserRoleData | null; error: unknown };
+
+        if (error) {
+          console.error("Error fetching user role:", error);
+          return;
+        }
+
+        const role = (userData as UserRoleData)?.UserRole?.[0]?.role?.name?.toLowerCase();
+        
+        if (role !== 'admin') {
+          if (role === 'faculty') {
+            router.push('/dashboard/faculty');
+          } else {
+            router.push('/dashboard');
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user role:", error);
+      }
+    };
+
+    checkUserRole();
   }, [isLoaded, isSignedIn, user, router]);
 
   const handleButtonClick = (buttonName: string) => {
@@ -284,6 +328,8 @@ export default function Dashboard() {
         return <DashboardContent />;
       case 'faculty':
         return <FacultyContent />;
+      case 'employees':
+        return <EmployeeContentNew />;
       case 'attendance':
         return <AttendanceContent />;
       case 'leave':
@@ -297,118 +343,131 @@ export default function Dashboard() {
 
   return (
     <>
-      <Head>
-        <title>Dashboard</title>
-        {/* <script src="https://cdn.tailwindcss.com"></script> */}
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-        />
-      </Head>
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
-        {/* Sidebar */}
-        <div className="bg-[#800000] text-white w-20 p-4 flex flex-col items-center">
+        {/* Sidebar - collapsible on all screen sizes */}
+        <div className={`bg-[#800000] text-white transition-all duration-300
+          ${isSidebarOpen ? 'w-64' : 'w-20'} 
+          flex-shrink-0 flex flex-col fixed h-full z-30`}>
+          
+          {/* Toggle Button - Above logo */}
+          <div className="flex justify-center py-2">
+            <button
+              className="text-white p-2 hover:bg-[#660000] rounded transition-colors"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              <i className={`fas ${isSidebarOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
+            </button>
+          </div>
+
+          {/* Logo and Title - Made clickable */}
+          <div className={`flex flex-col items-center cursor-pointer
+            ${isSidebarOpen ? 'p-4' : 'p-2'}`}
+               onClick={() => {
+                 handleButtonClick('dashboard');
+                 router.push('/dashboard/admin');
+               }}>
             <Image
               src="/sjsfilogo.png"
               alt="Logo"
-              width={40}
-              height={40}
-              className="w-10 h-10 mx-auto mb-6"
+              width={64}
+              height={64}
+              className={`${isSidebarOpen ? 'w-12 h-12' : 'w-10 h-10'} mb-2 hover:opacity-80 transition-opacity`}
             />
+            <span className={`text-white font-bold
+              ${isSidebarOpen ? 'text-xl' : 'hidden'} hover:text-[#ffd700] transition-colors`}>
+              SJSFI-HRMS
+            </span>
+          </div>
           
-            <nav className="space-y-6">
+          {/* Navigation Menu */}
+          <nav className={`flex-1 flex flex-col overflow-y-auto
+            ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
+            {[
+              { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
+              { name: 'Faculty', icon: 'fa-user', key: 'faculty' },
+              { name: 'Employees', icon: 'fa-users', key: 'employees' },
+              { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
+              { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
+              { name: 'Users', icon: 'fa-users-cog', key: 'users' }
+            ].map((item) => (
               <a
+                key={item.key}
                 href="#"
-                className={`flex flex-col items-center ${activeButton === 'dashboard' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Dashboard"
-                onClick={() => handleButtonClick('dashboard')}
+                className={`flex items-center rounded-md cursor-pointer transition-colors
+                  ${isSidebarOpen 
+                    ? 'space-x-3 px-3 py-2' 
+                    : 'flex-col justify-center py-2 space-y-1'
+                  }
+                  ${activeButton === item.key ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
+                title={item.name}
+                onClick={() => handleButtonClick(item.key)}
               >
-                <i className="fas fa-tachometer-alt text-xl"></i>
-                <span className="text-[10px]">Dashboard</span>
+                <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
+                  <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+                </div>
+                <span className={`${isSidebarOpen ? 'text-base' : 'text-[8px] text-center w-full'}`}>
+                  {item.name}
+                </span>
               </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'faculty' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Faculty"
-                onClick={() => handleButtonClick('faculty')}
-              >
-                <i className="fas fa-user text-xl"></i>
-                <span className="text-[10px]">Faculty</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'attendance' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Attendance"
-                onClick={() => handleButtonClick('attendance')}
-              >
-                <i className="fas fa-calendar-alt text-xl"></i>
-                <span className="text-[10px]">Attendance</span>
-                {/* <span className="text-[10px]">Schedule</span> */}
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'leave' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Leave"
-                onClick={() => handleButtonClick('leave')}
-              >
-                <i className="fas fa-clipboard text-xl"></i>
-                <span className="text-[10px]">Leave</span>
-              </a>
-              <a
-                href="#"
-                className={`flex flex-col items-center ${activeButton === 'users' ? 'text-[#ffd700]' : 'text-white'}`}
-                title="Users"
-                onClick={() => handleButtonClick('users')}
-              >
-                <i className="fas fa-users text-xl"></i>
-                <span className="text-[10px]">Users</span>
-              </a>
-            </nav>
-          {/* </div> */}
-          <a
-            href="#"
-            className={`flex flex-col items-center mt-auto ${activeButton === 'logout' ? 'text-[#ffd700]' : 'text-white'}`}
-            title="Log Out"
-            onClick={() => setLogoutModalVisible(true)} // Show the logout modal
-          >
-            <i className="fas fa-sign-out-alt text-xl"></i>
-            <span className="text-[10px]">Log Out</span>
-          </a>
+            ))}
+          </nav>
+
+          {/* Logout Button */}
+          <div className={`${isSidebarOpen ? 'p-3' : 'p-2'}`}>
+            <a
+              href="#"
+              className={`flex items-center rounded-md cursor-pointer transition-colors
+                ${isSidebarOpen 
+                  ? 'space-x-3 px-3 py-2' 
+                  : 'flex-col justify-center py-2 space-y-1'
+                }
+                ${activeButton === 'logout' ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
+              title="Log Out"
+              onClick={() => setLogoutModalVisible(true)}
+            >
+              <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
+                <i className={`fas fa-sign-out-alt ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+              </div>
+              <span className={`${isSidebarOpen ? 'text-base' : 'text-[8px] text-center w-full'}`}>
+                Log Out
+              </span>
+            </a>
+          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex flex-col flex-1">
+        {/* Main Content Area - Adjusted margin for sidebar */}
+        <div className={`flex-1 flex flex-col overflow-hidden
+          ${isSidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
           {/* Header */}
-          <div className="bg-white shadow-md p-4 mb-6 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-red-700">
-              {activeButton === 'dashboard' && 'DASHBOARD'}
-              {activeButton === 'faculty' && 'FACULTY'}
-              {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
-              {/* {activeButton === 'attendance' && 'SCHEDULE'} */}
-              {activeButton === 'leave' && 'LEAVE'}
-              {activeButton === 'users' && 'USERS'}
-            </h1>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-6">
-                {/* Icons Section */}
-                <div className="flex items-center space-x-4">
-                  <a
-                    href="#"
-                    ref={chatButtonRef}
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Comments"
-                    onClick={() => setChatbotVisible(!isChatbotVisible)} // Toggle Chatbot Popup
-                  >
-                    <i className="fas fa-comments text-black text-lg"></i>
-                  </a>
-                  {/* <a
-                    href="#"
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Notifications"
-                    onClick={() => setNotificationsVisible(!isNotificationsVisible)} // Toggle Notifications Popup
-                  >
-                    <i className="fas fa-bell text-black text-lg"></i>
-                  </a> */}
+          <header className="bg-white shadow-md sticky top-0 z-20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 space-y-4 sm:space-y-0">
+              {/* Title and Breadcrumb */}
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-red-700">
+                  {activeButton === 'dashboard' && 'DASHBOARD'}
+                  {activeButton === 'faculty' && 'FACULTY'}
+                  {activeButton === 'employees' && 'EMPLOYEES'}
+                  {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
+                  {activeButton === 'leave' && 'LEAVE'}
+                  {activeButton === 'users' && 'USERS'}
+                </h1>
+              </div>
+
+              {/* Right Side Icons and User Info */}
+              <div className="flex items-center justify-between sm:justify-end space-x-4">
+                {/* Chat Icon */}
+                <a
+                  ref={chatButtonRef}
+                  href="#"
+                  className="p-2 rounded-full hover:bg-gray-200 transition"
+                  title="Comments"
+                  onClick={() => setChatbotVisible(!isChatbotVisible)}
+                >
+                  <i className="fas fa-comments text-black text-lg"></i>
+                </a>
+
+                {/* Profile Section */}
+                <div className="flex items-center space-x-3">
                   <a
                     href="#"
                     className="p-1 rounded-full hover:bg-gray-200 transition"
@@ -419,192 +478,198 @@ export default function Dashboard() {
                       <img
                         src={user.imageUrl}
                         alt={`${user.firstName}'s profile`}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-8 sm:w-10 h-8 sm:h-10 rounded-full object-cover"
                       />
                     ) : (
-                      <i className="fas fa-user-circle text-black text-lg"></i>
+                      <i className="fas fa-user-circle text-black text-xl sm:text-2xl"></i>
                     )}
                   </a>
-                </div>
-                {/* User Information */}
-                {isLoaded && isSignedIn && user ? (
-                  <a
-                  href="#"
-                  onClick={toggleProfile}
-                  className="flex flex-col text-black hover:text-red-700 transition"
-                  title="User Profile"
-                >
-                  <div className="flex flex-col text-black">
-                    <div className="font-semibold">{user.firstName} {user.lastName}</div>
-                    <div className="text-xs">{user.emailAddresses[0]?.emailAddress}</div>
-                  </div></a>
-                ) : (
-                  <div>Loading user info...</div>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Notifications Popup */}
-          {isNotificationsVisible && (
-            <div className="absolute top-16 right-4 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200">
-              <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-                
-              </div>
-              <div className="flex border-b">
-                <button
-                  className={`flex-1 p-2 text-center ${activeTab === 'all' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
-                  onClick={() => setActiveTab('all')}
-                >
-                  All
-                </button>
-                <button
-                  className={`flex-1 p-2 text-center ${activeTab === 'unread' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
-                  onClick={() => setActiveTab('unread')}
-                >
-                  Unread
-                </button>
-              </div>
-              <ul className="max-h-72 overflow-y-auto divide-y divide-gray-200">
-                {activeTab === 'all' && (
-                  <>
-                    <li className="p-4 hover:bg-gray-50">
-                      <p className="text-sm text-gray-700">
-                        Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
-                      </p>
-                      <span className="text-xs text-gray-500">11h ago</span>
-                    </li>
-                    <li className="p-4 hover:bg-gray-50">
-                      <p className="text-sm text-gray-700">
-                        Doc Anne just sent a request: <strong>&ldquo;Request for change in class schedule&rdquo;.</strong>
-                      </p>
-                      <span className="text-xs text-gray-500">22h ago</span>
-                    </li>
-                    <li className="p-4 hover:bg-gray-50">
-                      <p className="text-sm text-gray-700">
-                        Zayne Ghaz has sent you a request to change their password.
-                      </p>
-                      <span className="text-xs text-gray-500">1d ago</span>
-                    </li>
-                    {/* Add more notifications for "All" */}
-                  </>
-                )}
-                {activeTab === 'unread' && (
-                  <>
-                    <li className="p-4 hover:bg-gray-50">
-                      <p className="text-sm text-gray-700">
-                        Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
-                      </p>
-                      <span className="text-xs text-gray-500">11h ago</span>
-                    </li>
-                    {/* Add more notifications for "Unread" */}
-                  </>
-                )}
-              </ul>
-              <div className="p-4 bg-gray-100 text-center">
-                <button
-                  className="text-red-600 font-semibold hover:underline"
-                  onClick={() => setNotificationsVisible(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Chatbot Popup */}
-          {isChatbotVisible && (
-            <div
-              ref={chatbotRef}
-              className="fixed bg-white shadow-lg rounded-lg z-50 border border-gray-200"
-              style={{
-                width: 350,
-                height: 420,
-                top: chatbotPosition.y,
-                left: chatbotPosition.x,
-              }}
-            >
-              <div
-                className="p-4 bg-[#800000] text-white flex items-center justify-between rounded-t-lg cursor-move"
-                onMouseDown={handleDragStart}
-              >
-                <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
-                <button
-                  title='Close'
-                  className="text-white hover:text-gray-300"
-                  onClick={() => setChatbotVisible(false)}
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
-              <div className="flex flex-col h-[calc(100%-48px)]">
-                <div className="p-4 space-y-4 overflow-y-auto flex-1">
-                  {chatMessages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`${
-                        message.type === 'user' 
-                          ? 'bg-[#800000] text-white ml-auto' 
-                          : 'bg-gray-100 text-gray-800'
-                      } p-2 rounded-lg shadow-md text-sm max-w-[80%] ${
-                        message.type === 'user' ? 'ml-auto' : 'mr-auto'
-                      }`}
+                  {/* User Info - Responsive */}
+                  {isLoaded && isSignedIn && user && (
+                    <a
+                      href="#"
+                      onClick={toggleProfile}
+                      className="flex flex-col text-black hover:text-red-700 transition"
+                      title="User Profile"
                     >
-                      {message.content}
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4">
-                  <h4 className="text-sm font-bold text-gray-700 mb-2">Suggested chat prompts</h4>
-                  <ul className="space-y-2">
-                    <li
-                      className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                      onClick={() => handleSendMessage("How do I manage faculty schedules?")}
-                    >
-                      How do I manage faculty schedules?
-                    </li>
-                    <li
-                      className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                      onClick={() => handleSendMessage("How do I add a new faculty member?")}
-                    >
-                      How do I add a new faculty member?
-                    </li>
-                    <li
-                      className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                      onClick={() => handleSendMessage("How do I approve leave requests?")}
-                    >
-                      How do I approve leave requests?
-                    </li>
-                  </ul>
-                </div>
-                <div className="p-3 border-t">
-                  <div className="flex items-center space-x-2 px-1">
-                    <input
-                      type="text"
-                      placeholder="Write a question..."
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
-                    />
-                    <button
-                      className="px-3 py-2 bg-[#800000] text-white rounded hover:bg-red-700 text-sm whitespace-nowrap"
-                      onClick={() => handleSendMessage(chatInput)}
-                    >
-                      Send
-                    </button>
-                  </div>
+                      <div className="font-semibold text-sm sm:text-base">{user.firstName} {user.lastName}</div>
+                      <div className="text-xs text-gray-600 hidden sm:block">{user.emailAddresses[0]?.emailAddress}</div>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
-          )}
+          </header>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
             {renderContent()}
+          </main>
+        </div>
+
+        {/* Overlay for when sidebar is open */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20"
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
+        )}
+      </div>
+
+      {/* Notifications Popup */}
+      {isNotificationsVisible && (
+        <div className="absolute top-16 right-4 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200">
+          <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
+            
+          </div>
+          <div className="flex border-b">
+            <button
+              className={`flex-1 p-2 text-center ${activeTab === 'all' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('all')}
+            >
+              All
+            </button>
+            <button
+              className={`flex-1 p-2 text-center ${activeTab === 'unread' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('unread')}
+            >
+              Unread
+            </button>
+          </div>
+          <ul className="max-h-72 overflow-y-auto divide-y divide-gray-200">
+            {activeTab === 'all' && (
+              <>
+                <li className="p-4 hover:bg-gray-50">
+                  <p className="text-sm text-gray-700">
+                    Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
+                  </p>
+                  <span className="text-xs text-gray-500">11h ago</span>
+                </li>
+                <li className="p-4 hover:bg-gray-50">
+                  <p className="text-sm text-gray-700">
+                    Doc Anne just sent a request: <strong>&ldquo;Request for change in class schedule&rdquo;.</strong>
+                  </p>
+                  <span className="text-xs text-gray-500">22h ago</span>
+                </li>
+                <li className="p-4 hover:bg-gray-50">
+                  <p className="text-sm text-gray-700">
+                    Zayne Ghaz has sent you a request to change their password.
+                  </p>
+                  <span className="text-xs text-gray-500">1d ago</span>
+                </li>
+                {/* Add more notifications for "All" */}
+              </>
+            )}
+            {activeTab === 'unread' && (
+              <>
+                <li className="p-4 hover:bg-gray-50">
+                  <p className="text-sm text-gray-700">
+                    Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
+                  </p>
+                  <span className="text-xs text-gray-500">11h ago</span>
+                </li>
+                {/* Add more notifications for "Unread" */}
+              </>
+            )}
+          </ul>
+          <div className="p-4 bg-gray-100 text-center">
+            <button
+              className="text-red-600 font-semibold hover:underline"
+              onClick={() => setNotificationsVisible(false)}
+            >
+              Close
+            </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Chatbot Popup */}
+      {isChatbotVisible && (
+        <div
+          ref={chatbotRef}
+          className="fixed bg-white shadow-lg rounded-lg z-50 border border-gray-200"
+          style={{
+            width: 350,
+            height: 420,
+            top: chatbotPosition.y,
+            left: chatbotPosition.x,
+          }}
+        >
+          <div
+            className="p-4 bg-[#800000] text-white flex items-center justify-between rounded-t-lg cursor-move"
+            onMouseDown={handleDragStart}
+          >
+            <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
+            <button
+              title='Close'
+              className="text-white hover:text-gray-300"
+              onClick={() => setChatbotVisible(false)}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          <div className="flex flex-col h-[calc(100%-48px)]">
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+              {chatMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`${
+                    message.type === 'user' 
+                      ? 'bg-[#800000] text-white ml-auto' 
+                      : 'bg-gray-100 text-gray-800'
+                  } p-2 rounded-lg shadow-md text-sm max-w-[80%] ${
+                    message.type === 'user' ? 'ml-auto' : 'mr-auto'
+                  }`}
+                >
+                  {message.content}
+                </div>
+              ))}
+            </div>
+            <div className="p-4">
+              <h4 className="text-sm font-bold text-gray-700 mb-2">Suggested chat prompts</h4>
+              <ul className="space-y-2">
+                <li
+                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
+                  onClick={() => handleSendMessage("How do I manage faculty schedules?")}
+                >
+                  How do I manage faculty schedules?
+                </li>
+                <li
+                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
+                  onClick={() => handleSendMessage("How do I add a new faculty member?")}
+                >
+                  How do I add a new faculty member?
+                </li>
+                <li
+                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
+                  onClick={() => handleSendMessage("How do I approve leave requests?")}
+                >
+                  How do I approve leave requests?
+                </li>
+              </ul>
+            </div>
+            <div className="p-3 border-t">
+              <div className="flex items-center space-x-2 px-1">
+                <input
+                  type="text"
+                  placeholder="Write a question..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                />
+                <button
+                  className="px-3 py-2 bg-[#800000] text-white rounded hover:bg-red-700 text-sm whitespace-nowrap"
+                  onClick={() => handleSendMessage(chatInput)}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalVisible && (
