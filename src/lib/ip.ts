@@ -1,12 +1,17 @@
 import { headers } from 'next/headers';
 
-export async function getClientIp() {
-    const headersList = await headers();
-
-    const ip =
-        headersList.get('x-forwarded-for')?.split(',')[0].trim() ||
-        headersList.get('x-real-ip') ||
-        '127.0.0.1'; // Default to localhost if no IP is found
-
-    return ip;
+export async function getClientIp(): Promise<string> {
+  try {
+    // Call our internal API endpoint
+    const response = await fetch('/api/ip');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.ip;
+  } catch (error) {
+    console.error('Failed to get client IP:', error);
+    return 'unknown';
+  }
 }

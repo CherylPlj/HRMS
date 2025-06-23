@@ -18,7 +18,10 @@ const publicRoutes = [
     "/api/document-types/[id]",
     "/api/leaves/[id]",
     "/api/leaves/faculty/[facultyId]",
-    "/api/webhooks/clerk"
+    "/api/webhooks/clerk",
+    "/api/ip",
+    "/terms-of-use",
+    "/privacy-statement"
 ];
 
 // Routes that can be accessed while signed out
@@ -37,7 +40,10 @@ const ignoredRoutes = [
     "/api/faculty-documents/[documentId]/delete",
     "/api/leaves/[id]",
     "/api/leaves/faculty/[facultyId]",
-    "/api/webhooks/clerk"
+    "/api/webhooks/clerk",
+    "/api/ip",
+    "/terms-of-use",
+    "/privacy-statement"
 ];
 
 // Add dashboard routes that require authentication
@@ -67,7 +73,7 @@ export default clerkMiddleware(async (auth, req) => {
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
         "img-src 'self' data: https: blob:; " +
         "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-        "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co; " +
+        "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co https://clerk-telemetry.com; " +
         "frame-src 'self' https://*.clerk.accounts.dev; " +
         "worker-src 'self' blob:; " +
         "child-src 'self' blob:;"
@@ -96,27 +102,24 @@ export default clerkMiddleware(async (auth, req) => {
     // Check for dashboard routes specifically
     if (isDashboardRoute(req)) {
         if (!isAuthenticated) {
-            return NextResponse.redirect(new URL('/sign-in', req.url));
+            // Store the intended destination for after login
+            const redirectUrl = new URL('/sign-in', req.url);
+            redirectUrl.searchParams.set('redirect_url', url.pathname);
+            return NextResponse.redirect(redirectUrl);
         }
         return response;
     }
 
     // If trying to access a protected route while not authenticated
     if (!isPublicRoute(req) && !isAuthenticated) {
-        return NextResponse.redirect(new URL('/sign-in', req.url));
+        const redirectUrl = new URL('/sign-in', req.url);
+        redirectUrl.searchParams.set('redirect_url', url.pathname);
+        return NextResponse.redirect(redirectUrl);
     }
 
-    // If trying to access a public route while authenticated
-    if (isPublicRoute(req) && isAuthenticated) {
-        // Allow access to terms and privacy pages
-        if (url.pathname === '/terms-of-use' || url.pathname === '/privacy-statement') {
-            return response;
-        }
-
-        // If accessing sign-in page while authenticated, immediately redirect to /dashboard
-        if (url.pathname.startsWith('/sign-in')) {
-            return NextResponse.redirect(new URL('/dashboard', req.url));
-        }
+    // If trying to access sign-in/sign-up while authenticated
+    if ((url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) && isAuthenticated) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
     return response;

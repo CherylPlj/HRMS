@@ -15,12 +15,20 @@ const eslintConfig = [
     ignores: [
       "src/generated/**",
       ".next/**",
+      "node_modules/**",
     ],
   },
   ...compat.config({
     extends: ["next/core-web-vitals"],
     parserOptions: {
-      project: "./tsconfig.json"
+      project: "./tsconfig.json",
+      sourceType: "module",
+      ecmaVersion: "latest"
+    },
+    settings: {
+      next: {
+        rootDir: __dirname
+      }
     }
   }),
   {
@@ -28,6 +36,8 @@ const eslintConfig = [
     rules: {
       "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off"
     },
   },
 ];

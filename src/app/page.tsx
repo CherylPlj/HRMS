@@ -8,11 +8,11 @@ export default function Home() {
   const router = useRouter();
 
   const navigateToFaculty = () => {
-    router.push('/sign-in?portal=faculty');
+    router.push('/sign-in?portal=faculty&redirect_url=/dashboard/faculty');
   };
 
   const navigateToAdmin = () => {
-    router.push('/sign-in?portal=admin');
+    router.push('/sign-in?portal=admin&redirect_url=/dashboard/admin');
   };
 
   return (

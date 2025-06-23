@@ -4,7 +4,7 @@ import { Inter, JetBrains_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 
 // Add type definitions for the database response
@@ -54,14 +54,22 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded: userLoaded } = useUser();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUserRole = async () => {
-      if (!isLoaded || !user?.primaryEmailAddress?.emailAddress) {
+      // Wait for both user and auth to be loaded
+      if (!userLoaded || !authLoaded) {
         setIsLoading(false);
+        return;
+      }
+
+      // If not signed in, redirect to sign-in
+      if (!isSignedIn || !user?.primaryEmailAddress?.emailAddress) {
+        router.push('/sign-in');
         return;
       }
 
@@ -99,6 +107,11 @@ export default function DashboardLayout({
         setCurrentRole(role);
 
         // Only redirect if we're at the base dashboard path
+        if (!pathname) {
+          router.push('/sign-in');
+          return;
+        }
+
         if (pathname === '/dashboard' || pathname === '/dashboard/') {
           router.push(`/dashboard/${role}`);
         }
@@ -114,17 +127,21 @@ export default function DashboardLayout({
       }
     };
 
-    if (isLoaded && !currentRole) {
-      checkUserRole();
-    }
-  }, [isLoaded, user, pathname, router, currentRole]);
+    checkUserRole();
+  }, [userLoaded, authLoaded, isSignedIn, user, pathname, router]);
 
-  if (isLoading) {
+  // Show loading state while checking authentication and role
+  if (isLoading || !userLoaded || !authLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
       </div>
     );
+  }
+
+  // If not authenticated, don't render anything (middleware will handle redirect)
+  if (!isSignedIn) {
+    return null;
   }
 
   return (
