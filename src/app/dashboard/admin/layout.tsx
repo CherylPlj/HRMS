@@ -405,7 +405,7 @@ export default function AdminDashboard() {
                 <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
                   <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
                 </div>
-                <span className={`${isSidebarOpen ? 'text-base' : 'text-[8px] text-center w-full'}`}>
+                <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
                   {item.name}
                 </span>
               </a>
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
               <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
                 <i className={`fas fa-sign-out-alt ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
               </div>
-              <span className={`${isSidebarOpen ? 'text-base' : 'text-[8px] text-center w-full'}`}>
+              <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
                 Log Out
               </span>
             </a>
