@@ -9,10 +9,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all employees from Supabase
+    // Get all employees from Supabase Faculty table
     const { data: employees, error } = await supabaseAdmin
-      .from('Employee')
-      .select(`
+      .from('Faculty')
+      .select(
+        `
         *,
         User:UserID (
           UserID,
@@ -27,8 +28,9 @@ export async function GET(request: Request) {
           DepartmentID,
           DepartmentName
         )
-      `)
-      .order('EmployeeID', { ascending: true });
+      `
+      )
+      .order('FacultyID', { ascending: true });
 
     if (error) {
       throw error;
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
     const data = await request.json();
     
     // Validate required fields
-    const requiredFields = ['FirstName', 'LastName', 'Email', 'Position', 'DepartmentId', 'EmploymentStatus', 'EmployeeType'];
+    const requiredFields = ['FirstName', 'LastName', 'Email', 'Position', 'DepartmentID', 'EmploymentStatus', 'EmployeeType'];
     for (const field of requiredFields) {
       if (!data[field]) {
         return NextResponse.json(
@@ -64,14 +66,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create user in Supabase
+    // Create user in Supabase Faculty table
     const { data: newEmployee, error } = await supabaseAdmin
-      .from('Employee')
+      .from('Faculty')
       .insert([
         {
           UserID: data.UserID,
           Position: data.Position,
-          DepartmentID: data.DepartmentId,
+          DepartmentID: data.DepartmentID,
           EmploymentStatus: data.EmploymentStatus,
           EmployeeType: data.EmployeeType,
           HireDate: data.HireDate || new Date().toISOString(),
@@ -79,8 +81,6 @@ export async function POST(request: Request) {
           Phone: data.Phone,
           Address: data.Address,
           EmergencyContact: data.EmergencyContact,
-          EmergencyRelation: data.EmergencyRelation,
-          EmergencyPhone: data.EmergencyPhone,
           // Add other CSC Form 212 fields
           PlaceOfBirth: data.PlaceOfBirth,
           Gender: data.Gender,
@@ -114,4 +114,67 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const data = await request.json();
+
+    if (!data.FacultyID) {
+      return NextResponse.json(
+        { error: 'Missing FacultyID for update' },
+        { status: 400 }
+      );
+    }
+
+    // Update user in Supabase Faculty table
+    const { data: updatedEmployee, error } = await supabaseAdmin
+      .from('Faculty')
+      .update({
+        Position: data.Position,
+        DepartmentID: data.DepartmentID,
+        EmploymentStatus: data.EmploymentStatus,
+        EmployeeType: data.EmployeeType,
+        HireDate: data.HireDate,
+        DateOfBirth: data.DateOfBirth,
+        Phone: data.Phone,
+        Address: data.Address,
+        EmergencyContact: data.EmergencyContact,
+        PlaceOfBirth: data.PlaceOfBirth,
+        Gender: data.Gender,
+        CivilStatus: data.CivilStatus,
+        Height: data.Height,
+        Weight: data.Weight,
+        BloodType: data.BloodType,
+        GSIS: data.GSIS,
+        SSS: data.SSS,
+        PhilHealth: data.PhilHealth,
+        PagIbig: data.PagIbig,
+        TIN: data.TIN,
+        MobilePhone: data.MobilePhone,
+        Education: data.Education,
+        CivilService: data.CivilService,
+        WorkExperience: data.WorkExperience
+      })
+      .eq('FacultyID', data.FacultyID)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json(updatedEmployee);
+  } catch (error) {
+    console.error('Error updating employee:', error);
+    return NextResponse.json(
+      { error: 'Failed to update employee' },
+      { status: 500 }
+    );
+  }
+}

@@ -181,58 +181,6 @@ interface OtherInfo {
   organizations: string[];
 }
 
-// Mock employee data for UI demonstration
-const mockEmployees = [
-  {
-    id: 1,
-    surname: 'Doe',
-    firstName: 'John',
-    middleName: 'M',
-    nameExtension: '',
-    birthDate: '1990-01-15',
-    birthPlace: 'Manila',
-    sex: 'Male',
-    civilStatus: 'Single',
-    email: 'john.doe@example.com',
-    position: 'Teacher',
-    department: 'Education',
-    employmentType: 'Regular',
-    status: 'Active'
-  },
-  {
-    id: 2,
-    surname: 'Smith',
-    firstName: 'Jane',
-    middleName: 'A',
-    nameExtension: '',
-    birthDate: '1985-03-20',
-    birthPlace: 'Quezon City',
-    sex: 'Female',
-    civilStatus: 'Married',
-    email: 'jane.smith@example.com',
-    position: 'HR Manager',
-    department: 'Human Resources',
-    employmentType: 'Regular',
-    status: 'Active'
-  },
-  {
-    id: 3,
-    surname: 'Johnson',
-    firstName: 'Mike',
-    middleName: 'B',
-    nameExtension: 'Jr.',
-    birthDate: '1988-07-10',
-    birthPlace: 'Makati',
-    sex: 'Male',
-    civilStatus: 'Married',
-    email: 'mike.johnson@example.com',
-    position: 'Admin',
-    department: 'Administration',
-    employmentType: 'Regular',
-    status: 'Active'
-  }
-];
-
 const EmployeeContentNew = () => {
   // State for active tab
   const [activeTab, setActiveTab] = useState('personal');
@@ -245,6 +193,7 @@ const EmployeeContentNew = () => {
   // State for Add Employee modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
+    UserID: '',
     surname: '',
     firstName: '',
     middleName: '',
@@ -264,15 +213,28 @@ const EmployeeContentNew = () => {
     citizenship: 'Filipino',
     email: '',
     position: '',
-    department: '',
-    employmentType: 'Regular',
+    departmentID: 0,
+    employmentStatus: '',
+    employeeType: 'Regular',
   });
+
+  // Fix all occurrences of 'employmentType' to 'employeeType' in newEmployee state and handlers
+  // For example, in input value and onChange handlers
+
+  // Replace all 'employmentType' with 'employeeType' in the component
+
+  // Fix all occurrences of 'employmentType' to 'employeeType' in newEmployee state and handlers
+  // For example, in input value and onChange handlers
 
   // State for Import Employee modal
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+
+  // State for editing mode and edited employee
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedEmployee, setEditedEmployee] = useState<any>(null);
 
   // Tabs configuration
   const tabs = [
@@ -287,16 +249,98 @@ const EmployeeContentNew = () => {
     { id: 'other', label: 'Other Information', icon: FaInfoCircle },
   ];
 
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const [employees, setEmployees] = useState(mockEmployees);
+  // Handle edit button click
+  const handleEditClick = () => {
+    setEditedEmployee(selectedEmployee);
+    setIsEditing(true);
+  };
 
-  // Filter employees based on search term
-  const filteredEmployees = employees.filter(employee =>
-    `${employee.firstName} ${employee.surname}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Handle save edited employee
+  const handleSaveEdit = async () => {
+    try {
+      const response = await fetch('/api/employees', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editedEmployee),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update employee');
+      }
+      const updatedEmployee = await response.json();
+      setEmployees((prev) =>
+        prev.map((emp) => (emp.id === updatedEmployee.FacultyID ? updatedEmployee : emp))
+      );
+      setSelectedEmployee(updatedEmployee);
+      setIsEditing(false);
+      setEditedEmployee(null);
+    } catch (error) {
+      console.error('Error updating employee:', error);
+    }
+  };
+
+  // Handle input change in edit form
+  const handleEditInputChange = (field: string, value: any) => {
+    setEditedEmployee((prev: any) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch employees from backend API
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch('/api/employees');
+        if (!response.ok) {
+          throw new Error('Failed to fetch employees');
+        }
+        const data = await response.json();
+        // Map data to match UI expected fields
+        const mappedData = data.map((emp: any) => ({
+          id: emp.FacultyID,
+          surname: emp.User?.LastName || '',
+          firstName: emp.User?.FirstName || '',
+          middleName: emp.MiddleName || '',
+          nameExtension: emp.NameExtension || '',
+          birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
+          birthPlace: emp.PlaceOfBirth || '',
+          sex: emp.Gender || '',
+          civilStatus: emp.CivilStatus || '',
+          email: emp.User?.Email || '',
+          position: emp.Position || '',
+          departmentName: emp.Department?.DepartmentName || '',
+          employmentType: emp.EmploymentStatus || '',
+          status: emp.User?.Status || 'Active',
+          // Add other fields as needed
+        }));
+        setEmployees(mappedData);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  // Filter employees based on search term and filters
+  const filteredEmployees = employees.filter(employee => {
+    const firstName = employee.firstName || '';
+    const lastName = employee.surname || '';
+    const fullName = `${firstName} ${lastName}`.toLowerCase();
+    const email = employee.email?.toLowerCase() || '';
+    const position = employee.position?.toLowerCase() || '';
+    const departmentName = employee.departmentName?.toLowerCase() || '';
+    const status = employee.status?.toLowerCase() || '';
+
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase()) || position.includes(searchTerm.toLowerCase()) || departmentName.includes(searchTerm.toLowerCase());
+    const matchesDepartment = departmentFilter === 'all' || departmentName === departmentFilter.toLowerCase();
+    const matchesStatus = statusFilter === 'all' || status === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesDepartment && matchesStatus;
+  });
 
   const handleEmployeeSelect = (employee: any) => {
     setSelectedEmployee(employee);
@@ -306,11 +350,74 @@ const EmployeeContentNew = () => {
     setSelectedEmployee(null);
   };
 
+  // Implement handleAddEmployee and handleImportEmployees with API calls
+
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement the API call to add employee
-    console.log('Adding employee:', newEmployee);
-    setIsAddModalOpen(false);
+    try {
+      const response = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          UserID: newEmployee.UserID,
+          FirstName: newEmployee.firstName,
+          LastName: newEmployee.surname,
+          MiddleName: newEmployee.middleName,
+          NameExtension: newEmployee.nameExtension,
+          DateOfBirth: newEmployee.birthDate,
+          PlaceOfBirth: newEmployee.birthPlace,
+          Gender: newEmployee.sex,
+          CivilStatus: newEmployee.civilStatus,
+          Height: newEmployee.height,
+          Weight: newEmployee.weight,
+          BloodType: newEmployee.bloodType,
+          GSIS: newEmployee.gsis,
+          PagIbig: newEmployee.pagibig,
+          PhilHealth: newEmployee.philhealth,
+          SSS: newEmployee.sss,
+          TIN: newEmployee.tin,
+          Citizenship: newEmployee.citizenship,
+          Email: newEmployee.email,
+          Position: newEmployee.position,
+          DepartmentID: newEmployee.departmentID,
+          EmploymentStatus: newEmployee.employmentStatus,
+          EmployeeType: newEmployee.employeeType,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to add employee');
+      }
+      const addedEmployee = await response.json();
+      setEmployees((prev) => [...prev, addedEmployee]);
+      setIsAddModalOpen(false);
+      setNewEmployee({
+        UserID: '',
+        surname: '',
+        firstName: '',
+        middleName: '',
+        nameExtension: '',
+        birthDate: '',
+        birthPlace: '',
+        sex: '',
+        civilStatus: '',
+        height: '',
+        weight: '',
+        bloodType: '',
+        gsis: '',
+        pagibig: '',
+        philhealth: '',
+        sss: '',
+        tin: '',
+        citizenship: 'Filipino',
+        email: '',
+        position: '',
+        departmentID: 0,
+        employmentStatus: '',
+        employeeType: 'Regular',
+      });
+    } catch (error) {
+      console.error('Error adding employee:', error);
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -385,12 +492,29 @@ const EmployeeContentNew = () => {
             </h1>
           </div>
           <div className="flex gap-2">
-            <button className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors">
-              <FaEye /> View
-            </button>
-            <button className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors">
-              <FaEdit /> Edit
-            </button>
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleSaveEdit}
+                  className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+              >
+                <FaEdit /> Edit
+              </button>
+            )}
           </div>
         </div>
 
@@ -487,23 +611,23 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">GSIS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">GSIS-123456789</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.gsis || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">SSS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">SSS-987654321</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.sss || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">PhilHealth Number</label>
-                    <p className="mt-1 text-sm text-gray-900">PH-1234567890</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.philhealth || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Pag-IBIG Number</label>
-                    <p className="mt-1 text-sm text-gray-900">PAG-123456789</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.pagibig || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">TIN</label>
-                    <p className="mt-1 text-sm text-gray-900">123-456-789-000</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.tin || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -515,15 +639,15 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Email Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.email}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.email || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Mobile Number</label>
-                    <p className="mt-1 text-sm text-gray-900">+63 912 345 6789</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.mobile || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-600">Residential Address</label>
-                    <p className="mt-1 text-sm text-gray-900">123 Main Street, Barangay 1, City, Province 1234</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.residentialAddress || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -777,7 +901,7 @@ const EmployeeContentNew = () => {
                           {employee.firstName} {employee.surname}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {employee.employmentType}
+                          {employee.employeeType}
                         </div>
                       </div>
                     </div>
@@ -786,7 +910,7 @@ const EmployeeContentNew = () => {
                     {employee.position}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.department}
+                    {employee.departmentName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {employee.email}
@@ -810,7 +934,7 @@ const EmployeeContentNew = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // TODO: Implement edit functionality
+  // Implement edit functionality
                         }}
                         className="text-[#800000] hover:text-red-800"
                       >
@@ -965,8 +1089,8 @@ const EmployeeContentNew = () => {
                     <label className="block text-sm font-medium text-gray-600">Department</label>
                     <input
                       type="text"
-                      value={newEmployee.department}
-                      onChange={(e) => setNewEmployee({...newEmployee, department: e.target.value})}
+                      value={newEmployee.departmentID}
+                      onChange={(e) => setNewEmployee({...newEmployee, departmentID: Number(e.target.value)})}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
                       required
                     />
@@ -974,8 +1098,8 @@ const EmployeeContentNew = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Employment Type</label>
                     <select
-                      value={newEmployee.employmentType}
-                      onChange={(e) => setNewEmployee({...newEmployee, employmentType: e.target.value})}
+                      value={newEmployee.employeeType}
+                      onChange={(e) => setNewEmployee({...newEmployee, employeeType: e.target.value})}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
                       required
                     >
@@ -1062,11 +1186,11 @@ const EmployeeContentNew = () => {
                   Your CSV file should include the following columns:
                 </p>
                 <div className="bg-white p-3 rounded border text-sm font-mono">
-                  surname,firstName,middleName,nameExtension,birthDate,birthPlace,sex,civilStatus,email,position,department,employmentType
+                  surname,firstName,middleName,nameExtension,birthDate,birthPlace,sex,civilStatus,email,position,departmentID,employeeType
                 </div>
                 <button
                   onClick={() => {
-                    const csvContent = "surname,firstName,middleName,nameExtension,birthDate,birthPlace,sex,civilStatus,email,position,department,employmentType\nDoe,John,M,2024-01-01,Manila,Male,Single,john.doe@example.com,Teacher,Education,Regular";
+                    const csvContent = "surname,firstName,middleName,nameExtension,birthDate,birthPlace,sex,civilStatus,email,position,departmentID,employeeType\nDoe,John,M,2024-01-01,Manila,Male,Single,john.doe@example.com,Teacher,Education,Regular";
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
