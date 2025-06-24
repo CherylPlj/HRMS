@@ -67,12 +67,7 @@ export const supabaseAdmin = (() => {
     // Only create the client on the server side
     if (typeof window === 'undefined') {
       const { supabaseUrl, supabaseServiceRoleKey } = validateEnv();
-      return createClient(supabaseUrl, supabaseServiceRoleKey, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true
-        }
-      });
+      return createClient(supabaseUrl, supabaseServiceRoleKey);
     } else {
       // On the client side, return a dummy client that will throw an error if used
       return {

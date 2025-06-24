@@ -252,12 +252,13 @@ export async function POST(req: Request) {
         const email = email_addresses[0]?.email_address;
 
         try {
-          // Update user data in Supabase
+          // Update user data in Supabase, including clearing password hash since Clerk handles auth
           const { error: updateError } = await supabaseAdmin
             .from('User')
             .update({ 
               DateModified: new Date().toISOString(),
-              Photo: image_url || null
+              Photo: image_url || null,
+              PasswordHash: 'CLERK_MANAGED' // Indicate that password is managed by Clerk
             })
             .eq('UserID', id);
 

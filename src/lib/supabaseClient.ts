@@ -10,13 +10,7 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 // Create a singleton instance
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  }
-});
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export { supabase };
 export default supabase;

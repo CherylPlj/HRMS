@@ -19,6 +19,7 @@ const publicRoutes = [
     "/api/leaves/[id]",
     "/api/leaves/faculty/[facultyId]",
     "/api/webhooks/clerk",
+    "/api/sync-user-password",
     "/api/ip",
     "/terms-of-use",
     "/privacy-statement"
@@ -41,6 +42,7 @@ const ignoredRoutes = [
     "/api/leaves/[id]",
     "/api/leaves/faculty/[facultyId]",
     "/api/webhooks/clerk",
+    "/api/sync-user-password",
     "/api/ip",
     "/terms-of-use",
     "/privacy-statement"
@@ -96,15 +98,21 @@ export default clerkMiddleware(async (auth, req) => {
     if (isAuthenticated) {
         // Redirect from sign-in/sign-up to dashboard if already authenticated
         if (url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) {
-            // Get user's role
-            const role = await getUserRole(userId ? userId : undefined);
+            try {
+                // Get user's role
+                const role = await getUserRole(userId ? userId : undefined);
 
-            // Redirect to appropriate dashboard based on role
-            if (role === 'admin') {
-                return NextResponse.redirect(new URL('/dashboard/admin', req.url));
-            } else if (role === 'faculty') {
-                return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
-            } else {
+                // Redirect to appropriate dashboard based on role
+                if (role === 'admin') {
+                    return NextResponse.redirect(new URL('/dashboard/admin', req.url));
+                } else if (role === 'faculty') {
+                    return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
+                } else {
+                    return NextResponse.redirect(new URL('/dashboard', req.url));
+                }
+            } catch (error) {
+                console.error("Error during role-based redirect:", error);
+                // Fallback to general dashboard if role lookup fails
                 return NextResponse.redirect(new URL('/dashboard', req.url));
             }
         }
@@ -143,17 +151,25 @@ async function getUserRole(userId?: string): Promise<string> {
 
         if (error) {
             console.error("Database error:", error);
-            return '';
+            // Return a default role instead of empty string to avoid redirect issues
+            return 'user';
         }
 
-        if (!data) return '';
+        if (!data) {
+            console.log("No user data found for userId:", userId);
+            return 'user';
+        }
 
         const roleData = data.UserRole?.[0]?.role;
-        if (!roleData || !('name' in roleData)) return '';
+        if (!roleData || !('name' in roleData)) {
+            console.log("No role data found for user:", userId);
+            return 'user';
+        }
 
         return (roleData as { name: string }).name.toLowerCase();
     } catch (error) {
         console.error("Error getting user role:", error);
-        return '';
+        // Return default role to prevent redirect loops
+        return 'user';
     }
 }

@@ -2,16 +2,30 @@
 
 'use client';
 import { useRouter } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
+  const { signOut } = useClerk();
 
-  const navigateToFaculty = () => {
+  const navigateToFaculty = async () => {
+    // Clear any existing session before navigating to faculty sign-in
+    try {
+      await signOut();
+    } catch (error) {
+      console.log('No session to sign out');
+    }
     router.push('/sign-in?portal=faculty&redirect_url=/dashboard/faculty');
   };
 
-  const navigateToAdmin = () => {
+  const navigateToAdmin = async () => {
+    // Clear any existing session before navigating to admin sign-in
+    try {
+      await signOut();
+    } catch (error) {
+      console.log('No session to sign out');
+    }
     router.push('/sign-in?portal=admin&redirect_url=/dashboard/admin');
   };
 

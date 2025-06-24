@@ -20,11 +20,7 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false
-  }
-});
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Add type definitions for the database response
 interface Role {
@@ -78,21 +74,56 @@ interface ForgotPasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (email: string) => Promise<any>;
+  clerk: any;
 }
 
-const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClose, onSubmit, clerk }) => {
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'pin' | 'newPassword' | 'success'>('email');
   const [resetData, setResetData] = useState<any>(null);
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const error = validateEmailCharacters(value);
+    
+    // Simple validation for forgot password modal - no external dependencies
+    let error = null;
+    
+    // Check for invalid characters
+    const validEmailRegex = /^[a-zA-Z0-9._\-@ ]*$/;
+    if (!validEmailRegex.test(value)) {
+      error = 'Only letters, numbers, dots, underscores, hyphens, and @ are allowed';
+    }
+    
+    // Check length
+    if (value.length > 50) {
+      error = 'Email must not exceed 50 characters';
+    }
+    
+    if (value.length < 6 && value.length > 0) {
+      error = 'Email must be at least 6 characters';
+    }
+    
+    // Check email format if there's input
+    if (value.length > 0 && !error) {
+      const emailRegex = /^[a-zA-Z0-9._\-]+@[a-zA-Z0-9._\-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(value)) {
+        if (!value.includes('@')) {
+          error = 'Please include @ in the email address';
+        } else if (!value.includes('.')) {
+          error = 'Please include a domain (e.g., .com, .edu)';
+        } else {
+          error = 'Please enter a valid email address (e.g., example@domain.com)';
+        }
+      }
+    }
+    
     setEmailError(error);
     
     if (error && error.includes('Only letters, numbers')) {
@@ -115,18 +146,72 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     setIsLoading(true);
 
     try {
-      const emailError = validateEmailCharacters(email);
+      // Use the same inline validation as handleEmailChange
+      let emailError = null;
+      
+      // Check for invalid characters
+      const validEmailRegex = /^[a-zA-Z0-9._\-@ ]*$/;
+      if (!validEmailRegex.test(email)) {
+        emailError = 'Only letters, numbers, dots, underscores, hyphens, and @ are allowed';
+      }
+      
+      // Check length
+      if (email.length > 50) {
+        emailError = 'Email must not exceed 50 characters';
+      }
+      
+      if (email.length < 6) {
+        emailError = 'Email must be at least 6 characters';
+      }
+      
+      // Check email format
+      if (email.length > 0 && !emailError) {
+        const emailRegex = /^[a-zA-Z0-9._\-]+@[a-zA-Z0-9._\-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+          if (!email.includes('@')) {
+            emailError = 'Please include @ in the email address';
+          } else if (!email.includes('.')) {
+            emailError = 'Please include a domain (e.g., .com, .edu)';
+          } else {
+            emailError = 'Please enter a valid email address (e.g., example@domain.com)';
+          }
+        }
+      }
+      
       if (emailError) {
         setError(emailError);
         setIsLoading(false);
         return;
       }
 
+      console.log('Submitting password reset for email:', email);
+      
       const result = await onSubmit(email);
-      setResetData(result);
-      setStep('pin');
+      
+      if (result) {
+        setResetData(result);
+        setStep('pin');
+        console.log('Password reset email sent successfully');
+      } else {
+        throw new Error('No result returned from password reset');
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset code');
+      console.error('Error during email submission:', err);
+      
+      // More specific error handling
+      let errorMessage = 'Failed to send reset code';
+      
+      if (err.message) {
+        if (err.message.includes('not found') || err.message.includes('invalid')) {
+          errorMessage = 'Email address not found. Please check your email and try again.';
+        } else if (err.message.includes('too many') || err.message.includes('rate')) {
+          errorMessage = 'Too many attempts. Please wait a few minutes before trying again.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -161,16 +246,71 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     setIsLoading(true);
 
     try {
-      const passwordError = validatePassword(newPassword);
-      if (passwordError) {
-        setError(passwordError);
+      const passwordValidation = validatePassword(newPassword);
+      if (passwordValidation) {
+        setPasswordError(passwordValidation);
         setIsLoading(false);
         return;
       }
 
-      await resetData.resetPassword({
+      // Reset the password 
+      const passwordResetResult = await resetData.resetPassword({
         password: newPassword
       });
+
+      console.log('Password reset result:', passwordResetResult);
+
+      // If a session was created during reset, sign out immediately
+      if (passwordResetResult?.status === 'complete') {
+        console.log('Password reset completed successfully');
+        
+        // Check if we're now signed in and sign out if needed
+        if (clerk) {
+          // Small delay to let Clerk process the session creation
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            // Force sign out to prevent auto-login
+            console.log('Force signing out after successful password reset...');
+            await clerk.signOut();
+            
+            // Additional delay to ensure sign out completes
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (signOutError) {
+            console.error('Error signing out after password reset:', signOutError);
+          }
+        }
+      }
+
+      // Sync the password status in Supabase
+      try {
+        console.log('Attempting to sync password status for email:', email);
+        
+        // Try to get the user ID from the reset data
+        const userID = resetData?.userData?.id || passwordResetResult?.userData?.id;
+        console.log('User ID from reset data:', userID);
+        
+        const response = await fetch('/api/sync-user-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            email,
+            userID: userID 
+          }),
+        });
+        
+        const result = await response.json();
+        console.log('Sync response:', result);
+        
+        if (!response.ok) {
+          console.error('Sync API failed:', result);
+        }
+      } catch (syncError) {
+        console.error('Error syncing password status:', syncError);
+        // Don't fail the password reset if sync fails
+      }
 
       setStep('success');
     } catch (err: any) {
@@ -181,14 +321,23 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
   };
 
   const handleClose = () => {
+    // Clear all state
     setEmail('');
     setPin('');
     setNewPassword('');
     setError(null);
     setEmailError(null);
+    setPasswordError(null);
+    setShowNewPassword(false);
     setStep('email');
     setResetData(null);
+    setIsLoading(false);
+    
+    // Call the parent close handler
     onClose();
+    
+    // No page refresh when just closing the modal
+    // User should be able to close and reopen without losing their place
   };
 
   if (!isOpen) return null;
@@ -213,11 +362,32 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
         {step === 'success' ? (
           <div className="text-center">
             <p className="text-green-600 mb-4">Your password has been successfully reset.</p>
+            <p className="text-gray-600 mb-4 text-sm">You can now sign in with your new password.</p>
             <button
-              onClick={handleClose}
+              onClick={async () => {
+                try {
+                  // Ensure user is signed out after password reset
+                  if (clerk) {
+                    console.log('Final sign out before returning to login...');
+                    await clerk.signOut();
+                    
+                    // Wait for sign out to complete
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                  }
+                  
+                  // Just close the modal - no page refresh or navigation
+                  handleClose();
+                  
+                  console.log('Password reset completed. User can now sign in with new password.');
+                } catch (error) {
+                  console.error('Error signing out after password reset:', error);
+                  // Still proceed with closing the modal
+                  handleClose();
+                }
+              }}
               className="bg-[#800000] text-white px-6 py-2 rounded hover:bg-[#800000]/80 transition-colors"
             >
-              Close
+              Continue to Sign In
             </button>
           </div>
         ) : (
@@ -286,21 +456,39 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                 <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
                   New Password
                 </label>
-                <input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => {
-                    setNewPassword(e.target.value);
-                    setError(null);
-                  }}
-                  className={`w-full px-3 py-2 border ${
-                    error ? 'border-red-300' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-1 ${
-                    error ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
-                  }`}
-                  placeholder="Enter new password"
-                />
+                <div className="relative">
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewPassword(value);
+                      setError(null);
+                      
+                      // Real-time password validation
+                      const validation = validatePassword(value);
+                      setPasswordError(validation);
+                    }}
+                    className={`w-full px-3 py-2 pr-10 border ${
+                      passwordError ? 'border-red-300' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-1 ${
+                      passwordError ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
+                    }`}
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none"
+                    disabled={isLoading}
+                  >
+                    <Eye className="h-[18px] w-[18px]" />
+                  </button>
+                </div>
+                {passwordError && (
+                  <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+                )}
               </div>
             )}
 
@@ -321,13 +509,13 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                 disabled={isLoading || (
                   step === 'email' ? !email || !!emailError :
                   step === 'pin' ? !pin || pin.length !== 6 :
-                  !newPassword
+                  !newPassword || !!passwordError
                 )}
                 className={`px-4 py-2 text-sm text-white rounded ${
                   isLoading || (
                     step === 'email' ? !email || !!emailError :
                     step === 'pin' ? !pin || pin.length !== 6 :
-                    !newPassword
+                    !newPassword || !!passwordError
                   )
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-[#800000] hover:bg-[#800000]/80'
@@ -352,9 +540,11 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
 export default function SignInPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const { signIn } = useSignIn();
+  const clerk = useClerk();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams?.get('redirect_url');
+  const portal = searchParams?.get('portal');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -364,16 +554,73 @@ export default function SignInPage() {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [hasAttemptedSignIn, setHasAttemptedSignIn] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+  const [isProcessingPasswordReset, setIsProcessingPasswordReset] = useState(false);
+
+  // Function to show error popup
+  const showErrorPopup = (message: string) => {
+    setErrorModalMessage(message);
+    setShowErrorModal(true);
+  };
+
+  // Check for pending password reset after page reload
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isLoaded) {
+      const pendingReset = localStorage.getItem('pendingPasswordReset');
+      console.log('Checking for pending password reset...', { pendingReset, isLoaded, isSignedIn });
+      
+      if (pendingReset) {
+        try {
+          const resetData = JSON.parse(pendingReset);
+          const timeDiff = Date.now() - resetData.timestamp;
+          
+          console.log('Found pending reset:', resetData, 'Time diff:', timeDiff);
+          
+          // If the pending reset is less than 5 minutes old, auto-open the modal
+          if (timeDiff < 5 * 60 * 1000) {
+            console.log('Resuming password reset for:', resetData.email);
+            
+            // Wait a bit more for the page to fully load before opening modal
+            setTimeout(() => {
+              setShowForgotPasswordModal(true);
+              // Clear the pending reset
+              localStorage.removeItem('pendingPasswordReset');
+            }, 1000);
+          } else {
+            // Clear old pending reset
+            console.log('Clearing old pending reset');
+            localStorage.removeItem('pendingPasswordReset');
+          }
+        } catch (error) {
+          console.error('Error parsing pending password reset:', error);
+          localStorage.removeItem('pendingPasswordReset');
+        }
+      }
+    }
+  }, [isLoaded]);
 
   // Check if user is already signed in and redirect accordingly
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
-      if (isLoaded && isSignedIn && user) {
+      // Check if there's a pending password reset - if so, don't redirect
+      const pendingReset = typeof window !== 'undefined' ? localStorage.getItem('pendingPasswordReset') : null;
+      
+      // Only redirect if user is actually authenticated and we're not in a loading state
+      // Don't auto-redirect if user explicitly chose a portal (they want to sign in as different user)
+      // Don't auto-redirect if there's a pending password reset
+      console.log('Auto-redirect check:', { isLoaded, isSignedIn, user: !!user, isLoading, portal, pendingReset: !!pendingReset });
+      
+      if (isLoaded && isSignedIn && user && !isLoading && !pendingReset) {
         try {
           // Get user's role from Supabase
           const { data: userData, error } = await supabase
             .from('User')
             .select(`
+              UserID,
+              Status,
+              isDeleted,
               UserRole (
                 role:Role (
                   name
@@ -385,27 +632,61 @@ export default function SignInPage() {
 
           if (error) {
             console.error("Error fetching user role:", error);
+            // Redirect to default dashboard if role lookup fails
+            window.location.href = '/dashboard';
             return;
           }
 
-          const role = userData?.UserRole?.[0]?.role?.[0]?.name?.toLowerCase() || '';
+          // Check if user is active
+          if (!userData || userData.isDeleted || userData.Status !== 'Active') {
+            console.log("User is not active or has been deleted");
+            // Don't redirect inactive users, let them see an error
+            return;
+          }
 
-          // Redirect based on role
+          const roleData = userData?.UserRole?.[0]?.role;
+          const role = (roleData as any)?.name?.toLowerCase() || '';
+
+          // Check if the current portal matches the user's role
+          const userMatchesPortal = !portal || 
+            (portal === 'admin' && role === 'admin') || 
+            (portal === 'faculty' && role === 'faculty');
+
+          if (!userMatchesPortal) {
+            console.log(`User role (${role}) doesn't match portal (${portal}), signing out`);
+            // Sign out the user if they're trying to access wrong portal
+            if (clerk) {
+              await clerk.signOut();
+              return;
+            }
+          }
+
+          console.log(`Redirecting authenticated ${role} user to dashboard...`);
+
+          // Small delay to ensure proper state sync
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Redirect based on role using window.location for more reliable redirect
           if (role === 'admin') {
-            router.push('/dashboard/admin');
+            window.location.href = '/dashboard/admin';
           } else if (role === 'faculty') {
-            router.push('/dashboard/faculty');
+            window.location.href = '/dashboard/faculty';
           } else {
-            router.push('/dashboard');
+            window.location.href = '/dashboard';
           }
         } catch (error) {
-          console.error("Error during role check:", error);
+          console.error("Error during authentication verification:", error);
+          // Fallback to default dashboard if any error occurs
+          window.location.href = '/dashboard';
         }
       }
     };
 
-    checkAuthAndRedirect();
-  }, [isLoaded, isSignedIn, user, router]);
+    // Add a small delay before checking to avoid immediate redirects
+    const timer = setTimeout(checkAuthAndRedirect, 500);
+    
+    return () => clearTimeout(timer);
+  }, [isLoaded, isSignedIn, user, router, isLoading, portal]);
 
   // If still loading, show loading state
   if (!isLoaded) {
@@ -416,40 +697,55 @@ export default function SignInPage() {
     );
   }
 
+  // If user is already signed in and not accessing a specific portal, show a loading message
+  if (isSignedIn && user && !portal) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading. Please wait...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
     if (name === 'email') {
-      const error = validateEmailCharacters(value);
-      setEmailError(error);
+      // Handle pasted content that might exceed max length
+      const trimmedValue = value.length > 50 ? value.slice(0, 50) : value;
       
-      if (error && error.includes('Only letters, numbers')) {
-        // Don't update the form if invalid characters are entered
+      const emailValidationError = validateEmailCharacters(trimmedValue);
+      setEmailError(emailValidationError);
+      
+      // Only prevent invalid characters, but allow length trimming
+      if (emailValidationError && emailValidationError.includes('Only letters, numbers')) {
         return;
       }
       
-      if (value.length > 50) {
-        setEmail(value.slice(0, 50));
-        return;
+      setEmail(trimmedValue);
+      
+      // Clear general error if email becomes valid
+      if (!emailValidationError) {
+        setError(null);
       }
-      setEmail(value);
     }
     
     if (name === 'password') {
-      // Show password requirements immediately
-      const error = validatePassword(value);
-      setError(error);
+      // Handle pasted content that might exceed max length
+      const trimmedValue = value.length > 50 ? value.slice(0, 50) : value;
       
-      // Only update form data if not exceeding max length
-      if (value.length > 50) {
-        return;
+      // Show password requirements immediately
+      const passwordValidationError = validatePassword(trimmedValue);
+      setError(passwordValidationError);
+      
+      setPassword(trimmedValue);
+      
+      // Clear email error if password is being edited and email is valid
+      if (!passwordValidationError && !validateEmailCharacters(email)) {
+        setEmailError(null);
       }
-      setPassword(value);
-    }
-    
-    // Only clear the main error message if no validation errors
-    if (!error && !emailError) {
-      setError(null);
     }
   };
 
@@ -457,6 +753,7 @@ export default function SignInPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setHasAttemptedSignIn(true);
 
     try {
       // Get client IP for rate limiting
@@ -467,50 +764,80 @@ export default function SignInPage() {
         await loginRateLimiter.consume(userIP);
       } catch {
         setIsLoading(false);
-        throw new Error('Too many login attempts. Please try again later.');
+        showErrorPopup('Too many login attempts. Please try again later.');
+        return;
       }
 
       // Check IP-based login attempts
       const { blocked, remainingAttempts } = checkLoginAttempts(userIP);
       if (blocked) {
         setIsLoading(false);
-        throw new Error('Account temporarily locked due to too many failed attempts. Please try again later.');
+        showErrorPopup('Account temporarily locked due to too many failed attempts. Please try again later.');
+        return;
       }
 
       if (!email || !password) {
         setIsLoading(false);
-        throw new Error('Please fill in all fields');
+        showErrorPopup('Please fill in all fields');
+        return;
       }
 
       if (email.length < 6) {
         setIsLoading(false);
-        throw new Error('Email must be at least 6 characters');
+        showErrorPopup('Email must be at least 6 characters');
+        return;
       }
 
       if (email.length > 50) {
         setIsLoading(false);
-        throw new Error('Email must not exceed 50 characters');
+        showErrorPopup('Email must not exceed 50 characters');
+        return;
       }
 
       const emailError = validateEmailCharacters(email);
       if (emailError) {
         setIsLoading(false);
-        throw new Error(emailError);
+        showErrorPopup(emailError);
+        return;
       }
 
       // Validate password complexity
       const passwordError = validatePassword(password);
       if (passwordError) {
         setIsLoading(false);
-        throw new Error(passwordError);
+        showErrorPopup(passwordError);
+        return;
       }
 
       if (!signIn) {
         setIsLoading(false);
-        throw new Error('Authentication is not initialized');
+        showErrorPopup('Authentication is not initialized');
+        return;
       }
 
-      // First verify the role before attempting to sign in
+      // Attempt to sign in with Clerk first
+      let result;
+      try {
+        result = await signIn.create({
+          identifier: email,
+          password: password,
+        });
+      } catch (clerkError: any) {
+        recordFailedLoginAttempt(userIP);
+        setIsLoading(false);
+        // Override all Clerk error messages with our custom message
+        showErrorPopup('Invalid Credentials');
+        return;
+      }
+
+      if (result.status !== "complete") {
+        recordFailedLoginAttempt(userIP);
+        setIsLoading(false);
+        showErrorPopup('Invalid Credentials');
+        return;
+      }
+
+      // Now verify the user exists in our database and get their role
       const { data: userCheck, error: userError } = await supabase
         .from('User')
         .select(`
@@ -527,55 +854,71 @@ export default function SignInPage() {
         .eq('Email', email)
         .single();
 
-      if (userError) {
+      if (userError || !userCheck) {
         recordFailedLoginAttempt(userIP);
         setIsLoading(false);
-        throw new Error('Failed to verify user role');
-      }
-
-      if (!userCheck) {
-        recordFailedLoginAttempt(userIP);
-        setIsLoading(false);
-        throw new Error('User not found in the system');
+        showErrorPopup('Invalid Credentials');
+        return;
       }
 
       const userRoles = (userCheck as unknown as UserCheck).UserRole;
       if (!userRoles || userRoles.length === 0) {
         recordFailedLoginAttempt(userIP);
         setIsLoading(false);
-        throw new Error('User role not found');
+        showErrorPopup('Invalid Credentials');
+        return;
       }
 
       // Check if user is deleted or inactive
       if (userCheck.isDeleted || userCheck.Status !== 'Active') {
         recordFailedLoginAttempt(userIP);
         setIsLoading(false);
-        throw new Error('Account is inactive or has been deleted');
+        showErrorPopup('Invalid Credentials');
+        return;
       }
 
-      // Attempt to sign in with Clerk
-      const result = await signIn.create({
-        identifier: email,
-        password: password,
-      });
-
-      if (result.status === "complete") {
-        resetLoginAttempts(userIP); // Reset attempts on successful login
-        
-        // Handle redirect
-        if (redirectUrl) {
-          router.push(redirectUrl);
-        } else {
-          const role = userRoles[0].role.name.toLowerCase();
-          router.push(`/dashboard/${role}`);
+      // If we get here, both Clerk authentication and database verification passed
+      resetLoginAttempts(userIP); // Reset attempts on successful login
+      
+      // Get user role for validation
+      const userRole = (userRoles[0].role as any).name.toLowerCase();
+      
+      // Role-based login validation
+      if (portal) {
+        if (portal === 'admin' && userRole !== 'admin') {
+          recordFailedLoginAttempt(userIP);
+          setIsLoading(false);
+          showErrorPopup('Invalid Credentials');
+          return;
         }
+        
+        if (portal === 'faculty' && userRole !== 'faculty') {
+          recordFailedLoginAttempt(userIP);
+          setIsLoading(false);
+          showErrorPopup('Invalid Credentials');
+          return;
+        }
+      }
+      
+      // Force a small delay to ensure session is fully established
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Handle redirect
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
       } else {
-        recordFailedLoginAttempt(userIP);
-        throw new Error('Invalid credentials');
+        if (userRole === 'admin') {
+          window.location.href = '/dashboard/admin';
+        } else if (userRole === 'faculty') {
+          window.location.href = '/dashboard/faculty';
+        } else {
+          window.location.href = '/dashboard';
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in');
       setIsLoading(false);
+      // Override all error messages with our custom message for security
+      showErrorPopup('Invalid Credentials');
     }
   };
 
@@ -589,6 +932,42 @@ export default function SignInPage() {
     }
 
     try {
+      setIsProcessingPasswordReset(true);
+      
+      // More robust sign-out process for password reset
+      if (isSignedIn && clerk) {
+        console.log('User is signed in, need to sign out before password reset...');
+        console.log('Current user:', user?.emailAddresses?.[0]?.emailAddress);
+        console.log('Reset email:', email);
+        
+        // Store the password reset intent in localStorage
+        if (typeof window !== 'undefined') {
+          const resetData = {
+            email,
+            timestamp: Date.now(),
+            portal: portal || null,
+            redirectUrl: redirectUrl || null
+          };
+          console.log('Storing pending password reset:', resetData);
+          localStorage.setItem('pendingPasswordReset', JSON.stringify(resetData));
+        }
+        
+        console.log('Signing out user...');
+        await clerk.signOut();
+        
+        // Longer delay to ensure sign out is complete and state is cleared
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Force a page reload to clear any cached state
+        if (typeof window !== 'undefined') {
+          console.log('Reloading page to clear auth state...');
+          window.location.reload();
+          return; // This will stop execution as page reloads
+        }
+      }
+
+      console.log('Initiating password reset for:', email);
+      
       const result = await signIn.create({
         strategy: "reset_password_email_code",
         identifier: email,
@@ -598,9 +977,17 @@ export default function SignInPage() {
         throw new Error('Failed to initiate password reset');
       }
 
+      console.log('Password reset initiated successfully:', result);
       return result;
     } catch (err: any) {
+      console.error('Password reset error:', err);
+      // Don't show "clerk is not defined" error to user
+      if (err.message?.includes('clerk is not defined')) {
+        throw new Error('Authentication service is not available. Please refresh the page and try again.');
+      }
       throw new Error(err.message || 'Failed to send reset code');
+    } finally {
+      setIsProcessingPasswordReset(false);
     }
   };
 
@@ -633,14 +1020,20 @@ export default function SignInPage() {
               />
               <h1 className="text-3xl text-center w-full mb-2 mx-1">
                 <span className="font-bold text-[#800000]">SJSFI-HRMS</span>
-                {redirectUrl ? (
+                {portal ? (
+                  <span className="ml-1">
+                    {portal === 'admin' ? 'Admin Portal' : 
+                     portal === 'faculty' ? 'Faculty Portal' : 
+                     'Portal'}
+                  </span>
+                ) : redirectUrl ? (
                   <span className="ml-1">
                     {redirectUrl.includes('admin') ? 'Admin Module' : 
                      redirectUrl.includes('faculty') ? 'Faculty Module' : 
                      'Module'}
                   </span>
                 ) : (
-                  <span className="ml-1">Module</span>
+                  <span className="ml-1">Portal</span>
                 )}
               </h1>
             </div>
@@ -648,11 +1041,6 @@ export default function SignInPage() {
               <p className="text-center text-black text-sm mb-4">
                 Sign in to start your session
               </p>
-              {error && (
-                <div className="mb-4 p-2 text-sm text-red-600 bg-red-50 rounded w-full mx-4">
-                  {error}
-                </div>
-              )}
               <form onSubmit={handleSubmit} className="w-full px-4" autoComplete="off">
                 <div className="mb-4 w-full">
                   <div className="relative w-full">
@@ -666,6 +1054,15 @@ export default function SignInPage() {
                       name="email"
                       value={email}
                       onChange={handleInputChange}
+                      onPaste={(e) => {
+                        // Allow paste to happen, then validate after a brief delay
+                        setTimeout(() => {
+                          const target = e.target as HTMLInputElement;
+                          handleInputChange({
+                            target: { name: 'email', value: target.value }
+                          } as React.ChangeEvent<HTMLInputElement>);
+                        }, 0);
+                      }}
                       disabled={isLoading}
                     />
                   </div>
@@ -685,6 +1082,15 @@ export default function SignInPage() {
                       name="password"
                       value={password}
                       onChange={handleInputChange}
+                      onPaste={(e) => {
+                        // Allow paste to happen, then validate after a brief delay
+                        setTimeout(() => {
+                          const target = e.target as HTMLInputElement;
+                          handleInputChange({
+                            target: { name: 'password', value: target.value }
+                          } as React.ChangeEvent<HTMLInputElement>);
+                        }, 0);
+                      }}
                       disabled={isLoading}
                     />
                     <button
@@ -704,11 +1110,11 @@ export default function SignInPage() {
                   <button
                     type="submit"
                     className={`text-sm rounded-sm px-4 py-2 w-full transition duration-200 ease-in-out ${
-                      isLoading || !!emailError || !!error
+                      isLoading || !!emailError || !!error || !email.trim() || !password.trim()
                         ? 'bg-white text-red-600 cursor-not-allowed opacity-75'
                         : 'bg-[#800000] hover:bg-[#800000]/80 text-white'
                     }`}
-                    disabled={isLoading || !!emailError || !!error}
+                    disabled={isLoading || !!emailError || !!error || !email.trim() || !password.trim()}
                   >
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </button>
@@ -717,9 +1123,9 @@ export default function SignInPage() {
                   <button
                     type="button"
                     onClick={() => setShowForgotPasswordModal(true)}
-                    className="text-sm text-[#800000] hover:text-[#800000]/80 focus:outline-none"
+                    className="text-sm text-[#800000] hover:text-[#800000]/80 focus:outline-none w-full text-center"
                   >
-                    Forgot password?
+                    Forgot Password?
                   </button>
                 </div>
                 <div className="flex items-center justify-center mb-4 w-full">
@@ -752,6 +1158,13 @@ export default function SignInPage() {
         isOpen={showForgotPasswordModal}
         onClose={() => setShowForgotPasswordModal(false)}
         onSubmit={handleForgotPassword}
+        clerk={clerk}
+      />
+
+      <WarningModal
+        isOpen={showErrorModal}
+        message={errorModalMessage}
+        onClose={() => setShowErrorModal(false)}
       />
     </>
   );
