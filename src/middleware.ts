@@ -99,15 +99,15 @@ export default clerkMiddleware(async (auth, req) => {
         // Redirect from sign-in/sign-up to dashboard if already authenticated
         if (url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) {
             try {
-                // Get user's role
-                const role = await getUserRole(userId ? userId : undefined);
+            // Get user's role
+            const role = await getUserRole(userId ? userId : undefined);
 
-                // Redirect to appropriate dashboard based on role
-                if (role === 'admin') {
-                    return NextResponse.redirect(new URL('/dashboard/admin', req.url));
-                } else if (role === 'faculty') {
-                    return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
-                } else {
+            // Redirect to appropriate dashboard based on role
+                if (role === 'admin' || role === 'super admin') {
+                return NextResponse.redirect(new URL('/dashboard/admin', req.url));
+            } else if (role === 'faculty') {
+                return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
+            } else {
                     return NextResponse.redirect(new URL('/dashboard', req.url));
                 }
             } catch (error) {

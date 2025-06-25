@@ -13,7 +13,7 @@ const supabase = createClient(
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 // Define valid roles and statuses
-const VALID_ROLES = ['admin', 'faculty', 'registrar', 'cashier'] as const;
+const VALID_ROLES = ['admin', 'faculty', 'registrar', 'cashier', 'super admin'] as const;
 const VALID_STATUS = ['Invited', 'Active', 'Inactive'] as const;
 
 type Role = typeof VALID_ROLES[number];

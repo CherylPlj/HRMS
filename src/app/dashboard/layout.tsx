@@ -112,12 +112,18 @@ export default function DashboardLayout({
           return;
         }
 
+        // Map roles to dashboard paths
+        let dashboardPath = role;
+        if (role === 'super admin') {
+          dashboardPath = 'admin'; // Super Admin users go to admin dashboard
+        }
+
         if (pathname === '/dashboard' || pathname === '/dashboard/') {
-          router.push(`/dashboard/${role}`);
+          router.push(`/dashboard/${dashboardPath}`);
         }
         // If trying to access wrong role's dashboard, redirect to correct one
-        else if (pathname.startsWith('/dashboard/') && !pathname.includes(`/dashboard/${role}`)) {
-          router.push(`/dashboard/${role}`);
+        else if (pathname.startsWith('/dashboard/') && !pathname.includes(`/dashboard/${dashboardPath}`)) {
+          router.push(`/dashboard/${dashboardPath}`);
         }
       } catch (error) {
         console.error('Error in role check:', error);

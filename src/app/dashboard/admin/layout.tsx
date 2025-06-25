@@ -9,6 +9,8 @@ import LeaveContent from '@/components/LeaveContent';
 import UsersContent from '@/components/UsersContent';
 import EmployeeContentNew from '@/components/EmployeeContentNew';
 import RecruitmentContent from '@/components/RecruitmentContent';
+import UserManagementContent from '@/components/UserManagementContent';
+import SessionManagementContent from '@/components/SessionManagementContent';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '@clerk/nextjs'; // Add this import
@@ -65,6 +67,7 @@ export default function AdminDashboard() {
   const [isChatbotVisible, setChatbotVisible] = useState(false); // State for Chatbot Popup
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [userRole, setUserRole] = useState<string>(''); // Store user role to show Super Admin features
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
@@ -180,8 +183,9 @@ export default function AdminDashboard() {
         }
 
         const role = (userData as UserRoleData)?.UserRole?.[0]?.role?.name?.toLowerCase();
+        setUserRole(role || ''); // Store the user's role
         
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'super admin') {
           if (role === 'faculty') {
             router.push('/dashboard/faculty');
           } else {
@@ -339,6 +343,10 @@ export default function AdminDashboard() {
         return <LeaveContent />;
       case 'users':
         return <UsersContent />;
+      case 'user-management':
+        return <UserManagementContent />;
+      case 'session-management':
+        return <SessionManagementContent />;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -392,7 +400,12 @@ export default function AdminDashboard() {
               { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
-              { name: 'Users', icon: 'fa-users-cog', key: 'users' }
+              { name: 'Users', icon: 'fa-users-cog', key: 'users' },
+              // Super Admin exclusive items
+              ...(userRole === 'super admin' ? [
+                { name: 'User Management', icon: 'fa-user-shield', key: 'user-management' },
+                { name: 'Session Management', icon: 'fa-clock', key: 'session-management' }
+              ] : [])
             ].map((item) => (
               <a
                 key={item.key}
@@ -454,6 +467,8 @@ export default function AdminDashboard() {
                   {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
                   {activeButton === 'leave' && 'LEAVE'}
                   {activeButton === 'users' && 'USERS'}
+                  {activeButton === 'user-management' && 'USER MANAGEMENT'}
+                  {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
                 </h1>
               </div>
 

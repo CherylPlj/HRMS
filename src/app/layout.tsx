@@ -43,7 +43,7 @@ export default function RootLayout({
           />
         </head>
         <body suppressHydrationWarning className={poppins.className}>
-          {children}
+            {children}
           <div id="modal-root" />
         </body>
       </html>

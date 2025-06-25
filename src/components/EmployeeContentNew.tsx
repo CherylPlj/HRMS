@@ -1213,7 +1213,7 @@ const EmployeeContentNew = () => {
                   </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
                             Employee ID
                           </label>
@@ -1239,7 +1239,7 @@ const EmployeeContentNew = () => {
                     />
                   </div>
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
                             Date of Birth
                           </label>
@@ -1252,7 +1252,7 @@ const EmployeeContentNew = () => {
                     />
                   </div>
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
                             Hire Date
                           </label>
@@ -1342,7 +1342,7 @@ const EmployeeContentNew = () => {
                     />
                   </div>
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
                             Employment Status
                           </label>
@@ -1358,7 +1358,7 @@ const EmployeeContentNew = () => {
                     </select>
                   </div>
                         <div className="space-y-2 md:col-span-2">
-                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
                             Employee Type
                           </label>

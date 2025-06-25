@@ -1616,6 +1616,7 @@ const UsersContent: React.FC = () => {
                       onChange={(e) => setEditedUser({ ...editedUser, Role: e.target.value })}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                     >
+                      <option value="Super Admin">Super Admin</option>
                       <option value="Admin">Admin</option>
                       <option value="Faculty">Faculty</option>
                       <option value="Registrar">Registrar</option>

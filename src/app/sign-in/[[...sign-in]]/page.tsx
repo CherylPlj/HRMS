@@ -301,15 +301,32 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
           }),
         });
         
-        const result = await response.json();
+        // Check if response has content
+        const contentType = response.headers.get('content-type');
+        let result = {};
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            result = await response.json();
+          } catch (jsonError) {
+            console.warn('Failed to parse sync response as JSON:', jsonError);
+            result = { error: 'Invalid JSON response' };
+          }
+        } else {
+          result = { error: 'Non-JSON response received', status: response.status };
+        }
+        
         console.log('Sync response:', result);
         
         if (!response.ok) {
-          console.error('Sync API failed:', result);
+          console.warn('Sync API returned non-OK status:', response.status, result);
+          // Log as warning instead of error since this doesn't affect password reset functionality
+        } else {
+          console.log('Password sync completed successfully');
         }
       } catch (syncError) {
-        console.error('Error syncing password status:', syncError);
-        // Don't fail the password reset if sync fails
+        console.warn('Error syncing password status:', syncError);
+        // Don't fail the password reset if sync fails - this is optional functionality
       }
 
       setStep('success');
@@ -649,7 +666,7 @@ export default function SignInPage() {
 
           // Check if the current portal matches the user's role
           const userMatchesPortal = !portal || 
-            (portal === 'admin' && role === 'admin') || 
+            (portal === 'admin' && (role === 'admin' || role === 'super admin')) || 
             (portal === 'faculty' && role === 'faculty');
 
           if (!userMatchesPortal) {
@@ -666,8 +683,8 @@ export default function SignInPage() {
           // Small delay to ensure proper state sync
           await new Promise(resolve => setTimeout(resolve, 100));
 
-          // Redirect based on role using window.location for more reliable redirect
-          if (role === 'admin') {
+          // Redirect based on role
+          if (role === 'admin' || role === 'super admin') {
             window.location.href = '/dashboard/admin';
           } else if (role === 'faculty') {
             window.location.href = '/dashboard/faculty';
@@ -885,7 +902,7 @@ export default function SignInPage() {
       
       // Role-based login validation
       if (portal) {
-        if (portal === 'admin' && userRole !== 'admin') {
+        if (portal === 'admin' && userRole !== 'admin' && userRole !== 'super admin') {
           recordFailedLoginAttempt(userIP);
           setIsLoading(false);
           showErrorPopup('Invalid Credentials');
@@ -907,12 +924,12 @@ export default function SignInPage() {
       if (redirectUrl) {
         window.location.href = redirectUrl;
       } else {
-        if (userRole === 'admin') {
-          window.location.href = '/dashboard/admin';
+        if (userRole === 'admin' || userRole === 'super admin') {
+          router.push('/dashboard/admin');
         } else if (userRole === 'faculty') {
-          window.location.href = '/dashboard/faculty';
+          router.push('/dashboard/faculty');
         } else {
-          window.location.href = '/dashboard';
+          router.push('/dashboard');
         }
       }
     } catch (err: any) {
