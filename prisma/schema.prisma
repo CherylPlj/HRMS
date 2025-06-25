@@ -18,6 +18,7 @@ model UserIDSequence {
 model User {
   UserID       String         @id
   ClerkID      String?        @unique
+  EmployeeID   String?        @unique
   FirstName    String
   LastName     String
   Email        String         @unique
@@ -34,6 +35,7 @@ model User {
   ActivityLog  ActivityLog[]
   Cashier      Cashier?       @relation("UserCashier")
   Faculty      Faculty?       @relation("UserFaculty")
+  Employee     Employee? @relation(fields: [EmployeeID], references: [EmployeeID])
   Notification Notification[]
   Registrar    Registrar?     @relation("UserRegistrar")
   Report       Report[]
@@ -43,6 +45,7 @@ model User {
 model Faculty {
   FacultyID        Int              @id
   UserID           String           @unique
+  EmployeeID       String?           @unique
   DateOfBirth      DateTime         @db.Date
   Phone            String?
   Address          String?
@@ -59,8 +62,42 @@ model Faculty {
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
   Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID], onDelete: Restrict)
+  Employee    Employee? @relation(fields: [EmployeeID], references: [EmployeeID])
   Leaves           Leave[]
   Schedules        Schedules[]
+}
+
+model Employee {
+  EmployeeID       String           @id  @unique
+  UserID           String?           @unique
+  FacultyID        Int?
+  LastName         String?
+  FirstName         String?
+  MiddleName        String?
+  ExtensionName     String?
+  Sex               String?
+  DateOfBirth      DateTime         @db.Date
+  Email        String?       @unique
+  Phone            String?
+  Address          String?
+  EmploymentStatus EmploymentStatus @default(Regular)
+  HireDate         DateTime         @db.Date
+  ResignationDate  DateTime?        @db.Date
+  Designation      Designation?
+  Position         String?
+  DepartmentID     Int?
+  ContractID       Int?
+  EmergencyContact String?
+  EmergencyContactName   String?
+  EmergencyContactNumber String?
+  EmployeeType     EmployeeType?     @default(Regular)
+  Attendance       Attendance[]
+  Documents        Document[]
+  Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
+  Department       Department?       @relation(fields: [DepartmentID], references: [DepartmentID])
+  User       User?
+  Faculty    Faculty?
+  Leaves           Leave[]
 }
 
 model Cashier {
@@ -83,11 +120,13 @@ model Department {
   DepartmentID   Int       @id @default(autoincrement())
   DepartmentName String    @unique
   Faculty        Faculty[]
+  Employees      Employee[] // <-- add this
 }
 
 model Document {
   DocumentID        Int       @id @default(autoincrement())
   FacultyID         Int
+  employeeId        String?   // <-- add this line
   DocumentTypeID    Int
   UploadDate        DateTime?  @default(now())
   SubmissionStatus  SubmissionStatus @default(Submitted)
@@ -95,6 +134,7 @@ model Document {
   FileUrl           String?   // Google Drive web view link
   DownloadUrl       String?   // Google Drive download link
   Faculty           Faculty   @relation(fields: [FacultyID], references: [FacultyID])
+  Employee          Employee? @relation(fields: [employeeId], references: [EmployeeID]) // <-- add this
   DocumentType      DocumentType @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
 
   @@index([FacultyID])
@@ -115,11 +155,13 @@ model Contract {
   EndDate      DateTime
   ContractType ContractType
   Faculty      Faculty[]
+  Employees    Employee[]   // <-- add this
 }
 
 model Attendance {
   id         Int       @id @default(autoincrement())
   facultyId  Int
+  employeeId        String?   // <-- add this line
   date       DateTime  @default(now())  @db.Date
   timeIn     DateTime?    @db.Time
   timeOut    DateTime?   @db.Time
@@ -128,6 +170,8 @@ model Attendance {
   updatedAt  DateTime?  @updatedAt
   status     AttendanceStatus @default(NOT_RECORDED)
   Faculty    Faculty   @relation(fields: [facultyId], references: [FacultyID])
+  Employee   Employee? @relation(fields: [employeeId], references: [EmployeeID]) // <-- add this
+
 }
 
 model AIChat {
@@ -188,6 +232,7 @@ model UserRole {
 model Leave {
   LeaveID                 Int         @id @default(autoincrement())
   FacultyID               Int
+  employeeId        String?   // <-- add this line
   RequestType             RequestType @default(Leave)
   LeaveType               LeaveType?
   StartDate               DateTime?
@@ -202,8 +247,43 @@ model Leave {
   CreatedAt              DateTime    @default(now())
   UpdatedAt              DateTime    @updatedAt
   Faculty                Faculty     @relation(fields: [FacultyID], references: [FacultyID])
+  Employee                Employee?   @relation(fields: [employeeId], references: [EmployeeID]) // <-- add this
 }
 
+model Vacancy {
+  VacancyID      Int       @id @default(autoincrement())
+  JobTitle       JobTitle
+  VacancyName    String
+  HiringManager  String
+  Status         VacancyStatus @default(Active)
+  DateCreated    DateTime  @default(now())
+  DateModified   DateTime  @updatedAt
+  isDeleted      Boolean   @default(false)
+  createdBy      String?
+  updatedBy      String?
+  Candidates     Candidate[]
+}
+
+model Candidate {
+  CandidateID    Int       @id @default(autoincrement())
+  VacancyID      Int
+  FullName       String
+  Email          String
+  Phone          String?
+  DateApplied    DateTime  @default(now())
+  InterviewDate  DateTime?
+  Status         CandidateStatus @default(ApplicationInitiated)
+  Resume         String?   // Google Drive file ID
+  ResumeUrl      String?   // Google Drive web view link
+  isDeleted      Boolean   @default(false)
+  DateCreated    DateTime  @default(now())
+  DateModified   DateTime?  @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  Vacancy        Vacancy   @relation(fields: [VacancyID], references: [VacancyID])
+
+  @@index([VacancyID])
+}
 
 enum Status {
   Invited
@@ -298,4 +378,41 @@ model Schedules {
   faculty      Faculty      @relation(fields: [facultyId], references: [FacultyID])
   subject      Subject      @relation(fields: [subjectId], references: [id])
   classSection ClassSection @relation(fields: [classSectionId], references: [id])
+}
+
+enum JobTitle {
+  HR_Manager
+  Faculty
+  Registrar
+  Cashier
+  Other
+}
+
+enum VacancyStatus {
+  Active
+  Inactive
+  Filled
+  Cancelled
+}
+
+enum CandidateStatus {
+  ApplicationInitiated
+  UnderReview
+  Shortlisted
+  InterviewScheduled
+  InterviewCompleted
+  Offered
+  Hired
+  Rejected
+  Withdrawn
+}
+
+enum Designation {
+  President
+  Admin_Officer
+  Vice_President
+  Registrar
+  Faculty
+  Principal
+  Cashier
 }

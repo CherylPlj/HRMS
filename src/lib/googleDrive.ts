@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
+import { Readable } from 'stream';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/drive',
@@ -171,6 +172,77 @@ class GoogleDriveService {
       console.error('Error listing user files:', error);
       throw new Error('Failed to list user files');
     }
+  }
+}
+
+interface UploadFileParams {
+  fileName: string;
+  mimeType: string;
+  fileBuffer: Buffer;
+}
+
+interface UploadFileResult {
+  fileId: string;
+  webViewLink: string;
+}
+
+export async function uploadFileToDrive({
+  fileName,
+  mimeType,
+  fileBuffer,
+}: UploadFileParams): Promise<UploadFileResult> {
+  try {
+    // Convert buffer to readable stream
+    const stream = new Readable();
+    stream.push(fileBuffer);
+    stream.push(null);
+
+    // Upload file to Google Drive
+    const response = await google.drive({ version: 'v3', auth: new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_DRIVE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
+    }) }).files.create({
+      requestBody: {
+        name: fileName,
+        mimeType: mimeType,
+        parents: [process.env.GOOGLE_DRIVE_FOLDER_ID_RESUME!], // Folder where resumes will be stored
+      },
+      media: {
+        mimeType: mimeType,
+        body: stream,
+      },
+      fields: 'id, webViewLink',
+    });
+
+    if (!response.data.id || !response.data.webViewLink) {
+      throw new Error('Failed to get file ID or web view link');
+    }
+
+    // Make the file viewable by anyone with the link
+    await google.drive({ version: 'v3', auth: new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_DRIVE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
+    }) }).permissions.create({
+      fileId: response.data.id,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+    });
+
+    return {
+      fileId: response.data.id,
+      webViewLink: response.data.webViewLink,
+    };
+  } catch (error) {
+    console.error('Error uploading file to Google Drive:', error);
+    throw error;
   }
 }
 

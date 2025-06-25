@@ -193,7 +193,8 @@ const EmployeeContentNew = () => {
   // State for Add Employee modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
-    UserID: '',
+    employeeID: '',
+    userID: '',
     surname: '',
     firstName: '',
     middleName: '',
@@ -213,18 +214,16 @@ const EmployeeContentNew = () => {
     citizenship: 'Filipino',
     email: '',
     position: '',
+    designation: '',
     departmentID: 0,
-    employmentStatus: '',
+    employmentStatus: 'Regular',
     employeeType: 'Regular',
+    phone: '',
+    address: '',
+    hireDate: '',
+    emergencyContactName: '',
+    emergencyContactNumber: '',
   });
-
-  // Fix all occurrences of 'employmentType' to 'employeeType' in newEmployee state and handlers
-  // For example, in input value and onChange handlers
-
-  // Replace all 'employmentType' with 'employeeType' in the component
-
-  // Fix all occurrences of 'employmentType' to 'employeeType' in newEmployee state and handlers
-  // For example, in input value and onChange handlers
 
   // State for Import Employee modal
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -288,48 +287,143 @@ const EmployeeContentNew = () => {
 
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [allEmployees, setAllEmployees] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
+  const [viewMode, setViewMode] = useState<'paginated' | 'all'>('paginated');
 
   useEffect(() => {
-    // Fetch employees from backend API
-    const fetchEmployees = async () => {
-      try {
-        const response = await fetch('/api/employees');
+    fetchEmployees(1);
+  }, []);
+
+  // Fetch employees from backend API with pagination
+  const fetchEmployees = async (page: number = 1) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/employees?page=${page}&limit=10`);
         if (!response.ok) {
           throw new Error('Failed to fetch employees');
         }
         const data = await response.json();
+      
         // Map data to match UI expected fields
-        const mappedData = data.map((emp: any) => ({
-          id: emp.FacultyID,
-          surname: emp.User?.LastName || '',
-          firstName: emp.User?.FirstName || '',
+      const mappedData = data.employees.map((emp: any) => ({
+        id: emp.EmployeeID,
+        employeeId: emp.EmployeeID,
+        firstName: emp.FirstName || '',
+        surname: emp.LastName || '',
           middleName: emp.MiddleName || '',
-          nameExtension: emp.NameExtension || '',
+        nameExtension: emp.ExtensionName || '',
+        fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
           birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
           birthPlace: emp.PlaceOfBirth || '',
-          sex: emp.Gender || '',
-          civilStatus: emp.CivilStatus || '',
-          email: emp.User?.Email || '',
-          position: emp.Position || '',
-          departmentName: emp.Department?.DepartmentName || '',
-          employmentType: emp.EmploymentStatus || '',
-          status: emp.User?.Status || 'Active',
+                sex: emp.Sex || '',
+        civilStatus: emp.CivilStatus || '',
+        email: emp.Email || emp.UserID || 'No email', // Use Email field first, then UserID if available
+        position: emp.Position || '',
+        designation: emp.Designation || '',
+        departmentName: emp.DepartmentID ? `Dept ${emp.DepartmentID}` : 'No Department',
+        employmentStatus: emp.EmploymentStatus || '',
+        employeeType: emp.EmployeeType || '',
+        status: 'Active', // Default status
+        phone: emp.Phone || '',
+        address: emp.Address || '',
+        hireDate: emp.HireDate ? new Date(emp.HireDate).toISOString().split('T')[0] : '',
+        emergencyContactName: emp.EmergencyContactName || '',
+        emergencyContactNumber: emp.EmergencyContactNumber || '',
           // Add other fields as needed
         }));
+      
         setEmployees(mappedData);
+      setPagination(data.pagination);
       } catch (error) {
         console.error('Error fetching employees:', error);
-      }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchEmployees();
-  }, []);
+  // Fetch ALL employees without pagination
+  const fetchAllEmployees = async () => {
+    setIsLoadingAll(true);
+    try {
+      const response = await fetch(`/api/employees?page=1&limit=1000`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch all employees');
+      }
+      const data = await response.json();
+      
+      // Map data to match UI expected fields
+      const mappedData = data.employees.map((emp: any) => ({
+        id: emp.EmployeeID,
+        employeeId: emp.EmployeeID,
+        firstName: emp.FirstName || '',
+        surname: emp.LastName || '',
+        middleName: emp.MiddleName || '',
+        nameExtension: emp.ExtensionName || '',
+        fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
+        birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
+        birthPlace: emp.PlaceOfBirth || '',
+        sex: emp.Sex || '',
+        civilStatus: emp.CivilStatus || '',
+        email: emp.Email || emp.UserID || 'No email', // Use Email field first, then UserID if available
+        position: emp.Position || '',
+        designation: emp.Designation || '',
+        departmentName: emp.DepartmentID ? `Dept ${emp.DepartmentID}` : 'No Department',
+        employmentStatus: emp.EmploymentStatus || '',
+        employeeType: emp.EmployeeType || '',
+        status: 'Active', // Default status
+        phone: emp.Phone || '',
+        address: emp.Address || '',
+        hireDate: emp.HireDate ? new Date(emp.HireDate).toISOString().split('T')[0] : '',
+        emergencyContactName: emp.EmergencyContactName || '',
+        emergencyContactNumber: emp.EmergencyContactNumber || '',
+        // Add other fields as needed
+      }));
+      
+      setAllEmployees(mappedData);
+      return mappedData;
+    } catch (error) {
+      console.error('Error fetching all employees:', error);
+      return [];
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
+
+  // Handle pagination
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchEmployees(newPage);
+    }
+  };
+
+  // Toggle between paginated and all employees view
+  const handleToggleView = async () => {
+    if (viewMode === 'paginated') {
+      // Switch to show all employees
+      if (allEmployees.length === 0) {
+        await fetchAllEmployees();
+      }
+      setViewMode('all');
+    } else {
+      // Switch back to paginated view
+      setViewMode('paginated');
+    }
+  };
 
   // Filter employees based on search term and filters
-  const filteredEmployees = employees.filter(employee => {
-    const firstName = employee.firstName || '';
-    const lastName = employee.surname || '';
-    const fullName = `${firstName} ${lastName}`.toLowerCase();
+  const currentEmployees = viewMode === 'all' ? allEmployees : employees;
+  const filteredEmployees = currentEmployees.filter(employee => {
+    const fullName = (employee.fullName || '').toLowerCase();
     const email = employee.email?.toLowerCase() || '';
     const position = employee.position?.toLowerCase() || '';
     const departmentName = employee.departmentName?.toLowerCase() || '';
@@ -359,39 +453,31 @@ const EmployeeContentNew = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          UserID: newEmployee.UserID,
-          FirstName: newEmployee.firstName,
-          LastName: newEmployee.surname,
-          MiddleName: newEmployee.middleName,
-          NameExtension: newEmployee.nameExtension,
+          EmployeeID: newEmployee.employeeID,
+          UserID: newEmployee.userID || null,
           DateOfBirth: newEmployee.birthDate,
-          PlaceOfBirth: newEmployee.birthPlace,
-          Gender: newEmployee.sex,
-          CivilStatus: newEmployee.civilStatus,
-          Height: newEmployee.height,
-          Weight: newEmployee.weight,
-          BloodType: newEmployee.bloodType,
-          GSIS: newEmployee.gsis,
-          PagIbig: newEmployee.pagibig,
-          PhilHealth: newEmployee.philhealth,
-          SSS: newEmployee.sss,
-          TIN: newEmployee.tin,
-          Citizenship: newEmployee.citizenship,
-          Email: newEmployee.email,
-          Position: newEmployee.position,
-          DepartmentID: newEmployee.departmentID,
+          Phone: newEmployee.phone,
+          Address: newEmployee.address,
           EmploymentStatus: newEmployee.employmentStatus,
+          HireDate: newEmployee.hireDate,
+          Position: newEmployee.position,
+          DepartmentID: newEmployee.departmentID || null,
+          EmergencyContactName: newEmployee.emergencyContactName,
+          EmergencyContactNumber: newEmployee.emergencyContactNumber,
           EmployeeType: newEmployee.employeeType,
+          Designation: newEmployee.designation,
         }),
       });
       if (!response.ok) {
         throw new Error('Failed to add employee');
       }
       const addedEmployee = await response.json();
-      setEmployees((prev) => [...prev, addedEmployee]);
+      // Refresh the employee list
+      fetchEmployees(pagination.currentPage);
       setIsAddModalOpen(false);
       setNewEmployee({
-        UserID: '',
+        employeeID: '',
+        userID: '',
         surname: '',
         firstName: '',
         middleName: '',
@@ -411,9 +497,15 @@ const EmployeeContentNew = () => {
         citizenship: 'Filipino',
         email: '',
         position: '',
+        designation: '',
         departmentID: 0,
-        employmentStatus: '',
+        employmentStatus: 'Regular',
         employeeType: 'Regular',
+        phone: '',
+        address: '',
+        hireDate: '',
+        emergencyContactName: '',
+        emergencyContactNumber: '',
       });
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -424,12 +516,11 @@ const EmployeeContentNew = () => {
     const file = event.target.files?.[0];
     if (file) {
       setImportFile(file);
-      // Preview the file content
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const csv = e.target?.result as string;
-          const lines = csv.split('\n');
+          const lines = csv.split('\n').filter(line => line.trim() !== '');
           const headers = lines[0].split(',');
           const data = lines.slice(1).map(line => {
             const values = line.split(',');
@@ -439,7 +530,7 @@ const EmployeeContentNew = () => {
             });
             return row;
           });
-          setImportPreview(data.slice(0, 5)); // Show first 5 rows
+          setImportPreview(data.slice(0, 5));
         } catch (error) {
           console.error('Error parsing CSV:', error);
         }
@@ -450,16 +541,15 @@ const EmployeeContentNew = () => {
 
   const handleImportEmployees = async () => {
     if (!importFile) return;
-    
     setIsImporting(true);
     try {
-      // TODO: Implement the API call to import employees
-      console.log('Importing employees from file:', importFile.name);
-      console.log('Preview data:', importPreview);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      for (const row of importPreview) {
+        await fetch('/api/employees/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row),
+        });
+      }
       setIsImportModalOpen(false);
       setImportFile(null);
       setImportPreview([]);
@@ -488,7 +578,7 @@ const EmployeeContentNew = () => {
             </button>
             <div className="h-6 w-px bg-gray-300"></div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {selectedEmployee.firstName} {selectedEmployee.surname}
+              {selectedEmployee.fullName || `${selectedEmployee.firstName} ${selectedEmployee.surname}`.trim()}
             </h1>
           </div>
           <div className="flex gap-2">
@@ -817,6 +907,33 @@ const EmployeeContentNew = () => {
             <FaUpload /> Import Employees
           </button>
         </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleToggleView}
+            disabled={isLoadingAll}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingAll ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Loading...
+              </>
+            ) : viewMode === 'paginated' ? (
+              <>
+                <FaEye /> Show All ({pagination.totalCount})
+              </>
+            ) : (
+              <>
+                <FaEye /> Show Paginated
+              </>
+            )}
+          </button>
+          {viewMode === 'all' && (
+            <span className="text-sm text-gray-600">
+              Showing all {allEmployees.length} employees
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Search and Filter Section */}
@@ -856,15 +973,28 @@ const EmployeeContentNew = () => {
 
       {/* Employees Table */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]"></div>
+            <span className="ml-2 text-gray-600">Loading employees...</span>
+          </div>
+        ) : (
+          <>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Employee ID
+                    </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Employee
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Position
+                </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Designation
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Department
@@ -887,18 +1017,21 @@ const EmployeeContentNew = () => {
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => handleEmployeeSelect(employee)}
                 >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {employee.employeeId}
+                      </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
                         <div className="h-10 w-10 rounded-full bg-[#800000] flex items-center justify-center">
                           <span className="text-white font-medium">
-                            {employee.firstName.charAt(0)}{employee.surname.charAt(0)}
+                            {(employee.firstName || '').charAt(0)}{(employee.surname || '').charAt(0)}
                           </span>
                         </div>
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {employee.firstName} {employee.surname}
+                          {employee.fullName || `${employee.firstName} ${employee.surname}`.trim()}
                         </div>
                         <div className="text-sm text-gray-500">
                           {employee.employeeType}
@@ -908,6 +1041,9 @@ const EmployeeContentNew = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {employee.position}
+                  </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {employee.designation}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {employee.departmentName}
@@ -947,186 +1083,363 @@ const EmployeeContentNew = () => {
             </tbody>
           </table>
         </div>
+
+            {/* Pagination Controls - Only show in paginated mode */}
+            {viewMode === 'paginated' && (
+              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+      </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing{' '}
+                    <span className="font-medium">
+                      {((pagination.currentPage - 1) * pagination.limit) + 1}
+                    </span>{' '}
+                    to{' '}
+                    <span className="font-medium">
+                      {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-medium">{pagination.totalCount}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => handlePageChange(pagination.currentPage - 1)}
+                      disabled={!pagination.hasPrevPage}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            pageNum === pagination.currentPage
+                              ? 'z-10 bg-[#800000] border-[#800000] text-white'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      onClick={() => handlePageChange(pagination.currentPage + 1)}
+                      disabled={!pagination.hasNextPage}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Add Employee Modal */}
+      {/* Add Employee Modal - Modern & User-Friendly */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Add New Employee</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#800000] to-red-700 px-8 py-6 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold">Add New Employee</h2>
+                  <p className="text-red-100 mt-1">Fill in the employee information below</p>
+                </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                  className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-full"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              </div>
             </div>
 
-            <form onSubmit={handleAddEmployee} className="space-y-6">
-              {/* Personal Information */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Personal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Surname</label>
+            {/* Modal Body - Scrollable with Form */}
+            <form onSubmit={handleAddEmployee} className="flex flex-col h-full">
+              <div className="overflow-y-auto max-h-[calc(95vh-200px)] flex-1">
+                <div className="p-8">
+                  <div className="space-y-8">
+                    {/* Step 1: Basic Information */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">1</div>
+                        <h3 className="text-xl font-bold text-gray-800">Basic Information</h3>
+                  </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Employee ID
+                          </label>
                     <input
                       type="text"
-                      value={newEmployee.surname}
-                      onChange={(e) => setNewEmployee({...newEmployee, surname: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
+                            value={newEmployee.employeeID}
+                            onChange={(e) => setNewEmployee({...newEmployee, employeeID: e.target.value})}
+                            placeholder="e.g., 2024-0001"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">First Name</label>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            User ID (Optional)
+                          </label>
                     <input
                       type="text"
-                      value={newEmployee.firstName}
-                      onChange={(e) => setNewEmployee({...newEmployee, firstName: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                      required
+                            value={newEmployee.userID}
+                            onChange={(e) => setNewEmployee({...newEmployee, userID: e.target.value})}
+                            placeholder="Link to existing user"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Middle Name</label>
-                    <input
-                      type="text"
-                      value={newEmployee.middleName}
-                      onChange={(e) => setNewEmployee({...newEmployee, middleName: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Name Extension</label>
-                    <input
-                      type="text"
-                      value={newEmployee.nameExtension}
-                      onChange={(e) => setNewEmployee({...newEmployee, nameExtension: e.target.value})}
-                      placeholder="e.g., Jr., Sr., III"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Date of Birth</label>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Date of Birth
+                          </label>
                     <input
                       type="date"
                       value={newEmployee.birthDate}
                       onChange={(e) => setNewEmployee({...newEmployee, birthDate: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Place of Birth</label>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Hire Date
+                          </label>
                     <input
-                      type="text"
-                      value={newEmployee.birthPlace}
-                      onChange={(e) => setNewEmployee({...newEmployee, birthPlace: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
+                            type="date"
+                            value={newEmployee.hireDate}
+                            onChange={(e) => setNewEmployee({...newEmployee, hireDate: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Sex</label>
-                    <select
-                      value={newEmployee.sex}
-                      onChange={(e) => setNewEmployee({...newEmployee, sex: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                      required
-                    >
-                      <option value="">Select sex</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={newEmployee.phone}
+                            onChange={(e) => setNewEmployee({...newEmployee, phone: e.target.value})}
+                            placeholder="09123456789"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Civil Status</label>
-                    <select
-                      value={newEmployee.civilStatus}
-                      onChange={(e) => setNewEmployee({...newEmployee, civilStatus: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                      required
-                    >
-                      <option value="">Select status</option>
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                      <option value="Widowed">Widowed</option>
-                      <option value="Separated">Separated</option>
-                      <option value="Others">Others</option>
-                    </select>
+                        <div className="space-y-2 lg:col-span-3">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Complete Address
+                          </label>
+                          <input
+                            type="text"
+                            value={newEmployee.address}
+                            onChange={(e) => setNewEmployee({...newEmployee, address: e.target.value})}
+                            placeholder="House No., Street, Barangay, City, Province"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
                   </div>
                 </div>
               </div>
 
-              {/* Employment Information */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Employment Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Email</label>
-                    <input
-                      type="email"
-                      value={newEmployee.email}
-                      onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                      required
-                    />
+                    {/* Step 2: Employment Details */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">2</div>
+                        <h3 className="text-xl font-bold text-gray-800">Employment Details</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Position</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Position/Job Title
+                          </label>
                     <input
                       type="text"
                       value={newEmployee.position}
                       onChange={(e) => setNewEmployee({...newEmployee, position: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                      required
+                            placeholder="e.g., Teacher, Principal, Administrator"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Department</label>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Designation
+                          </label>
+                          <select
+                            value={newEmployee.designation}
+                            onChange={(e) => setNewEmployee({...newEmployee, designation: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                          >
+                            <option value="">Choose designation...</option>
+                            <option value="President">President</option>
+                            <option value="Admin_Officer">Admin Officer</option>
+                            <option value="Vice_President">Vice President</option>
+                            <option value="Registrar">Registrar</option>
+                            <option value="Faculty">Faculty</option>
+                            <option value="Principal">Principal</option>
+                            <option value="Cashier">Cashier</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Department ID
+                          </label>
                     <input
-                      type="text"
-                      value={newEmployee.departmentID}
-                      onChange={(e) => setNewEmployee({...newEmployee, departmentID: Number(e.target.value)})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
-                      required
+                            type="number"
+                            value={newEmployee.departmentID || ''}
+                            onChange={(e) => setNewEmployee({...newEmployee, departmentID: Number(e.target.value) || 0})}
+                            placeholder="Enter department ID (optional)"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Employment Type</label>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Employment Status
+                          </label>
                     <select
-                      value={newEmployee.employeeType}
-                      onChange={(e) => setNewEmployee({...newEmployee, employeeType: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring focus:ring-[#800000] focus:ring-opacity-50"
+                            value={newEmployee.employmentStatus}
+                            onChange={(e) => setNewEmployee({...newEmployee, employmentStatus: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
                       required
                     >
                       <option value="Regular">Regular</option>
                       <option value="Probationary">Probationary</option>
                       <option value="Contract">Contract</option>
-                      <option value="Part-time">Part-time</option>
                     </select>
+                  </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Employee Type
+                          </label>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {['Regular', 'Probationary', 'Contract', 'Part-time'].map((type) => (
+                              <label key={type} className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="employeeType"
+                                  value={type}
+                                  checked={newEmployee.employeeType === type}
+                                  onChange={(e) => setNewEmployee({...newEmployee, employeeType: e.target.value})}
+                                  className="text-green-600 focus:ring-green-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700">{type}</span>
+                              </label>
+                            ))}
+                          </div>
                   </div>
                 </div>
               </div>
 
-              {/* Form Actions */}
-              <div className="flex justify-end space-x-3 pt-4">
+                    {/* Step 3: Emergency Contact */}
+                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">3</div>
+                        <h3 className="text-xl font-bold text-gray-800">Emergency Contact</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Contact Person Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newEmployee.emergencyContactName}
+                            onChange={(e) => setNewEmployee({...newEmployee, emergencyContactName: e.target.value})}
+                            placeholder="Full name of emergency contact"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Contact Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={newEmployee.emergencyContactNumber}
+                            onChange={(e) => setNewEmployee({...newEmployee, emergencyContactNumber: e.target.value})}
+                            placeholder="09123456789"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer - Now inside form */}
+              <div className="bg-gray-50 px-8 py-6 border-t border-gray-200 flex-shrink-0">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">
+                    <span className="text-red-500">*</span> Required fields
+                  </p>
+                  <div className="flex space-x-4">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-6 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-white bg-[#800000] rounded-lg hover:bg-red-800 transition-colors"
+                      className="px-8 py-3 text-white bg-gradient-to-r from-[#800000] to-red-700 rounded-lg hover:from-red-800 hover:to-red-900 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   Add Employee
                 </button>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
@@ -1186,11 +1499,13 @@ const EmployeeContentNew = () => {
                   Your CSV file should include the following columns:
                 </p>
                 <div className="bg-white p-3 rounded border text-sm font-mono">
-                  surname,firstName,middleName,nameExtension,birthDate,birthPlace,sex,civilStatus,email,position,departmentID,employeeType
+                  EmployeeID,firstName,lastName,email,dateOfBirth,hireDate,position,designation,address,phone,employmentStatus,employeeType,emergencyContactName,emergencyContactNumber,passwordHash
                 </div>
                 <button
                   onClick={() => {
-                    const csvContent = "surname,firstName,middleName,nameExtension,birthDate,birthPlace,sex,civilStatus,email,position,departmentID,employeeType\nDoe,John,M,2024-01-01,Manila,Male,Single,john.doe@example.com,Teacher,Education,Regular";
+                    const csvContent =
+                      "EmployeeID,firstName,lastName,email,dateOfBirth,hireDate,position,designation,address,phone,employmentStatus,employeeType,emergencyContactName,emergencyContactNumber,passwordHash\n" +
+                      "2018-0017,Ronel,Reyes,ronel.reyes@example.com,1990-01-01,2018-01-01,Faculty,Faculty,6965 Sto. Niño St. Maligaya Brgy. 177 Caloocan City,0935-8141526,Regular,Regular,Consuelo Reyes,0935-8141526,dummyhash";
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');

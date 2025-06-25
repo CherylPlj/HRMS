@@ -426,7 +426,7 @@ const FacultyContent = () => {
           role: 'Faculty',
           facultyData: {
             Position: newFaculty.Position,
-            DepartmentId: newFaculty.DepartmentId,
+            DepartmentID: newFaculty.DepartmentId,
             EmploymentStatus: newFaculty.EmploymentStatus,
             HireDate: newFaculty.HireDate,
             DateOfBirth: newFaculty.DateOfBirth,
@@ -660,13 +660,14 @@ const FacultyContent = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          Position: selectedFaculty.Position,
-          DepartmentId: selectedFaculty.DepartmentID,
-          EmploymentStatus: selectedFaculty.EmploymentStatus,
-          HireDate: selectedFaculty.HireDate,
-          DateOfBirth: selectedFaculty.DateOfBirth,
-          Phone: selectedFaculty.Phone,
-          Address: selectedFaculty.Address
+          Position: editFaculty.Position,
+          DepartmentID: editFaculty.DepartmentID,
+          EmploymentStatus: editFaculty.EmploymentStatus,
+          HireDate: editFaculty.HireDate,
+          DateOfBirth: editFaculty.DateOfBirth,
+          Phone: editFaculty.Phone,
+          Address: editFaculty.Address,
+          ResignationDate: editFaculty.EmploymentStatus === 'Resigned' ? editFaculty.ResignationDate : null
         }),
       });
 
@@ -674,9 +675,11 @@ const FacultyContent = () => {
         throw new Error('Failed to update faculty member');
       }
 
-      await fetchFacultyData();
+      const updatedData = await response.json();
+      await fetchFacultyData();  // Refresh the faculty list
       setIsEditModalOpen(false);
       setSelectedFaculty(null);
+      setEditFaculty({});  // Reset the edit form
       setNotification({
         type: 'success',
         message: 'Faculty member updated successfully'
@@ -856,9 +859,11 @@ const FacultyContent = () => {
       Position: faculty.Position,
       DepartmentID: faculty.DepartmentID,
       EmploymentStatus: faculty.EmploymentStatus,
-      ResignationDate: faculty.ResignationDate,
-      Phone: faculty.Phone,
-      Address: faculty.Address,
+      HireDate: faculty.HireDate || '',
+      DateOfBirth: faculty.DateOfBirth || '',
+      Phone: faculty.Phone || '',
+      Address: faculty.Address || '',
+      ResignationDate: faculty.ResignationDate || ''
     });
     setIsEditModalOpen(true);
   };
@@ -909,7 +914,7 @@ const FacultyContent = () => {
         : '/api/document-types';
 
       const response = await fetch(url, {
-        method: editingDocType ? 'PUT' : 'POST',
+        method: editingDocType ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },

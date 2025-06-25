@@ -8,6 +8,7 @@ import AttendanceContent from '@/components/AttendanceContent';
 import LeaveContent from '@/components/LeaveContent';
 import UsersContent from '@/components/UsersContent';
 import EmployeeContentNew from '@/components/EmployeeContentNew';
+import RecruitmentContent from '@/components/RecruitmentContent';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '@clerk/nextjs'; // Add this import
@@ -330,6 +331,8 @@ export default function AdminDashboard() {
         return <FacultyContent />;
       case 'employees':
         return <EmployeeContentNew />;
+      case 'recruitment':
+        return <RecruitmentContent />;
       case 'attendance':
         return <AttendanceContent />;
       case 'leave':
@@ -384,10 +387,11 @@ export default function AdminDashboard() {
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
             {[
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
-              { name: 'Faculty', icon: 'fa-user', key: 'faculty' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
+              { name: 'Faculty', icon: 'fa-user', key: 'faculty' },
               { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
+              { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
               { name: 'Users', icon: 'fa-users-cog', key: 'users' }
             ].map((item) => (
               <a

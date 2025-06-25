@@ -28,37 +28,42 @@ async function seedSubjectsAndClasses() {
     console.log('✅ Subjects seeded successfully.');
 
     // Seed Class Sections
-    const gemNames = [
-      'Ruby', 'Diamond', 'Sapphire', 'Emerald', 'Pearl', 'Garnet',
-      'Amethyst', 'Opal', 'Topaz', 'Peridot', 'Aquamarine', 'Tourmaline'
-    ];
+    // Kinder 1 & 2
+    await prisma.classSection.upsert({ where: { name: 'Kinder 1-Mapagbigay' }, update: {}, create: { name: 'Kinder 1-Mapagbigay' } });
+    await prisma.classSection.upsert({ where: { name: 'Kinder 2-Mabait' }, update: {}, create: { name: 'Kinder 2-Mabait' } });
+    await prisma.classSection.upsert({ where: { name: 'Kinder 2-Matiyaga' }, update: {}, create: { name: 'Kinder 2-Matiyaga' } });
 
-    const treeNames = [
-      'Narra', 'Mahogany', 'Acacia', 'Pine', 'Oak', 'Maple', 'Cherry', 'Willow',
-      'Aspen', 'Birch', 'Cedar', 'Cypress', 'Elm', 'Beech', 'Hickory', 'Sycamore',
-      'Poplar', 'Linden', 'Hawthorn', 'Dogwood', 'Redwood', 'Sequoia'
-    ];
+    // Grade 1
+    await prisma.classSection.upsert({ where: { name: 'Grade 1-Malinis' }, update: {}, create: { name: 'Grade 1-Malinis' } });
 
-    // Kinder
-    await prisma.classSection.upsert({ where: { name: 'Kinder-Ruby' }, update: {}, create: { name: 'Kinder-Ruby' } });
-    await prisma.classSection.upsert({ where: { name: 'Kinder-Diamond' }, update: {}, create: { name: 'Kinder-Diamond' } });
+    // Grade 2
+    await prisma.classSection.upsert({ where: { name: 'Grade 2-Matapat' }, update: {}, create: { name: 'Grade 2-Matapat' } });
 
-    // Grades 1-6 (Gems)
-    for (let grade = 1; grade <= 6; grade++) {
-      const section1Name = `${grade}-${gemNames[(grade - 1) * 2]}`;
-      const section2Name = `${grade}-${gemNames[(grade - 1) * 2 + 1]}`;
-      await prisma.classSection.upsert({ where: { name: section1Name }, update: {}, create: { name: section1Name } });
-      await prisma.classSection.upsert({ where: { name: section2Name }, update: {}, create: { name: section2Name } });
-    }
+    // Grade 3
+    await prisma.classSection.upsert({ where: { name: 'Grade 3-Mapagmahal' }, update: {}, create: { name: 'Grade 3-Mapagmahal' } });
+    await prisma.classSection.upsert({ where: { name: 'Grade 3-Magalang' }, update: {}, create: { name: 'Grade 3-Magalang' } });
 
-    // Grades 7-12 (Trees)
-    for (let grade = 7; grade <= 12; grade++) {
-      const treeIndex = (grade - 7) * 2;
-      const section1Name = `${grade}-${treeNames[treeIndex]}`;
-      const section2Name = `${grade}-${treeNames[treeIndex + 1]}`;
-      await prisma.classSection.upsert({ where: { name: section1Name }, update: {}, create: { name: section1Name } });
-      await prisma.classSection.upsert({ where: { name: section2Name }, update: {}, create: { name: section2Name } });
-    }
+    // Grade 4
+    await prisma.classSection.upsert({ where: { name: 'Grade 4-Maalalahanin' }, update: {}, create: { name: 'Grade 4-Maalalahanin' } });
+    await prisma.classSection.upsert({ where: { name: 'Grade 4-Magiliw' }, update: {}, create: { name: 'Grade 4-Magiliw' } });
+
+    // Grade 5
+    await prisma.classSection.upsert({ where: { name: 'Grade 5-Malikhain' }, update: {}, create: { name: 'Grade 5-Malikhain' } });
+
+    // Grade 6
+    await prisma.classSection.upsert({ where: { name: 'Grade 6-Masigasig' }, update: {}, create: { name: 'Grade 6-Masigasig' } });
+
+    // Grade 7
+    await prisma.classSection.upsert({ where: { name: 'Grade 7-Magiting' }, update: {}, create: { name: 'Grade 7-Magiting' } });
+
+    // Grade 8
+    await prisma.classSection.upsert({ where: { name: 'Grade 8-Masinop' }, update: {}, create: { name: 'Grade 8-Masinop' } });
+
+    // Grade 9
+    await prisma.classSection.upsert({ where: { name: 'Grade 9-Masunurin' }, update: {}, create: { name: 'Grade 9-Masunurin' } });
+
+    // Grade 10
+    await prisma.classSection.upsert({ where: { name: 'Grade 10-Mahusay' }, update: {}, create: { name: 'Grade 10-Mahusay' } });
     
     console.log('✅ Class sections seeded successfully.');
     console.log('🎉 Subjects and Class Sections seeding completed!');

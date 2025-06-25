@@ -9,34 +9,45 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all employees from Supabase Faculty table
+    // Get pagination parameters from URL
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const { count: totalCount, error: countError } = await supabaseAdmin
+      .from('Employee')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      throw countError;
+    }
+
+    // Get employees from Supabase Employee table with pagination
     const { data: employees, error } = await supabaseAdmin
-      .from('Faculty')
-      .select(
-        `
-        *,
-        User:UserID (
-          UserID,
-          FirstName,
-          LastName,
-          Email,
-          Status,
-          Photo,
-          isDeleted
-        ),
-        Department:DepartmentID (
-          DepartmentID,
-          DepartmentName
-        )
-      `
-      )
-      .order('FacultyID', { ascending: true });
+      .from('Employee')
+      .select('*')
+      .order('EmployeeID', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw error;
     }
 
-    return NextResponse.json(employees);
+    const totalPages = Math.ceil((totalCount || 0) / limit);
+
+    return NextResponse.json({
+      employees,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount: totalCount || 0,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching employees:', error);
     return NextResponse.json(
@@ -56,7 +67,7 @@ export async function POST(request: Request) {
     const data = await request.json();
     
     // Validate required fields
-    const requiredFields = ['FirstName', 'LastName', 'Email', 'Position', 'DepartmentID', 'EmploymentStatus', 'EmployeeType'];
+    const requiredFields = ['EmployeeID', 'DateOfBirth', 'HireDate'];
     for (const field of requiredFields) {
       if (!data[field]) {
         return NextResponse.json(
@@ -66,37 +77,26 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create user in Supabase Faculty table
+    // Create employee in Supabase Employee table
     const { data: newEmployee, error } = await supabaseAdmin
-      .from('Faculty')
+      .from('Employee')
       .insert([
         {
-          UserID: data.UserID,
-          Position: data.Position,
-          DepartmentID: data.DepartmentID,
-          EmploymentStatus: data.EmploymentStatus,
-          EmployeeType: data.EmployeeType,
-          HireDate: data.HireDate || new Date().toISOString(),
+          EmployeeID: data.EmployeeID,
+          UserID: data.UserID || null,
           DateOfBirth: data.DateOfBirth,
           Phone: data.Phone,
           Address: data.Address,
-          EmergencyContact: data.EmergencyContact,
-          // Add other CSC Form 212 fields
-          PlaceOfBirth: data.PlaceOfBirth,
-          Gender: data.Gender,
-          CivilStatus: data.CivilStatus,
-          Height: data.Height,
-          Weight: data.Weight,
-          BloodType: data.BloodType,
-          GSIS: data.GSIS,
-          SSS: data.SSS,
-          PhilHealth: data.PhilHealth,
-          PagIbig: data.PagIbig,
-          TIN: data.TIN,
-          MobilePhone: data.MobilePhone,
-          Education: data.Education,
-          CivilService: data.CivilService,
-          WorkExperience: data.WorkExperience
+          EmploymentStatus: data.EmploymentStatus || 'Regular',
+          HireDate: data.HireDate,
+          ResignationDate: data.ResignationDate || null,
+          Position: data.Position,
+          DepartmentID: data.DepartmentID || null,
+          ContractID: data.ContractID || null,
+          EmergencyContactName: data.EmergencyContactName,
+          EmergencyContactNumber: data.EmergencyContactNumber,
+          EmployeeType: data.EmployeeType || 'Regular',
+          Designation: data.Designation
         }
       ])
       .select()
@@ -125,43 +125,33 @@ export async function PATCH(request: Request) {
 
     const data = await request.json();
 
-    if (!data.FacultyID) {
+    if (!data.EmployeeID) {
       return NextResponse.json(
-        { error: 'Missing FacultyID for update' },
+        { error: 'Missing EmployeeID for update' },
         { status: 400 }
       );
     }
 
-    // Update user in Supabase Faculty table
+    // Update employee in Supabase Employee table
     const { data: updatedEmployee, error } = await supabaseAdmin
-      .from('Faculty')
+      .from('Employee')
       .update({
-        Position: data.Position,
-        DepartmentID: data.DepartmentID,
-        EmploymentStatus: data.EmploymentStatus,
-        EmployeeType: data.EmployeeType,
-        HireDate: data.HireDate,
+        UserID: data.UserID,
         DateOfBirth: data.DateOfBirth,
         Phone: data.Phone,
         Address: data.Address,
-        EmergencyContact: data.EmergencyContact,
-        PlaceOfBirth: data.PlaceOfBirth,
-        Gender: data.Gender,
-        CivilStatus: data.CivilStatus,
-        Height: data.Height,
-        Weight: data.Weight,
-        BloodType: data.BloodType,
-        GSIS: data.GSIS,
-        SSS: data.SSS,
-        PhilHealth: data.PhilHealth,
-        PagIbig: data.PagIbig,
-        TIN: data.TIN,
-        MobilePhone: data.MobilePhone,
-        Education: data.Education,
-        CivilService: data.CivilService,
-        WorkExperience: data.WorkExperience
+        EmploymentStatus: data.EmploymentStatus,
+        HireDate: data.HireDate,
+        ResignationDate: data.ResignationDate,
+        Position: data.Position,
+        DepartmentID: data.DepartmentID,
+        ContractID: data.ContractID,
+        EmergencyContactName: data.EmergencyContactName,
+        EmergencyContactNumber: data.EmergencyContactNumber,
+        EmployeeType: data.EmployeeType,
+        Designation: data.Designation
       })
-      .eq('FacultyID', data.FacultyID)
+      .eq('EmployeeID', data.EmployeeID)
       .select()
       .single();
 
