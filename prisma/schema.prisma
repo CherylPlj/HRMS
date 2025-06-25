@@ -254,8 +254,10 @@ model Vacancy {
   VacancyID      Int       @id @default(autoincrement())
   JobTitle       JobTitle
   VacancyName    String
+  Description    String?
   HiringManager  String
   Status         VacancyStatus @default(Active)
+  DatePosted     DateTime?
   DateCreated    DateTime  @default(now())
   DateModified   DateTime  @updatedAt
   isDeleted      Boolean   @default(false)
@@ -267,9 +269,16 @@ model Vacancy {
 model Candidate {
   CandidateID    Int       @id @default(autoincrement())
   VacancyID      Int
-  FullName       String
+  LastName       String
+  FirstName      String
+  MiddleName     String?
+  ExtensionName  String?
+  FullName       String    // Computed field for backward compatibility
   Email          String
-  Phone          String?
+  ContactNumber  String?
+  Sex            Sex?
+  DateOfBirth    DateTime? @db.Date
+  Phone          String?   // Keeping for backward compatibility
   DateApplied    DateTime  @default(now())
   InterviewDate  DateTime?
   Status         CandidateStatus @default(ApplicationInitiated)
@@ -393,6 +402,7 @@ enum VacancyStatus {
   Inactive
   Filled
   Cancelled
+  Withdrawn
 }
 
 enum CandidateStatus {
@@ -415,4 +425,20 @@ enum Designation {
   Faculty
   Principal
   Cashier
+}
+
+enum Role2 {
+  APPLICANT
+  EMPLOYEE
+  ADMIN
+}
+
+enum Sex {
+  Male
+  Female
+  Intersex
+}
+
+enum EmploymentType {
+  FullTime
 }

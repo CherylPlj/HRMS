@@ -1,13 +1,16 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
 
 interface Vacancy {
   VacancyID: number;
   JobTitle: 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other';
   VacancyName: string;
+  Description?: string;
   HiringManager: string;
   Status: 'Active' | 'Inactive' | 'Filled' | 'Cancelled';
   DateCreated: string;
+  DatePosted?: string;
   _count?: {
     Candidates: number;
   }
@@ -16,9 +19,16 @@ interface Vacancy {
 interface Candidate {
   CandidateID: number;
   VacancyID: number;
+  LastName: string;
+  FirstName: string;
+  MiddleName?: string;
+  ExtensionName?: string;
   FullName: string;
   Email: string;
-  Phone?: string;
+  ContactNumber?: string;
+  Sex?: string;
+  DateOfBirth?: string;
+  Phone?: string; // Keeping for backward compatibility
   DateApplied: string;
   InterviewDate?: string;
   Status: string;
@@ -84,6 +94,20 @@ const validateInterviewTime = (dateTimeStr: string): boolean => {
   return hours >= 7 && hours < 19; // 7 AM to 7 PM
 };
 
+const calculateAge = (dateOfBirth: string | Date | null): number | null => {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (isNaN(dob.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDifference = today.getMonth() - dob.getMonth();
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 const RecruitmentContent = () => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'vacancies'>('candidates');
   const [showAddVacancy, setShowAddVacancy] = useState(false);
@@ -104,14 +128,23 @@ const RecruitmentContent = () => {
   // Vacancy form state
   const [vacancyJobTitle, setVacancyJobTitle] = useState<'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other'>('HR_Manager');
   const [vacancyName, setVacancyName] = useState('');
+  const [vacancyDescription, setVacancyDescription] = useState('');
   const [vacancyHiringManager, setVacancyHiringManager] = useState('');
   const [vacancyStatus, setVacancyStatus] = useState<'Active' | 'Inactive' | 'Filled' | 'Cancelled'>('Active');
+  const [vacancyDatePosted, setVacancyDatePosted] = useState('');
 
   // Candidate form state
-  const [candidateName, setCandidateName] = useState('');
+  const [candidateLastName, setCandidateLastName] = useState('');
+  const [candidateFirstName, setCandidateFirstName] = useState('');
+  const [candidateMiddleName, setCandidateMiddleName] = useState('');
+  const [candidateExtensionName, setCandidateExtensionName] = useState('');
+  const [candidateName, setCandidateName] = useState(''); // Keeping for backward compatibility
   const [candidateVacancy, setCandidateVacancy] = useState('');
   const [candidateEmail, setCandidateEmail] = useState('');
-  const [candidatePhone, setCandidatePhone] = useState('');
+  const [candidateContactNumber, setCandidateContactNumber] = useState('');
+  const [candidateSex, setCandidateSex] = useState('');
+  const [candidateDateOfBirth, setCandidateDateOfBirth] = useState('');
+  const [candidatePhone, setCandidatePhone] = useState(''); // Keeping for backward compatibility
   const [candidateHiringManager, setCandidateHiringManager] = useState('');
   const [candidateDate, setCandidateDate] = useState('');
   const [candidateStatus, setCandidateStatus] = useState('ApplicationInitiated');
@@ -134,6 +167,9 @@ const RecruitmentContent = () => {
   // Delete confirmation state
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  // Form errors state
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Fetch data
   const fetchVacancies = async () => {
@@ -182,8 +218,10 @@ const RecruitmentContent = () => {
         body: JSON.stringify({
           JobTitle: vacancyJobTitle,
           VacancyName: vacancyName,
+          Description: vacancyDescription,
           HiringManager: vacancyHiringManager,
-          Status: vacancyStatus
+          Status: vacancyStatus,
+          DatePosted: vacancyDatePosted
         })
       });
 
@@ -213,8 +251,10 @@ const RecruitmentContent = () => {
         body: JSON.stringify({
           JobTitle: editVacancyData.JobTitle,
           VacancyName: editVacancyData.VacancyName,
+          Description: editVacancyData.Description,
           HiringManager: editVacancyData.HiringManager,
-          Status: editVacancyData.Status
+          Status: editVacancyData.Status,
+          DatePosted: editVacancyData.DatePosted
         })
       });
 
@@ -264,13 +304,27 @@ const RecruitmentContent = () => {
       return;
     }
 
+    if (!validateCandidateForm()) {
+      return;
+    }
+
     try {
       setIsLoading(true);
+      // Generate full name from components
+      const fullName = `${candidateLastName}, ${candidateFirstName} ${candidateMiddleName} ${candidateExtensionName}`.trim().replace(/\s+/g, ' ');
+      
       const formData = new FormData();
       formData.append('VacancyID', candidateVacancy);
-      formData.append('FullName', candidateName);
+      formData.append('LastName', candidateLastName);
+      formData.append('FirstName', candidateFirstName);
+      formData.append('MiddleName', candidateMiddleName);
+      formData.append('ExtensionName', candidateExtensionName);
+      formData.append('FullName', fullName);
       formData.append('Email', candidateEmail);
-      formData.append('Phone', candidatePhone);
+      formData.append('ContactNumber', candidateContactNumber);
+      formData.append('Sex', candidateSex);
+      formData.append('DateOfBirth', candidateDateOfBirth);
+      formData.append('Phone', candidateContactNumber); // Use ContactNumber for Phone field too
       formData.append('InterviewDate', candidateInterview);
       formData.append('Status', candidateStatus);
       if (candidateResume) {
@@ -308,10 +362,19 @@ const RecruitmentContent = () => {
 
     try {
       setIsLoading(true);
+      // Generate full name from components
+      const fullName = `${editCandidateData.LastName}, ${editCandidateData.FirstName} ${editCandidateData.MiddleName || ''} ${editCandidateData.ExtensionName || ''}`.trim().replace(/\s+/g, ' ');
+      
       const formData = new FormData();
-      formData.append('FullName', editCandidateData.FullName);
+      formData.append('LastName', editCandidateData.LastName);
+      formData.append('FirstName', editCandidateData.FirstName);
+      formData.append('MiddleName', editCandidateData.MiddleName || '');
+      formData.append('ExtensionName', editCandidateData.ExtensionName || '');
+      formData.append('FullName', fullName);
       formData.append('Email', editCandidateData.Email);
-      formData.append('Phone', editCandidateData.Phone || '');
+      formData.append('ContactNumber', editCandidateData.ContactNumber || '');
+      formData.append('DateOfBirth', editCandidateData.DateOfBirth || '');
+      formData.append('Phone', editCandidateData.ContactNumber || ''); // Use ContactNumber for Phone field too
       formData.append('InterviewDate', editCandidateData.InterviewDate || '');
       formData.append('Status', editCandidateData.Status);
       if (editCandidateResume) {
@@ -372,20 +435,30 @@ const RecruitmentContent = () => {
   const resetVacancyForm = () => {
     setVacancyJobTitle('HR_Manager');
     setVacancyName('');
+    setVacancyDescription('');
     setVacancyHiringManager('');
     setVacancyStatus('Active');
+    setVacancyDatePosted('');
   };
 
   const resetCandidateForm = () => {
+    setCandidateLastName('');
+    setCandidateFirstName('');
+    setCandidateMiddleName('');
+    setCandidateExtensionName('');
     setCandidateName('');
     setCandidateVacancy('');
     setCandidateEmail('');
+    setCandidateContactNumber('');
+    setCandidateSex('');
+    setCandidateDateOfBirth('');
     setCandidatePhone('');
     setCandidateHiringManager('');
     setCandidateDate('');
     setCandidateStatus('ApplicationInitiated');
     setCandidateResume(null);
     setCandidateInterview('');
+    setErrors({});
   };
 
   const handleResumeChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -470,6 +543,24 @@ const RecruitmentContent = () => {
     setVacancySearch('');
     setVacancyStatusFilter('');
     setVacancyJobTitleFilter('');
+  };
+
+  const validateCandidateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!candidateVacancy) newErrors.vacancy = 'Vacancy is required.';
+    if (!candidateLastName) newErrors.lastName = 'Last name is required.';
+    if (!candidateFirstName) newErrors.firstName = 'First name is required.';
+    if (!candidateEmail) {
+      newErrors.email = 'Email is required.';
+    } else if (!/\S+@\S+\.\S+/.test(candidateEmail)) {
+      newErrors.email = 'Email is invalid.';
+    }
+    if (!candidateContactNumber) newErrors.contactNumber = 'Contact number is required.';
+    if (!candidateSex) newErrors.sex = 'Sex is required.';
+    if (!candidateDateOfBirth) newErrors.dateOfBirth = 'Date of birth is required.';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   return (
@@ -582,7 +673,8 @@ const RecruitmentContent = () => {
                 <tr>
                   <th className="px-4 py-2">Vacancy</th>
                   <th className="px-4 py-2">Candidate</th>
-                  <th className="px-4 py-2">Hiring Manager</th>
+                  <th className="px-4 py-2">Email</th>
+                  <th className="px-4 py-2">Contact Number</th>
                   <th className="px-4 py-2">Date of Application</th>
                   <th className="px-4 py-2">Interview Schedule</th>
                   <th className="px-4 py-2">Status</th>
@@ -594,8 +686,16 @@ const RecruitmentContent = () => {
                 {filteredCandidates.map((c) => (
                   <tr key={c.CandidateID} className="border-t">
                     <td className="px-4 py-2">{c.Vacancy?.VacancyName}</td>
-                    <td className="px-4 py-2">{c.FullName}</td>
-                    <td className="px-4 py-2">{c.Vacancy?.HiringManager}</td>
+                    <td className="px-4 py-2">
+                      <div className="font-medium">{c.FullName}</div>
+                      {c.DateOfBirth && (
+                        <div className="text-sm text-gray-500">
+                          DOB: {formatDate(c.DateOfBirth)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">{c.Email}</td>
+                    <td className="px-4 py-2">{c.ContactNumber || c.Phone || '-'}</td>
                     <td className="px-4 py-2">{formatDate(c.DateApplied)}</td>
                     <td className="px-4 py-2">{c.InterviewDate ? formatDateTime(c.InterviewDate) : '-'}</td>
                     <td className="px-4 py-2">{formatStatus(c.Status)}</td>
@@ -637,16 +737,51 @@ const RecruitmentContent = () => {
               <div className="bg-white p-6 rounded shadow-lg w-[600px] max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-4">Add Candidate</h3>
                 <form onSubmit={handleAddCandidate}>
-                  <div className="mb-4">
-                    <RequiredLabel text="Full Name" />
-                    <input 
-                      type="text" 
-                      className="w-full border rounded px-3 py-2" 
-                      value={candidateName} 
-                      onChange={e => setCandidateName(e.target.value)} 
-                      placeholder="Enter full name"
-                      required 
-                    />
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <RequiredLabel text="Last Name" />
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateLastName} 
+                        onChange={e => setCandidateLastName(e.target.value)} 
+                        placeholder="Enter last name"
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <RequiredLabel text="First Name" />
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateFirstName} 
+                        onChange={e => setCandidateFirstName(e.target.value)} 
+                        placeholder="Enter first name"
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block mb-1 font-medium">Middle Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateMiddleName} 
+                        onChange={e => setCandidateMiddleName(e.target.value)} 
+                        placeholder="Enter middle name" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Extension Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateExtensionName} 
+                        onChange={e => setCandidateExtensionName(e.target.value)} 
+                        placeholder="Jr., Sr., III, etc." 
+                      />
+                    </div>
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Vacancy" />
@@ -675,15 +810,38 @@ const RecruitmentContent = () => {
                       required 
                     />
                   </div>
-                  <div className="mb-4">
-                    <label className="block mb-1 font-medium">Phone</label>
-                    <input 
-                      type="tel" 
-                      className="w-full border rounded px-3 py-2" 
-                      value={candidatePhone} 
-                      onChange={e => setCandidatePhone(e.target.value)} 
-                      placeholder="Enter phone number" 
-                    />
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="block mb-1 font-medium">Contact Number</label>
+                      <input 
+                        type="tel" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateContactNumber} 
+                        onChange={e => setCandidateContactNumber(e.target.value)} 
+                        placeholder="Enter contact number" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Sex</label>
+                      <select 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateSex} 
+                        onChange={e => setCandidateSex(e.target.value)}
+                      >
+                        <option value="">-- Select Sex --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Date of Birth</label>
+                      <input 
+                        type="date" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={candidateDateOfBirth} 
+                        onChange={e => setCandidateDateOfBirth(e.target.value)} 
+                      />
+                    </div>
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Interview Schedule (7 AM - 7 PM only)</label>
@@ -742,17 +900,72 @@ const RecruitmentContent = () => {
               <div className="bg-white p-6 rounded shadow-lg w-[600px] max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-4">Edit Candidate</h3>
                 <form onSubmit={handleEditCandidate}>
-                  <div className="mb-4">
-                    <RequiredLabel text="Full Name" />
-                    <input type="text" className="w-full border rounded px-3 py-2" value={editCandidateData.FullName} onChange={e => setEditCandidateData({ ...editCandidateData, FullName: e.target.value })} required />
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <RequiredLabel text="Last Name" />
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={editCandidateData.LastName} 
+                        onChange={e => setEditCandidateData({ ...editCandidateData, LastName: e.target.value })} 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <RequiredLabel text="First Name" />
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={editCandidateData.FirstName} 
+                        onChange={e => setEditCandidateData({ ...editCandidateData, FirstName: e.target.value })} 
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block mb-1 font-medium">Middle Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={editCandidateData.MiddleName || ''} 
+                        onChange={e => setEditCandidateData({ ...editCandidateData, MiddleName: e.target.value })} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Extension Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={editCandidateData.ExtensionName || ''} 
+                        onChange={e => setEditCandidateData({ ...editCandidateData, ExtensionName: e.target.value })} 
+                        placeholder="Jr., Sr., III, etc."
+                      />
+                    </div>
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Email" />
                     <input type="email" className="w-full border rounded px-3 py-2" value={editCandidateData.Email} onChange={e => setEditCandidateData({ ...editCandidateData, Email: e.target.value })} required />
                   </div>
-                  <div className="mb-4">
-                    <label className="block mb-1 font-medium">Phone</label>
-                    <input type="tel" className="w-full border rounded px-3 py-2" value={editCandidateData.Phone || ''} onChange={e => setEditCandidateData({ ...editCandidateData, Phone: e.target.value })} />
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block mb-1 font-medium">Contact Number</label>
+                      <input 
+                        type="tel" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={editCandidateData.ContactNumber || ''} 
+                        onChange={e => setEditCandidateData({ ...editCandidateData, ContactNumber: e.target.value })} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Date of Birth</label>
+                      <input 
+                        type="date" 
+                        className="w-full border rounded px-3 py-2" 
+                        value={editCandidateData.DateOfBirth ? editCandidateData.DateOfBirth.split('T')[0] : ''} 
+                        onChange={e => setEditCandidateData({ ...editCandidateData, DateOfBirth: e.target.value })} 
+                      />
+                    </div>
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Interview Schedule (7 AM - 7 PM only)</label>
@@ -917,8 +1130,10 @@ const RecruitmentContent = () => {
                 <tr>
                   <th className="px-4 py-2">Vacancy</th>
                   <th className="px-4 py-2">Job Title</th>
+                  <th className="px-4 py-2">Description</th>
                   <th className="px-4 py-2">Hiring Manager</th>
                   <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Date Posted</th>
                   <th className="px-4 py-2">Actions</th>
                 </tr>
               </thead>
@@ -927,8 +1142,16 @@ const RecruitmentContent = () => {
                   <tr key={v.VacancyID} className="border-t">
                     <td className="px-4 py-2">{v.VacancyName}</td>
                     <td className="px-4 py-2">{v.JobTitle}</td>
+                    <td className="px-4 py-2 max-w-xs">
+                      <div className="truncate" title={v.Description || 'No description'}>
+                        {v.Description || 'No description'}
+                      </div>
+                    </td>
                     <td className="px-4 py-2">{v.HiringManager}</td>
                     <td className="px-4 py-2">{v.Status}</td>
+                    <td className="px-4 py-2">
+                      {v.DatePosted ? formatDate(v.DatePosted) : 'Not set'}
+                    </td>
                     <td className="px-4 py-2 space-x-1">
                       <button className={iconBtn} title="Edit" onClick={() => openEditVacancy(v.VacancyID)}>
                         <i className="fas fa-edit text-blue-600"></i>
@@ -973,6 +1196,16 @@ const RecruitmentContent = () => {
                     />
                   </div>
                   <div className="mb-4">
+                    <label className="block mb-1 font-medium">Description</label>
+                    <textarea 
+                      className="w-full border rounded px-3 py-2 h-24 resize-vertical" 
+                      value={vacancyDescription} 
+                      onChange={e => setVacancyDescription(e.target.value)} 
+                      placeholder="Enter job description and requirements"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="mb-4">
                     <label className="block mb-1 font-medium">Hiring Manager</label>
                     <input 
                       type="text" 
@@ -981,6 +1214,15 @@ const RecruitmentContent = () => {
                       onChange={e => setVacancyHiringManager(e.target.value)} 
                       placeholder="Enter hiring manager"
                       required 
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block mb-1 font-medium">Date Posted</label>
+                    <input 
+                      type="date" 
+                      className="w-full border rounded px-3 py-2" 
+                      value={vacancyDatePosted} 
+                      onChange={e => setVacancyDatePosted(e.target.value)} 
                     />
                   </div>
                   <div className="mb-4">
@@ -1026,8 +1268,27 @@ const RecruitmentContent = () => {
                     <input type="text" className="w-full border rounded px-3 py-2" value={editVacancyData.VacancyName} onChange={e => setEditVacancyData({ ...editVacancyData, VacancyName: e.target.value })} />
                   </div>
                   <div className="mb-4">
+                    <label className="block mb-1 font-medium">Description</label>
+                    <textarea 
+                      className="w-full border rounded px-3 py-2 h-24 resize-vertical" 
+                      value={editVacancyData.Description || ''} 
+                      onChange={e => setEditVacancyData({ ...editVacancyData, Description: e.target.value })} 
+                      placeholder="Enter job description and requirements"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="mb-4">
                     <label className="block mb-1 font-medium">Hiring Manager</label>
                     <input type="text" className="w-full border rounded px-3 py-2" value={editVacancyData.HiringManager} onChange={e => setEditVacancyData({ ...editVacancyData, HiringManager: e.target.value })} />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block mb-1 font-medium">Date Posted</label>
+                    <input 
+                      type="date" 
+                      className="w-full border rounded px-3 py-2" 
+                      value={editVacancyData.DatePosted ? editVacancyData.DatePosted.split('T')[0] : ''} 
+                      onChange={e => setEditVacancyData({ ...editVacancyData, DatePosted: e.target.value })} 
+                    />
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Status</label>

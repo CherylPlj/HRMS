@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
 import { googleDriveService } from '@/services/googleDriveService';
+// import { streamToBuffer } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -49,17 +50,31 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const VacancyID = formData.get('VacancyID');
+    const LastName = formData.get('LastName');
+    const FirstName = formData.get('FirstName');
+    const MiddleName = formData.get('MiddleName');
+    const ExtensionName = formData.get('ExtensionName');
     const FullName = formData.get('FullName');
     const Email = formData.get('Email');
-    const Phone = formData.get('Phone');
+    const ContactNumber = formData.get('ContactNumber');
+    const DateOfBirth = formData.get('DateOfBirth');
+    const Phone = formData.get('Phone'); // For backward compatibility
     const InterviewDate = formData.get('InterviewDate');
     const Status = formData.get('Status');
     const resume = formData.get('resume') as File | null;
+    const Sex = formData.get('Sex') as string;
 
     // Validate required fields
-    if (!VacancyID || !FullName || !Email) {
+    if (!VacancyID || !LastName || !FirstName || !Email) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: VacancyID, LastName, FirstName, and Email are required' },
+        { status: 400 }
+      );
+    }
+
+    if (Sex && !['Male', 'Female', 'Intersex'].includes(Sex)) {
+      return NextResponse.json(
+        { error: 'Invalid value for Sex' },
         { status: 400 }
       );
     }
@@ -104,13 +119,20 @@ export async function POST(req: NextRequest) {
       .from('Candidate')
       .insert([{
         VacancyID: parseInt(VacancyID as string),
+        LastName: LastName as string,
+        FirstName: FirstName as string,
+        MiddleName: MiddleName as string || null,
+        ExtensionName: ExtensionName as string || null,
         FullName: FullName as string,
         Email: Email as string,
-        Phone: Phone as string || null,
+        ContactNumber: ContactNumber as string || null,
+        DateOfBirth: DateOfBirth ? new Date(DateOfBirth as string).toISOString() : null,
+        Phone: ContactNumber as string || null, // Use ContactNumber for Phone field too
         InterviewDate: InterviewDate ? new Date(InterviewDate as string).toISOString() : null,
         Status: finalStatus,
         Resume,
         ResumeUrl,
+        Sex: Sex || null,
         DateModified: new Date().toISOString(),
         createdBy: userId
       }])

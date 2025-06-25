@@ -46,129 +46,71 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const id = await params.id;
   try {
-    const { userId } = getAuth(req) || {};
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const { id } = params;
+    const data = await req.json();
+    const {
+      VacancyID,
+      LastName,
+      FirstName,
+      MiddleName,
+      ExtensionName,
+      Email,
+      ContactNumber,
+      Sex,
+      DateOfBirth,
+      Status,
+      InterviewDate,
+    } = data;
+
+    // Validation
+    if (Email && (typeof Email !== 'string' || !Email.includes('@'))) {
+      return NextResponse.json({ message: 'Invalid Email format' }, { status: 400 });
     }
 
-    const formData = await req.formData();
-    const FullName = formData.get('FullName');
-    const Email = formData.get('Email');
-    const Phone = formData.get('Phone');
-    const InterviewDate = formData.get('InterviewDate');
-    const Status = formData.get('Status');
-    const resume = formData.get('resume') as File | null;
-
-    // Validate required fields
-    if (!FullName || !Email) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    if (Sex && !['Male', 'Female', 'Intersex'].includes(Sex)) {
+      return NextResponse.json({ message: 'Invalid value for Sex' }, { status: 400 });
     }
 
-    // Auto-set status to InterviewScheduled if interview date is provided
-    let finalStatus = Status as string;
-    if (InterviewDate && InterviewDate.toString().trim() !== '') {
-      finalStatus = 'InterviewScheduled';
-    }
-
-    // Handle resume file if provided
-    let Resume = undefined;
-    let ResumeUrl = undefined;
-    if (resume) {
-      try {
-        // Upload file to Google Drive using the same approach as faculty-documents
-        const fileName = `${Date.now()}_${resume.name}`;
-        console.log('Uploading resume to Google Drive:', {
-          fileName,
-          fileType: resume.type,
-          folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
-        });
-
-        const uploadResult = await googleDriveService.uploadFile(
-          resume,
-          fileName,
-          resume.type,
-          process.env.GOOGLE_DRIVE_FOLDER_ID
-        );
-
-        console.log('File upload successful:', uploadResult);
-        
-        Resume = uploadResult.fileId;
-        ResumeUrl = uploadResult.webViewLink;
-
-        // Delete old resume if it exists
-        const { data: existingCandidate } = await supabaseAdmin
-          .from('Candidate')
-          .select('Resume')
-          .eq('CandidateID', parseInt(id))
-          .single();
-
-        if (existingCandidate?.Resume) {
-          try {
-            // Determine storage type based on file ID format
-            // Google Drive IDs are typically long alphanumeric strings
-            // Supabase Storage paths contain slashes and are typically shorter
-            const isGoogleDriveId = existingCandidate.Resume.length > 20 && !existingCandidate.Resume.includes('/');
-            const storageType = isGoogleDriveId ? 'google-drive' : 'supabase';
-            
-            await googleDriveService.deleteFile(existingCandidate.Resume, storageType);
-            console.log('Deleted old resume from storage:', existingCandidate.Resume, 'Storage type:', storageType);
-          } catch (deleteError) {
-            console.error('Error deleting old resume:', deleteError);
-            // Continue even if delete fails - this is not critical
-          }
-        }
-      } catch (error) {
-        console.error('Error uploading resume:', error);
-        // Continue without the resume if upload fails
-      }
-    }
+    // Dynamic FullName
+    const fullName = [FirstName, MiddleName, LastName, ExtensionName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
 
     const { data: candidate, error } = await supabaseAdmin
       .from('Candidate')
       .update({
-        FullName: FullName as string,
-        Email: Email as string,
-        Phone: Phone as string || null,
-        InterviewDate: InterviewDate ? new Date(InterviewDate as string).toISOString() : null,
-        Status: finalStatus,
-        ...(Resume && { Resume }),
-        ...(ResumeUrl && { ResumeUrl }),
+        VacancyID,
+        LastName,
+        FirstName,
+        MiddleName,
+        ExtensionName,
+        FullName: fullName,
+        Email,
+        ContactNumber,
+        Sex,
+        DateOfBirth: DateOfBirth ? new Date(DateOfBirth).toISOString() : null,
+        Phone: ContactNumber, // backward compatibility
+        Status,
+        InterviewDate: InterviewDate ? new Date(InterviewDate).toISOString() : null,
         DateModified: new Date().toISOString(),
-        updatedBy: userId
       })
-      .eq('CandidateID', parseInt(id))
-      .select()
-      .single();
+      .eq('CandidateID', id)
+      .select();
 
     if (error) {
       console.error('Error updating candidate:', error);
-      // If candidate update fails, delete the uploaded file from Google Drive
-      if (Resume) {
-        try {
-          await googleDriveService.deleteFile(Resume);
-        } catch (deleteError) {
-          console.error('Error deleting uploaded file:', deleteError);
-        }
-      }
       return NextResponse.json(
-        { error: 'Failed to update candidate' },
+        { message: 'Error updating candidate', error },
         { status: 500 }
       );
     }
 
     return NextResponse.json(candidate);
   } catch (error) {
-    console.error('Error updating candidate:', error);
     return NextResponse.json(
-      { error: 'Failed to update candidate' },
+      { message: 'Error updating candidate', error },
       { status: 500 }
     );
   }

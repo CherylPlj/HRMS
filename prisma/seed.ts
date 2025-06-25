@@ -161,6 +161,68 @@ async function createUserWithRole({
     return user;
 }
 
+async function createDefaultVacancies() {
+    const vacancies = [
+        {
+            JobTitle: 'Faculty',
+            VacancyName: 'Elementary Teacher',
+            Description: 'Full-time position for grades 1-6. Bachelor\'s degree in Education required.',
+            HiringManager: 'HR Department',
+            Status: 'Active',
+            DatePosted: new Date('2025-05-01'),
+        },
+        {
+            JobTitle: 'Faculty',
+            VacancyName: 'High School Math Teacher',
+            Description: 'Teaching position for junior and senior high school mathematics.',
+            HiringManager: 'HR Department',
+            Status: 'Active',
+            DatePosted: new Date('2025-05-01'),
+        },
+        {
+            JobTitle: 'Other',
+            VacancyName: 'School Guidance Counselor',
+            Description: 'Full-time counselor position. Psychology or Guidance Counseling degree preferred.',
+            HiringManager: 'HR Department',
+            Status: 'Active',
+            DatePosted: new Date('2025-05-01'),
+        },
+        {
+            JobTitle: 'Other',
+            VacancyName: 'Administrative Assistant',
+            Description: 'Support role for school administration. Computer literacy and communication skills required.',
+            HiringManager: 'HR Department',
+            Status: 'Active',
+            DatePosted: new Date('2025-05-01'),
+        },
+    ];
+
+    for (const vacancy of vacancies) {
+        try {
+            // Check if vacancy already exists
+            const existingVacancy = await prisma.vacancy.findFirst({
+                where: { VacancyName: vacancy.VacancyName },
+            });
+
+            if (!existingVacancy) {
+                await prisma.vacancy.create({
+                    data: {
+                        JobTitle: vacancy.JobTitle as any,
+                        VacancyName: vacancy.VacancyName,
+                        HiringManager: vacancy.HiringManager,
+                        Status: vacancy.Status as any,
+                        // Note: Description and DatePosted will be added after schema migration
+                    },
+                });
+            }
+            await delay(100); // Small delay to prevent prepared statement conflicts
+        } catch (error) {
+            console.log(`Vacancy ${vacancy.VacancyName} already exists or error:`, error);
+        }
+    }
+    console.log('Default vacancies created/verified');
+}
+
 async function main() {
     console.log('Seeding database...');
 
@@ -169,6 +231,9 @@ async function main() {
     // await createDefaultDocumentTypes();
     console.log('Default departments created/verified');
     console.log('Default document types created/verified');
+
+    // Create default vacancies
+    await createDefaultVacancies();
 
     // Seed Subjects
     // const subjects = [

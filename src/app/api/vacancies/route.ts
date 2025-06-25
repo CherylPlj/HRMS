@@ -8,9 +8,7 @@ export async function GET() {
       .from('Vacancy')
       .select(`
         *,
-        _count {
-          Candidates
-        }
+        Candidate(count)
       `)
       .eq('isDeleted', false)
       .order('DateCreated', { ascending: false });
@@ -44,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await req.json();
-    const { JobTitle, VacancyName, HiringManager, Status } = data;
+    const { JobTitle, VacancyName, Description, HiringManager, Status, DatePosted } = data;
 
     // Validate required fields
     if (!JobTitle || !VacancyName || !HiringManager) {
@@ -59,8 +57,10 @@ export async function POST(req: NextRequest) {
       .insert([{
         JobTitle,
         VacancyName,
+        Description,
         HiringManager,
         Status: Status || 'Active',
+        DatePosted: DatePosted ? new Date(DatePosted).toISOString() : null,
         DateModified: new Date().toISOString(),
         createdBy: userId
       }])
