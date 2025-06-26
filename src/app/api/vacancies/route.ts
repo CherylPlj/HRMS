@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await req.json();
-    const { JobTitle, VacancyName, Description, HiringManager, Status, DatePosted } = data;
+    const { JobTitle, VacancyName, Description, HiringManager, Status, DatePosted, NumberOfPositions } = data;
 
     // Validate required fields
     if (!JobTitle || !VacancyName || !HiringManager) {
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
         HiringManager,
         Status: Status || 'Active',
         DatePosted: DatePosted ? new Date(DatePosted).toISOString() : null,
+        NumberOfPositions: NumberOfPositions || 1,
         DateModified: new Date().toISOString(),
         createdBy: userId
       }])

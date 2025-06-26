@@ -14,6 +14,48 @@ interface FormErrors {
   [key: string]: string;
 }
 
+interface InputFieldProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  required?: boolean;
+  error?: string;
+  placeholder?: string;
+  showErrorMessage?: boolean;
+}
+
+const InputField = ({
+  label,
+  name,
+  value,
+  onChange,
+  type = 'text',
+  required = false,
+  error,
+  placeholder,
+  showErrorMessage = false,
+}: InputFieldProps) => (
+  <div className="space-y-1">
+    <label className="text-sm font-medium text-gray-700">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      required={required}
+      placeholder={placeholder}
+      className={`w-full border ${error ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
+    />
+    {showErrorMessage && error && (
+      <p className="mt-1 text-sm text-red-500">{error}</p>
+    )}
+  </div>
+);
+
 const SuccessModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   if (!isOpen) return null;
 
@@ -83,6 +125,8 @@ const ApplicantPage = () => {
     email: '',
     contactNumber: '',
     vacancy: '',
+    sex: '',
+    dateOfBirth: '',
     resume: null as File | null,
   })
 
@@ -128,36 +172,62 @@ const ApplicantPage = () => {
     }
   }, 500);
 
+  const validateAge = (dateOfBirth: string): { valid: boolean; age: number | null } => {
+    if (!dateOfBirth) return { valid: false, age: null };
+    const dob = new Date(dateOfBirth);
+    if (isNaN(dob.getTime())) return { valid: false, age: null };
+
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDifference = today.getMonth() - dob.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return { valid: age >= 18 && age <= 65, age };
+  };
+
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        return value.trim().length < 2 ? `${name === 'firstName' ? 'First' : 'Last'} name must be at least 2 characters` : '';
+      
+      case 'email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return !emailRegex.test(value) ? 'Please enter a valid email address' : '';
+      
+      case 'contactNumber':
+        const phoneRegex = /^(\+63|0)[0-9]{10}$/;
+        return !phoneRegex.test(value) ? 'Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)' : '';
+      
+      case 'sex':
+        return !value ? 'Please select your sex' : '';
+      
+      case 'dateOfBirth':
+        if (!value) return 'Please enter your date of birth';
+        const { valid, age } = validateAge(value);
+        return !valid ? `Age must be between 18 and 65 years old (current age: ${age} years)` : '';
+      
+      case 'vacancy':
+        return !value ? 'Please select a job vacancy' : '';
+      
+      default:
+        return '';
+    }
+  };
+
   const validateForm = () => {
     const newErrors: FormErrors = {};
-
-    // Name validations
-    if (formData.lastName.trim().length < 2) {
-      newErrors.lastName = 'Last name must be at least 2 characters';
-    }
-    if (formData.firstName.trim().length < 2) {
-      newErrors.firstName = 'First name must be at least 2 characters';
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    if (errors.email?.includes('already been used')) {
-      newErrors.email = errors.email;
-    }
-
-    // Contact number validation
-    const phoneRegex = /^(\+63|0)[0-9]{10}$/;
-    if (!phoneRegex.test(formData.contactNumber)) {
-      newErrors.contactNumber = 'Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)';
-    }
-
-    // Vacancy validation
-    if (!formData.vacancy) {
-      newErrors.vacancy = 'Please select a job vacancy';
-    }
+    
+    // Validate all required fields
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key !== 'resume' && key !== 'middleName' && key !== 'extName') {
+        const error = validateField(key, value as string);
+        if (error) {
+          newErrors[key] = error;
+        }
+      }
+    });
 
     // Resume validation
     if (!formData.resume) {
@@ -168,7 +238,6 @@ const ApplicantPage = () => {
       if (!allowedTypes.includes(fileExtension)) {
         newErrors.resume = 'Please upload a PDF or Word document';
       }
-      // 5MB file size limit
       if (formData.resume.size > 5 * 1024 * 1024) {
         newErrors.resume = 'File size must be less than 5MB';
       }
@@ -180,18 +249,17 @@ const ApplicantPage = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    // Validate field in real-time
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
 
-    // Check email after user stops typing
-    if (name === 'email' && value.includes('@')) {
+    // Special handling for email
+    if (name === 'email' && value.includes('@') && !error) {
       checkExistingEmail(value);
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -221,6 +289,25 @@ const ApplicantPage = () => {
       data.append('ExtensionName', formData.extName);
       data.append('Email', formData.email);
       data.append('ContactNumber', formData.contactNumber);
+      
+      // Ensure sex is properly set
+      if (!formData.sex) {
+        throw new Error('Please select your sex');
+      }
+      data.append('Sex', formData.sex);
+
+      // Validate and format date of birth
+      if (!formData.dateOfBirth) {
+        throw new Error('Please enter your date of birth');
+      }
+      const { valid, age } = validateAge(formData.dateOfBirth);
+      if (!valid) {
+        throw new Error(`Age must be between 18 and 65 years old (current age: ${age} years)`);
+      }
+      // Convert to ISO string for consistent date format
+      const dob = new Date(formData.dateOfBirth);
+      data.append('DateOfBirth', dob.toISOString());
+
       if (formData.resume) {
         data.append('resume', formData.resume);
       }
@@ -244,6 +331,8 @@ const ApplicantPage = () => {
         email: '',
         contactNumber: '',
         vacancy: '',
+        sex: '',
+        dateOfBirth: '',
         resume: null,
       });
       // Reset file input
@@ -317,6 +406,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.firstName}
+              showErrorMessage={true}
             />
             <InputField 
               label="Middle Name" 
@@ -331,12 +421,14 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.lastName}
+              showErrorMessage={true}
             />
             <InputField 
               label="Extension Name" 
               name="extName" 
               value={formData.extName} 
               onChange={handleChange} 
+              placeholder="Jr., Sr., III, etc."
             />
             <InputField 
               label="Email Address" 
@@ -346,6 +438,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.email}
+              showErrorMessage={true}
             />
             <InputField 
               label="Contact Number" 
@@ -355,7 +448,49 @@ const ApplicantPage = () => {
               required 
               error={errors.contactNumber}
               placeholder="+639123456789 or 09123456789"
+              showErrorMessage={true}
             />
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Sex <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="sex"
+                required
+                value={formData.sex}
+                onChange={handleChange}
+                className={`w-full border ${errors.sex ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
+              >
+                <option value="">-- Select Sex --</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+              {errors.sex && (
+                <p className="mt-1 text-sm text-red-500">{errors.sex}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Date of Birth <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                name="dateOfBirth"
+                required
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+                max={new Date().toISOString().split('T')[0]}
+                className={`w-full border ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
+              />
+              {errors.dateOfBirth && (
+                <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>
+              )}
+              {formData.dateOfBirth && !errors.dateOfBirth && (
+                <p className="mt-1 text-sm text-gray-600">
+                  Age: {validateAge(formData.dateOfBirth).age} years old
+                </p>
+              )}
+            </div>
             <div className="space-y-1 col-span-1 md:col-span-2">
               <label className="text-sm font-medium text-gray-700">
                 Vacancy <span className="text-red-500">*</span>
@@ -420,43 +555,5 @@ const ApplicantPage = () => {
     </div>
   )
 }
-
-const InputField = ({
-  label,
-  name,
-  value,
-  onChange,
-  type = 'text',
-  required = false,
-  error,
-  placeholder,
-}: {
-  label: string
-  name: string
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  type?: string
-  required?: boolean
-  error?: string
-  placeholder?: string
-}) => (
-  <div className="space-y-1">
-    <label className="text-sm font-medium text-gray-700">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      required={required}
-      placeholder={placeholder}
-      className={`w-full border ${error ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
-    />
-    {error && (
-      <p className="mt-1 text-sm text-red-500">{error}</p>
-    )}
-  </div>
-)
 
 export default ApplicantPage

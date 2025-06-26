@@ -13,7 +13,10 @@ import {
   FaFile,
   FaClock,
   FaGraduationCap,
-  FaBriefcase
+  FaBriefcase,
+  FaUserPlus,
+  FaBuilding,
+  FaCalendarCheck
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
@@ -31,18 +34,22 @@ interface User {
   }[];
 }
 
-interface Faculty {
-  FacultyID: number;
-  EmploymentStatus?: string;
-  Contract?: {
-    ContractType: string;
-  };
-  User?: User;
+interface Department {
+  DepartmentID: number;
+  DepartmentName: string;
 }
 
-interface Department {
-  DepartmentName: string;
-  Faculty?: Faculty[];
+interface Employee {
+  EmployeeID: string;
+  FirstName: string;
+  LastName: string;
+  MiddleName?: string;
+  ExtensionName?: string;
+  EmploymentStatus: string;
+  DepartmentID?: number;
+  isDeleted?: boolean;
+  UserID?: string;
+  Department?: Department;
 }
 
 export default function DashboardContent() {
@@ -102,6 +109,31 @@ export default function DashboardContent() {
 
   const [logs, setLogs] = useState<Log[]>([]);
 
+  // Add new state for recruitment stats
+  const [recruitmentStats, setRecruitmentStats] = useState({
+    activeVacancies: 0,
+    totalCandidates: 0,
+    shortlisted: 0,
+    interviewed: 0,
+    hired: 0,
+  });
+
+  // Fix the type error in upcomingInterviews state
+  const [upcomingInterviews, setUpcomingInterviews] = useState<Array<{
+    CandidateID: number;
+    FirstName: string;
+    LastName: string;
+    MiddleName?: string;
+    ExtensionName?: string;
+    InterviewDate: string;
+    Email: string;
+    ContactNumber?: string;
+    Vacancy: {
+      VacancyName: string;
+      JobTitle: string;
+    };
+  }>>([]);
+
   const handleDateChange = (dates: [Date | null, Date | null]) => {
     const [start, end] = dates;
     if (start && end) {
@@ -109,45 +141,47 @@ export default function DashboardContent() {
     }
   };
 
+  // Add navigation handlers
+  const handleCardClick = (module: string) => {
+    router.push(`/dashboard/admin/${module}`);
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch Faculty Stats
-        const { data: faculty, error: facultyError } = await supabase
-          .from("Faculty")
+                // Fetch Employee Stats
+        const { data: employees, error: employeeError } = await supabase
+          .from("Employee")
           .select(`
             *,
-            Contract (
-              ContractType
-            ),
-            User:UserID (
-              UserID,
-              isDeleted,
-              Status
+            Department:DepartmentID (
+              DepartmentID,
+              DepartmentName
             )
-          `) as { data: Faculty[] | null, error: any };
+          `) as { data: Employee[] | null, error: any };
 
-        if (facultyError) {
-          console.error("Faculty fetch error:", facultyError.message || facultyError);
-          throw facultyError;
+        if (employeeError) {
+          console.error("Employee fetch error:", employeeError.message || employeeError);
+          throw employeeError;
         }
 
-        console.log('Raw faculty data from dashboard:', faculty); // Debug log
+        console.log('Raw employee data from dashboard:', employees); // Debug log
 
-        // Filter out deleted faculty first
-        const allNonDeletedFaculty = faculty?.filter(f => !f.User?.isDeleted) || [];
-        console.log('All non-deleted faculty data (check for EmploymentStatus here):', allNonDeletedFaculty); // Debug log
+        // Filter out deleted employees
+        const allNonDeletedEmployees = employees?.filter(e => !e.isDeleted) || [];
+        console.log('All non-deleted employee data:', allNonDeletedEmployees); // Debug log
 
         // Calculate stats based on EmploymentStatus
-        const hiredCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Hired").length;
-        const regularCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Regular").length;
-        const probationaryCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Probationary").length;
-        const resignedCount = allNonDeletedFaculty.filter((f) => f.EmploymentStatus === "Resigned").length;
+        const activeEmployees = allNonDeletedEmployees.filter((e) => e.EmploymentStatus !== "Resigned");
+        const regularCount = activeEmployees.filter((e) => e.EmploymentStatus === "Regular").length;
+        const probationaryCount = activeEmployees.filter((e) => e.EmploymentStatus === "Probationary").length;
+        const hiredCount = activeEmployees.filter((e) => e.EmploymentStatus === "Hired").length;
+        const resignedCount = allNonDeletedEmployees.filter((e) => e.EmploymentStatus === "Resigned").length;
         
-        const totalActiveFaculty = hiredCount + regularCount + probationaryCount;
+        const totalActiveEmployees = activeEmployees.length;
 
         console.log('Stats calculation from EmploymentStatus:', {
-          total: totalActiveFaculty,
+          total: totalActiveEmployees,
           regular: regularCount,
           probationary: probationaryCount,
           hired: hiredCount,
@@ -155,42 +189,37 @@ export default function DashboardContent() {
         }); // Debug log
 
         setFacultyStats({
-          total: totalActiveFaculty,
+          total: totalActiveEmployees,
           regular: regularCount,
           probationary: probationaryCount,
           resigned: resignedCount,
-          underProbation: probationaryCount, // UI uses this for 'Under Probation'
+          underProbation: probationaryCount,
         });
 
-        // Fetch Department Stats
-        const { data: departments, error: deptError } = await supabase
+        // Fetch department names first
+        const { data: departments } = await supabase
           .from("Department")
-          .select(`
-            DepartmentName,
-            Faculty (
-              FacultyID,
-              User:UserID (
-                UserID,
-                isDeleted,
-                Status
-              )
-            )
-          `) as { data: Department[] | null, error: any };
+          .select('DepartmentID, DepartmentName');
 
-        if (deptError) {
-          console.error("Department fetch error:", deptError.message || deptError);
-          throw deptError;
-        }
-
-        console.log('Raw department data:', departments); // Debug log
-
+        // Calculate Department Stats from Employees
         const deptStats: Record<string, number> = {};
+        
+        // Initialize all departments with 0
         departments?.forEach((dept) => {
-          // Only count faculty who are not deleted
-          const activeFacultyInDept = dept.Faculty?.filter(f => !f.User?.isDeleted) || [];
-          console.log(`Department ${dept.DepartmentName} active faculty:`, activeFacultyInDept.length); // Debug log
-          deptStats[dept.DepartmentName] = activeFacultyInDept.length;
+          deptStats[dept.DepartmentName] = 0;
         });
+
+        // Count active employees per department
+        allNonDeletedEmployees.forEach((emp) => {
+          if (!emp.isDeleted && emp.EmploymentStatus !== "Resigned" && emp.DepartmentID) {
+            const dept = departments?.find(d => d.DepartmentID === emp.DepartmentID);
+            if (dept) {
+              deptStats[dept.DepartmentName] = (deptStats[dept.DepartmentName] || 0) + 1;
+            }
+          }
+        });
+
+        console.log('Department stats:', deptStats); // Debug log
 
         setDepartmentStats(deptStats);
 
@@ -220,24 +249,26 @@ export default function DashboardContent() {
 
         console.log("All users from database:", users); // Debug log to see all users
 
-        // Exclude users with the 'Student' role
-        const nonStudentUsers = users?.filter(u => !u.Role?.some(r => (r.role as any).name === 'Student')) || [];
+        // Get active faculty users (not resigned, not inactive)
+        const activeFacultyUsers = users?.filter(u => 
+          u.Role?.some(r => (r.role as any).name === 'Faculty') && // is a faculty
+          u.Status === 'Active' && // is active
+          !u.isDeleted // not deleted
+        ).length || 0;
 
-        // First get total active users (excluding students)
-        const totalActiveUsers = nonStudentUsers.length;
-        
-        // Then count users with specific roles (excluding students)
-        const facultyUsers = nonStudentUsers.filter((u) => u.Role?.some(r => (r.role as any).name === 'Faculty')).length || 0;
-        const adminUsers = nonStudentUsers.filter((u) => u.Role?.some(r => (r.role as any).name === 'Admin')).length || 0;
+        const adminUsers = users?.filter(u => 
+          u.Role?.some(r => (r.role as any).name === 'Admin') &&
+          u.Status === 'Active' &&
+          !u.isDeleted
+        ).length || 0;
 
-        console.log("Total active users:", totalActiveUsers); // Debug log
-        console.log("Faculty users count:", facultyUsers); // Debug log
+        console.log("Active faculty count:", activeFacultyUsers); // Debug log
         console.log("Admin users count:", adminUsers); // Debug log
 
         setActiveUsers({
-          faculty: facultyUsers,
+          faculty: activeFacultyUsers,
           admin: adminUsers,
-          total: totalActiveUsers, // Use total active users instead of sum of roles
+          total: activeFacultyUsers + adminUsers
         });
 
         // Fetch Attendance Data
@@ -318,6 +349,81 @@ export default function DashboardContent() {
         const submittedCount = documents?.filter(doc => doc.SubmissionStatus === "Submitted").length || 0;
         setDocumentStats({ submitted: submittedCount });
 
+        // Fetch Recruitment Stats
+        const { data: vacancies, error: vacanciesError } = await supabase
+          .from("Vacancy")
+          .select("*")
+          .eq("isDeleted", false);
+
+        if (vacanciesError) throw vacanciesError;
+
+        const { data: candidates, error: candidatesError } = await supabase
+          .from("Candidate")
+          .select("*")
+          .eq("isDeleted", false);
+
+        if (candidatesError) throw candidatesError;
+
+        // Filter out inactive candidates (those who are hired, rejected, or withdrawn)
+        const activeCandidates = candidates?.filter(c => 
+          !c.isDeleted && 
+          !['Hired', 'Rejected', 'Withdrawn'].includes(c.Status)
+        ) || [];
+
+        setRecruitmentStats({
+          activeVacancies: vacancies?.filter(v => v.Status === 'Active').length || 0,
+          totalCandidates: activeCandidates.length,
+          shortlisted: activeCandidates.filter(c => c.Status === 'Shortlisted').length || 0,
+          interviewed: activeCandidates.filter(c => ['InterviewScheduled', 'InterviewCompleted'].includes(c.Status)).length || 0,
+          hired: candidates?.filter(c => c.Status === 'Hired').length || 0,
+        });
+
+        // Fetch Upcoming Interviews with proper typing
+        const today = new Date();
+        const { data: interviews, error: interviewsError } = await supabase
+          .from("Candidate")
+          .select(`
+            CandidateID,
+            FirstName,
+            LastName,
+            MiddleName,
+            ExtensionName,
+            InterviewDate,
+            Email,
+            ContactNumber,
+            Vacancy:VacancyID (
+              VacancyName,
+              JobTitle
+            )
+          `)
+          .eq("Status", "InterviewScheduled")
+          .gte("InterviewDate", today.toISOString())
+          .order("InterviewDate", { ascending: true })
+          .limit(5);
+
+        if (interviewsError) throw interviewsError;
+        
+                  // Transform the data to match our type
+        const typedInterviews = (interviews || []).map(interview => {
+          const vacancy = Array.isArray(interview.Vacancy) ? interview.Vacancy[0] : interview.Vacancy;
+          return {
+            CandidateID: interview.CandidateID,
+            FirstName: interview.FirstName,
+            LastName: interview.LastName,
+            MiddleName: interview.MiddleName,
+            ExtensionName: interview.ExtensionName,
+            InterviewDate: interview.InterviewDate,
+            Email: interview.Email,
+            ContactNumber: interview.ContactNumber,
+            Vacancy: {
+              VacancyName: vacancy.VacancyName,
+              JobTitle: vacancy.JobTitle
+            }
+          };
+        });
+        
+        setUpcomingInterviews(typedInterviews);
+
       } catch (error) {
         if (error instanceof Error) {
           console.error("Error fetching dashboard data:", error.message);
@@ -370,38 +476,31 @@ export default function DashboardContent() {
   const daysCount = Math.floor((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const presentPerDay: number[] = Array(daysCount).fill(0);
   const absentPerDay: number[] = Array(daysCount).fill(0);
+  
+  // Get all unique employee IDs from attendance records
+  const employeeIds = Array.from(new Set(attendanceRecords.map((rec) => rec.employeeId)));
+  
+  // Calculate attendance for each day
   for (let i = 0; i < daysCount; i++) {
     const day = new Date(dateRange[0]);
     day.setDate(day.getDate() + i);
     const dayStr = day.toISOString().split('T')[0];
-    let present = 0;
-    let absent = 0;
-    // For each faculty, check if they have a record for this day
-    for (const faculty of Object.values(facultyStats.total ? facultyStats : { total: 0 })) {
-      // We'll use the activeFaculty list from above, but since it's not in state, let's get all unique faculty IDs from attendanceRecords
-      // Instead, let's get all unique faculty IDs from attendanceRecords
-      break;
-    }
-  }
-  // Instead, get all unique faculty IDs from attendanceRecords
-  const facultyIds = Array.from(new Set(attendanceRecords.map((rec) => rec.facultyId)));
-  for (let i = 0; i < daysCount; i++) {
-    const day = new Date(dateRange[0]);
-    day.setDate(day.getDate() + i);
-    const dayStr = day.toISOString().split('T')[0];
-    let present = 0;
-    let absent = 0;
-    for (const facultyId of facultyIds) {
-      const rec = attendanceRecords.find((r) => r.facultyId === facultyId && r.date === dayStr);
+    
+    let dayPresent = 0;
+    let dayAbsent = 0;
+    
+    for (const employeeId of employeeIds) {
+      const rec = attendanceRecords.find((r) => r.employeeId === employeeId && r.date === dayStr);
       if (rec) {
-        if (rec.status === 'PRESENT') present++;
-        else absent++;
+        if (rec.status === 'PRESENT') dayPresent++;
+        else dayAbsent++;
       } else {
-        absent++;
+        dayAbsent++;
       }
     }
-    presentPerDay[i] = present;
-    absentPerDay[i] = absent;
+    
+    presentPerDay[i] = dayPresent;
+    absentPerDay[i] = dayAbsent;
   }
   const attendanceOverviewData = {
     labels: Array.from({ length: daysCount }, (_, i) => {
@@ -463,6 +562,29 @@ export default function DashboardContent() {
     ],
   };
 
+  // Helper function to format candidate name
+  const formatCandidateName = (firstName: string, lastName: string, middleName?: string, extensionName?: string) => {
+    let fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
+    if (extensionName) {
+      fullName += ` ${extensionName}`;
+    }
+    return fullName;
+  };
+
+  // Helper function to format date and time
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   return (
     <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
@@ -520,27 +642,36 @@ export default function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          onClick={() => handleCardClick('faculty')}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm">Total Faculty</p>
+              <p className="text-gray-500 text-sm">Total Employees</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{facultyStats.total}</h3>
             </div>
             <FaUsers className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          onClick={() => handleCardClick('recruitment')}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm">Active Users</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{activeUsers.total}</h3>
+              <p className="text-gray-500 text-sm">Total Applicants</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{recruitmentStats.totalCandidates}</h3>
             </div>
-            <FaUserTie className="text-4xl text-[#800000] opacity-50" />
+            <FaUserPlus className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          onClick={() => handleCardClick('documents')}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Documents Requiring Approval</p>
@@ -550,7 +681,10 @@ export default function DashboardContent() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          onClick={() => handleCardClick('leaves')}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Pending Leaves</p>
@@ -559,10 +693,227 @@ export default function DashboardContent() {
             <FaClock className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
-
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Recruitment Overview Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FaUserPlus className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Recruitment Overview</h2>
+          </div>
+          <button 
+            onClick={() => handleCardClick('recruitment')}
+            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
+          >
+            View All
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Recruitment Funnel Chart */}
+          <div className="bg-gray-50 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Recruitment Funnel</h3>
+            <div className="h-[300px]">
+              <Bar
+                data={{
+                  labels: ['Total Candidates', 'Shortlisted', 'Interviewed', 'Hired'],
+                  datasets: [
+                    {
+                      label: 'Candidates',
+                      data: [
+                        recruitmentStats.totalCandidates,
+                        recruitmentStats.shortlisted,
+                        recruitmentStats.interviewed,
+                        recruitmentStats.hired
+                      ],
+                      backgroundColor: [
+                        '#800000',
+                        '#9C27B0',
+                        '#2196F3',
+                        '#43a047'
+                      ],
+                      borderRadius: 8,
+                    }
+                  ]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.1)'
+                      }
+                    },
+                    x: {
+                      grid: {
+                        display: false
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Recruitment Progress Pie Chart */}
+          <div className="bg-gray-50 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Application Status Distribution</h3>
+            <div className="h-[300px] flex items-center justify-center">
+              <Pie
+                data={{
+                  labels: ['Active Vacancies', 'In Process', 'Shortlisted', 'Interviewed', 'Hired'],
+                  datasets: [{
+                    data: [
+                      recruitmentStats.activeVacancies,
+                      recruitmentStats.totalCandidates - (recruitmentStats.shortlisted + recruitmentStats.interviewed + recruitmentStats.hired),
+                      recruitmentStats.shortlisted,
+                      recruitmentStats.interviewed,
+                      recruitmentStats.hired
+                    ],
+                    backgroundColor: [
+                      '#800000',
+                      '#9C27B0',
+                      '#2196F3',
+                      '#FF9800',
+                      '#43a047'
+                    ],
+                    borderWidth: 0,
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        usePointStyle: true
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats Row */}
+        <div className="grid grid-cols-5 gap-4 mt-8">
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaBuilding className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.activeVacancies}</p>
+            <p className="text-sm text-gray-600">Active Vacancies</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUsers className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.totalCandidates}</p>
+            <p className="text-sm text-gray-600">Total Candidates</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUserCheck className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.shortlisted}</p>
+            <p className="text-sm text-gray-600">Shortlisted</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUserClock className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.interviewed}</p>
+            <p className="text-sm text-gray-600">Interviewed</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUserTie className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.hired}</p>
+            <p className="text-sm text-gray-600">Hired</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Upcoming Interviews Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
+          </div>
+          <button 
+            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
+            onClick={() => handleCardClick('recruitment')}
+          >
+            View All
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        {upcomingInterviews.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Interview Schedule
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Candidate Name
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Position
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Contact
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {upcomingInterviews.map((interview) => (
+                  <tr key={interview.CandidateID} className="hover:bg-gray-50">
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatDateTime(interview.InterviewDate)}
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatCandidateName(
+                        interview.FirstName,
+                        interview.LastName,
+                        interview.MiddleName,
+                        interview.ExtensionName
+                      )}
+                    </td>
+                    <td className="py-4">
+                      <div className="text-sm text-gray-900">{interview.Vacancy.VacancyName}</div>
+                      <div className="text-sm text-gray-500">{interview.Vacancy.JobTitle}</div>
+                    </td>
+                    <td className="py-4">
+                      <div className="text-sm text-gray-900">{interview.Email}</div>
+                      <div className="text-sm text-gray-500">{interview.ContactNumber || 'No contact number'}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No upcoming interviews scheduled
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Faculty Overview Section */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaGraduationCap className="text-[#800000] text-2xl mr-3" />
@@ -608,6 +959,7 @@ export default function DashboardContent() {
           </div>
         </div>
 
+        {/* Leave Requests Section */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaBriefcase className="text-[#800000] text-2xl mr-3" />
@@ -648,20 +1000,19 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      <div className="mt-8">
-        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-          <div className="flex items-center mb-6">
-            <FaUserClock className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
-          </div>
-          <div className="h-[350px]">
-            <Line data={attendanceOverviewData} options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: true } },
-              scales: { y: { beginAtZero: true } },
-            }} />
-          </div>
+      {/* Attendance Overview Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+        <div className="flex items-center mb-6">
+          <FaUserClock className="text-[#800000] text-2xl mr-3" />
+          <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
+        </div>
+        <div className="h-[350px]">
+          <Line data={attendanceOverviewData} options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true } },
+            scales: { y: { beginAtZero: true } },
+          }} />
         </div>
       </div>
     </div>

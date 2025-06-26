@@ -13,18 +13,43 @@ export async function POST(req: NextRequest) {
     const ExtensionName = formData.get('ExtensionName');
     const Email = formData.get('Email');
     const ContactNumber = formData.get('ContactNumber');
+    const Sex = formData.get('Sex');
+    const DateOfBirth = formData.get('DateOfBirth');
     const resume = formData.get('resume') as File | null;
 
     // Validate required fields
-    if (!VacancyID || !LastName || !FirstName || !Email) {
+    if (!VacancyID || !LastName || !FirstName || !Email || !Sex || !DateOfBirth) {
       return NextResponse.json(
-        { error: 'Missing required fields: VacancyID, LastName, FirstName, and Email are required' },
+        { error: 'Missing required fields: VacancyID, LastName, FirstName, Email, Sex, and DateOfBirth are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate Sex field
+    if (!['Male', 'Female'].includes(Sex as string)) {
+      return NextResponse.json(
+        { error: 'Sex must be either Male or Female' },
+        { status: 400 }
+      );
+    }
+
+    // Validate age (18-65)
+    const dob = new Date(DateOfBirth as string);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    if (age < 18 || age > 65) {
+      return NextResponse.json(
+        { error: 'Age must be between 18 and 65 years old' },
         { status: 400 }
       );
     }
 
     // Generate FullName
-    const FullName = [FirstName, MiddleName, LastName, ExtensionName]
+    const FullName = [LastName, FirstName, MiddleName, ExtensionName]
       .filter(Boolean)
       .join(' ')
       .trim();
@@ -70,6 +95,8 @@ export async function POST(req: NextRequest) {
         Email: Email as string,
         ContactNumber: ContactNumber as string || null,
         Phone: ContactNumber as string || null,
+        Sex: Sex as string,
+        DateOfBirth: new Date(DateOfBirth as string).toISOString(),
         Status: 'ApplicationInitiated',
         Resume,
         ResumeUrl,

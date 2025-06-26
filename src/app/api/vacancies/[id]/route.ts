@@ -55,7 +55,7 @@ export async function PATCH(
     }
 
     const data = await req.json();
-    const { JobTitle, VacancyName, HiringManager, Status } = data;
+    const { JobTitle, VacancyName, HiringManager, Status, NumberOfPositions } = data;
 
     // Validate required fields
     if (!JobTitle || !VacancyName || !HiringManager) {
@@ -72,6 +72,7 @@ export async function PATCH(
         VacancyName,
         HiringManager,
         Status,
+        NumberOfPositions: NumberOfPositions || 1,
         DateModified: new Date().toISOString(),
         updatedBy: userId
       })

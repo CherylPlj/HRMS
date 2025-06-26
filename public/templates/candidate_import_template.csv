@@ -1,0 +1,6 @@
+Last Name,First Name,Middle Name,Extension Name,Email,Contact Number,Sex,Date of Birth
+Dela Cruz,Juan,Santos,Jr.,juan.delacruz@email.com,09123456789,Male,1990-01-01
+,,,,,,, 
+# Required fields: Last Name, First Name, Email
+# Optional fields: Middle Name, Extension Name, Contact Number, Sex (Male/Female), Date of Birth (YYYY-MM-DD)
+# Delete the sample data and this note before importing actual candidates 

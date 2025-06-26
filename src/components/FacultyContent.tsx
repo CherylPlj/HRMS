@@ -1019,7 +1019,7 @@ const FacultyContent = () => {
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
-            Faculty Information
+            Faculty List
           </button>
           <button
             onClick={() => setActiveView('documentManagement')}
@@ -1035,12 +1035,12 @@ const FacultyContent = () => {
         <div className="flex space-x-2">
           
           <div className="flex space-x-2">
-            <button
+            {/* <button
               onClick={() => setIsAddFacultyModalOpen(true)}
               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
             >
               <FaPlus /> Add Faculty
-            </button>
+            </button> */}
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"

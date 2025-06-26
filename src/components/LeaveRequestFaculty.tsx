@@ -10,7 +10,7 @@ import { FaRegCalendarAlt, FaClock, FaEye, FaPen, FaTrash } from 'react-icons/fa
 
 // Define leave types as string literals
 type RequestType = 'Leave' | 'Undertime';
-type LeaveType = 'Sick' | 'Vacation' | 'Emergency';
+type LeaveType = 'Sick' | 'Vacation' | 'Emergency' | 'Maternity';
 type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 
 interface ComponentWithBackButton {
@@ -682,14 +682,21 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-[#800000]">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Total Leaves</h3>
-                    <p className="text-2xl font-bold text-[#800000]">15</p>
-                    <p className="text-xs text-gray-600">Days Per Year</p>
+                    <p className="text-2xl font-bold text-[#800000]">10</p>
+                    <p className="text-xs text-gray-600">Days Per Month</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-blue-500">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Remaining</h3>
                     <p className="text-2xl font-bold text-blue-500">
-                        {15 - leaveRequests
-                            .filter(request => request.Status === 'Approved' && request.RequestType === 'Leave')
+                        {10 - leaveRequests
+                            .filter(request => {
+                                const leaveDate = new Date(request.StartDate);
+                                const currentDate = new Date();
+                                return request.Status === 'Approved' && 
+                                       request.RequestType === 'Leave' &&
+                                       leaveDate.getMonth() === currentDate.getMonth() &&
+                                       leaveDate.getFullYear() === currentDate.getFullYear();
+                            })
                             .reduce((total, leave) => {
                                 const start = new Date(leave.StartDate);
                                 const end = new Date(leave.EndDate);
@@ -697,7 +704,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 return total + days;
                             }, 0)}
                     </p>
-                    <p className="text-xs text-gray-600">Days Left</p>
+                    <p className="text-xs text-gray-600">Days Left This Month</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-yellow-500">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Pending</h3>
@@ -954,6 +961,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         <option value="Sick">Sick Leave</option>
                                         <option value="Vacation">Vacation Leave</option>
                                         <option value="Emergency">Emergency Leave</option>
+                                        <option value="Maternity">Maternity Leave</option>
                                     </select>
                                 </div>
                             )}
@@ -1199,11 +1207,12 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         <select
                                             value={leaveType}
                                             onChange={(e) => setLeaveType(e.target.value as LeaveType)}
-                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
                                         >
                                             <option value="Sick">Sick Leave</option>
                                             <option value="Vacation">Vacation Leave</option>
                                             <option value="Emergency">Emergency Leave</option>
+                                            <option value="Maternity">Maternity Leave</option>
                                         </select>
                                     </div>
                                 )}

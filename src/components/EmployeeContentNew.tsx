@@ -393,6 +393,15 @@ const EmployeeContentNew = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [totalEmployees, setTotalEmployees] = useState(0);
 
+  // Add state for departments
+  const [departments, setDepartments] = useState([
+    { id: 1, name: 'Pre-School' },
+    { id: 2, name: 'Primary' },
+    { id: 3, name: 'Intermediate' },
+    { id: 4, name: 'JHS' },
+    { id: 5, name: 'Admin' }
+  ]);
+
   useEffect(() => {
     fetchEmployees(1);
   }, []);
@@ -401,39 +410,49 @@ const EmployeeContentNew = () => {
   const fetchEmployees = async (page: number = 1) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/employees?page=${page}`);
+      const response = await fetch(`/api/employees?page=${page}&limit=10`);
       const data = await response.json();
 
-        if (!response.ok) {
+      if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch employees');
-        }
+      }
       
       const mappedData = data.employees.map((emp: any) => ({
         employeeId: emp.EmployeeID,
-        id: emp.EmployeeID, // Keep this for backward compatibility
+        id: emp.EmployeeID,
         firstName: emp.FirstName || '',
         surname: emp.LastName || '',
-          middleName: emp.MiddleName || '',
+        middleName: emp.MiddleName || '',
         nameExtension: emp.ExtensionName || '',
         fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
-          birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
-          birthPlace: emp.PlaceOfBirth || '',
-                sex: emp.Sex || '',
+        birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
+        birthPlace: emp.PlaceOfBirth || '',
+        sex: emp.Sex || '',
         civilStatus: emp.CivilStatus || '',
         email: emp.Email || emp.UserID || 'No email',
         position: emp.Position || '',
         designation: emp.Designation || '',
-        departmentName: emp.DepartmentID ? `Dept ${emp.DepartmentID}` : '',
+        departmentId: emp.DepartmentID,
         photo: emp.Photo || '',
+        status: emp.EmploymentStatus || 'Active',
+        employeeType: emp.EmployeeType || 'Regular',
         // Add all other fields from the API response
         ...emp
-        }));
+      }));
       
-        setEmployees(mappedData);
-      setTotalEmployees(data.total || mappedData.length);
+      setEmployees(mappedData);
+      setPagination({
+        currentPage: data.pagination.currentPage,
+        totalPages: data.pagination.totalPages,
+        totalCount: data.pagination.totalCount,
+        limit: data.pagination.limit,
+        hasNextPage: data.pagination.hasNextPage,
+        hasPrevPage: data.pagination.hasPrevPage
+      });
+      setTotalEmployees(data.pagination.totalCount);
       setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching employees:', error);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
       setIsLoading(false);
     }
   };
@@ -451,7 +470,7 @@ const EmployeeContentNew = () => {
       
       const mappedData = data.employees.map((emp: any) => ({
         employeeId: emp.EmployeeID,
-        id: emp.EmployeeID, // Keep this for backward compatibility
+        id: emp.EmployeeID,
         firstName: emp.FirstName || '',
         surname: emp.LastName || '',
         middleName: emp.MiddleName || '',
@@ -464,13 +483,15 @@ const EmployeeContentNew = () => {
         email: emp.Email || emp.UserID || 'No email',
         position: emp.Position || '',
         designation: emp.Designation || '',
-        departmentName: emp.DepartmentID ? `Dept ${emp.DepartmentID}` : '',
+        departmentId: emp.DepartmentID,
         photo: emp.Photo || '',
+        status: emp.EmploymentStatus || 'Active',
+        employeeType: emp.EmployeeType || 'Regular',
         // Add all other fields from the API response
         ...emp
       }));
 
-      setEmployees(mappedData);
+      setAllEmployees(mappedData);
       setIsLoadingAll(false);
     } catch (error) {
       console.error('Error fetching all employees:', error);
@@ -505,12 +526,22 @@ const EmployeeContentNew = () => {
     const fullName = (employee.fullName || '').toLowerCase();
     const email = employee.email?.toLowerCase() || '';
     const position = employee.position?.toLowerCase() || '';
-    const departmentName = employee.departmentName?.toLowerCase() || '';
+    const departmentId = employee.DepartmentID?.toString() || '';
     const status = employee.status?.toLowerCase() || '';
+    const searchQuery = searchTerm.toLowerCase();
 
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase()) || position.includes(searchTerm.toLowerCase()) || departmentName.includes(searchTerm.toLowerCase());
-    const matchesDepartment = departmentFilter === 'all' || departmentName === departmentFilter.toLowerCase();
-    const matchesStatus = statusFilter === 'all' || status === statusFilter.toLowerCase();
+    const matchesSearch = 
+      fullName.includes(searchQuery) || 
+      email.includes(searchQuery) || 
+      position.includes(searchQuery);
+    
+    const matchesDepartment = 
+      departmentFilter === 'all' || 
+      departmentId === departmentFilter;
+    
+    const matchesStatus = 
+      statusFilter === 'all' || 
+      status === statusFilter.toLowerCase();
 
     return matchesSearch && matchesDepartment && matchesStatus;
   });
@@ -844,7 +875,7 @@ const EmployeeContentNew = () => {
                     {selectedEmployee.fullName || `${selectedEmployee.firstName} ${selectedEmployee.surname}`.trim()}
                   </h2>
                   <p className="text-gray-500">{selectedEmployee.position}</p>
-                  <p className="text-gray-500">{selectedEmployee.departmentName}</p>
+                  <p className="text-gray-500">{departments.find(dept => dept.id === selectedEmployee.DepartmentID)?.name || 'No Department'}</p>
                 </>
               )}
               <div className="mt-4 flex space-x-3">
@@ -885,7 +916,7 @@ const EmployeeContentNew = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500">Department</label>
-              <p className="text-lg font-semibold text-gray-800">{selectedEmployee.departmentName}</p>
+              <p className="text-lg font-semibold text-gray-800">{departments.find(dept => dept.id === selectedEmployee.DepartmentID)?.name || 'No Department'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500">Email</label>
@@ -893,7 +924,15 @@ const EmployeeContentNew = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500">Status</label>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                selectedEmployee.status === 'Active' || selectedEmployee.status === 'Regular'
+                  ? 'bg-green-100 text-green-800'
+                  : selectedEmployee.status === 'Resigned'
+                  ? 'bg-red-100 text-red-800'
+                  : selectedEmployee.status === 'Probationary'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
                 {selectedEmployee.status}
               </span>
             </div>
@@ -1320,9 +1359,11 @@ const EmployeeContentNew = () => {
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
         >
           <option value="all">All Departments</option>
-          <option value="education">Education</option>
-          <option value="hr">Human Resources</option>
-          <option value="admin">Administration</option>
+          {departments.map((dept) => (
+            <option key={dept.id} value={dept.id.toString()}>
+              {dept.name}
+            </option>
+          ))}
         </select>
         <select
           value={statusFilter}
@@ -1438,13 +1479,21 @@ const EmployeeContentNew = () => {
                         {employee.designation}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.departmentName}
+                    {departments.find(dept => dept.id === employee.DepartmentID)?.name || 'No Department'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {employee.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      employee.status === 'Active' || employee.status === 'Regular'
+                        ? 'bg-green-100 text-green-800'
+                        : employee.status === 'Resigned'
+                        ? 'bg-red-100 text-red-800'
+                        : employee.status === 'Probationary'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
                       {employee.status}
                     </span>
                   </td>

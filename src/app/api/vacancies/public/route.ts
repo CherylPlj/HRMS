@@ -27,6 +27,7 @@ export async function GET() {
       `)
       .eq('isDeleted', false)
       .eq('Status', 'Active') // Only return active vacancies
+      .not('Status', 'in', ['Filled', 'Inactive', 'Cancelled']) // Exclude filled, inactive, and cancelled positions
       .order('DateCreated', { ascending: false });
 
     if (error) {

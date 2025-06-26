@@ -331,7 +331,7 @@ export default function AdminDashboard() {
     switch (activeButton) {
       case 'dashboard':
         return <DashboardContent />;
-      case 'faculty':
+      case 'document':
         return <FacultyContent />;
       case 'employees':
         return <EmployeeContentNew />;
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
             {[
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
-              { name: 'Faculty', icon: 'fa-user', key: 'faculty' },
+              { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
               { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
@@ -462,7 +462,7 @@ export default function AdminDashboard() {
               <div className="flex items-center">
                 <h1 className="text-xl font-bold text-red-700">
                   {activeButton === 'dashboard' && 'DASHBOARD'}
-                  {activeButton === 'faculty' && 'FACULTY'}
+                  {activeButton === 'document' && 'DOCUMENTS'}
                   {activeButton === 'employees' && 'EMPLOYEES'}
                   {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
                   {activeButton === 'leave' && 'LEAVE'}

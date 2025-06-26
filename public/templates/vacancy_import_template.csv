@@ -1,0 +1,16 @@
+JobTitle,VacancyName,Description,HiringManager,Status,NumberOfPositions
+Faculty,Kindergarten Teacher,"Seeking a dedicated Kindergarten teacher with experience in early childhood education. Requirements: Bachelor's degree in Education, 2+ years teaching experience, strong classroom management skills.",HR Department,Active,2
+Faculty,Grade 1 Teacher,"Looking for an experienced Grade 1 teacher. Requirements: Bachelor's degree in Elementary Education, proficiency in teaching foundational reading and math skills.",HR Department,Active,1
+Faculty,Grade 4 Math Teacher,"Math specialist needed for Grade 4. Requirements: Bachelor's degree in Education or Mathematics, experience in teaching elementary math concepts.",HR Department,Active,1
+Faculty,Grade 7-8 Science Teacher,"Middle school Science teacher needed. Requirements: Bachelor's degree in Science Education or related field, laboratory management experience.",HR Department,Active,1
+Faculty,Grade 9-10 English Teacher,"High school English teacher position. Requirements: Bachelor's degree in English or Literature, experience in teaching composition and literature.",HR Department,Active,1
+Faculty,Physical Education Teacher,"PE teacher for all grade levels. Requirements: Bachelor's degree in Physical Education, experience in organizing sports events.",HR Department,Active,1
+Faculty,Music Teacher,"Music teacher for all grade levels. Requirements: Bachelor's degree in Music Education, proficiency in multiple instruments.",HR Department,Active,1
+Faculty,Art Teacher,"Art teacher for all grade levels. Requirements: Bachelor's degree in Fine Arts or Art Education, experience in various art mediums.",HR Department,Active,1
+Faculty,Computer Teacher,"Computer teacher for Grades 4-10. Requirements: Bachelor's degree in Computer Science or IT Education, programming knowledge.",HR Department,Active,1
+Faculty,Filipino Teacher,"Filipino language teacher for all grade levels. Requirements: Bachelor's degree in Filipino or Education, strong communication skills.",HR Department,Active,1
+Registrar,School Registrar,"Seeking a detail-oriented School Registrar. Requirements: Bachelor's degree, 3+ years experience in academic records management.",HR Department,Active,1
+HR_Manager,HR Officer,"Human Resources Officer needed. Requirements: Bachelor's degree in HR Management, 3+ years experience in school HR.",HR Department,Active,1
+Other,School Librarian,"Librarian position available. Requirements: Bachelor's degree in Library Science, experience in library management systems.",HR Department,Active,1
+Other,School Nurse,"Registered Nurse needed. Requirements: Bachelor's degree in Nursing, valid license, 2+ years experience.",HR Department,Active,1
+Other,Guidance Counselor,"School Guidance Counselor needed. Requirements: Master's degree in Guidance and Counseling, experience in student counseling.",HR Department,Active,1 

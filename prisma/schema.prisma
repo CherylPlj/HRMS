@@ -320,6 +320,7 @@ model Vacancy {
   isDeleted      Boolean   @default(false)
   createdBy      String?
   updatedBy      String?
+  NumberOfPositions Int    @default(1)
   Candidates     Candidate[]
 }
 
@@ -411,6 +412,7 @@ enum LeaveType {
   Vacation
   Emergency
   Undertime
+  Maternity
 }
 
 enum RequestType {

@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate leave type
-        const validLeaveTypes = ['Sick', 'Vacation', 'Emergency'];
+        const validLeaveTypes = ['Sick', 'Vacation', 'Emergency', 'Maternity'];
         if (LeaveType && !validLeaveTypes.includes(LeaveType)) {
             console.error('Invalid leave type:', LeaveType);
             return NextResponse.json(
@@ -162,6 +162,111 @@ export async function POST(request: NextRequest) {
                 { error: 'Start date must be before end date' },
                 { status: 400 }
             );
+        }
+
+        // Calculate days for this request
+        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+        // Special validation for maternity leave
+        if (LeaveType === LeaveType.Maternity) {
+            // Check if the request is at least 60 days (minimum maternity leave)
+            if (requestDays < 60) {
+                return NextResponse.json(
+                    { error: 'Maternity leave must be at least 60 days' },
+                    { status: 400 }
+                );
+            }
+            // Check if there's already a maternity leave request in the current year
+            const currentYear = new Date().getFullYear();
+            const existingMaternityLeave = await prisma.leave.findFirst({
+                where: {
+                    FacultyID: Number(FacultyID),
+                    LeaveType: LeaveType.Maternity,
+                    StartDate: {
+                        gte: new Date(currentYear, 0, 1)
+                    },
+                    EndDate: {
+                        lte: new Date(currentYear, 11, 31)
+                    }
+                }
+            });
+            if (existingMaternityLeave) {
+                return NextResponse.json(
+                    { error: 'Only one maternity leave is allowed per year' },
+                    { status: 400 }
+                );
+            }
+        } else {
+            // For non-maternity leaves, check against the monthly limit
+            const startMonth = start.getMonth();
+            const startYear = start.getFullYear();
+            const endMonth = end.getMonth();
+            const endYear = end.getFullYear();
+
+            // If the leave request spans multiple months, check each month's limit
+            let currentDate = new Date(start);
+            while (currentDate <= end) {
+                const currentMonth = currentDate.getMonth();
+                const currentYear = currentDate.getFullYear();
+
+                // Get all approved leaves for this faculty in the current month
+                const approvedLeaves = await prisma.leave.findMany({
+                    where: {
+                        FacultyID: Number(FacultyID),
+                        Status: 'Approved',
+                        RequestType: 'Leave',
+                        LeaveType: {
+                            not: LeaveType.Maternity // Exclude maternity leaves from the count
+                        },
+                        AND: [
+                            {
+                                StartDate: {
+                                    lte: new Date(currentYear, currentMonth + 1, 0) // Last day of current month
+                                }
+                            },
+                            {
+                                EndDate: {
+                                    gte: new Date(currentYear, currentMonth, 1) // First day of current month
+                                }
+                            }
+                        ]
+                    }
+                });
+
+                // Calculate days used in this month
+                const daysUsedInMonth = approvedLeaves.reduce((total, leave) => {
+                    const leaveStart = new Date(Math.max(
+                        new Date(leave.StartDate!).getTime(),
+                        new Date(currentYear, currentMonth, 1).getTime()
+                    ));
+                    const leaveEnd = new Date(Math.min(
+                        new Date(leave.EndDate!).getTime(),
+                        new Date(currentYear, currentMonth + 1, 0).getTime()
+                    ));
+                    const days = Math.ceil((leaveEnd.getTime() - leaveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    return total + days;
+                }, 0);
+
+                // Calculate days requested for this month
+                const monthStart = new Date(currentYear, currentMonth, 1);
+                const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+                const requestStart = new Date(Math.max(start.getTime(), monthStart.getTime()));
+                const requestEnd = new Date(Math.min(end.getTime(), monthEnd.getTime()));
+                const daysRequestedInMonth = Math.ceil((requestEnd.getTime() - requestStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+                // Check if adding this request would exceed 10 days for this month
+                if (daysUsedInMonth + daysRequestedInMonth > 10) {
+                    const monthName = monthStart.toLocaleString('default', { month: 'long' });
+                    return NextResponse.json(
+                        { error: `This request would exceed the monthly leave limit of 10 days for ${monthName}. You have used ${daysUsedInMonth} days and are requesting ${daysRequestedInMonth} more days.` },
+                        { status: 400 }
+                    );
+                }
+
+                // Move to next month
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                currentDate.setDate(1);
+            }
         }
 
         // Log the data we're about to insert

@@ -586,7 +586,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
 
           {/* Time In/Out Section */}
           <div className="grid grid-cols-1 gap-4 mt-4">
-            <div className="flex flex-col space-y-2">
+            {/* <div className="flex flex-col space-y-2">
               <label htmlFor="date" className="text-sm font-medium text-gray-700">Select Date (Monday-Friday only)</label>
               <input
                 type="date"
@@ -645,11 +645,60 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
                   </button>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
-     
+        {/* Schedule Section */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
+            <button 
+              onClick={handleDownloadSchedule}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download Schedule
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (min)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class Section</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {schedule.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No schedule data available
+                    </td>
+                  </tr>
+                ) : (
+                  schedule.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.day}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeIn}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeOut}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.duration}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.subject}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.classSection}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* Attendance History Section */}
         <div className="bg-white rounded-xl shadow-sm p-6">
@@ -731,64 +780,6 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
             </>
           )}
         </div>
-
-           {/* Schedule Section */}
-           <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
-            <button 
-              onClick={handleDownloadSchedule}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#800000] hover:bg-[#a00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] transition-colors duration-200"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download Schedule
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (min)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class Section</th>
-                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {schedule.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No schedule data available
-                    </td>
-                  </tr>
-                ) : (
-                  schedule.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.day}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeIn}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.timeOut}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.duration}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.subject}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.classSection}</td>
-                      {/* <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(item.status)}`}>
-                          {item.status}
-                        </span>
-                      </td> */}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
       </div>
     </div>
   );

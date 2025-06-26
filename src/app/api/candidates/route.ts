@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
         ContactNumber: ContactNumber as string || null,
         DateOfBirth: DateOfBirth ? new Date(DateOfBirth as string).toISOString() : null,
         Phone: ContactNumber as string || null, // Use ContactNumber for Phone field too
-        InterviewDate: InterviewDate ? new Date(InterviewDate as string).toISOString() : null,
+        InterviewDate: InterviewDate as string || null, // Store as is without conversion
         Status: finalStatus,
         Resume,
         ResumeUrl,
