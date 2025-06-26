@@ -22,6 +22,7 @@ const publicRoutes = [
     "/api/webhooks/clerk",
     "/api/sync-user-password",
     "/api/ip",
+    "/api/vacancies/public",
     "/terms-of-use",
     "/privacy-statement"
 ];
@@ -46,6 +47,7 @@ const ignoredRoutes = [
     "/api/webhooks/clerk",
     "/api/sync-user-password",
     "/api/ip",
+    "/api/vacancies/public",
     "/terms-of-use",
     "/privacy-statement"
 ];
