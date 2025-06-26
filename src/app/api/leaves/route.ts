@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
-import { LeaveStatus, LeaveType, RequestType } from '@prisma/client';
-import type { Leave, Faculty, User, Department } from '@/generated/prisma';
+import { LeaveStatus, LeaveType, RequestType, Leave, User, Department, Faculty } from '@prisma/client';
 
 // Define a type for the transformed leave record
 type TransformedLeave = Leave & {

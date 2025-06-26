@@ -4,8 +4,8 @@ import Image from 'next/image';
 import { User } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import type { Leave, Faculty, User as PrismaUser, Department } from '@/generated/prisma';
-import { LeaveType, LeaveStatus } from '@/generated/prisma';
+import type { Leave, Faculty, User as PrismaUser, Department } from '@prisma/client';
+import { LeaveType, LeaveStatus } from '@prisma/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -54,22 +54,37 @@ const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
 };
 
 // Helper functions
-const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString();
+const formatDate = (date: string | Date | null): string => {
+    if (!date) return 'Not set';
+    try {
+        const dateObj = new Date(date);
+        return dateObj.toLocaleDateString();
+    } catch {
+        return 'Invalid date';
+    }
 };
 
-const calculateDuration = (startDate: string | Date, endDate: string | Date) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+const calculateDuration = (startDate: string | Date | null, endDate: string | Date | null): string => {
+    if (!startDate || !endDate) return 'N/A';
+    try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    } catch {
+        return 'Invalid date range';
+    }
 };
 
 // Helper function to format time
 const formatTime = (dateString: string | null | undefined): string => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+        return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return 'Invalid time';
+    }
 };
 
 // Add this new component before the LeaveContent component
@@ -212,11 +227,11 @@ const ViewLeaveModal: React.FC<ViewLeaveModalProps> = ({ isOpen, onClose, leave 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <h3 className="font-semibold text-gray-600">Start Date</h3>
-                            <p className="text-gray-800">{new Date(leave.StartDate).toLocaleDateString()}</p>
+                            <p className="text-gray-800">{formatDate(leave.StartDate)}</p>
                         </div>
                         <div>
                             <h3 className="font-semibold text-gray-600">End Date</h3>
-                            <p className="text-gray-800">{new Date(leave.EndDate).toLocaleDateString()}</p>
+                            <p className="text-gray-800">{formatDate(leave.EndDate)}</p>
                         </div>
                     </div>
 
@@ -510,61 +525,61 @@ const LeaveContent: React.FC = () => {
     };
 
     const handleDownloadPDF = () => {
-    const doc = new jsPDF();
+        const doc = new jsPDF();
 
-    if (activeTab === 'management') {
-        // Title
-        doc.setFontSize(16);
-        doc.text('Leave Management Report', 14, 15);
-        doc.setFontSize(10);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+        if (activeTab === 'management') {
+            // Title
+            doc.setFontSize(16);
+            doc.text('Leave Management Report', 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-        const tableData = leaves.map(item => [
-        item.Faculty?.Name || '',
-        item.Faculty?.Department || 'N/A',
-        item.LeaveType,
-        new Date(item.StartDate).toLocaleDateString(),
-        new Date(item.EndDate).toLocaleDateString(),
-        item.Status
-        ]);
+            const tableData = leaves.map(item => [
+                item.Faculty?.Name || '',
+                item.Faculty?.Department || 'N/A',
+                item.LeaveType,
+                formatDate(item.StartDate),
+                formatDate(item.EndDate),
+                item.Status
+            ]);
 
-        autoTable(doc, {
-        head: [['Faculty', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Status']],
-        body: tableData,
-        startY: 30,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [128, 0, 0] }
-        });
+            autoTable(doc, {
+                head: [['Faculty', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Status']],
+                body: tableData,
+                startY: 30,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [128, 0, 0] }
+            });
 
-        doc.save('leave-management.pdf');
+            doc.save('leave-management.pdf');
 
-    } else if (activeTab === 'logs') {
-        // Title
-        doc.setFontSize(16);
-        doc.text('Leave Logs Report', 14, 15);
-        doc.setFontSize(10);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+        } else if (activeTab === 'logs') {
+            // Title
+            doc.setFontSize(16);
+            doc.text('Leave Logs Report', 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-        const tableData = leaves.map(log => [
-        `${log.Faculty?.Name}`,
-        log.LeaveType,
-        new Date(log.StartDate).toLocaleDateString(),
-        new Date(log.EndDate).toLocaleDateString(),
-        `${calculateDuration(log.StartDate, log.EndDate)}`,
-        new Date(log.CreatedAt).toLocaleDateString(),
-        log.Status
-        ]);
+            const tableData = leaves.map(log => [
+                `${log.Faculty?.Name}`,
+                log.LeaveType,
+                formatDate(log.StartDate),
+                formatDate(log.EndDate),
+                calculateDuration(log.StartDate, log.EndDate),
+                formatDate(log.CreatedAt),
+                log.Status
+            ]);
 
-        autoTable(doc, {
-        head: [['Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Duration', 'Date Submitted', 'Status']],
-        body: tableData,
-        startY: 30,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [128, 0, 0] }
-        });
+            autoTable(doc, {
+                head: [['Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Duration', 'Date Submitted', 'Status']],
+                body: tableData,
+                startY: 30,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [128, 0, 0] }
+            });
 
-        doc.save('leave-logs.pdf');
-    }
+            doc.save('leave-logs.pdf');
+        }
     };
 
     if (!isUserLoaded) {

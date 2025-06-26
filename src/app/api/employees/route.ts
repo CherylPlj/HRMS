@@ -67,7 +67,15 @@ export async function POST(request: Request) {
     const data = await request.json();
     
     // Validate required fields
-    const requiredFields = ['EmployeeID', 'DateOfBirth', 'HireDate'];
+    const requiredFields = [
+      'EmployeeID',
+      'FirstName',
+      'LastName',
+      'DateOfBirth',
+      'HireDate',
+      'Sex'
+    ];
+    
     for (const field of requiredFields) {
       if (!data[field]) {
         return NextResponse.json(
@@ -80,29 +88,56 @@ export async function POST(request: Request) {
     // Create employee in Supabase Employee table
     const { data: newEmployee, error } = await supabaseAdmin
       .from('Employee')
-      .insert([
-        {
-          EmployeeID: data.EmployeeID,
-          UserID: data.UserID || null,
-          DateOfBirth: data.DateOfBirth,
-          Phone: data.Phone,
-          Address: data.Address,
-          EmploymentStatus: data.EmploymentStatus || 'Regular',
-          HireDate: data.HireDate,
-          ResignationDate: data.ResignationDate || null,
-          Position: data.Position,
-          DepartmentID: data.DepartmentID || null,
-          ContractID: data.ContractID || null,
-          EmergencyContactName: data.EmergencyContactName,
-          EmergencyContactNumber: data.EmergencyContactNumber,
-          EmployeeType: data.EmployeeType || 'Regular',
-          Designation: data.Designation
-        }
-      ])
+      .insert([{
+        EmployeeID: data.EmployeeID,
+        UserID: data.UserID || null,
+        FacultyID: data.FacultyID || null,
+        LastName: data.LastName,
+        FirstName: data.FirstName,
+        MiddleName: data.MiddleName || null,
+        ExtensionName: data.ExtensionName || null,
+        Sex: data.Sex,
+        Photo: data.Photo || null,
+        DateOfBirth: data.DateOfBirth,
+        PlaceOfBirth: data.PlaceOfBirth || null,
+        CivilStatus: data.CivilStatus || null,
+        Nationality: data.Nationality || null,
+        Religion: data.Religion || null,
+        BloodType: data.BloodType || null,
+        Email: data.Email || null,
+        Phone: data.Phone || null,
+        Address: data.Address || null,
+        PresentAddress: data.PresentAddress || null,
+        PermanentAddress: data.PermanentAddress || null,
+        
+        // Government IDs
+        SSSNumber: data.SSSNumber || null,
+        TINNumber: data.TINNumber || null,
+        PhilHealthNumber: data.PhilHealthNumber || null,
+        PagIbigNumber: data.PagIbigNumber || null,
+        GSISNumber: data.GSISNumber || null,
+        PRCLicenseNumber: data.PRCLicenseNumber || null,
+        PRCValidity: data.PRCValidity || null,
+
+        EmploymentStatus: data.EmploymentStatus || 'Regular',
+        HireDate: data.HireDate,
+        ResignationDate: data.ResignationDate || null,
+        Designation: data.Designation || null,
+        Position: data.Position || null,
+        DepartmentID: data.DepartmentID || null,
+        ContractID: data.ContractID || null,
+        EmergencyContactName: data.EmergencyContactName || null,
+        EmergencyContactNumber: data.EmergencyContactNumber || null,
+        EmployeeType: data.EmployeeType || 'Regular',
+        SalaryGrade: data.SalaryGrade || null,
+        
+        createdAt: new Date().toISOString()
+      }])
       .select()
       .single();
 
     if (error) {
+      console.error('Error creating employee:', error);
       throw error;
     }
 
@@ -110,7 +145,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating employee:', error);
     return NextResponse.json(
-      { error: 'Failed to create employee' },
+      { error: error instanceof Error ? error.message : 'Failed to create employee' },
       { status: 500 }
     );
   }

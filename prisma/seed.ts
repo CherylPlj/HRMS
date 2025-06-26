@@ -19,21 +19,23 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function createDefaultDepartments() {
     const departments = [
-        { name: 'Math' },
-        { name: 'English' },
-        { name: 'Science' },
-        { name: 'AP' },
-        { name: 'Filipino' },
-        { name: 'ESP' },
-        { name: 'MAPEH' },
+        { name: 'Pre-School', type: 'Pre_School' as const },
+        { name: 'Primary', type: 'Primary' as const },
+        { name: 'Intermediate', type: 'Intermediate' as const },
+        { name: 'JHS', type: 'JHS' as const },
+        { name: 'Admin', type: 'Admin' as const },
+        { name: 'Default', type: 'Default' as const }
     ];
 
     for (const dept of departments) {
         try {
             await prisma.department.upsert({
                 where: { DepartmentName: dept.name },
-                update: {},
-                create: { DepartmentName: dept.name },
+                update: { type: dept.type },
+                create: { 
+                    DepartmentName: dept.name,
+                    type: dept.type
+                },
             });
             await delay(100); // Small delay to prevent prepared statement conflicts
         } catch (error) {
@@ -86,7 +88,6 @@ async function createUserWithRole({
         dateOfBirth: Date;
         phone?: string;
         address?: string;
-        emergencyContact?: string;
     } | null;
 }) {
     const { saltHash } = hashWithSHA256(plainPassword);
@@ -141,7 +142,6 @@ async function createUserWithRole({
                 Address: facultyData.address,
                 Position: facultyData.position,
                 DepartmentID: department.DepartmentID,
-                EmergencyContact: facultyData.emergencyContact,
                 HireDate: new Date(), // Default hire date to today
             },
             create: {
@@ -152,7 +152,6 @@ async function createUserWithRole({
                 Address: facultyData.address,
                 Position: facultyData.position,
                 DepartmentID: department.DepartmentID,
-                EmergencyContact: facultyData.emergencyContact,
                 HireDate: new Date(), // Default hire date to today
             },
         });
@@ -639,7 +638,6 @@ async function main() {
                 Position: faculty.Position,
                 DepartmentID: faculty.DepartmentID,
                 ContractID: faculty.ContractID,
-                EmergencyContact: faculty.EmergencyContact,
                 EmployeeType: faculty.EmployeeType,
                 // Add other fields as needed
             },

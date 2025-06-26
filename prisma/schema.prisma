@@ -68,18 +68,36 @@ model Faculty {
 }
 
 model Employee {
-  EmployeeID       String           @id  @unique
-  UserID           String?           @unique
+  EmployeeID       String           @id @unique
+  UserID           String?          @unique
   FacultyID        Int?
   LastName         String?
-  FirstName         String?
-  MiddleName        String?
-  ExtensionName     String?
-  Sex               String?
+  FirstName        String?
+  MiddleName       String?
+  ExtensionName    String?          // Jr., Sr., III, etc.
+  Sex              String?
+  Photo            String?          // URL or path to employee's photo
   DateOfBirth      DateTime         @db.Date
-  Email        String?       @unique
+  PlaceOfBirth     String?
+  CivilStatus      String?
+  Nationality      String?
+  Religion         String?
+  BloodType        String?
+  Email            String?          @unique
   Phone            String?
   Address          String?
+  PresentAddress   String?
+  PermanentAddress String?
+
+  // Government IDs
+  SSSNumber        String?
+  TINNumber        String?
+  PhilHealthNumber String?
+  PagIbigNumber    String?
+  GSISNumber       String?
+  PRCLicenseNumber String?
+  PRCValidity      DateTime?
+
   EmploymentStatus EmploymentStatus @default(Regular)
   HireDate         DateTime         @db.Date
   ResignationDate  DateTime?        @db.Date
@@ -87,17 +105,30 @@ model Employee {
   Position         String?
   DepartmentID     Int?
   ContractID       Int?
-  EmergencyContact String?
   EmergencyContactName   String?
   EmergencyContactNumber String?
-  EmployeeType     EmployeeType?     @default(Regular)
+  EmployeeType     EmployeeType?    @default(Regular)
+  SalaryGrade      String?
+
+  // Relations
   Attendance       Attendance[]
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
-  Department       Department?       @relation(fields: [DepartmentID], references: [DepartmentID])
-  User       User?
-  Faculty    Faculty?
+  Department       Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
+  User             User?
+  Faculty          Faculty?
   Leaves           Leave[]
+  Education        Education[]
+  Eligibility      Eligibility[]
+  EmploymentHistory EmploymentHistory[]
+  Training         Training[]
+  MedicalInfo      MedicalInfo?
+  Family           Family[]
+  skills           Skill[]
+  certificates     Certificate[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime? @updatedAt
 }
 
 model Cashier {
@@ -116,11 +147,21 @@ model Registrar {
   User        User    @relation("UserRegistrar", fields: [UserID], references: [UserID], onDelete: Cascade)
 }
 
+enum DepartmentType {
+  Pre_School
+  Primary
+  Intermediate
+  JHS
+  Admin
+  Default
+}
+
 model Department {
   DepartmentID   Int       @id @default(autoincrement())
   DepartmentName String    @unique
+  type          DepartmentType  @default(Default)
   Faculty        Faculty[]
-  Employees      Employee[] // <-- add this
+  Employees      Employee[]
 }
 
 model Document {
@@ -172,6 +213,22 @@ model Attendance {
   Faculty    Faculty   @relation(fields: [facultyId], references: [FacultyID])
   Employee   Employee? @relation(fields: [employeeId], references: [EmployeeID]) // <-- add this
 
+}
+
+model Schedules {
+  id             Int          @id @default(autoincrement())
+  facultyId      Int
+  subjectId      Int
+  classSectionId Int
+  day            String
+  time           String
+  duration       Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  faculty      Faculty      @relation(fields: [facultyId], references: [FacultyID])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  classSection ClassSection @relation(fields: [classSectionId], references: [id])
 }
 
 model AIChat {
@@ -373,22 +430,6 @@ model ClassSection {
   schedules Schedules[]
 }
 
-model Schedules {
-  id             Int          @id @default(autoincrement())
-  facultyId      Int
-  subjectId      Int
-  classSectionId Int
-  day            String
-  time           String
-  duration       Int
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  faculty      Faculty      @relation(fields: [facultyId], references: [FacultyID])
-  subject      Subject      @relation(fields: [subjectId], references: [id])
-  classSection ClassSection @relation(fields: [classSectionId], references: [id])
-}
-
 enum JobTitle {
   HR_Manager
   Faculty
@@ -441,4 +482,107 @@ enum Sex {
 
 enum EmploymentType {
   FullTime
+}
+
+model Education {
+  id         Int      @id @default(autoincrement())
+  employee   Employee @relation(fields: [employeeId], references: [EmployeeID])
+  employeeId String
+  level      String   // Elementary, High School, College, etc.
+  schoolName String
+  course     String?
+  yearGraduated Int?
+  honors     String?
+}
+
+model Eligibility {
+  id         Int      @id @default(autoincrement())
+  employee   Employee @relation(fields: [employeeId], references: [EmployeeID])
+  employeeId String
+  type       String   // e.g., LET, Civil Service
+  rating     Float?
+  licenseNumber String?
+  examDate   DateTime?
+  validUntil DateTime?
+}
+
+model EmploymentHistory {
+  id         Int      @id @default(autoincrement())
+  employee   Employee @relation(fields: [employeeId], references: [EmployeeID])
+  employeeId String
+  schoolName String
+  position   String
+  startDate  DateTime
+  endDate    DateTime?
+  reasonForLeaving String?
+}
+
+model Training {
+  id          Int      @id @default(autoincrement())
+  employeeId  String
+  title       String
+  hours       Int
+  conductedBy String
+  date        DateTime
+  employee    Employee @relation(fields: [employeeId], references: [EmployeeID])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("trainings")
+}
+
+model Skill {
+  id                Int      @id @default(autoincrement())
+  employeeId        String
+  name              String
+  proficiencyLevel  String
+  yearsOfExperience Int
+  description       String?
+  employee          Employee @relation(fields: [employeeId], references: [EmployeeID])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("skills")
+}
+
+model MedicalInfo {
+  id             Int      @id @default(autoincrement())
+  employee       Employee @relation(fields: [employeeId], references: [EmployeeID])
+  employeeId     String   @unique
+  medicalNotes   String?
+  lastCheckup    DateTime?
+  vaccination    String?
+  allergies      String?
+}
+
+model Family {
+  id         Int      @id @default(autoincrement())
+  employee   Employee @relation(fields: [employeeId], references: [EmployeeID])
+  employeeId String
+  type       String   // Spouse, Child, Parent, etc.
+  name       String
+  dateOfBirth DateTime?
+  occupation String?
+  isDependent Boolean @default(false)
+  relationship String?
+  contactNumber String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
+}
+
+model Certificate {
+  id          Int      @id @default(autoincrement())
+  employeeId  String
+  title       String
+  issuedBy    String
+  issueDate   DateTime
+  expiryDate  DateTime?
+  description String?
+  fileUrl     String?
+  employee    Employee @relation(fields: [employeeId], references: [EmployeeID])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("certificates")
 }
