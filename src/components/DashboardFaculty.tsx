@@ -221,10 +221,26 @@ export default function DashboardFaculty() {
       }
     };
 
+    const safeFetchAttendanceData = async () => {
+      try {
+        await fetchAttendanceData();
+      } catch (error) {
+        console.error('Error fetching attendance data:', error);
+      }
+    };
+
+    const safeFetchOtherData = async () => {
+      try {
+        await fetchOtherData();
+      } catch (error) {
+        console.error('Error fetching other dashboard data:', error);
+      }
+    };
+
     if (facultyId) {
       fetchSchedule();
-      fetchAttendanceData();
-      fetchOtherData();
+      safeFetchAttendanceData();
+      safeFetchOtherData();
     }
   }, [facultyId]);
 
@@ -716,47 +732,49 @@ export default function DashboardFaculty() {
               </div>
             </div>
 
-            {/* Schedule for the Week */}
-            <div 
-              onClick={() => setCurrentView('attendance')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-calendar-week mr-2 text-[#800000]"></i>
-                  Schedule for the Week
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
-              </div>
-              <div className="space-y-4">
-                {scheduleForWeek.map((schedule) => (
-                  <div key={schedule.id} className="border-b pb-2">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          <i className="fas fa-book mr-2 text-gray-500"></i>
-                          {schedule.subject.name}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          <i className="fas fa-users mr-2"></i>
-                          {schedule.classSection.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          <i className="fas fa-clock mr-2"></i>
-                          {schedule.day} • {schedule.time} ({schedule.duration} mins)
-                        </p>
-                      </div>
+          {/* Schedule for the Week */}
+          {/*
+          <div 
+            onClick={() => setCurrentView('attendance')}
+            className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                <i className="fas fa-calendar-week mr-2 text-[#800000]"></i>
+                Schedule for the Week
+              </h3>
+              <i className="fas fa-chevron-right text-gray-400"></i>
+            </div>
+            <div className="space-y-4">
+              {scheduleForWeek.map((schedule) => (
+                <div key={schedule.id} className="border-b pb-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium text-gray-900">
+                        <i className="fas fa-book mr-2 text-gray-500"></i>
+                        {schedule.subject.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        <i className="fas fa-users mr-2"></i>
+                        {schedule.classSection.name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        <i className="fas fa-clock mr-2"></i>
+                        {schedule.day} • {schedule.time} ({schedule.duration} mins)
+                      </p>
                     </div>
                   </div>
-                ))}
-                {scheduleForWeek.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">
-                    <i className="fas fa-calendar-times mr-2"></i>
-                    No schedules found for this week
-                  </p>
-                )}
-              </div>
+                </div>
+              ))}
+              {scheduleForWeek.length === 0 && (
+                <p className="text-gray-500 text-center py-4">
+                  <i className="fas fa-calendar-times mr-2"></i>
+                  No schedules found for this week
+                </p>
+              )}
             </div>
+          </div>
+          */}
           </div>
 
           {/* Fourth Row: Recent Attendance Records */}
