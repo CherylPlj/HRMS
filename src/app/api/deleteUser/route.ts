@@ -5,10 +5,10 @@ import { createClient } from '@supabase/supabase-js';
 // Initialize Clerk client
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
-// Initialize Supabase client
+// Initialize Supabase client with service role key for admin operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 // Add helper function to log activities
@@ -49,10 +49,10 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Get user details before marking as deleted
+    // Get user details including ClerkID before deletion
     const { data: userData, error: userFetchError } = await supabase
       .from('User')
-      .select('FirstName, LastName, Email')
+      .select('FirstName, LastName, Email, ClerkID')
       .eq('UserID', userId)
       .single();
 
@@ -71,7 +71,19 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Update user in Supabase to set isDeleted to true
+    // Delete from Clerk first if ClerkID exists
+    if (userData.ClerkID) {
+      try {
+        await clerk.users.deleteUser(userData.ClerkID);
+        console.log(`Successfully deleted Clerk user: ${userData.ClerkID}`);
+      } catch (clerkError) {
+        console.error('Error deleting Clerk user:', clerkError);
+        // Continue with Supabase deletion even if Clerk deletion fails
+        // This ensures we don't leave orphaned records
+      }
+    }
+
+    // Soft delete user in Supabase
     const { error: updateError } = await supabase
       .from('User')
       .update({
@@ -89,23 +101,24 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // After successful user deletion, log the activity
+    // Log the activity
     await logActivity(
       createdBy,
       'user_deleted',
       'User',
-      `Deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})`,
+      `Deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})${userData.ClerkID ? ' - Clerk account also deleted' : ' - No Clerk account found'}`,
       request.headers.get('x-forwarded-for') || 'system'
     );
 
     return NextResponse.json({ 
-      message: 'User deleted successfully',
-      userId
+      message: 'User account deleted successfully',
+      userId,
+      clerkDeleted: !!userData.ClerkID
     });
   } catch (error: unknown) {
-    console.error('Error marking user as deleted:', error);
+    console.error('Error deleting user account:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to mark user as deleted' },
+      { error: error instanceof Error ? error.message : 'Failed to delete user account' },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH } from 'react-icons/fa';
+import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync } from 'react-icons/fa';
 import { Search } from 'lucide-react';
 
 // Define interfaces for the PDS sections
@@ -128,7 +128,6 @@ interface OtherInfo {
 interface EmployeeFormState {
   EmployeeID: string;
   UserID: string;
-  FacultyID: number | null;
   LastName: string;
   FirstName: string;
   MiddleName: string;
@@ -198,7 +197,6 @@ const EmployeeContentNew = () => {
   const [newEmployee, setNewEmployee] = useState<EmployeeFormState>({
     EmployeeID: '',
     UserID: '',
-    FacultyID: null,
     LastName: '',
     FirstName: '',
     MiddleName: '',
@@ -257,6 +255,60 @@ const EmployeeContentNew = () => {
   // State for editing mode and edited employee
   const [isEditing, setIsEditing] = useState(false);
   const [editedEmployee, setEditedEmployee] = useState<any>(null);
+  
+  // State for Edit Employee modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
+    EmployeeID: '',
+    UserID: '',
+    LastName: '',
+    FirstName: '',
+    MiddleName: '',
+    ExtensionName: '',
+    Sex: '',
+    Photo: '',
+    DateOfBirth: '',
+    PlaceOfBirth: '',
+    CivilStatus: '',
+    Nationality: '',
+    Religion: '',
+    BloodType: '',
+    Email: '',
+    Phone: '',
+    Address: '',
+    PresentAddress: '',
+    PermanentAddress: '',
+    
+    // Government IDs
+    SSSNumber: '',
+    TINNumber: '',
+    PhilHealthNumber: '',
+    PagIbigNumber: '',
+    GSISNumber: '',
+    PRCLicenseNumber: '',
+    PRCValidity: '',
+
+    EmploymentStatus: 'Regular',
+    HireDate: '',
+    ResignationDate: null,
+    Designation: null,
+    Position: '',
+    DepartmentID: null,
+    ContractID: null,
+    EmergencyContactName: '',
+    EmergencyContactNumber: '',
+    EmployeeType: 'Regular',
+    SalaryGrade: '',
+
+    Education: [],
+    Eligibility: [],
+    EmploymentHistory: [],
+    Training: [],
+    MedicalInfo: {},
+
+    createdAt: null,
+    updatedAt: null
+  });
 
   // Add new state for photo modal
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -413,21 +465,21 @@ const EmployeeContentNew = () => {
       const response = await fetch(`/api/employees?page=${page}&limit=10`);
       const data = await response.json();
 
-      if (!response.ok) {
+        if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch employees');
-      }
+        }
       
       const mappedData = data.employees.map((emp: any) => ({
         employeeId: emp.EmployeeID,
         id: emp.EmployeeID,
         firstName: emp.FirstName || '',
         surname: emp.LastName || '',
-        middleName: emp.MiddleName || '',
+          middleName: emp.MiddleName || '',
         nameExtension: emp.ExtensionName || '',
         fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
-        birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
-        birthPlace: emp.PlaceOfBirth || '',
-        sex: emp.Sex || '',
+          birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
+          birthPlace: emp.PlaceOfBirth || '',
+                sex: emp.Sex || '',
         civilStatus: emp.CivilStatus || '',
         email: emp.Email || emp.UserID || 'No email',
         position: emp.Position || '',
@@ -438,9 +490,9 @@ const EmployeeContentNew = () => {
         employeeType: emp.EmployeeType || 'Regular',
         // Add all other fields from the API response
         ...emp
-      }));
+        }));
       
-      setEmployees(mappedData);
+        setEmployees(mappedData);
       setPagination({
         currentPage: data.pagination.currentPage,
         totalPages: data.pagination.totalPages,
@@ -451,8 +503,8 @@ const EmployeeContentNew = () => {
       });
       setTotalEmployees(data.pagination.totalCount);
       setIsLoading(false);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
       setIsLoading(false);
     }
   };
@@ -490,7 +542,7 @@ const EmployeeContentNew = () => {
         // Add all other fields from the API response
         ...emp
       }));
-
+      
       setAllEmployees(mappedData);
       setIsLoadingAll(false);
     } catch (error) {
@@ -616,7 +668,6 @@ const EmployeeContentNew = () => {
         // Convert string IDs to numbers or null
         DepartmentID: newEmployee.DepartmentID,
         ContractID: newEmployee.ContractID,
-        FacultyID: newEmployee.FacultyID,
 
         // Remove createdAt and updatedAt as they are handled by the database
         createdAt: undefined,
@@ -641,7 +692,6 @@ const EmployeeContentNew = () => {
       setNewEmployee({
         EmployeeID: '',
         UserID: '',
-        FacultyID: null,
         LastName: '',
         FirstName: '',
         MiddleName: '',
@@ -761,52 +811,269 @@ const EmployeeContentNew = () => {
     setSelectedPhoto(null);
   };
 
+  // State for generate user ID loading
+  const [isGeneratingUserId, setIsGeneratingUserId] = useState(false);
+  
+  // State for generate employee ID loading
+  const [isGeneratingEmployeeId, setIsGeneratingEmployeeId] = useState(false);
+
+  // Handle generate user ID - automatically prevents duplicates by finding next available number
+  const handleGenerateUserId = async () => {
+    setIsGeneratingUserId(true);
+    try {
+      // Call the API endpoint to generate user ID on the server
+      const response = await fetch('/api/generate-user-id', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hireDate: newEmployee.HireDate || new Date().toISOString()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate user ID');
+      }
+
+      const { userId } = await response.json();
+      setNewEmployee({...newEmployee, UserID: userId});
+    } catch (error) {
+      console.error('Error generating user ID:', error);
+      alert('Failed to generate user ID. Please try again.');
+    } finally {
+      setIsGeneratingUserId(false);
+    }
+  };
+
+  // Handle generate employee ID - automatically prevents duplicates by finding next available number
+  const handleGenerateEmployeeId = async () => {
+    setIsGeneratingEmployeeId(true);
+    try {
+      // Call the API endpoint to generate employee ID on the server
+      const response = await fetch('/api/generate-employee-id', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate employee ID');
+      }
+
+      const { employeeId } = await response.json();
+      setNewEmployee({...newEmployee, EmployeeID: employeeId});
+    } catch (error) {
+      console.error('Error generating employee ID:', error);
+      alert('Failed to generate employee ID. Please try again.');
+    } finally {
+      setIsGeneratingEmployeeId(false);
+    }
+  };
+
+  // Reset form to initial state
+  const resetEmployeeForm = () => {
+    setNewEmployee({
+      EmployeeID: '',
+      UserID: '',
+      LastName: '',
+      FirstName: '',
+      MiddleName: '',
+      ExtensionName: '',
+      Sex: '',
+      Photo: '',
+      DateOfBirth: '',
+      PlaceOfBirth: '',
+      CivilStatus: '',
+      Nationality: '',
+      Religion: '',
+      BloodType: '',
+      Email: '',
+      Phone: '',
+      Address: '',
+      PresentAddress: '',
+      PermanentAddress: '',
+      
+      // Government IDs
+      SSSNumber: '',
+      TINNumber: '',
+      PhilHealthNumber: '',
+      PagIbigNumber: '',
+      GSISNumber: '',
+      PRCLicenseNumber: '',
+      PRCValidity: '',
+
+      EmploymentStatus: 'Regular',
+      HireDate: '',
+      ResignationDate: null,
+      Designation: null,
+      Position: '',
+      DepartmentID: null,
+      ContractID: null,
+      EmergencyContactName: '',
+      EmergencyContactNumber: '',
+      EmployeeType: 'Regular',
+      SalaryGrade: '',
+
+      Education: [],
+      Eligibility: [],
+      EmploymentHistory: [],
+      Training: [],
+      MedicalInfo: {},
+
+      createdAt: null,
+      updatedAt: null
+    });
+  };
+
+  // Handle closing the add employee modal
+  const handleCloseAddModal = () => {
+    resetEmployeeForm();
+    setIsAddModalOpen(false);
+  };
+
+  // Handle opening edit modal
+  const handleEditEmployee = (employee: any) => {
+    // Populate the edit form with employee data
+    setEditEmployee({
+      EmployeeID: employee.employeeId || '',
+      UserID: employee.userId || '',
+      LastName: employee.surname || '',
+      FirstName: employee.firstName || '',
+      MiddleName: employee.middleName || '',
+      ExtensionName: employee.nameExtension || '',
+      Sex: employee.sex || '',
+      Photo: employee.photo || '',
+      DateOfBirth: employee.birthDate || '',
+      PlaceOfBirth: employee.birthPlace || '',
+      CivilStatus: employee.civilStatus || '',
+      Nationality: employee.nationality || '',
+      Religion: employee.religion || '',
+      BloodType: employee.bloodType || '',
+      Email: employee.email || '',
+      Phone: employee.phone || '',
+      Address: employee.address || '',
+      PresentAddress: employee.PresentAddress || '',
+      PermanentAddress: employee.PermanentAddress || '',
+      
+      // Government IDs
+      SSSNumber: employee.sss || '',
+      TINNumber: employee.tin || '',
+      PhilHealthNumber: employee.philhealth || '',
+      PagIbigNumber: employee.pagibig || '',
+      GSISNumber: employee.gsis || '',
+      PRCLicenseNumber: employee.PRCLicenseNumber || '',
+      PRCValidity: employee.PRCValidity || '',
+
+      EmploymentStatus: employee.status || 'Regular',
+      HireDate: employee.hireDate || '',
+      ResignationDate: employee.resignationDate || null,
+      Designation: employee.designation || null,
+      Position: employee.position || '',
+      DepartmentID: employee.DepartmentID || null,
+      ContractID: employee.ContractID || null,
+      EmergencyContactName: employee.EmergencyContactName || '',
+      EmergencyContactNumber: employee.EmergencyContactNumber || '',
+      EmployeeType: employee.EmployeeType || 'Regular',
+      SalaryGrade: employee.SalaryGrade || '',
+
+      Education: employee.Education || [],
+      Eligibility: employee.Eligibility || [],
+      EmploymentHistory: employee.EmploymentHistory || [],
+      Training: employee.Training || [],
+      MedicalInfo: employee.MedicalInfo || {},
+
+      createdAt: employee.createdAt || null,
+      updatedAt: employee.updatedAt || null
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Handle updating employee
+  const handleUpdateEmployee = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    
+    try {
+      const employeeData = {
+        ...editEmployee,
+        // Convert empty strings to null for optional fields
+        MiddleName: editEmployee.MiddleName || null,
+        ExtensionName: editEmployee.ExtensionName || null,
+        PlaceOfBirth: editEmployee.PlaceOfBirth || null,
+        CivilStatus: editEmployee.CivilStatus || null,
+        Nationality: editEmployee.Nationality || null,
+        Religion: editEmployee.Religion || null,
+        BloodType: editEmployee.BloodType || null,
+        PresentAddress: editEmployee.PresentAddress || null,
+        PermanentAddress: editEmployee.PermanentAddress || null,
+        
+        // Government IDs
+        SSSNumber: editEmployee.SSSNumber || null,
+        TINNumber: editEmployee.TINNumber || null,
+        PhilHealthNumber: editEmployee.PhilHealthNumber || null,
+        PagIbigNumber: editEmployee.PagIbigNumber || null,
+        GSISNumber: editEmployee.GSISNumber || null,
+        PRCLicenseNumber: editEmployee.PRCLicenseNumber || null,
+        PRCValidity: editEmployee.PRCValidity || null,
+
+        // Employment Info
+        ResignationDate: editEmployee.ResignationDate || null,
+        Designation: editEmployee.Designation || null,
+        ContractID: editEmployee.ContractID || null,
+        EmergencyContactName: editEmployee.EmergencyContactName || null,
+        EmergencyContactNumber: editEmployee.EmergencyContactNumber || null,
+        SalaryGrade: editEmployee.SalaryGrade || null,
+        Photo: editEmployee.Photo || null
+      };
+
+      const response = await fetch(`/api/employees/${editEmployee.EmployeeID}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(employeeData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update employee');
+      }
+
+      const result = await response.json();
+
+      // Close modal and show success
+      setIsEditModalOpen(false);
+      setSuccessMessage(`Successfully updated employee ${result.FirstName} ${result.LastName}`);
+      setShowSuccessModal(true);
+      
+      // Refresh employee list
+      await fetchEmployees();
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update employee. Please try again.');
+    }
+  };
+
+  // Handle closing the edit employee modal
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+  };
+
   // If an employee is selected, show the personal data tabs
   if (selectedEmployee) {
     return (
       <div className="container mx-auto px-4 py-8">
         {/* Header with back button */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleBackToList}
-              className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Employees
-            </button>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              {selectedEmployee.fullName || `${selectedEmployee.firstName} ${selectedEmployee.surname}`.trim()}
-            </h1>
-          </div>
-          <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={handleSaveEdit}
-                  className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
-              >
-                <FaEdit /> Edit
-              </button>
-            )}
-          </div>
+        <div className="flex items-center mb-8">
+          <button
+            onClick={handleBackToList}
+            className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Employees
+          </button>
         </div>
 
         {/* Employee Info Card */}
@@ -819,15 +1086,15 @@ const EmployeeContentNew = () => {
                 if (isEditing) {
                   const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
                   if (fileInput) fileInput.click();
-                } else if (selectedEmployee.photo) {
-                  handlePhotoClick(e, selectedEmployee.photo, `${selectedEmployee.firstName} ${selectedEmployee.surname}`);
+                } else if (selectedEmployee?.photo) {
+                  handlePhotoClick(e, selectedEmployee.photo, `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`);
                 }
               }}
             >
-              {selectedEmployee.photo ? (
+              {selectedEmployee?.photo ? (
                 <img 
-                  src={selectedEmployee.photo} 
-                  alt={`${selectedEmployee.firstName} ${selectedEmployee.surname}`}
+                  src={selectedEmployee?.photo} 
+                  alt={`${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -839,101 +1106,38 @@ const EmployeeContentNew = () => {
               )}
             </div>
             <div className="flex-1">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">First Name</label>
-                    <input
-                      type="text"
-                      value={editedEmployee.firstName}
-                      onChange={(e) => handleEditInputChange('firstName', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                    <input
-                      type="text"
-                      value={editedEmployee.surname}
-                      onChange={(e) => handleEditInputChange('surname', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Position</label>
-                    <input
-                      type="text"
-                      value={editedEmployee.position}
-                      onChange={(e) => handleEditInputChange('position', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {selectedEmployee.fullName || `${selectedEmployee.firstName} ${selectedEmployee.surname}`.trim()}
-                  </h2>
-                  <p className="text-gray-500">{selectedEmployee.position}</p>
-                  <p className="text-gray-500">{departments.find(dept => dept.id === selectedEmployee.DepartmentID)?.name || 'No Department'}</p>
-                </>
-              )}
-              <div className="mt-4 flex space-x-3">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleSaveEdit}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditedEmployee(null);
-                      }}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={handleEditClick}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <FaEdit className="mr-2 -ml-1 h-4 w-4" />
-                    Edit Employee
-                  </button>
-                )}
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {selectedEmployee?.fullName || `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`.trim()}
+              </h2>
+              <p className="text-gray-500">{selectedEmployee?.position}</p>
+              <p className="text-gray-500">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-500">Position</label>
-              <p className="text-lg font-semibold text-gray-800">{selectedEmployee.position}</p>
+              <p className="text-lg font-semibold text-gray-800">{selectedEmployee?.position}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500">Department</label>
-              <p className="text-lg font-semibold text-gray-800">{departments.find(dept => dept.id === selectedEmployee.DepartmentID)?.name || 'No Department'}</p>
+              <p className="text-lg font-semibold text-gray-800">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500">Email</label>
-              <p className="text-lg font-semibold text-gray-800">{selectedEmployee.email}</p>
+              <p className="text-lg font-semibold text-gray-800">{selectedEmployee?.email}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500">Status</label>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                selectedEmployee.status === 'Active' || selectedEmployee.status === 'Regular'
+                selectedEmployee?.status === 'Active' || selectedEmployee?.status === 'Regular'
                   ? 'bg-green-100 text-green-800'
-                  : selectedEmployee.status === 'Resigned'
+                  : selectedEmployee?.status === 'Resigned'
                   ? 'bg-red-100 text-red-800'
-                  : selectedEmployee.status === 'Probationary'
+                  : selectedEmployee?.status === 'Probationary'
                   ? 'bg-yellow-100 text-yellow-800'
                   : 'bg-gray-100 text-gray-800'
               }`}>
-                {selectedEmployee.status}
+                {selectedEmployee?.status}
               </span>
             </div>
           </div>
@@ -968,35 +1172,35 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Surname</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.surname}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.surname}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">First Name</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.firstName}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.firstName}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Middle Name</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.middleName}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.middleName}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Name Extension</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.nameExtension || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.nameExtension || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Date of Birth</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.birthDate}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.birthDate}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Place of Birth</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.birthPlace}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.birthPlace}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Sex</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.sex}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.sex}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Civil Status</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.civilStatus}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.civilStatus}</p>
                   </div>
                 </div>
               </div>
@@ -1008,23 +1212,23 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">GSIS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.gsis || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.gsis || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">SSS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.sss || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.sss || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">PhilHealth Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.philhealth || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.philhealth || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">Pag-IBIG Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.pagibig || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.pagibig || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">TIN</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.tin || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.tin || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -1036,30 +1240,30 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Email Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.Email || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.Email || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Mobile Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.Phone || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.Phone || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-600">Present Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.PresentAddress || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.PresentAddress || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-600">Permanent Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.PermanentAddress || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.PermanentAddress || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2 border-t pt-4 mt-2">
                     <h4 className="text-md font-semibold text-gray-800 mb-4">Emergency Contact</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-600">Contact Name</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.EmergencyContactName || 'N/A'}</p>
+                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.EmergencyContactName || 'N/A'}</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-600">Contact Number</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.EmergencyContactNumber || 'N/A'}</p>
+                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.EmergencyContactNumber || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
@@ -1092,7 +1296,7 @@ const EmployeeContentNew = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Educational Background</h3>
                 <div className="space-y-4">
-                  {selectedEmployee.Education?.map((edu: Education, index: number) => (
+                  {selectedEmployee?.Education?.map((edu: Education, index: number) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
@@ -1118,7 +1322,7 @@ const EmployeeContentNew = () => {
                     </div>
                   </div>
                   ))}
-                  {(!selectedEmployee.Education || selectedEmployee.Education.length === 0) && (
+                  {(!selectedEmployee?.Education || selectedEmployee?.Education.length === 0) && (
                     <p className="text-gray-500 italic">No educational records found.</p>
                   )}
                 </div>
@@ -1129,7 +1333,7 @@ const EmployeeContentNew = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Civil Service Eligibility</h3>
                 <div className="space-y-4">
-                  {selectedEmployee.Eligibility?.map((elig: Eligibility, index: number) => (
+                  {selectedEmployee?.Eligibility?.map((elig: Eligibility, index: number) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -1159,7 +1363,7 @@ const EmployeeContentNew = () => {
                       </div>
                     </div>
                   ))}
-                  {(!selectedEmployee.Eligibility || selectedEmployee.Eligibility.length === 0) && (
+                  {(!selectedEmployee?.Eligibility || selectedEmployee?.Eligibility.length === 0) && (
                     <p className="text-gray-500 italic">No eligibility records found.</p>
                   )}
                 </div>
@@ -1170,7 +1374,7 @@ const EmployeeContentNew = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Work Experience</h3>
                 <div className="space-y-4">
-                  {selectedEmployee.EmploymentHistory?.map((work: EmploymentHistory, index: number) => (
+                  {selectedEmployee?.EmploymentHistory?.map((work: EmploymentHistory, index: number) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -1200,7 +1404,7 @@ const EmployeeContentNew = () => {
                   </div>
                     </div>
                   ))}
-                  {(!selectedEmployee.EmploymentHistory || selectedEmployee.EmploymentHistory.length === 0) && (
+                  {(!selectedEmployee?.EmploymentHistory || selectedEmployee?.EmploymentHistory.length === 0) && (
                     <p className="text-gray-500 italic">No employment history found.</p>
                   )}
                 </div>
@@ -1211,7 +1415,7 @@ const EmployeeContentNew = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Training Programs</h3>
                 <div className="space-y-4">
-                  {selectedEmployee.Training?.map((training: Training, index: number) => (
+                  {selectedEmployee?.Training?.map((training: Training, index: number) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -1235,7 +1439,7 @@ const EmployeeContentNew = () => {
                     </div>
                     </div>
                   ))}
-                  {(!selectedEmployee.Training || selectedEmployee.Training.length === 0) && (
+                  {(!selectedEmployee?.Training || selectedEmployee?.Training.length === 0) && (
                     <p className="text-gray-500 italic">No training records found.</p>
                   )}
                 </div>
@@ -1248,23 +1452,23 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Medical Notes</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.MedicalInfo?.medicalNotes || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.MedicalInfo?.medicalNotes || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Last Checkup</label>
                     <p className="mt-1 text-sm text-gray-900">
-                      {selectedEmployee.MedicalInfo?.lastCheckup 
+                      {selectedEmployee?.MedicalInfo?.lastCheckup 
                         ? new Date(selectedEmployee.MedicalInfo.lastCheckup).toLocaleDateString() 
                         : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Vaccination Status</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.MedicalInfo?.vaccination || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.MedicalInfo?.vaccination || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Allergies</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee.MedicalInfo?.allergies || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.MedicalInfo?.allergies || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -1511,7 +1715,7 @@ const EmployeeContentNew = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-  // Implement edit functionality
+                          handleEditEmployee(employee);
                         }}
                         className="text-[#800000] hover:text-red-800"
                       >
@@ -1631,7 +1835,7 @@ const EmployeeContentNew = () => {
                   <p className="text-red-100 mt-1">Fill in the employee information below</p>
                 </div>
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={handleCloseAddModal}
                   className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-full"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1652,45 +1856,60 @@ const EmployeeContentNew = () => {
                         <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">1</div>
                         <h3 className="text-xl font-bold text-gray-800">Basic Information</h3>
                   </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
                             Employee ID
                           </label>
-                    <input
-                      type="text"
-                            value={newEmployee.EmployeeID}
-                            onChange={(e) => setNewEmployee({...newEmployee, EmployeeID: e.target.value})}
-                            placeholder="e.g., 2024-0001"
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                      required
-                    />
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newEmployee.EmployeeID}
+                              onChange={(e) => setNewEmployee({...newEmployee, EmployeeID: e.target.value})}
+                              placeholder="Click generate button to create Employee ID"
+                              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={handleGenerateEmployeeId}
+                              disabled={isGeneratingEmployeeId || newEmployee.EmployeeID.trim() !== ''}
+                              className="px-3 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
+                              title={newEmployee.EmployeeID.trim() !== '' ? "Employee ID already exists" : "Generate Employee ID"}
+                            >
+                              <FaSync className={`w-4 h-4 ${isGeneratingEmployeeId ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
                   </div>
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            User ID (Optional)
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            User ID
                           </label>
+                          <div className="flex gap-2">
                     <input
                       type="text"
                             value={newEmployee.UserID}
-                            onChange={(e) => setNewEmployee({...newEmployee, UserID: e.target.value})}
-                            placeholder="Link to existing user"
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                    />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Faculty ID (Optional)
-                          </label>
-                          <input
-                            type="number"
-                            value={newEmployee.FacultyID || ''}
-                            onChange={(e) => setNewEmployee({...newEmployee, FacultyID: e.target.value ? parseInt(e.target.value) : null})}
-                            placeholder="Link to faculty"
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                          />
+                              placeholder="Click generate button to create User ID"
+                              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
+                              required
+                              readOnly
+                            />
+                            <button
+                              type="button"
+                              onClick={handleGenerateUserId}
+                              disabled={isGeneratingUserId || newEmployee.UserID.trim() !== ''}
+                              className="px-3 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
+                              title={newEmployee.UserID.trim() !== '' ? "User ID already exists" : "Generate User ID"}
+                            >
+                              <FaSync className={`w-4 h-4 ${isGeneratingUserId ? 'animate-spin' : ''}`} />
+                            </button>
                   </div>
+                  </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
@@ -1912,7 +2131,8 @@ const EmployeeContentNew = () => {
                   </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
                             Email
                           </label>
                     <input
@@ -1921,10 +2141,12 @@ const EmployeeContentNew = () => {
                             onChange={(e) => setNewEmployee({...newEmployee, Email: e.target.value})}
                             placeholder="email@example.com"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                            required
                     />
                   </div>
                         <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
                             Phone Number
                           </label>
                           <input
@@ -1933,6 +2155,7 @@ const EmployeeContentNew = () => {
                             onChange={(e) => setNewEmployee({...newEmployee, Phone: e.target.value})}
                             placeholder="09123456789"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                            required
                           />
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -2103,22 +2326,7 @@ const EmployeeContentNew = () => {
                             <option value="Resigned">Resigned</option>
                     </select>
                   </div>
-                        <div className="space-y-2">
-                          <label className="flex text-sm font-semibold text-gray-700 items-center">
-                            <span className="text-red-500 mr-1">*</span>
-                            Employee Type
-                          </label>
-                          <select
-                            value={newEmployee.EmployeeType}
-                            onChange={(e) => setNewEmployee({...newEmployee, EmployeeType: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                            required
-                          >
-                            <option value="Regular">Regular</option>
-                            <option value="Probationary">Probationary</option>
-                            <option value="Resigned">Resigned</option>
-                          </select>
-                        </div>
+
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
                             <span className="text-red-500 mr-1">*</span>
@@ -2145,28 +2353,30 @@ const EmployeeContentNew = () => {
                           </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
-                            Position
+                            Position <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
                             value={newEmployee.Position}
                             onChange={(e) => setNewEmployee({...newEmployee, Position: e.target.value})}
                             placeholder="Job Position"
+                            required
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           />
                   </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
-                            Designation
+                            Designation <span className="text-red-500">*</span>
                           </label>
                           <select
                             value={newEmployee.Designation || ''}
                             onChange={(e) => setNewEmployee({...newEmployee, Designation: e.target.value || null})}
+                            required
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           >
                             <option value="">Select designation...</option>
                             <option value="President">President</option>
-                            <option value="Admin_Officer">Admin Officer</option>
+                            <option value="Admin">Admin</option>
                             <option value="Vice_President">Vice President</option>
                             <option value="Registrar">Registrar</option>
                             <option value="Faculty">Faculty</option>
@@ -2176,11 +2386,12 @@ const EmployeeContentNew = () => {
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
-                            Department
+                            Department <span className="text-red-500">*</span>
                           </label>
                           <select
                             value={newEmployee.DepartmentID || ''}
                             onChange={(e) => setNewEmployee({...newEmployee, DepartmentID: parseInt(e.target.value) || null})}
+                            required
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           >
                             <option value="">Select department...</option>
@@ -2264,7 +2475,7 @@ const EmployeeContentNew = () => {
                   <div className="flex space-x-4">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={handleCloseAddModal}
                       className="px-6 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
                 >
                   Cancel
@@ -2275,6 +2486,622 @@ const EmployeeContentNew = () => {
                 >
                   Add Employee
                 </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee Modal - Modern & User-Friendly */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold">Edit Employee</h2>
+                  <p className="text-blue-100 mt-1">Update employee information below</p>
+                </div>
+                <button
+                  onClick={handleCloseEditModal}
+                  className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-full"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Scrollable with Form */}
+            <form onSubmit={handleUpdateEmployee} className="flex flex-col h-full">
+              <div className="overflow-y-auto max-h-[calc(95vh-200px)] flex-1">
+                <div className="p-8">
+                  <div className="space-y-8">
+                    {/* Step 1: Basic Information */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">1</div>
+                        <h3 className="text-xl font-bold text-gray-800">Basic Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Employee ID
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.EmployeeID}
+                            placeholder="Employee ID"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
+                            required
+                            readOnly
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            User ID
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.UserID}
+                            placeholder="User ID"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
+                            required
+                            readOnly
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            First Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.FirstName}
+                            onChange={(e) => setEditEmployee({...editEmployee, FirstName: e.target.value})}
+                            placeholder="First Name"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Last Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.LastName}
+                            onChange={(e) => setEditEmployee({...editEmployee, LastName: e.target.value})}
+                            placeholder="Last Name"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Middle Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.MiddleName}
+                            onChange={(e) => setEditEmployee({...editEmployee, MiddleName: e.target.value})}
+                            placeholder="Middle Name"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Extension Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.ExtensionName}
+                            onChange={(e) => setEditEmployee({...editEmployee, ExtensionName: e.target.value})}
+                            placeholder="Jr., Sr., III, etc."
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Sex
+                          </label>
+                          <select
+                            value={editEmployee.Sex}
+                            onChange={(e) => setEditEmployee({...editEmployee, Sex: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                            required
+                          >
+                            <option value="">Select sex...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Intersex">Intersex</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Photo
+                          </label>
+                          <div className="flex flex-col items-start space-y-4">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    const img = new Image();
+                                    img.onload = () => {
+                                      const aspectRatio = img.width / img.height;
+                                      if (aspectRatio < 0.9 || aspectRatio > 1.1) {
+                                        alert('Please upload a square (2x2) image');
+                                        return;
+                                      }
+                                      setEditEmployee({...editEmployee, Photo: event.target?.result as string});
+                                    };
+                                    img.src = event.target?.result as string;
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                            />
+                            {editEmployee.Photo && (
+                              <div className="relative w-[200px] h-[200px] border-2 border-gray-200 rounded-lg overflow-hidden">
+                                <img
+                                  src={editEmployee.Photo}
+                                  alt="Employee photo preview"
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setEditEmployee({...editEmployee, Photo: ''})}
+                                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                            <p className="text-sm text-gray-500">
+                              Upload a square (2x2) photo. Supported formats: JPG, PNG
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Date of Birth
+                          </label>
+                          <input
+                            type="date"
+                            value={editEmployee.DateOfBirth}
+                            onChange={(e) => setEditEmployee({...editEmployee, DateOfBirth: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Place of Birth
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.PlaceOfBirth}
+                            onChange={(e) => setEditEmployee({...editEmployee, PlaceOfBirth: e.target.value})}
+                            placeholder="City, Province"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Civil Status
+                          </label>
+                          <select
+                            value={editEmployee.CivilStatus}
+                            onChange={(e) => setEditEmployee({...editEmployee, CivilStatus: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          >
+                            <option value="">Select status...</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Widowed">Widowed</option>
+                            <option value="Separated">Separated</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Nationality
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.Nationality}
+                            onChange={(e) => setEditEmployee({...editEmployee, Nationality: e.target.value})}
+                            placeholder="e.g., Filipino"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Religion
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.Religion}
+                            onChange={(e) => setEditEmployee({...editEmployee, Religion: e.target.value})}
+                            placeholder="Religion"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Blood Type
+                          </label>
+                          <select
+                            value={editEmployee.BloodType}
+                            onChange={(e) => setEditEmployee({...editEmployee, BloodType: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
+                          >
+                            <option value="">Select blood type...</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Contact Information */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">2</div>
+                        <h3 className="text-xl font-bold text-gray-800">Contact Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={editEmployee.Email}
+                            onChange={(e) => setEditEmployee({...editEmployee, Email: e.target.value})}
+                            placeholder="email@example.com"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={editEmployee.Phone}
+                            onChange={(e) => setEditEmployee({...editEmployee, Phone: e.target.value})}
+                            placeholder="09123456789"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Present Address
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.PresentAddress}
+                            onChange={(e) => setEditEmployee({...editEmployee, PresentAddress: e.target.value})}
+                            placeholder="Complete present address"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Permanent Address
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.PermanentAddress}
+                            onChange={(e) => setEditEmployee({...editEmployee, PermanentAddress: e.target.value})}
+                            placeholder="Complete permanent address"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Government IDs */}
+                    <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-yellow-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">3</div>
+                        <h3 className="text-xl font-bold text-gray-800">Government IDs</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            SSS Number
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.SSSNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, SSSNumber: e.target.value})}
+                            placeholder="00-0000000-0"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            TIN Number
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.TINNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, TINNumber: e.target.value})}
+                            placeholder="000-000-000-000"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            PhilHealth Number
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.PhilHealthNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, PhilHealthNumber: e.target.value})}
+                            placeholder="00-000000000-0"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Pag-IBIG Number
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.PagIbigNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, PagIbigNumber: e.target.value})}
+                            placeholder="0000-0000-0000"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            GSIS Number
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.GSISNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, GSISNumber: e.target.value})}
+                            placeholder="00000000000"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            PRC License Number
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.PRCLicenseNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, PRCLicenseNumber: e.target.value})}
+                            placeholder="PRC License Number"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            PRC Validity
+                          </label>
+                          <input
+                            type="date"
+                            value={editEmployee.PRCValidity}
+                            onChange={(e) => setEditEmployee({...editEmployee, PRCValidity: e.target.value})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 4: Employment Details */}
+                    <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">4</div>
+                        <h3 className="text-xl font-bold text-gray-800">Employment Details</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Employment Status
+                          </label>
+                          <select
+                            value={editEmployee.EmploymentStatus}
+                            onChange={(e) => setEditEmployee({...editEmployee, EmploymentStatus: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          >
+                            <option value="">Select status...</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Probationary">Probationary</option>
+                            <option value="Resigned">Resigned</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex text-sm font-semibold text-gray-700 items-center">
+                            <span className="text-red-500 mr-1">*</span>
+                            Hire Date
+                          </label>
+                          <input
+                            type="date"
+                            value={editEmployee.HireDate}
+                            onChange={(e) => setEditEmployee({...editEmployee, HireDate: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Resignation Date
+                          </label>
+                          <input
+                            type="date"
+                            value={editEmployee.ResignationDate || ''}
+                            onChange={(e) => setEditEmployee({...editEmployee, ResignationDate: e.target.value || null})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Position <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.Position}
+                            onChange={(e) => setEditEmployee({...editEmployee, Position: e.target.value})}
+                            placeholder="Position"
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Designation <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={editEmployee.Designation || ''}
+                            onChange={(e) => setEditEmployee({...editEmployee, Designation: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          >
+                            <option value="">Select designation...</option>
+                            <option value="Faculty">Faculty</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Student">Student</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Department <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={editEmployee.DepartmentID || ''}
+                            onChange={(e) => setEditEmployee({...editEmployee, DepartmentID: parseInt(e.target.value) || null})}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          >
+                            <option value="">Select department...</option>
+                            <option value="1">Pre-School</option>
+                            <option value="2">Primary</option>
+                            <option value="3">Intermediate</option>
+                            <option value="4">JHS</option>
+                            <option value="5">Admin</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Contract ID
+                          </label>
+                          <input
+                            type="number"
+                            value={editEmployee.ContractID || ''}
+                            onChange={(e) => setEditEmployee({...editEmployee, ContractID: parseInt(e.target.value) || null})}
+                            placeholder="Contract ID"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Salary Grade
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.SalaryGrade}
+                            onChange={(e) => setEditEmployee({...editEmployee, SalaryGrade: e.target.value})}
+                            placeholder="Salary Grade"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 5: Emergency Contact */}
+                    <div className="bg-gradient-to-br from-red-50 to-pink-50 border border-red-200 rounded-xl p-6">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">5</div>
+                        <h3 className="text-xl font-bold text-gray-800">Emergency Contact</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Contact Person Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editEmployee.EmergencyContactName}
+                            onChange={(e) => setEditEmployee({...editEmployee, EmergencyContactName: e.target.value})}
+                            placeholder="Full name of emergency contact"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Contact Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={editEmployee.EmergencyContactNumber}
+                            onChange={(e) => setEditEmployee({...editEmployee, EmergencyContactNumber: e.target.value})}
+                            placeholder="09123456789"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:ring-0 transition-colors bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-8 py-6 border-t border-gray-200 flex-shrink-0">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">
+                    <span className="text-red-500">*</span> Required fields
+                  </p>
+                  <div className="flex space-x-4">
+                    <button
+                      type="button"
+                      onClick={handleCloseEditModal}
+                      className="px-6 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-8 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      Update Employee
+                    </button>
                   </div>
                 </div>
               </div>

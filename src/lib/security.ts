@@ -11,11 +11,18 @@ export const validatePassword = (password: string): string | null => {
   return null;
 };
 
-// Brute force protection
+// Brute force protection - separate limiters for known and unknown IPs
 export const loginRateLimiter = new RateLimiterMemory({
   points: 5, // 5 attempts
   duration: 300, // per 5 minutes
   blockDuration: 900 // 15 minutes block after limit exceeded
+});
+
+// More restrictive rate limiter for unknown IPs
+export const unknownIPRateLimiter = new RateLimiterMemory({
+  points: 3, // 3 attempts
+  duration: 600, // per 10 minutes
+  blockDuration: 1800 // 30 minutes block after limit exceeded
 });
 
 // IP-based login attempt tracking
@@ -29,9 +36,9 @@ const LOGIN_MAX_RETRIES = 3;
 const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export const checkLoginAttempts = (ipAddress: string): { blocked: boolean; remainingAttempts: number } => {
-  // If IP is unknown, use a more lenient approach
+  // For unknown IPs, use a more restrictive approach
   if (ipAddress === 'unknown') {
-    return { blocked: false, remainingAttempts: LOGIN_MAX_RETRIES };
+    return { blocked: false, remainingAttempts: 2 }; // Allow fewer attempts for unknown IPs
   }
 
   const now = Date.now();
@@ -56,19 +63,38 @@ export const checkLoginAttempts = (ipAddress: string): { blocked: boolean; remai
 };
 
 export const recordFailedLoginAttempt = (ipAddress: string): void => {
-  // Don't track attempts for unknown IPs
-  if (ipAddress === 'unknown') return;
+  // Track attempts for unknown IPs too, but with a special prefix
+  const key = ipAddress === 'unknown' ? `unknown_${Date.now()}` : ipAddress;
 
-  const attempt = failedLoginAttempts.get(ipAddress);
+  const attempt = failedLoginAttempts.get(key);
   if (attempt) {
     attempt.count += 1;
     attempt.lastAttempt = Date.now();
   } else {
-    failedLoginAttempts.set(ipAddress, { count: 1, lastAttempt: Date.now() });
+    failedLoginAttempts.set(key, { count: 1, lastAttempt: Date.now() });
+  }
+
+  // Clean up old unknown IP entries to prevent memory bloat
+  if (ipAddress === 'unknown') {
+    const cutoffTime = Date.now() - LOCKOUT_DURATION;
+    for (const [k, v] of failedLoginAttempts.entries()) {
+      if (k.startsWith('unknown_') && v.lastAttempt < cutoffTime) {
+        failedLoginAttempts.delete(k);
+      }
+    }
   }
 };
 
 export const resetLoginAttempts = (ipAddress: string): void => {
-  if (ipAddress === 'unknown') return;
+  if (ipAddress === 'unknown') {
+    // For unknown IPs, clean up recent entries
+    const recentTime = Date.now() - 60000; // Last minute
+    for (const [k] of failedLoginAttempts.entries()) {
+      if (k.startsWith('unknown_')) {
+        failedLoginAttempts.delete(k);
+      }
+    }
+    return;
+  }
   failedLoginAttempts.delete(ipAddress);
 }; 

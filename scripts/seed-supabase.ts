@@ -321,20 +321,6 @@ async function main() {
 
     const users = [
         {
-            email: 'superadmin@sjsfi.edu.ph',
-            plainPassword: 'SuperAdmin@SJSFI2025!',
-            firstName: 'Super',
-            lastName: 'Admin',
-            roleName: 'Super Admin',
-        },
-        {
-            email: 'admin@admin.com',
-            plainPassword: 'SJSFI@dmin1',
-            firstName: 'Admin',
-            lastName: 'User',
-            roleName: 'Admin',
-        },
-        {
             email: 'faculty@faculty.com',
             plainPassword: 'SJSFIF@culty1',
             firstName: 'Faculty',

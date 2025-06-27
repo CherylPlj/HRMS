@@ -6,7 +6,6 @@ import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
 import AttendanceContent from '@/components/AttendanceContent';
 import LeaveContent from '@/components/LeaveContent';
-import UsersContent from '@/components/UsersContent';
 import EmployeeContentNew from '@/components/EmployeeContentNew';
 import RecruitmentContent from '@/components/RecruitmentContent';
 import UserManagementContent from '@/components/UserManagementContent';
@@ -341,12 +340,10 @@ export default function AdminDashboard() {
         return <AttendanceContent />;
       case 'leave':
         return <LeaveContent />;
-      case 'users':
-        return <UsersContent />;
       case 'user-management':
-        return <UserManagementContent />;
+        return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
       case 'session-management':
-        return <SessionManagementContent />;
+        return userRole === 'super admin' ? <SessionManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -393,14 +390,13 @@ export default function AdminDashboard() {
           {/* Navigation Menu */}
           <nav className={`flex-1 flex flex-col overflow-y-auto
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
-            {[
+                        {[
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
               { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
-              { name: 'Users', icon: 'fa-users-cog', key: 'users' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
                 { name: 'User Management', icon: 'fa-user-shield', key: 'user-management' },
@@ -466,7 +462,6 @@ export default function AdminDashboard() {
                   {activeButton === 'employees' && 'EMPLOYEES'}
                   {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
                   {activeButton === 'leave' && 'LEAVE'}
-                  {activeButton === 'users' && 'USERS'}
                   {activeButton === 'user-management' && 'USER MANAGEMENT'}
                   {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
                 </h1>

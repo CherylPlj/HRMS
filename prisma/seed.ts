@@ -379,241 +379,98 @@ async function main() {
     //     }
     // }
 
-    await prisma.employee.createMany({
-        data: [
-            {
-                EmployeeID: '2024-0064',
-                FirstName: 'Maria',
-                LastName: 'Santos',
-                MiddleName: 'Cruz',
-                Sex: 'Female',
+    // Create employees with relations using individual create operations
+    const employeesToCreate = [
+        {
+            EmployeeID: '2024-0064',
+            FirstName: 'Maria',
+            LastName: 'Santos',
+            MiddleName: 'Cruz',
+            ExtensionName: undefined,
+            Sex: 'Female',
+            DateOfBirth: new Date('1990-05-01'),
+            DepartmentID: 1,
+            contactInfo: {
                 Email: 'maria.santos@sjsfi.edu.ph',
-                DateOfBirth: new Date('1990-05-01'),
                 Phone: '09170000005',
-                Address: '005-A Katipunan Commonwealth Quezon City',
+                PresentAddress: '005-A Katipunan Commonwealth Quezon City',
+                EmergencyContactName: 'Ivhann Glenn C. Bendal',
+                EmergencyContactNumber: '0965-3447382',
+            },
+            employmentDetails: {
                 EmploymentStatus: 'Regular',
                 HireDate: new Date('2024-01-01'),
                 Designation: 'Faculty',
                 Position: 'Math Teacher',
-                DepartmentID: 1,
-                EmergencyContactName: 'Ivhann Glenn C. Bendal',
-                EmergencyContactNumber: '0965-3447382',
                 EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2022-0003',
-                FirstName: 'Ana',
-                LastName: 'Bote',
-                MiddleName: 'Reyes',
-                Sex: 'Female',
+            }
+        },
+        {
+            EmployeeID: '2022-0003',
+            FirstName: 'Ana',
+            LastName: 'Bote',
+            MiddleName: 'Reyes',
+            ExtensionName: undefined,
+            Sex: 'Female',
+            DateOfBirth: new Date('1991-06-02'),
+            DepartmentID: 2,
+            contactInfo: {
                 Email: 'ana.bote@sjsfi.edu.ph',
-                DateOfBirth: new Date('1991-06-02'),
                 Phone: '09170000006',
-                Address: 'Block 35 Lot 20 Lower Narra Street Paez Santos Ville  Quezon City',
+                PresentAddress: 'Block 35 Lot 20 Lower Narra Street Paez Santos Ville  Quezon City',
+                EmergencyContactName: 'Josie B. Bote',
+                EmergencyContactNumber: '0910-5877378',
+            },
+            employmentDetails: {
                 EmploymentStatus: 'Regular',
                 HireDate: new Date('2022-01-01'),
                 Designation: 'Faculty',
                 Position: 'English Teacher',
-                DepartmentID: 2,
-                EmergencyContactName: 'Josie B. Bote',
-                EmergencyContactNumber: '0910-5877378',
                 EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2023-0026',
-                FirstName: 'Carmen',
-                LastName: 'Buena',
-                MiddleName: 'Dela Cruz',
-                Sex: 'Female',
-                Email: 'carmen.buena@sjsfi.edu.ph',
-                DateOfBirth: new Date('1992-07-03'),
-                Phone: '09170000007',
-                Address: 'Block 218 Lot 47  Drachma Street Phase 8, Brgy. North Fairview  Quezon City',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2023-01-01'),
-                Designation: 'Faculty',
-                Position: 'Science Teacher',
-                DepartmentID: 3,
-                EmergencyContactName: 'Myla D. Buena',
-                EmergencyContactNumber: '0936-5471975',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2023-0053',
-                FirstName: 'Rosa',
-                LastName: 'Calanza',
-                MiddleName: 'Garcia',
-                Sex: 'Female',
-                Email: 'rosa.calanza@sjsfi.edu.ph',
-                DateOfBirth: new Date('1993-08-04'),
-                Phone: '09170000008',
-                Address: '#2640  Saint Bernadeth St. Admin Site Tala  Barangay 186 Caloocan',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2023-01-01'),
-                Designation: 'Faculty',
-                Position: 'Filipino Teacher',
-                DepartmentID: 5,
-                EmergencyContactName: 'Diodita Calanza',
-                EmergencyContactNumber: '0951-9221241',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2018-0017',
-                FirstName: 'Ronel',
-                LastName: 'Reyes',
-                MiddleName: 'Santos',
-                Sex: 'Male',
-                Email: 'ronel.reyes@sjsfi.edu.ph',
-                DateOfBirth: new Date('1985-03-15'),
-                Phone: '0935-8141526',
-                Address: '6965 Sto. Niño St. Maligaya Brgy. 177 Caloocan City',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2018-01-01'),
-                Designation: 'Faculty',
-                Position: 'PE Teacher',
-                DepartmentID: 7,
-                EmergencyContactName: 'Consuelo Reyes',
-                EmergencyContactNumber: '0935-8141526',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2021-0012',
-                FirstName: 'Juan',
-                LastName: 'Dela Cruz',
-                MiddleName: 'Martinez',
-                ExtensionName: 'Jr.',
-                Sex: 'Male',
-                Email: 'juan.delacruz@sjsfi.edu.ph',
-                DateOfBirth: new Date('1988-11-20'),
-                Phone: '09171234567',
-                Address: '123 Rizal Street, Barangay Central, Manila',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2021-01-01'),
-                Designation: 'Principal',
-                Position: 'School Principal',
-                DepartmentID: 1,
-                EmergencyContactName: 'Maria Dela Cruz',
-                EmergencyContactNumber: '09171234568',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2020-0008',
-                FirstName: 'Elena',
-                LastName: 'Mendoza',
-                MiddleName: 'Torres',
-                Sex: 'Female',
-                Email: 'elena.mendoza@sjsfi.edu.ph',
-                DateOfBirth: new Date('1987-09-12'),
-                Phone: '09182345678',
-                Address: '456 Luna Avenue, Quezon City',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2020-01-01'),
-                Designation: 'Vice_President',
-                Position: 'Vice Principal',
-                DepartmentID: 2,
-                EmergencyContactName: 'Carlos Mendoza',
-                EmergencyContactNumber: '09182345679',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2019-0015',
-                FirstName: 'Roberto',
-                LastName: 'Fernandez',
-                MiddleName: 'Silva',
-                Sex: 'Male',
-                Email: 'roberto.fernandez@sjsfi.edu.ph',
-                DateOfBirth: new Date('1983-07-08'),
-                Phone: '09193456789',
-                Address: '789 Bonifacio Street, Makati City',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2019-01-01'),
-                Designation: 'Registrar',
-                Position: 'School Registrar',
-                DepartmentID: 1,
-                EmergencyContactName: 'Isabel Fernandez',
-                EmergencyContactNumber: '09193456790',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2022-0025',
-                FirstName: 'Grace',
-                LastName: 'Villanueva',
-                MiddleName: 'Ramos',
-                Sex: 'Female',
-                Email: 'grace.villanueva@sjsfi.edu.ph',
-                DateOfBirth: new Date('1992-04-25'),
-                Phone: '09204567890',
-                Address: '321 Mabini Street, Pasig City',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2022-01-01'),
-                Designation: 'Cashier',
-                Position: 'School Cashier',
-                DepartmentID: 1,
-                EmergencyContactName: 'Pedro Villanueva',
-                EmergencyContactNumber: '09204567891',
-                EmployeeType: 'Regular',
-            },
-            {
-                EmployeeID: '2023-0031',
-                FirstName: 'Michael',
-                LastName: 'Garcia',
-                MiddleName: 'Lopez',
-                Sex: 'Male',
-                Email: 'michael.garcia@sjsfi.edu.ph',
-                DateOfBirth: new Date('1989-12-03'),
-                Phone: '09215678901',
-                Address: '654 Aguinaldo Highway, Cavite',
-                EmploymentStatus: 'Probationary',
-                HireDate: new Date('2023-06-01'),
-                Designation: 'Faculty',
-                Position: 'History Teacher',
-                DepartmentID: 4,
-                EmergencyContactName: 'Linda Garcia',
-                EmergencyContactNumber: '09215678902',
-                EmployeeType: 'Probationary',
-            },
-            {
-                EmployeeID: '2024-0001',
-                FirstName: 'Sarah',
-                LastName: 'Gonzales',
-                MiddleName: 'Cruz',
-                Sex: 'Female',
-                Email: 'sarah.gonzales@sjsfi.edu.ph',
-                DateOfBirth: new Date('1994-01-18'),
-                Phone: '09226789012',
-                Address: '987 Magallanes Street, Cebu City',
-                EmploymentStatus: 'Probationary',
-                HireDate: new Date('2024-01-15'),
-                Designation: 'Faculty',
-                Position: 'Art Teacher',
-                DepartmentID: 7,
-                EmergencyContactName: 'Jose Gonzales',
-                EmergencyContactNumber: '09226789013',
-                EmployeeType: 'Probationary',
-            },
-            {
-                EmployeeID: '2017-0005',
-                FirstName: 'Antonio',
-                LastName: 'Rodriguez',
-                MiddleName: 'Perez',
-                ExtensionName: 'Sr.',
-                Sex: 'Male',
-                Email: 'antonio.rodriguez@sjsfi.edu.ph',
-                DateOfBirth: new Date('1975-08-30'),
-                Phone: '09237890123',
-                Address: '147 Katipunan Avenue, Quezon City',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date('2017-01-01'),
-                Designation: 'Admin_Officer',
-                Position: 'Administrative Officer',
-                DepartmentID: 1,
-                EmergencyContactName: 'Carmen Rodriguez',
-                EmergencyContactNumber: '09237890124',
-                EmployeeType: 'Regular',
-            },
-        ],
-        skipDuplicates: true,
-    });
+            }
+        },
+    ];
+
+    // Create employees with their relations
+    for (const employeeData of employeesToCreate) {
+        try {
+            await prisma.employee.create({
+                data: {
+                    EmployeeID: employeeData.EmployeeID,
+                    FirstName: employeeData.FirstName,
+                    LastName: employeeData.LastName,
+                    MiddleName: employeeData.MiddleName,
+                    ExtensionName: (employeeData as any).ExtensionName || null,
+                    Sex: employeeData.Sex,
+                    DateOfBirth: employeeData.DateOfBirth,
+                    DepartmentID: employeeData.DepartmentID,
+                    contactInfo: {
+                        create: {
+                            Email: employeeData.contactInfo.Email,
+                            Phone: employeeData.contactInfo.Phone,
+                            PresentAddress: employeeData.contactInfo.PresentAddress,
+                            EmergencyContactName: employeeData.contactInfo.EmergencyContactName,
+                            EmergencyContactNumber: employeeData.contactInfo.EmergencyContactNumber,
+                        }
+                    },
+                    employmentDetails: {
+                        create: {
+                            EmploymentStatus: employeeData.employmentDetails.EmploymentStatus as any,
+                            HireDate: employeeData.employmentDetails.HireDate,
+                            Designation: employeeData.employmentDetails.Designation as any,
+                            Position: employeeData.employmentDetails.Position,
+                            EmployeeType: employeeData.employmentDetails.EmployeeType as any,
+                        }
+                    }
+                }
+            });
+            console.log(`Created employee: ${employeeData.FirstName} ${employeeData.LastName}`);
+        } catch (error) {
+            console.error(`Error creating employee ${employeeData.FirstName} ${employeeData.LastName}:`, error);
+        }
+    }
+
+    console.log('Employee seeding complete.');
 
     const faculties = await prisma.faculty.findMany();
 
@@ -624,22 +481,30 @@ async function main() {
         });
         if (existingEmployee) continue;
 
-        // Create Employee
+        // Create Employee with related data
         const employee = await prisma.employee.create({
             data: {
                 EmployeeID: faculty.EmployeeID || faculty.UserID, // Use Faculty.EmployeeID if available, else UserID
                 UserID: faculty.UserID,
                 DateOfBirth: faculty.DateOfBirth,
-                Phone: faculty.Phone,
-                Address: faculty.Address,
-                EmploymentStatus: faculty.EmploymentStatus,
-                HireDate: faculty.HireDate,
-                ResignationDate: faculty.ResignationDate,
-                Position: faculty.Position,
                 DepartmentID: faculty.DepartmentID,
                 ContractID: faculty.ContractID,
-                EmployeeType: faculty.EmployeeType,
-                // Add other fields as needed
+                contactInfo: {
+                    create: {
+                        Phone: faculty.Phone || '',
+                        PresentAddress: faculty.Address || '',
+                        EmergencyContactName: faculty.EmergencyContact || '',
+                    }
+                },
+                employmentDetails: {
+                    create: {
+                        EmploymentStatus: faculty.EmploymentStatus,
+                        HireDate: faculty.HireDate,
+                        ResignationDate: faculty.ResignationDate,
+                        Position: faculty.Position || '',
+                        EmployeeType: faculty.EmployeeType,
+                    }
+                }
             },
         });
 
@@ -661,19 +526,28 @@ async function main() {
     });
 
     for (const user of users) {
-        // Create Employee
+        // Create Employee with related data
         const employee = await prisma.employee.create({
             data: {
                 EmployeeID: user.UserID,
                 UserID: user.UserID,
                 // Fill with dummy/default values or from user if available
                 DateOfBirth: new Date('1990-01-01'),
-                Phone: '',
-                Address: '',
-                EmploymentStatus: 'Regular',
-                HireDate: new Date(),
-                Position: '',
-                EmployeeType: 'Regular',
+                contactInfo: {
+                    create: {
+                        Phone: '',
+                        PresentAddress: '',
+                        EmergencyContactName: '',
+                    }
+                },
+                employmentDetails: {
+                    create: {
+                        EmploymentStatus: 'Regular',
+                        HireDate: new Date(),
+                        Position: '',
+                        EmployeeType: 'Regular',
+                    }
+                }
             },
         });
 
