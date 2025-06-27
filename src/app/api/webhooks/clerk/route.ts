@@ -163,6 +163,13 @@ export async function POST(req: Request) {
         const { id, email_addresses, first_name, last_name, image_url } = evt.data as UserCreatedEvent;
         const email = email_addresses[0]?.email_address;
 
+        console.log('Processing user.created webhook:', {
+          clerkId: id,
+          email,
+          firstName: first_name,
+          lastName: last_name
+        });
+
         if (!email) {
           console.error('No email found in webhook data:', evt.data);
           return NextResponse.json(
@@ -172,45 +179,154 @@ export async function POST(req: Request) {
         }
 
         try {
-          // Log the user creation
-          await logActivity(
-            id,
-            'user_created',
-            'User',
-            `New user created: ${first_name} ${last_name} (${email})`,
-            ipAddress
-          );
+          let userData = null;
+          let findError = null;
+          let retryCount = 0;
+          const maxRetries = 3;
 
-          // Update user status and photo in Supabase
-          const { error: updateError } = await supabaseAdmin
-            .from('User')
-            .update({ 
-              Status: 'Active',
-              DateModified: new Date().toISOString(),
-              LastLogin: new Date().toISOString(),
-              Photo: image_url || null
-            })
-            .eq('UserID', id);
+          // Retry loop for finding the user
+          while (retryCount < maxRetries && (!userData || findError)) {
+            if (retryCount > 0) {
+              console.log(`Retry ${retryCount} - Waiting before searching for user...`);
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+            }
 
-          if (updateError) {
-            console.error('Error updating user status in Supabase:', updateError);
-            return NextResponse.json(
-              { error: 'Failed to update user status' },
-              { status: 500 }
+            // First, try to find user by ClerkID (existing user)
+            const result = await supabaseAdmin
+              .from('User')
+              .select('UserID, FirstName, LastName, Status, ClerkID, PasswordHash')
+              .eq('ClerkID', id)
+              .single();
+
+            if (result.error && result.error.code === 'PGRST116') { // No rows returned
+              // If not found by ClerkID, try to find by email
+              const emailResult = await supabaseAdmin
+                .from('User')
+                .select('UserID, FirstName, LastName, Status, ClerkID, PasswordHash')
+                .eq('Email', email)
+                .single();
+
+              userData = emailResult.data;
+              findError = emailResult.error;
+            } else {
+              userData = result.data;
+              findError = result.error;
+            }
+
+            console.log(`Search attempt ${retryCount + 1} result:`, { userData, findError });
+            retryCount++;
+          }
+
+          let userIdForLogging = id;
+          
+          if (userData) {
+            // Retry loop for updating the user
+            retryCount = 0;
+            let updateResult = null;
+            let updateError = null;
+
+            while (retryCount < maxRetries && (!updateResult || updateError)) {
+              if (retryCount > 0) {
+                console.log(`Retry ${retryCount} - Waiting before updating user...`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+              }
+
+              const result = await supabaseAdmin
+                .from('User')
+                .update({ 
+                  ClerkID: id,
+                  Status: 'Active',
+                  DateModified: new Date().toISOString(),
+                  LastLogin: new Date().toISOString(),
+                  Photo: image_url || null,
+                  PasswordHash: 'CLERK_MANAGED'
+                })
+                .eq('UserID', userData.UserID)
+                .select();
+
+              updateResult = result.data;
+              updateError = result.error;
+
+              console.log(`Update attempt ${retryCount + 1} result:`, { updateResult, updateError });
+              retryCount++;
+            }
+
+            if (updateError || !updateResult) {
+              console.error('Error updating user with ClerkID after retries:', updateError);
+              await logActivity(
+                userData.UserID,
+                'user_creation_error',
+                'User',
+                `Failed to update user ${userData.UserID} with ClerkID after ${maxRetries} attempts`,
+                ipAddress
+              );
+              return NextResponse.json(
+                { error: 'Failed to update user with ClerkID' },
+                { status: 500 }
+              );
+            }
+
+            userIdForLogging = userData.UserID;
+
+            // Log the user activation
+            await logActivity(
+              userData.UserID,
+              'user_activated',
+              'User',
+              `User ${userData.FirstName} ${userData.LastName} (${email}) accepted invitation and activated their account. ClerkID: ${id}`,
+              ipAddress
+            );
+          } else {
+            // This is a direct signup (not through invitation) - create a new user record
+            console.log(`Direct signup detected for ${email} - creating new user record`);
+            
+            // Generate a unique UserID
+            const { generateUserId } = await import('@/lib/generateUserId');
+            const userId = await generateUserId(new Date());
+
+            const { data: newUser, error: createError } = await supabaseAdmin
+              .from('User')
+              .insert({
+                UserID: userId,
+                FirstName: first_name || '',
+                LastName: last_name || '',
+                Email: email,
+                Status: 'Active',
+                ClerkID: id,
+                PasswordHash: 'CLERK_MANAGED',
+                Photo: image_url || null,
+                DateModified: new Date().toISOString(),
+                LastLogin: new Date().toISOString()
+              })
+              .select()
+              .single();
+
+            if (createError) {
+              console.error('Error creating new user record:', createError);
+              await logActivity(
+                id,
+                'user_creation_error',
+                'User',
+                `Failed to create user record for direct signup ${email}`,
+                ipAddress
+              );
+              return NextResponse.json(
+                { error: 'Failed to create user record' },
+                { status: 500 }
+              );
+            }
+
+            await logActivity(
+              userId,
+              'user_created',
+              'User',
+              `Created new user record for direct signup ${first_name} ${last_name} (${email})`,
+              ipAddress
             );
           }
 
-          // Log the user activation
-          await logActivity(
-            id,
-            'user_activated',
-            'User',
-            `User ${first_name} ${last_name} (${email}) accepted invitation and activated their account`,
-            ipAddress
-          );
-
           // Send welcome email only if RESEND_API_KEY is configured
-          if (process.env.RESEND_API_KEY) {
+          if (process.env.RESEND_API_KEY && userData) {
             const resend = new Resend(process.env.RESEND_API_KEY);
             try {
               await resend.emails.send({
@@ -220,7 +336,7 @@ export async function POST(req: Request) {
                 html: `
                   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1>Welcome to HRMS!</h1>
-                    <p>Dear ${first_name} ${last_name},</p>
+                    <p>Dear ${userData.FirstName} ${userData.LastName},</p>
                     <p>Your account has been successfully activated. You can now log in to the HRMS system.</p>
                     <p>Best regards,<br>HRMS Team</p>
                   </div>
@@ -231,7 +347,7 @@ export async function POST(req: Request) {
               // Don't fail the webhook if email fails
             }
           } else {
-            console.warn('Resend API key not configured, skipping welcome email');
+            console.warn('Resend API key not configured or user data not found, skipping welcome email');
           }
 
           return NextResponse.json({ success: true });
@@ -252,6 +368,18 @@ export async function POST(req: Request) {
         const email = email_addresses[0]?.email_address;
 
         try {
+          // Find the user by ClerkID first
+          const { data: userData, error: findError } = await supabaseAdmin
+            .from('User')
+            .select('UserID')
+            .eq('ClerkID', id)
+            .single();
+
+          if (findError || !userData) {
+            console.warn(`User not found for ClerkID ${id} during update`);
+            return NextResponse.json({ success: true }); // Don't fail webhook for missing user
+          }
+
           // Update user data in Supabase, including clearing password hash since Clerk handles auth
           const { error: updateError } = await supabaseAdmin
             .from('User')
@@ -260,7 +388,7 @@ export async function POST(req: Request) {
               Photo: image_url || null,
               PasswordHash: 'CLERK_MANAGED' // Indicate that password is managed by Clerk
             })
-            .eq('UserID', id);
+            .eq('ClerkID', id);
 
           if (updateError) {
             console.error('Error updating user data in Supabase:', updateError);
@@ -272,7 +400,7 @@ export async function POST(req: Request) {
 
           // Log the user update
           await logActivity(
-            id,
+            userData.UserID,
             'user_updated',
             'User',
             `User profile updated: ${first_name} ${last_name} (${email})`,
@@ -295,8 +423,20 @@ export async function POST(req: Request) {
       case 'user.deleted': {
         const { id } = evt.data as { id: string };
         try {
+          // Find the user by ClerkID first
+          const { data: userData, error: findError } = await supabaseAdmin
+            .from('User')
+            .select('UserID')
+            .eq('ClerkID', id)
+            .single();
+
+          if (findError || !userData) {
+            console.warn(`User not found for ClerkID ${id} during deletion`);
+            return NextResponse.json({ success: true }); // Don't fail webhook for missing user
+          }
+
           await logActivity(
-            id,
+            userData.UserID,
             'user_deleted',
             'User',
             'User account deleted',
@@ -311,7 +451,7 @@ export async function POST(req: Request) {
               DateModified: new Date().toISOString(),
               isDeleted: true
             })
-            .eq('UserID', id);
+            .eq('ClerkID', id);
 
           if (updateError) {
             console.error('Error updating user status in Supabase:', updateError);
@@ -337,8 +477,20 @@ export async function POST(req: Request) {
       case 'session.created': {
         const { user_id } = evt.data as SessionCreatedEvent;
         try {
+          // Find the user by ClerkID
+          const { data: userData, error: findError } = await supabaseAdmin
+            .from('User')
+            .select('UserID')
+            .eq('ClerkID', user_id)
+            .single();
+
+          if (findError || !userData) {
+            console.warn(`User not found for ClerkID ${user_id} during session creation`);
+            return NextResponse.json({ success: true }); // Don't fail webhook for missing user
+          }
+
           await logActivity(
-            user_id,
+            userData.UserID,
             'session_created',
             'User',
             'User session created',
@@ -351,7 +503,7 @@ export async function POST(req: Request) {
             .update({ 
               LastLogin: new Date().toISOString()
             })
-            .eq('UserID', user_id);
+            .eq('ClerkID', user_id);
 
           if (updateError) {
             console.error('Error updating last login time:', updateError);
@@ -377,8 +529,20 @@ export async function POST(req: Request) {
       case 'session.ended': {
         const { user_id } = evt.data as SessionEndedEvent;
         try {
+          // Find the user by ClerkID
+          const { data: userData, error: findError } = await supabaseAdmin
+            .from('User')
+            .select('UserID')
+            .eq('ClerkID', user_id)
+            .single();
+
+          if (findError || !userData) {
+            console.warn(`User not found for ClerkID ${user_id} during session end`);
+            return NextResponse.json({ success: true }); // Don't fail webhook for missing user
+          }
+
           await logActivity(
-            user_id,
+            userData.UserID,
             'session_ended',
             'User',
             'User session ended',
@@ -423,14 +587,110 @@ export async function POST(req: Request) {
       case 'invitation.accepted': {
         const data = evt.data as unknown as InvitationAcceptedEvent;
         const { id, email_address, user_id } = data;
+
+        console.log('Processing invitation.accepted webhook:', {
+          invitationId: id,
+          email: email_address,
+          clerkUserId: user_id
+        });
+
         try {
+          let userData = null;
+          let findError = null;
+          let retryCount = 0;
+          const maxRetries = 3;
+
+          // Retry loop for finding the user
+          while (retryCount < maxRetries && (!userData || findError)) {
+            if (retryCount > 0) {
+              console.log(`Retry ${retryCount} - Waiting before searching for user...`);
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+            }
+
+            // Find the user by email address and update with ClerkID
+            const result = await supabaseAdmin
+              .from('User')
+              .select('UserID, FirstName, LastName, Status, ClerkID, PasswordHash')
+              .eq('Email', email_address)
+              .eq('Status', 'Invited')
+              .single();
+
+            userData = result.data;
+            findError = result.error;
+
+            console.log(`Search attempt ${retryCount + 1} result:`, { userData, findError });
+            retryCount++;
+          }
+
+          if (findError || !userData) {
+            console.error('Error finding invited user by email after retries:', findError);
+            await logActivity(
+              user_id,
+              'invitation_accepted_error',
+              'User',
+              `Failed to find invited user with email ${email_address} after ${maxRetries} attempts`,
+              ipAddress
+            );
+            return NextResponse.json(
+              { error: 'User not found or not in invited status' },
+              { status: 404 }
+            );
+          }
+
+          // Retry loop for updating the user
+          retryCount = 0;
+          let updateResult = null;
+          let updateError = null;
+
+          while (retryCount < maxRetries && (!updateResult || updateError)) {
+            if (retryCount > 0) {
+              console.log(`Retry ${retryCount} - Waiting before updating user...`);
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+            }
+
+            const result = await supabaseAdmin
+              .from('User')
+              .update({
+                ClerkID: user_id,
+                Status: 'Active',
+                DateModified: new Date().toISOString(),
+                PasswordHash: 'CLERK_MANAGED'
+              })
+              .eq('UserID', userData.UserID)
+              .select();
+
+            updateResult = result.data;
+            updateError = result.error;
+
+            console.log(`Update attempt ${retryCount + 1} result:`, { updateResult, updateError });
+            retryCount++;
+          }
+
+          if (updateError || !updateResult) {
+            console.error('Error updating user with ClerkID after retries:', updateError);
+            await logActivity(
+              user_id,
+              'invitation_accepted_error',
+              'User',
+              `Failed to update user ${userData.UserID} with ClerkID after ${maxRetries} attempts`,
+              ipAddress
+            );
+            return NextResponse.json(
+              { error: 'Failed to update user with ClerkID' },
+              { status: 500 }
+            );
+          }
+
           await logActivity(
-            user_id,
+            userData.UserID,
             'invitation_accepted',
             'User',
-            `Invitation accepted by ${email_address}`,
+            `Invitation accepted by ${userData.FirstName} ${userData.LastName} (${email_address}). ClerkID ${user_id} assigned and user activated.`,
             ipAddress
           );
+
+          console.log(`Successfully processed invitation acceptance for user ${userData.UserID}, assigned ClerkID: ${user_id}`);
+          
           return NextResponse.json({ success: true });
         } catch (error) {
           console.error('Error processing invitation.accepted webhook:', error);

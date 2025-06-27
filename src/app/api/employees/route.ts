@@ -94,9 +94,8 @@ export async function POST(request: Request) {
 
     const data = await request.json();
     
-    // Validate required fields
+    // Validate required fields (excluding EmployeeID since we'll generate it)
     const requiredFields = [
-      'EmployeeID',
       'FirstName',
       'LastName',
       'DateOfBirth',
@@ -113,11 +112,32 @@ export async function POST(request: Request) {
       }
     }
 
+    // Generate a unique Employee ID on the server side to prevent race conditions
+    let employeeId = data.EmployeeID;
+    
+    // If no Employee ID provided or if it already exists, generate a new one
+    if (!employeeId) {
+      employeeId = await generateUniqueEmployeeId();
+    } else {
+      // Check if the provided Employee ID already exists
+      const { data: existingEmployee } = await supabaseAdmin
+        .from('Employee')
+        .select('EmployeeID')
+        .eq('EmployeeID', employeeId)
+        .single();
+      
+      if (existingEmployee) {
+        // Employee ID already exists, generate a new one
+        employeeId = await generateUniqueEmployeeId();
+        console.log(`Employee ID ${data.EmployeeID} already exists, generated new ID: ${employeeId}`);
+      }
+    }
+
     // Start a transaction by creating the main employee record first
     const { data: newEmployee, error: employeeError } = await supabaseAdmin
       .from('Employee')
       .insert([{
-        EmployeeID: data.EmployeeID,
+        EmployeeID: employeeId,
         UserID: data.UserID || null,
         LastName: data.LastName,
         FirstName: data.FirstName,
@@ -152,7 +172,7 @@ export async function POST(request: Request) {
       const { error: employmentError } = await supabaseAdmin
         .from('EmploymentDetail')
         .insert([{
-          employeeId: data.EmployeeID,
+          employeeId: employeeId,
           EmploymentStatus: data.EmploymentStatus || 'Regular',
           HireDate: data.HireDate,
           ResignationDate: data.ResignationDate || null,
@@ -169,7 +189,7 @@ export async function POST(request: Request) {
         await supabaseAdmin
           .from('Employee')
           .delete()
-          .eq('EmployeeID', data.EmployeeID);
+          .eq('EmployeeID', employeeId);
         return NextResponse.json(
           { error: `Failed to create employment detail: ${employmentError.message}` },
           { status: 500 }
@@ -182,7 +202,7 @@ export async function POST(request: Request) {
       const { error: contactError } = await supabaseAdmin
         .from('ContactInfo')
         .insert([{
-          employeeId: data.EmployeeID,
+          employeeId: employeeId,
           Email: data.Email || null,
           Phone: data.Phone || null,
           PresentAddress: data.PresentAddress || null,
@@ -199,11 +219,11 @@ export async function POST(request: Request) {
         await supabaseAdmin
           .from('EmploymentDetail')
           .delete()
-          .eq('employeeId', data.EmployeeID);
+          .eq('employeeId', employeeId);
         await supabaseAdmin
           .from('Employee')
           .delete()
-          .eq('EmployeeID', data.EmployeeID);
+          .eq('EmployeeID', employeeId);
         return NextResponse.json(
           { error: `Failed to create contact info: ${contactError.message}` },
           { status: 500 }
@@ -216,7 +236,7 @@ export async function POST(request: Request) {
       const { error: govIdError } = await supabaseAdmin
         .from('GovernmentID')
         .insert([{
-          employeeId: data.EmployeeID,
+          employeeId: employeeId,
           SSSNumber: data.SSSNumber || null,
           TINNumber: data.TINNumber || null,
           PhilHealthNumber: data.PhilHealthNumber || null,
@@ -234,15 +254,15 @@ export async function POST(request: Request) {
         await supabaseAdmin
           .from('ContactInfo')
           .delete()
-          .eq('employeeId', data.EmployeeID);
+          .eq('employeeId', employeeId);
         await supabaseAdmin
           .from('EmploymentDetail')
           .delete()
-          .eq('employeeId', data.EmployeeID);
+          .eq('employeeId', employeeId);
         await supabaseAdmin
           .from('Employee')
           .delete()
-          .eq('EmployeeID', data.EmployeeID);
+          .eq('EmployeeID', employeeId);
         return NextResponse.json(
           { error: `Failed to create government ID: ${govIdError.message}` },
           { status: 500 }
@@ -265,6 +285,60 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to generate a unique Employee ID
+async function generateUniqueEmployeeId(): Promise<string> {
+  const currentYear = new Date().getFullYear();
+  const usedNumbers = new Set<number>();
+
+  // Get all employee IDs for the current year
+  const { data: existingEmployees } = await supabaseAdmin
+    .from('Employee')
+    .select('EmployeeID')
+    .like('EmployeeID', `${currentYear}-%`);
+
+  // Process Employee IDs (format: YYYY-NNNN)
+  if (existingEmployees) {
+    existingEmployees.forEach((employee: { EmployeeID: string }) => {
+      const match = employee.EmployeeID.match(new RegExp(`^${currentYear}-(\\d{4})$`));
+      if (match) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    });
+  }
+
+  // Get all existing users to check for UserID conflicts
+  const { data: existingUsers } = await supabaseAdmin
+    .from('User')
+    .select('UserID');
+
+  // Process User IDs (multiple formats that could conflict)
+  if (existingUsers) {
+    existingUsers.forEach((user: { UserID: string }) => {
+      const userId = user.UserID;
+
+      // Pattern 1: YYYY-NNNN (same as employee format)
+      const match1 = userId.match(new RegExp(`^${currentYear}-(\\d{4})$`));
+      if (match1) {
+        usedNumbers.add(parseInt(match1[1], 10));
+      }
+
+      // Pattern 2: YYYYNNNN
+      const match2 = userId.match(new RegExp(`^${currentYear}(\\d{4})$`));
+      if (match2) {
+        usedNumbers.add(parseInt(match2[1], 10));
+      }
+    });
+  }
+
+  // Find the next available number starting from 1
+  let nextNumber = 1;
+  while (usedNumbers.has(nextNumber)) {
+    nextNumber++;
+  }
+
+  return `${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
 }
 
 export async function PATCH(request: Request) {

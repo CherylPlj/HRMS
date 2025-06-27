@@ -49,10 +49,10 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Get user details including ClerkID before deletion
+    // Get user details including ClerkID and EmployeeID before deletion
     const { data: userData, error: userFetchError } = await supabase
       .from('User')
-      .select('FirstName, LastName, Email, ClerkID')
+      .select('FirstName, LastName, Email, ClerkID, EmployeeID')
       .eq('UserID', userId)
       .single();
 
@@ -72,48 +72,93 @@ export async function DELETE(request: Request) {
     }
 
     // Delete from Clerk first if ClerkID exists
-    if (userData.ClerkID) {
+    let clerkDeleted = false;
+    if (userData.ClerkID && userData.ClerkID.trim() !== '') {
       try {
-        await clerk.users.deleteUser(userData.ClerkID);
-        console.log(`Successfully deleted Clerk user: ${userData.ClerkID}`);
+        // First verify if the Clerk user exists
+        try {
+          const clerkUser = await clerk.users.getUser(userData.ClerkID);
+          if (clerkUser) {
+            await clerk.users.deleteUser(userData.ClerkID);
+            console.log(`Successfully deleted Clerk user: ${userData.ClerkID}`);
+            clerkDeleted = true;
+          } else {
+            console.warn(`Clerk user not found for ClerkID: ${userData.ClerkID}`);
+          }
+        } catch (clerkGetError) {
+          console.warn(`Error getting Clerk user (may not exist): ${userData.ClerkID}`, clerkGetError);
+        }
       } catch (clerkError) {
         console.error('Error deleting Clerk user:', clerkError);
-        // Continue with Supabase deletion even if Clerk deletion fails
-        // This ensures we don't leave orphaned records
+        // Continue with database deletion even if Clerk deletion fails
+      }
+    } else {
+      console.warn(`No valid ClerkID found for user ${userId} (${userData.Email})`);
+    }
+
+    // If user has an associated employee record, soft delete it
+    let employeeSoftDeleted = false;
+    if (userData.EmployeeID) {
+      try {
+        const { error: employeeUpdateError } = await supabase
+          .from('Employee')
+          .update({
+            isDeleted: true,
+            DateModified: new Date().toISOString(),
+            updatedBy: createdBy
+          })
+          .eq('EmployeeID', userData.EmployeeID);
+
+        if (employeeUpdateError) {
+          console.error('Error soft deleting employee:', employeeUpdateError);
+        } else {
+          employeeSoftDeleted = true;
+          console.log(`Successfully soft deleted employee: ${userData.EmployeeID}`);
+        }
+      } catch (employeeError) {
+        console.error('Error soft deleting employee:', employeeError);
       }
     }
 
-    // Soft delete user in Supabase
-    const { error: updateError } = await supabase
+    // Hard delete user from User table
+    const { error: deleteError } = await supabase
       .from('User')
-      .update({
-        isDeleted: true,
-        DateModified: new Date().toISOString(),
-        updatedBy: createdBy
-      })
+      .delete()
       .eq('UserID', userId);
 
-    if (updateError) {
-      console.error('Error updating user:', updateError);
+    if (deleteError) {
+      console.error('Error hard deleting user:', deleteError);
       return NextResponse.json(
-        { error: 'Failed to mark user as deleted' },
+        { error: 'Failed to delete user from database' },
         { status: 500 }
       );
     }
 
     // Log the activity
+    const activityDetails = [
+      `Hard deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})`,
+      clerkDeleted ? 'Clerk account deleted' : 'No Clerk account found',
+      employeeSoftDeleted ? `Employee record soft deleted (${userData.EmployeeID})` : 'No employee record found'
+    ].join(' - ');
+
     await logActivity(
       createdBy,
-      'user_deleted',
+      'user_hard_deleted',
       'User',
-      `Deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})${userData.ClerkID ? ' - Clerk account also deleted' : ' - No Clerk account found'}`,
+      activityDetails,
       request.headers.get('x-forwarded-for') || 'system'
     );
 
     return NextResponse.json({ 
       message: 'User account deleted successfully',
       userId,
-      clerkDeleted: !!userData.ClerkID
+      clerkDeleted,
+      employeeSoftDeleted,
+      details: {
+        userHardDeleted: true,
+        clerkDeleted,
+        employeeSoftDeleted
+      }
     });
   } catch (error: unknown) {
     console.error('Error deleting user account:', error);

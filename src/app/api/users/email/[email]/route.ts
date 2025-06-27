@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { generateUserId } from '@/lib/generateUserId';
 
 export async function GET(
     request: NextRequest,
@@ -42,15 +43,8 @@ export async function GET(
             const firstName = nameFromEmail.split('.')[0];
             const lastName = nameFromEmail.split('.')[1] || nameFromEmail;
 
-            // Generate a unique UserID
-            const year = new Date().getFullYear();
-            const sequence = await prisma.userIDSequence.upsert({
-                where: { year },
-                update: { lastCount: { increment: 1 } },
-                create: { year, lastCount: 1 }
-            });
-
-            const userID = `${year}${sequence.lastCount.toString().padStart(4, '0')}`;
+            // Generate a unique UserID using centralized function
+            const userID = await generateUserId(new Date());
 
             // Create new user
             user = await prisma.user.create({

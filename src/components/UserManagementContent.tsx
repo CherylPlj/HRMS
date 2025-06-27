@@ -16,6 +16,7 @@ interface UserRecord {
   Designation: string | null;
   DepartmentID: number | null;
   UserID: string | null;
+  Photo: string | null;
   Department: {
     DepartmentName: string;
   }[] | null;
@@ -25,6 +26,7 @@ interface UserRecord {
     UserID: string;
     Status: string;
     LastLogin: string | null;
+    Photo: string | null;
     Role: {
       role: {
         name: string;
@@ -61,6 +63,13 @@ export default function UserManagementContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<UserRecord | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; alt: string } | null>(null);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  
+  // Add state for role selection modal
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<UserRecord | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>('');
 
   const fetchData = async () => {
     try {
@@ -110,6 +119,7 @@ export default function UserManagementContent() {
             ExtensionName,
             UserID,
             DepartmentID,
+            Photo,
             employmentDetails:EmploymentDetail(
               Position,
               Designation,
@@ -135,6 +145,7 @@ export default function UserManagementContent() {
             FirstName,
             LastName,
             Email,
+            Photo,
             Status,
             LastLogin
           `)
@@ -154,6 +165,7 @@ export default function UserManagementContent() {
             const roles = roleMap.get(userAccount.UserID) || [];
             userWithRoles = [{
               ...userAccount,
+              Photo: userAccount.Photo,
               Role: roles
             }];
             processedUserIds.add(userAccount.UserID);
@@ -175,6 +187,7 @@ export default function UserManagementContent() {
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
+            Photo: employee.Photo || (userAccount?.Photo || null),
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
@@ -201,11 +214,13 @@ export default function UserManagementContent() {
                 Designation: 'Student',
                 DepartmentID: null,
                 UserID: user.UserID,
+                Photo: user.Photo,
                 Department: null,
                 EmploymentStatus: null,
                 HireDate: null,
                 User: [{
                   ...user,
+                  Photo: user.Photo,
                   Role: roles
                 }],
                 isUserOnly: true
@@ -228,6 +243,7 @@ export default function UserManagementContent() {
             ExtensionName,
             UserID,
             DepartmentID,
+            Photo,
             employmentDetails:EmploymentDetail(
               Position,
               Designation,
@@ -253,6 +269,7 @@ export default function UserManagementContent() {
             FirstName,
             LastName,
             Email,
+            Photo,
             Status,
             LastLogin
           `)
@@ -272,6 +289,7 @@ export default function UserManagementContent() {
             const roles = roleMap.get(userAccount.UserID) || [];
             userWithRoles = [{
               ...userAccount,
+              Photo: userAccount.Photo,
               Role: roles
             }];
             processedUserIds.add(userAccount.UserID);
@@ -293,6 +311,7 @@ export default function UserManagementContent() {
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
+            Photo: employee.Photo || (userAccount?.Photo || null),
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
@@ -319,11 +338,13 @@ export default function UserManagementContent() {
                 Designation: 'Faculty',
                 DepartmentID: null,
                 UserID: user.UserID,
+                Photo: user.Photo,
                 Department: null,
                 EmploymentStatus: null,
                 HireDate: null,
                 User: [{
                   ...user,
+                  Photo: user.Photo,
                   Role: roles
                 }],
                 isUserOnly: true
@@ -346,6 +367,7 @@ export default function UserManagementContent() {
             ExtensionName,
             UserID,
             DepartmentID,
+            Photo,
             employmentDetails:EmploymentDetail(
               Position,
               Designation,
@@ -372,6 +394,7 @@ export default function UserManagementContent() {
             FirstName,
             LastName,
             Email,
+            Photo,
             Status,
             LastLogin
           `)
@@ -380,9 +403,10 @@ export default function UserManagementContent() {
         if (userError) throw userError;
 
         const userRecordsList: UserRecord[] = [];
+        const processedEmployeeIds = new Set<string>();
         const processedUserIds = new Set<string>();
 
-        // Process employees only (no faculty/teacher/student positions)
+        // Process employees - these are employee records (may or may not have user accounts)
         for (const employee of employeeData || []) {
           const userAccount = userData?.find(u => u.EmployeeID === employee.EmployeeID);
           
@@ -391,6 +415,7 @@ export default function UserManagementContent() {
             const roles = roleMap.get(userAccount.UserID) || [];
             userWithRoles = [{
               ...userAccount,
+              Photo: userAccount.Photo,
               Role: roles
             }];
             processedUserIds.add(userAccount.UserID);
@@ -412,48 +437,14 @@ export default function UserManagementContent() {
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
+            Photo: employee.Photo || (userAccount?.Photo || null),
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
             User: userWithRoles,
             isUserOnly: false
           });
-        }
-
-        // Add standalone users with employee-related roles (Admin, Registrar, Cashier)
-        for (const user of userData || []) {
-          if (!processedUserIds.has(user.UserID) && (!user.EmployeeID)) {
-            const roles = roleMap.get(user.UserID) || [];
-            const hasEmployeeRole = roles.some((r: any) => 
-              r.role?.name === 'Admin' || 
-              r.role?.name === 'Registrar' || 
-              r.role?.name === 'Cashier'
-            );
-            
-            if (hasEmployeeRole) {
-              userRecordsList.push({
-                EmployeeID: null,
-                FirstName: user.FirstName,
-                LastName: user.LastName,
-                MiddleName: null,
-                ExtensionName: null,
-                Email: user.Email,
-                Position: null,
-                Designation: null,
-                DepartmentID: null,
-                UserID: user.UserID,
-                Department: null,
-                EmploymentStatus: null,
-                HireDate: null,
-                User: [{
-                  ...user,
-                  Role: roles
-                }],
-                isUserOnly: true
-              });
-              processedUserIds.add(user.UserID);
-            }
-          }
+          processedEmployeeIds.add(employee.EmployeeID);
         }
 
         setUserRecords(userRecordsList);
@@ -469,6 +460,7 @@ export default function UserManagementContent() {
             ExtensionName,
             UserID,
             DepartmentID,
+            Photo,
             employmentDetails:EmploymentDetail(
               Position,
               Designation,
@@ -495,6 +487,7 @@ export default function UserManagementContent() {
             FirstName,
             LastName,
             Email,
+            Photo,
             Status,
             LastLogin
           `)
@@ -506,7 +499,7 @@ export default function UserManagementContent() {
         const processedEmployeeIds = new Set<string>();
         const processedUserIds = new Set<string>();
 
-        // Process employees
+        // Process employees - these are employee records (may or may not have user accounts)
         for (const employee of employeeData || []) {
           const userAccount = userData?.find(u => u.EmployeeID === employee.EmployeeID);
           
@@ -515,9 +508,9 @@ export default function UserManagementContent() {
             const roles = roleMap.get(userAccount.UserID) || [];
             userWithRoles = [{
               ...userAccount,
+              Photo: userAccount.Photo,
               Role: roles
             }];
-            processedEmployeeIds.add(userAccount.EmployeeID || '');
             processedUserIds.add(userAccount.UserID);
           }
 
@@ -537,22 +530,22 @@ export default function UserManagementContent() {
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
+            Photo: employee.Photo || (userAccount?.Photo || null),
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
             User: userWithRoles,
             isUserOnly: false
           });
+          processedEmployeeIds.add(employee.EmployeeID);
         }
 
-        // Add standalone users (users without employee records)
+        // Add standalone users (users not linked to employee records)
         for (const user of userData || []) {
-          // Only add if this user hasn't already been processed and either has no EmployeeID or the EmployeeID doesn't exist in employees
-          if (!processedUserIds.has(user.UserID) && (!user.EmployeeID || !processedEmployeeIds.has(user.EmployeeID))) {
+          if (!processedUserIds.has(user.UserID) && (!user.EmployeeID)) {
             const roles = roleMap.get(user.UserID) || [];
-            
             userRecordsList.push({
-              EmployeeID: user.EmployeeID,
+              EmployeeID: null,
               FirstName: user.FirstName,
               LastName: user.LastName,
               MiddleName: null,
@@ -562,43 +555,60 @@ export default function UserManagementContent() {
               Designation: null,
               DepartmentID: null,
               UserID: user.UserID,
+              Photo: user.Photo,
               Department: null,
               EmploymentStatus: null,
               HireDate: null,
               User: [{
                 ...user,
+                Photo: user.Photo,
                 Role: roles
               }],
               isUserOnly: true
             });
-            processedUserIds.add(user.UserID);
           }
         }
 
         setUserRecords(userRecordsList);
       }
+
     } catch (error) {
-      console.error('Error fetching data:', {
-        error,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        type: typeof error,
-        stringified: JSON.stringify(error, null, 2)
-      });
-      
-      let errorMessage = 'Failed to load data';
-      if (error instanceof Error) {
-        errorMessage = `Failed to load data: ${error.message}`;
-      } else if (typeof error === 'object' && error !== null) {
-        errorMessage = `Failed to load data: ${JSON.stringify(error)}`;
-      }
-      
+      console.error('Error fetching users:', error);
       setNotification({
         type: 'error',
-        message: errorMessage
+        message: error instanceof Error ? error.message : 'Failed to load user data'
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add photo click handler
+  const handlePhotoClick = (e: React.MouseEvent, photoUrl: string, alt: string) => {
+    e.stopPropagation();
+    if (!photoUrl) return;
+    setSelectedPhoto({ url: photoUrl, alt });
+    setIsPhotoModalOpen(true);
+  };
+
+  // Add modal close handler
+  const handleClosePhotoModal = () => {
+    setIsPhotoModalOpen(false);
+    setSelectedPhoto(null);
+  };
+
+  // Add function to show role selection modal
+  const showRoleSelectionModal = (userRecord: UserRecord) => {
+    setSelectedUserForRole(userRecord);
+    setSelectedRole(''); // Reset selection
+    setShowRoleModal(true);
+  };
+
+  // Add function to handle role selection and account creation
+  const handleRoleSelection = () => {
+    if (selectedUserForRole && selectedRole) {
+      setShowRoleModal(false);
+      handleCreateAccount(selectedUserForRole, selectedRole);
     }
   };
 
@@ -606,17 +616,103 @@ export default function UserManagementContent() {
     fetchData();
   }, [viewType]);
 
-  const handleCreateAccount = async (userRecord: UserRecord) => {
+  const handleCreateAccount = async (userRecord: UserRecord, selectedRole?: string) => {
     try {
-      // Logic to create account for employee
+      if (!user) {
+        setNotification({
+          type: 'error',
+          message: 'Not authenticated. Please sign in again.'
+        });
+        return;
+      }
+
+      // Validate required data
+      if (!userRecord.FirstName || !userRecord.LastName || !userRecord.Email) {
+        setNotification({
+          type: 'error',
+          message: 'Missing required information (name or email) to create account.'
+        });
+        return;
+      }
+
+      // Determine role based on selected role or designation
+      let role = 'Faculty';
+      if (selectedRole) {
+        // Use the role selected from the modal
+        role = selectedRole;
+      } else if (userRecord.Designation) {
+        // Fallback to designation-based role mapping
+        const designation = userRecord.Designation.toLowerCase();
+        if (designation === 'faculty') {
+          role = 'Faculty';
+        } else if (designation === 'admin' || designation === 'admin_officer') {
+          role = 'Admin';
+        } else if (designation === 'registrar') {
+          role = 'Registrar';
+        } else if (designation === 'cashier') {
+          role = 'Cashier';
+        } else if (designation === 'student') {
+          role = 'Student';
+        } else {
+          role = 'Faculty'; // Default for unknown designations
+        }
+      }
+
+      // Prepare faculty data if the user has employment details
+      let facultyData = null;
+      if (userRecord.Position || userRecord.DepartmentID) {
+        facultyData = {
+          Position: userRecord.Position || 'Not specified',
+          DepartmentId: userRecord.DepartmentID || null,
+          EmploymentStatus: userRecord.EmploymentStatus || 'Regular',
+          HireDate: userRecord.HireDate || new Date().toISOString().split('T')[0]
+        };
+      }
+
       setNotification({
         type: 'info',
-        message: 'Create account functionality will be implemented soon.'
+        message: 'Creating account...'
       });
+
+      // Create user account using the existing API
+      const response = await fetch('/api/createUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: userRecord.FirstName,
+          lastName: userRecord.LastName,
+          email: userRecord.Email,
+          role: role.toLowerCase(),
+          createdBy: user.id, // Current user's Clerk ID
+          facultyData: facultyData,
+          employeeId: userRecord.EmployeeID // Pass the employee ID to link them
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create account');
+      }
+
+      // Show success message for account creation
+      const message = `Account created successfully for ${userRecord.FirstName} ${userRecord.LastName}. An invitation email has been sent.`;
+
+      setNotification({
+        type: 'success',
+        message: message
+      });
+
+      // Refresh the data to show the new account status
+      await fetchData();
+
     } catch (error) {
+      console.error('Error creating account:', error);
       setNotification({
         type: 'error',
-        message: 'Failed to create account'
+        message: `Failed to create account: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
@@ -633,10 +729,30 @@ export default function UserManagementContent() {
       }
       
       const currentUserId = user.id;
-      const hasAccount = userRecord.User.length > 0;
 
-      if (hasAccount) {
-        // User has an account - delete both Clerk account and user record
+      if (userRecord.EmployeeID) {
+        // Employee record exists - delete both employee and account (if any)
+        const response = await fetch(`/api/employees/${userRecord.EmployeeID}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to delete employee and account');
+        }
+
+        setNotification({
+          type: 'success',
+          message: result.clerkDeleted 
+            ? 'Employee and account deleted successfully (employee soft-deleted, user hard-deleted, authentication account removed)'
+            : 'Employee record soft-deleted and user account hard-deleted successfully'
+        });
+      } else if (userRecord.User.length > 0) {
+        // User-only record (no employee) - delete just the user account
         const response = await fetch('/api/deleteUser', {
           method: 'DELETE',
           headers: {
@@ -657,35 +773,16 @@ export default function UserManagementContent() {
         setNotification({
           type: 'success',
           message: result.clerkDeleted 
-            ? 'Account deleted successfully (both system and authentication account removed)'
-            : 'Account deleted successfully (system account removed)'
+            ? 'User account hard-deleted successfully (both system and authentication account removed)'
+            : 'User account hard-deleted successfully (system account removed)'
         });
       } else {
-        // User doesn't have an account - just remove employee record
-        if (!userRecord.EmployeeID) {
-          setNotification({
-            type: 'error',
-            message: 'No employee record to remove'
-          });
-          return;
-        }
-
-        const response = await fetch(`/api/employees/${userRecord.EmployeeID}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || 'Failed to remove employee');
-        }
-
+        // Should not happen, but handle gracefully
         setNotification({
-          type: 'success',
-          message: 'Employee removed successfully'
+          type: 'error',
+          message: 'No record to delete found'
         });
+        return;
       }
 
       // Refresh data
@@ -695,7 +792,7 @@ export default function UserManagementContent() {
     } catch (error) {
       setNotification({
         type: 'error',
-        message: `Failed to ${userRecord.User.length > 0 ? 'delete account' : 'remove employee'}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
       // Close modal even on error so user can try again
       setShowDeleteModal(false);
@@ -948,29 +1045,8 @@ export default function UserManagementContent() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th 
-                      className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                      onClick={() => handleSort('id')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>ID</span>
-                        <div className="flex flex-col">
-                          <ChevronUp 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'id' && sortConfig.direction === 'asc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                          <ChevronDown 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'id' && sortConfig.direction === 'desc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                        </div>
-                      </div>
+                    <th className="w-16 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Photo
                     </th>
                     <th 
                       className="w-80 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
@@ -1087,8 +1163,31 @@ export default function UserManagementContent() {
                     
                     return (
                       <tr key={uniqueKey} className="hover:bg-gray-50">
-                        <td className="w-32 px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {displayId}
+                        <td className="w-16 px-6 py-4 whitespace-nowrap">
+                          <div 
+                            className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const photoUrl = userRecord.Photo || (hasAccount ? userRecord.User[0]?.Photo : null);
+                              if (photoUrl) {
+                                handlePhotoClick(e, photoUrl, fullName);
+                              }
+                            }}
+                          >
+                            {(userRecord.Photo || (hasAccount ? userRecord.User[0]?.Photo : null)) ? (
+                              <img 
+                                src={userRecord.Photo || userRecord.User[0]?.Photo || ''} 
+                                alt={fullName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="w-80 px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -1138,7 +1237,7 @@ export default function UserManagementContent() {
                           <div className="flex space-x-2">
                             {!hasAccount && (
                               <button
-                                onClick={() => handleCreateAccount(userRecord)}
+                                onClick={() => showRoleSelectionModal(userRecord)}
                                 className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
                                 title="Create Account"
                               >
@@ -1148,7 +1247,7 @@ export default function UserManagementContent() {
                             <button
                               onClick={() => confirmDelete(userRecord)}
                               className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                              title={hasAccount ? "Delete Account" : "Remove Employee/User"}
+                              title="Delete Employee and Account"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -1175,26 +1274,19 @@ export default function UserManagementContent() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {selectedRecord.User.length > 0 ? 'Confirm Account Deletion' : 'Confirm Employee/User Removal'}
+              Confirm Deletion
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              {selectedRecord.User.length > 0 ? (
-                <>
-                  Are you sure you want to delete the account for{' '}
-                  <span className="font-medium">
-                    {[selectedRecord.FirstName, selectedRecord.LastName].filter(Boolean).join(' ') || 'this user'}
-                  </span>
-                  ? This will delete both the authentication account and remove them from the system. This action cannot be undone.
-                </>
+              Are you sure you want to delete{' '}
+              <span className="font-medium">
+                {[selectedRecord.FirstName, selectedRecord.LastName].filter(Boolean).join(' ') || 'this user'}
+              </span>
+              {selectedRecord.EmployeeID ? (
+                <>? This will soft-delete their employee record and hard-delete their user account (including authentication account).{' '}</>
               ) : (
-                <>
-                  Are you sure you want to remove{' '}
-                  <span className="font-medium">
-                    {[selectedRecord.FirstName, selectedRecord.LastName].filter(Boolean).join(' ') || 'this user'}
-                  </span>
-                  {' '}from the system? This will remove their employee record. This action cannot be undone.
-                </>
+                <>? This will permanently delete their user account (including authentication account).{' '}</>
               )}
+              This action cannot be undone for the user account.
             </p>
             <div className="flex justify-end space-x-3">
               <button
@@ -1210,8 +1302,93 @@ export default function UserManagementContent() {
                 onClick={() => handleDeleteAccount(selectedRecord)}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
               >
-                {selectedRecord.User.length > 0 ? 'Delete Account' : 'Remove Employee'}
+                Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Selection Modal */}
+      {showRoleModal && selectedUserForRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Select Role for Account Creation
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Creating account for{' '}
+              <span className="font-medium">
+                {[selectedUserForRole.FirstName, selectedUserForRole.LastName].filter(Boolean).join(' ')}
+              </span>
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Role
+              </label>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-[#800000] focus:border-[#800000]"
+              >
+                <option value="">Choose a role...</option>
+                <option value="Faculty">Faculty</option>
+                <option value="Admin">Admin</option>
+                <option value="Cashier">Cashier</option>
+                <option value="Registrar">Registrar</option>
+              </select>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRoleModal(false);
+                  setSelectedUserForRole(null);
+                  setSelectedRole('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRoleSelection}
+                disabled={!selectedRole}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                  selectedRole 
+                    ? 'bg-[#800000] hover:bg-[#600000]' 
+                    : 'bg-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Modal */}
+      {isPhotoModalOpen && selectedPhoto && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
+          onClick={handleClosePhotoModal}
+        >
+          <div 
+            className="relative bg-white rounded-lg p-2 max-w-4xl max-h-[90vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 bg-white rounded-full p-1"
+              onClick={handleClosePhotoModal}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex items-center justify-center min-h-[200px]">
+              <img
+                src={selectedPhoto.url}
+                alt={selectedPhoto.alt}
+                className="max-w-full max-h-[85vh] object-contain"
+              />
             </div>
           </div>
         </div>

@@ -24,6 +24,8 @@ const publicRoutes = [
     "/api/ip",
     "/api/vacancies/public",
     "/api/candidates/public",
+    "/api/generate-employee-id",
+    "/api/generate-user-id",
     "/terms-of-use",
     "/privacy-statement"
 ];
@@ -50,6 +52,8 @@ const ignoredRoutes = [
     "/api/ip",
     "/api/vacancies/public",
     "/api/candidates/public",
+    "/api/generate-employee-id",
+    "/api/generate-user-id",
     "/terms-of-use",
     "/privacy-statement"
 ];

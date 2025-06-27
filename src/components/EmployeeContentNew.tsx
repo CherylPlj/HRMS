@@ -89,13 +89,7 @@ interface Education {
   honors?: string;
 }
 
-interface Eligibility {
-  type: string;
-  rating?: number;
-  licenseNumber?: string;
-  examDate?: Date;
-  validUntil?: Date;
-}
+
 
 interface EmploymentHistory {
   schoolName: string;
@@ -105,12 +99,7 @@ interface EmploymentHistory {
   reasonForLeaving?: string;
 }
 
-interface Training {
-    title: string;
-  hours: number;
-  conductedBy: string;
-  date: Date;
-}
+
 
 interface MedicalInfo {
   medicalNotes?: string;
@@ -168,9 +157,7 @@ interface EmployeeFormState {
   SalaryGrade: string;
 
   Education?: Education[];
-  Eligibility?: Eligibility[];
   EmploymentHistory?: EmploymentHistory[];
-  trainings?: Training[];
   MedicalInfo?: MedicalInfo;
 
   createdAt: Date | null;
@@ -237,9 +224,7 @@ const EmployeeContentNew = () => {
     SalaryGrade: '',
 
     Education: [],
-    Eligibility: [],
     EmploymentHistory: [],
-    trainings: [],
     MedicalInfo: {},
 
     createdAt: null,
@@ -301,9 +286,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     SalaryGrade: '',
 
     Education: [],
-    Eligibility: [],
     EmploymentHistory: [],
-    trainings: [],
     MedicalInfo: {},
 
     createdAt: null,
@@ -325,9 +308,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     { id: 'contact', label: 'Contact Information', icon: FaPhone },
     { id: 'family', label: 'Family Background', icon: FaUsers },
     { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
-    { id: 'civil', label: 'Civil Service', icon: FaBriefcase },
     { id: 'work', label: 'Work Experience', icon: FaBriefcase },
-    { id: 'training', label: 'Training Programs', icon: FaBook },
     { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
     { id: 'other', label: 'Other Information', icon: FaEllipsisH },
   ];
@@ -831,9 +812,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         EmployeeType: 'Regular',
         SalaryGrade: '',
         Education: [],
-        Eligibility: [],
         EmploymentHistory: [],
-        trainings: [],
         MedicalInfo: {},
         createdAt: null,
         updatedAt: null
@@ -1023,9 +1002,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       SalaryGrade: '',
 
       Education: [],
-      Eligibility: [],
       EmploymentHistory: [],
-      trainings: [],
       MedicalInfo: {},
 
       createdAt: null,
@@ -1088,9 +1065,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       SalaryGrade: employee.EmploymentDetail?.SalaryGrade || employee.SalaryGrade || '',
 
       Education: employee.Education || [],
-      Eligibility: employee.Eligibility || [],
       EmploymentHistory: employee.EmploymentHistory || [],
-                trainings: employee.trainings || [],
       MedicalInfo: employee.MedicalInfo || {},
 
       createdAt: employee.createdAt || null,
@@ -1504,46 +1479,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               </div>
             )}
 
-            {activeTab === 'civil' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Civil Service Eligibility</h3>
-                <div className="space-y-4">
-                  {selectedEmployee?.Eligibility?.map((elig: Eligibility, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                          <label className="block text-sm font-medium text-gray-600">Type</label>
-                          <p className="mt-1 text-sm text-gray-900">{elig.type || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600">Rating</label>
-                          <p className="mt-1 text-sm text-gray-900">{elig.rating || 'N/A'}</p>
-                    </div>
-                    <div>
-                          <label className="block text-sm font-medium text-gray-600">License Number</label>
-                          <p className="mt-1 text-sm text-gray-900">{elig.licenseNumber || 'N/A'}</p>
-                    </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Exam Date</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {elig.examDate ? new Date(elig.examDate).toLocaleDateString() : 'N/A'}
-                          </p>
-                  </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Valid Until</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {elig.validUntil ? new Date(elig.validUntil).toLocaleDateString() : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {(!selectedEmployee?.Eligibility || selectedEmployee?.Eligibility.length === 0) && (
-                    <p className="text-gray-500 italic">No eligibility records found.</p>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {activeTab === 'work' && (
               <div className="space-y-6">
@@ -1586,40 +1522,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               </div>
             )}
 
-            {activeTab === 'training' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Training Programs</h3>
-                <div className="space-y-4">
-                  {selectedEmployee?.trainings?.map((training: Training, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                          <label className="block text-sm font-medium text-gray-600">Title</label>
-                          <p className="mt-1 text-sm text-gray-900">{training.title || 'N/A'}</p>
-                      </div>
-                      <div>
-                          <label className="block text-sm font-medium text-gray-600">Hours</label>
-                          <p className="mt-1 text-sm text-gray-900">{training.hours || 'N/A'}</p>
-                      </div>
-                      <div>
-                          <label className="block text-sm font-medium text-gray-600">Conducted By</label>
-                          <p className="mt-1 text-sm text-gray-900">{training.conductedBy || 'N/A'}</p>
-                      </div>
-                      <div>
-                          <label className="block text-sm font-medium text-gray-600">Date</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {training.date ? new Date(training.date).toLocaleDateString() : 'N/A'}
-                          </p>
-                      </div>
-                    </div>
-                    </div>
-                  ))}
-                  {(!selectedEmployee?.trainings || selectedEmployee?.trainings.length === 0) && (
-                    <p className="text-gray-500 italic">No training records found.</p>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {activeTab === 'medical' && (
               <div className="space-y-6">
@@ -1789,9 +1692,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                   Photo
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Employee ID
-                    </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Employee
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1843,9 +1743,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                       )}
                     </div>
                   </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {employee.employeeId}
-                      </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -2044,7 +1941,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
-                            <span className="text-red-500 mr-1">*</span>
                             Employee ID
                           </label>
                           <div className="flex gap-2">
@@ -2052,24 +1948,38 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                               type="text"
                               value={newEmployee.EmployeeID}
                               onChange={(e) => setNewEmployee({...newEmployee, EmployeeID: e.target.value})}
-                              placeholder="Click generate button to create Employee ID"
+                              placeholder="Optional - will auto-generate if empty"
                               className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                              required
                             />
                             <button
                               type="button"
                               onClick={handleGenerateEmployeeId}
                               disabled={isGeneratingEmployeeId || newEmployee.EmployeeID.trim() !== ''}
-                              className="px-3 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
-                              title={newEmployee.EmployeeID.trim() !== '' ? "Employee ID already exists" : "Generate Employee ID"}
+                              className={`px-3 py-3 text-white rounded-lg transition-all duration-200 ${
+                                isGeneratingEmployeeId || newEmployee.EmployeeID.trim() !== ''
+                                  ? 'bg-gray-400 cursor-not-allowed opacity-75' 
+                                  : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'
+                              }`}
+                              title={
+                                isGeneratingEmployeeId 
+                                  ? "Generating..." 
+                                  : newEmployee.EmployeeID.trim() !== '' 
+                                    ? "Employee ID already exists" 
+                                    : "Generate Employee ID"
+                              }
                             >
                               <FaSync className={`w-4 h-4 ${isGeneratingEmployeeId ? 'animate-spin' : ''}`} />
                             </button>
                           </div>
+                          {isGeneratingEmployeeId && (
+                            <p className="text-sm text-blue-600 mt-1 flex items-center">
+                              <FaSync className="animate-spin w-3 h-3 mr-1" />
+                              Generating Employee ID...
+                            </p>
+                          )}
                   </div>
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
-                            <span className="text-red-500 mr-1">*</span>
                             User ID
                           </label>
                           <div className="flex gap-2">
@@ -2078,19 +1988,34 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             value={newEmployee.UserID}
                               placeholder="Click generate button to create User ID"
                               className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
-                              required
                               readOnly
                             />
                             <button
                               type="button"
                               onClick={handleGenerateUserId}
                               disabled={isGeneratingUserId || newEmployee.UserID.trim() !== ''}
-                              className="px-3 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
-                              title={newEmployee.UserID.trim() !== '' ? "User ID already exists" : "Generate User ID"}
+                              className={`px-3 py-3 text-white rounded-lg transition-all duration-200 ${
+                                isGeneratingUserId || newEmployee.UserID.trim() !== ''
+                                  ? 'bg-gray-400 cursor-not-allowed opacity-75' 
+                                  : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'
+                              }`}
+                              title={
+                                isGeneratingUserId 
+                                  ? "Generating..." 
+                                  : newEmployee.UserID.trim() !== '' 
+                                    ? "User ID already exists" 
+                                    : "Generate User ID"
+                              }
                             >
                               <FaSync className={`w-4 h-4 ${isGeneratingUserId ? 'animate-spin' : ''}`} />
                             </button>
                   </div>
+                          {isGeneratingUserId && (
+                            <p className="text-sm text-blue-600 mt-1 flex items-center">
+                              <FaSync className="animate-spin w-3 h-3 mr-1" />
+                              Generating User ID...
+                            </p>
+                          )}
                   </div>
                       </div>
 
@@ -2561,7 +2486,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                           >
                             <option value="">Select designation...</option>
                             <option value="President">President</option>
-                            <option value="Admin">Admin</option>
+                            <option value="Admin_Officer">Admin Officer</option>
                             <option value="Vice_President">Vice President</option>
                             <option value="Registrar">Registrar</option>
                             <option value="Faculty">Faculty</option>
@@ -2737,7 +2662,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                         </div>
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
-                            <span className="text-red-500 mr-1">*</span>
                             User ID
                           </label>
                           <input
@@ -2745,7 +2669,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             value={editEmployee.UserID}
                             placeholder="User ID"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
-                            required
                             readOnly
                           />
                         </div>
@@ -3188,9 +3111,13 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           >
                             <option value="">Select designation...</option>
+                            <option value="President">President</option>
+                            <option value="Admin_Officer">Admin Officer</option>
+                            <option value="Vice_President">Vice President</option>
+                            <option value="Registrar">Registrar</option>
                             <option value="Faculty">Faculty</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Student">Student</option>
+                            <option value="Principal">Principal</option>
+                            <option value="Cashier">Cashier</option>
                           </select>
                         </div>
                         <div className="space-y-2">

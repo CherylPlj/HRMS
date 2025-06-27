@@ -6,10 +6,8 @@ import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import jsPDF from 'jspdf';
 import EducationTab from './tabs/EducationTab';
-import EligibilityTab from './tabs/EligibilityTab';
 import FamilyTab from './tabs/FamilyTab';
 import WorkExperienceTab from './tabs/WorkExperienceTab';
-import TrainingTab from './tabs/TrainingTab';
 import SkillsTab from './tabs/SkillsTab';
 import CertificatesTab from './tabs/CertificatesTab';
 
@@ -80,12 +78,6 @@ interface FacultyDetails {
   GraduateDegree?: string;
   GraduateYearCompleted?: number;
 
-  // Civil Service
-  CivilServiceEligibility?: string;
-  CivilServiceRating?: number;
-  CivilServiceExamDate?: string;
-  CivilServiceExamPlace?: string;
-
   // Work Experience
   WorkExperience?: {
     Company: string;
@@ -93,15 +85,6 @@ interface FacultyDetails {
     StartDate: string;
     EndDate?: string;
     Responsibilities?: string;
-  }[];
-
-  // Training Programs
-  TrainingPrograms?: {
-    Title: string;
-    Organizer: string;
-    Date: string;
-    Duration: string;
-    Certificate?: string;
   }[];
 
   // Medical Information
@@ -581,7 +564,7 @@ const handleDownload = () => {
       let processedValue: any = value;
 
       // Handle special cases for complex fields
-      if (field === 'Children' || field === 'WorkExperience' || field === 'TrainingPrograms') {
+      if (field === 'Children' || field === 'WorkExperience') {
         try {
           processedValue = JSON.parse(value);
         } catch (e) {
@@ -592,13 +575,13 @@ const handleDownload = () => {
 
       // Handle special case for dates
       if (field === 'DateOfBirth' || field === 'HireDate' || field === 'ResignationDate' || 
-          field === 'PRCValidity' || field === 'CivilServiceExamDate' || field === 'LastMedicalCheckup') {
+          field === 'PRCValidity' || field === 'LastMedicalCheckup') {
         processedValue = value || null;
       }
 
       // Handle special case for numbers
       if (field === 'DepartmentID' || field === 'ContractID' || field === 'FacultyID' ||
-          field === 'CollegeYearGraduated' || field === 'GraduateYearCompleted' || field === 'CivilServiceRating') {
+          field === 'CollegeYearGraduated' || field === 'GraduateYearCompleted') {
         processedValue = value ? parseInt(value, 10) : null;
       }
 
@@ -709,9 +692,7 @@ const handleDownload = () => {
     { id: 'contact', label: 'Contact Information', icon: FaPhone },
     { id: 'family', label: 'Family Background', icon: FaUsers },
     { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
-    { id: 'civil', label: 'Civil Service', icon: FaBriefcase },
     { id: 'employment', label: 'Employment History', icon: FaBriefcase },
-    { id: 'training', label: 'Training Programs', icon: FaBook },
     { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
     { id: 'other', label: 'Other Information', icon: FaEllipsisH }
   ];
@@ -1137,12 +1118,7 @@ const handleDownload = () => {
           </div>
         )}
 
-        {/* Civil Service Tab */}
-        {activeTab === 'civil' && (
-          <div className="space-y-6">
-            <EligibilityTab employeeId={facultyDetails?.EmployeeID || ''} />
-          </div>
-        )}
+
 
         {/* Work Experience Tab - renamed to Employment History */}
         {activeTab === 'employment' && (
@@ -1186,12 +1162,7 @@ const handleDownload = () => {
           </div>
         )}
 
-        {/* Training Programs Tab */}
-        {activeTab === 'training' && (
-          <div className="space-y-6">
-            <TrainingTab employeeId={facultyDetails?.EmployeeID || ''} />
-          </div>
-        )}
+
 
         {/* Medical Information Tab */}
         {activeTab === 'medical' && (

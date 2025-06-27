@@ -2,18 +2,23 @@
     "WillLuke.nextjs.hasPrompted": true,
     "cSpell.words": [
         "autoincrement",
+        "autotable",
         "barangay",
         "Brgy",
+        "chartjs",
         "culty",
         "dmin",
         "dummyhash",
         "elig",
+        "exceljs",
         "Fairview",
+        "fontawesome",
         "GSIS",
         "hgetall",
         "hmset",
         "HRMS",
         "ilike",
+        "jspdf",
         "luxon",
         "Maalalahanin",
         "Mabait",
@@ -36,6 +41,7 @@
         "Matiyaga",
         "Niño",
         "PAGIBIG",
+        "papaparse",
         "PGRST",
         "philhealth",
         "Ronel",
@@ -45,6 +51,9 @@
         "sjsfilogo",
         "supabase",
         "superadmin",
-        "Undertime"
+        "svix",
+        "Undertime",
+        "Vercel",
+        "YYYYNNNN"
     ]
 }

@@ -96,9 +96,7 @@ model Employee {
   Faculty          Faculty?
   Leaves           Leave[]
   Education        Education[]
-  Eligibility      Eligibility[]
   EmploymentHistory EmploymentHistory[]
-  Training         Training[]
   MedicalInfo      MedicalInfo?
   Family           Family[]
   skills           Skill[]
@@ -575,16 +573,7 @@ model Education {
   honors     String?
 }
 
-model Eligibility {
-  id         Int      @id @default(autoincrement())
-  employee   Employee @relation(fields: [employeeId], references: [EmployeeID])
-  employeeId String
-  type       String   // e.g., LET, Civil Service
-  rating     Float?
-  licenseNumber String?
-  examDate   DateTime?
-  validUntil DateTime?
-}
+
 
 model EmploymentHistory {
   id         Int      @id @default(autoincrement())
@@ -597,19 +586,7 @@ model EmploymentHistory {
   reasonForLeaving String?
 }
 
-model Training {
-  id          Int      @id @default(autoincrement())
-  employeeId  String
-  title       String
-  hours       Int
-  conductedBy String
-  date        DateTime
-  employee    Employee @relation(fields: [employeeId], references: [EmployeeID])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime? @updatedAt
 
-  @@map("trainings")
-}
 
 model Skill {
   id                Int      @id @default(autoincrement())

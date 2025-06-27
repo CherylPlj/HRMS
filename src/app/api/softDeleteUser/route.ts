@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClerkClient } from '@clerk/clerk-sdk-node';
+
+// Initialize Clerk client
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -49,10 +53,10 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Get user details before update
+    // Get user details before update (including ClerkID)
     const { data: userData, error: userError } = await supabase
       .from('User')
-      .select('FirstName, LastName, Email, Status')
+      .select('FirstName, LastName, Email, Status, ClerkID')
       .eq('UserID', sanitizedUserId)
       .single();
 
@@ -71,11 +75,26 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Update user in Supabase to set isDeleted to true
+    // Delete from Clerk first if ClerkID exists
+    let clerkDeleted = false;
+    if (userData.ClerkID) {
+      try {
+        await clerk.users.deleteUser(userData.ClerkID);
+        console.log(`Successfully deleted Clerk user: ${userData.ClerkID}`);
+        clerkDeleted = true;
+      } catch (clerkError) {
+        console.error('Error deleting Clerk user:', clerkError);
+        // Continue with Supabase deletion even if Clerk deletion fails
+        // This ensures we don't leave orphaned records
+      }
+    }
+
+    // Update user in Supabase to set isDeleted to true and clear email
     const { error: updateError } = await supabase
       .from('User')
       .update({
         isDeleted: true,
+        Email: null, // Clear email to prevent conflicts when creating new accounts
         DateModified: new Date().toISOString(),
         updatedBy: sanitizedUpdatedBy
       })
@@ -94,13 +113,14 @@ export async function PUT(request: Request) {
       sanitizedUpdatedBy,
       'user_deleted',
       'User',
-      `Soft deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})`,
+      `Soft deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})${clerkDeleted ? ' - Clerk account also deleted' : ' - No Clerk account found'}`,
       request.headers.get('x-forwarded-for') || 'system'
     );
 
     return NextResponse.json({
       message: 'User deleted successfully',
-      userId: sanitizedUserId
+      userId: sanitizedUserId,
+      clerkDeleted: clerkDeleted
     });
 
   } catch (error) {

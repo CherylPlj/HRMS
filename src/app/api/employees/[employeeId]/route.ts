@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/nextjs/server';
 
 export async function GET(
   request: Request,
@@ -70,26 +71,51 @@ export async function PATCH(
     const { employeeId } = await context.params;
     const data = await request.json();
 
+    // If only UserID is being updated, handle it separately
+    if (Object.keys(data).length === 1 && data.UserID !== undefined) {
+      const { data: updatedEmployee, error: employeeError } = await supabaseAdmin
+        .from('Employee')
+        .update({
+          UserID: data.UserID,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('EmployeeID', employeeId)
+        .select()
+        .single();
+
+      if (employeeError) {
+        console.error('Error updating employee UserID:', employeeError);
+        throw employeeError;
+      }
+
+      return NextResponse.json(updatedEmployee);
+    }
+
     // Update employee in Supabase Employee table (only basic fields)
+    const updateFields: any = {
+      updatedAt: new Date().toISOString()
+    };
+
+    // Only include fields that are provided in the request
+    if (data.UserID !== undefined) updateFields.UserID = data.UserID;
+    if (data.LastName !== undefined) updateFields.LastName = data.LastName;
+    if (data.FirstName !== undefined) updateFields.FirstName = data.FirstName;
+    if (data.MiddleName !== undefined) updateFields.MiddleName = data.MiddleName || null;
+    if (data.ExtensionName !== undefined) updateFields.ExtensionName = data.ExtensionName || null;
+    if (data.Sex !== undefined) updateFields.Sex = data.Sex;
+    if (data.Photo !== undefined) updateFields.Photo = data.Photo || null;
+    if (data.DateOfBirth !== undefined) updateFields.DateOfBirth = data.DateOfBirth;
+    if (data.PlaceOfBirth !== undefined) updateFields.PlaceOfBirth = data.PlaceOfBirth || null;
+    if (data.CivilStatus !== undefined) updateFields.CivilStatus = data.CivilStatus || null;
+    if (data.Nationality !== undefined) updateFields.Nationality = data.Nationality || null;
+    if (data.Religion !== undefined) updateFields.Religion = data.Religion || null;
+    if (data.BloodType !== undefined) updateFields.BloodType = data.BloodType || null;
+    if (data.DepartmentID !== undefined) updateFields.DepartmentID = data.DepartmentID || null;
+    if (data.ContractID !== undefined) updateFields.ContractID = data.ContractID || null;
+
     const { data: updatedEmployee, error: employeeError } = await supabaseAdmin
       .from('Employee')
-      .update({
-        LastName: data.LastName,
-        FirstName: data.FirstName,
-        MiddleName: data.MiddleName || null,
-        ExtensionName: data.ExtensionName || null,
-        Sex: data.Sex,
-        Photo: data.Photo || null,
-        DateOfBirth: data.DateOfBirth,
-        PlaceOfBirth: data.PlaceOfBirth || null,
-        CivilStatus: data.CivilStatus || null,
-        Nationality: data.Nationality || null,
-        Religion: data.Religion || null,
-        BloodType: data.BloodType || null,
-        DepartmentID: data.DepartmentID || null,
-        ContractID: data.ContractID || null,
-        updatedAt: new Date().toISOString()
-      })
+      .update(updateFields)
       .eq('EmployeeID', employeeId)
       .select()
       .single();
@@ -191,10 +217,16 @@ export async function DELETE(
 
     const { employeeId } = await context.params;
 
-    // Get employee data to check if exists and get UserID
+    // Get employee data first to check if it exists and get associated User data
     const { data: employee, error: fetchError } = await supabaseAdmin
       .from('Employee')
-      .select('UserID, FirstName, LastName')
+      .select(`
+        *,
+        User:UserID (
+          UserID,
+          ClerkID
+        )
+      `)
       .eq('EmployeeID', employeeId)
       .single();
 
@@ -205,100 +237,33 @@ export async function DELETE(
       );
     }
 
-    try {
-      // Delete related records first (in correct order due to foreign key constraints)
-      
-      // Delete GovernmentID record
-      const { error: govIdDeleteError } = await supabaseAdmin
-        .from('GovernmentID')
-        .delete()
-        .eq('employeeId', employeeId);
-
-      if (govIdDeleteError) {
-        console.log('GovernmentID delete info:', govIdDeleteError.message);
+    // If there's an associated user, delete from Clerk first
+    if (employee.User?.ClerkID) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(employee.User.ClerkID);
+        console.log(`Successfully deleted Clerk user: ${employee.User.ClerkID}`);
+      } catch (clerkError) {
+        console.error('Error deleting Clerk user:', clerkError);
+        // Continue with deletion even if Clerk deletion fails
       }
+    }
 
-      // Delete ContactInfo record
-      const { error: contactDeleteError } = await supabaseAdmin
-        .from('ContactInfo')
-        .delete()
-        .eq('employeeId', employeeId);
+    // Delete from Supabase
+    const { error: deleteError } = await supabaseAdmin
+      .from('Employee')
+      .delete()
+      .eq('EmployeeID', employeeId);
 
-      if (contactDeleteError) {
-        console.log('ContactInfo delete info:', contactDeleteError.message);
-      }
-
-      // Delete EmploymentDetail record
-      const { error: employmentDeleteError } = await supabaseAdmin
-        .from('EmploymentDetail')
-        .delete()
-        .eq('employeeId', employeeId);
-
-      if (employmentDeleteError) {
-        console.log('EmploymentDetail delete info:', employmentDeleteError.message);
-      }
-
-      // Finally delete the Employee record
-      const { error: employeeDeleteError } = await supabaseAdmin
-        .from('Employee')
-        .delete()
-        .eq('EmployeeID', employeeId);
-
-      if (employeeDeleteError) {
-        throw new Error(`Failed to delete employee: ${employeeDeleteError.message}`);
-      }
-
-      // If employee has an associated user account, delete that too
-      if (employee.UserID) {
-        try {
-          const deleteResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/deleteUser`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: employee.UserID,
-              createdBy: user.id
-            }),
-          });
-
-          const deleteResult = await deleteResponse.json();
-
-          if (!deleteResponse.ok) {
-            console.log('User account deletion failed, but employee record deleted:', deleteResult.error);
-            return NextResponse.json({ 
-              message: 'Employee record deleted successfully, but user account deletion failed',
-              clerkDeleted: false,
-              warning: deleteResult.error
-            });
-          }
-
-          return NextResponse.json({ 
-            message: 'Employee and associated account deleted successfully',
-            clerkDeleted: deleteResult.clerkDeleted
-          });
-        } catch (userDeleteError) {
-          console.log('User deletion error:', userDeleteError);
-          return NextResponse.json({ 
-            message: 'Employee record deleted successfully, but user account deletion failed',
-            clerkDeleted: false,
-            warning: 'Could not delete associated user account'
-          });
-        }
-      } else {
-        return NextResponse.json({ 
-          message: 'Employee record deleted successfully',
-          clerkDeleted: false
-        });
-      }
-    } catch (deleteError) {
-      console.error('Error during deletion process:', deleteError);
+    if (deleteError) {
       throw deleteError;
     }
+
+    return NextResponse.json({ message: 'Employee deleted successfully' });
   } catch (error) {
     console.error('Error deleting employee:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete employee' },
+      { error: 'Failed to delete employee' },
       { status: 500 }
     );
   }
