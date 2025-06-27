@@ -45,7 +45,7 @@ model User {
 model Faculty {
   FacultyID        Int              @id
   UserID           String           @unique
-  EmployeeID       String?           @unique
+  EmployeeID       String?          @unique
   DateOfBirth      DateTime         @db.Date
   Phone            String?
   Address          String?
@@ -83,34 +83,11 @@ model Employee {
   Nationality      String?
   Religion         String?
   BloodType        String?
-  Email            String?          @unique
-  Phone            String?
-  Address          String?
-  PresentAddress   String?
-  PermanentAddress String?
-
-  // Government IDs
-  SSSNumber        String?
-  TINNumber        String?
-  PhilHealthNumber String?
-  PagIbigNumber    String?
-  GSISNumber       String?
-  PRCLicenseNumber String?
-  PRCValidity      DateTime?
-
-  EmploymentStatus EmploymentStatus @default(Regular)
-  HireDate         DateTime         @db.Date
-  ResignationDate  DateTime?        @db.Date
-  Designation      Designation?
-  Position         String?
-  DepartmentID     Int?
-  ContractID       Int?
-  EmergencyContactName   String?
-  EmergencyContactNumber String?
-  EmployeeType     EmployeeType?    @default(Regular)
-  SalaryGrade      String?
 
   // Relations
+  governmentIds    GovernmentID?
+  employmentDetails EmploymentDetail?
+  contactInfo      ContactInfo?
   Attendance       Attendance[]
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
@@ -126,9 +103,79 @@ model Employee {
   Family           Family[]
   skills           Skill[]
   certificates     Certificate[]
+  retirement       Retirement?
+
+  // Foreign keys
+  ContractID       Int?
+  DepartmentID     Int?
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime? @updatedAt
+  createdBy        String?
+  updatedBy        String?
+}
+
+model GovernmentID {
+  id               Int      @id @default(autoincrement())
+  employeeId       String   @unique
+  SSSNumber        String?
+  TINNumber        String?
+  PhilHealthNumber String?
+  PagIbigNumber    String?
+  GSISNumber       String?
+  PRCLicenseNumber String?
+  PRCValidity      DateTime?
+  BIRNumber        String?  // Added BIR Number
+  PassportNumber   String?  // Added Passport Number
+  PassportValidity DateTime? // Added Passport Validity
+  
+  // Relation
+  employee         Employee @relation(fields: [employeeId], references: [EmployeeID])
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        String?
+  updatedBy        String?
+}
+
+model EmploymentDetail {
+  id               Int              @id @default(autoincrement())
+  employeeId       String           @unique
+  EmploymentStatus EmploymentStatus @default(Regular)
+  EmployeeType     EmployeeType     @default(Regular)
+  HireDate         DateTime         @db.Date
+  ResignationDate  DateTime?        @db.Date
+  RetirementDate   DateTime?        @db.Date
+  RetirementStatus RetirementStatus?
+  Designation      Designation?
+  Position         String?
+  SalaryGrade      String?
+  
+  // Relation
+  employee         Employee @relation(fields: [employeeId], references: [EmployeeID])
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime? @updatedAt
+  createdBy        String?
+  updatedBy        String?
+}
+
+model ContactInfo {
+  id                    Int      @id @default(autoincrement())
+  employeeId            String   @unique
+  Phone                String?
+  PresentAddress       String?
+  PermanentAddress     String?
+  EmergencyContactName String?
+  EmergencyContactNumber String?
+  
+  // Relation
+  employee             Employee @relation(fields: [employeeId], references: [EmployeeID])
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime? @updatedAt
+  createdBy            String?
+  updatedBy            String?
 }
 
 model Cashier {
@@ -174,9 +221,11 @@ model Document {
   FilePath          String?   // Google Drive file ID
   FileUrl           String?   // Google Drive web view link
   DownloadUrl       String?   // Google Drive download link
+  retirementId      Int?      // Add this field for retirement relation
   Faculty           Faculty   @relation(fields: [FacultyID], references: [FacultyID])
-  Employee          Employee? @relation(fields: [employeeId], references: [EmployeeID]) // <-- add this
+  Employee          Employee? @relation(fields: [employeeId], references: [EmployeeID])
   DocumentType      DocumentType @relation(fields: [DocumentTypeID], references: [DocumentTypeID])
+  Retirement        Retirement? @relation(fields: [retirementId], references: [id])
 
   @@index([FacultyID])
   @@index([DocumentTypeID])
@@ -224,7 +273,7 @@ model Schedules {
   time           String
   duration       Int
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  updatedAt      DateTime?     @updatedAt
 
   faculty      Faculty      @relation(fields: [facultyId], references: [FacultyID])
   subject      Subject      @relation(fields: [subjectId], references: [id])
@@ -302,7 +351,7 @@ model Leave {
   employeeSignature       String?
   departmentHeadSignature String?
   CreatedAt              DateTime    @default(now())
-  UpdatedAt              DateTime    @updatedAt
+  UpdatedAt              DateTime?    @updatedAt
   Faculty                Faculty     @relation(fields: [FacultyID], references: [FacultyID])
   Employee                Employee?   @relation(fields: [employeeId], references: [EmployeeID]) // <-- add this
 }
@@ -316,7 +365,7 @@ model Vacancy {
   Status         VacancyStatus @default(Active)
   DatePosted     DateTime?
   DateCreated    DateTime  @default(now())
-  DateModified   DateTime  @updatedAt
+  DateModified   DateTime?  @updatedAt
   isDeleted      Boolean   @default(false)
   createdBy      String?
   updatedBy      String?
@@ -363,6 +412,7 @@ enum EmploymentStatus {
   Resigned
   Regular
   Probationary
+  Retired
 }
 
 enum EmployeeType {
@@ -413,6 +463,7 @@ enum LeaveType {
   Emergency
   Undertime
   Maternity
+  Paternity
 }
 
 enum RequestType {
@@ -528,7 +579,7 @@ model Training {
   date        DateTime
   employee    Employee @relation(fields: [employeeId], references: [EmployeeID])
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime? @updatedAt
 
   @@map("trainings")
 }
@@ -542,19 +593,50 @@ model Skill {
   description       String?
   employee          Employee @relation(fields: [employeeId], references: [EmployeeID])
   createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  updatedAt         DateTime? @updatedAt
 
   @@map("skills")
 }
 
 model MedicalInfo {
-  id             Int      @id @default(autoincrement())
-  employee       Employee @relation(fields: [employeeId], references: [EmployeeID])
-  employeeId     String   @unique
-  medicalNotes   String?
-  lastCheckup    DateTime?
-  vaccination    String?
-  allergies      String?
+  id                   Int      @id @default(autoincrement())
+  employee             Employee @relation(fields: [employeeId], references: [EmployeeID])
+  employeeId           String   @unique
+  medicalNotes         String?
+  lastCheckup          DateTime?
+  vaccination          String?
+  allergies            String?
+  
+  // Disability Information
+  hasDisability        Boolean  @default(false)
+  disabilityType       String?  // e.g., Visual, Hearing, Physical, etc.
+  disabilityDetails    String?  // Detailed description of the disability
+  accommodationsNeeded String?  // Required workplace accommodations
+  pwdIdNumber         String?   // PWD ID card number
+  pwdIdValidity       DateTime? // PWD ID expiration date
+  disabilityCertification String? // Medical certification of disability
+  disabilityPercentage    Int?    // Percentage of disability if applicable
+  assistiveTechnology    String?  // Any assistive devices or technology needed
+  mobilityAids          String?  // Wheelchair, crutches, etc.
+  communicationNeeds    String?  // Sign language, braille, etc.
+  workplaceModifications String? // Specific modifications needed in workplace
+  emergencyProtocol     String?  // Special emergency procedures for the disability
+  
+  // Medical Information
+  bloodPressure    String?
+  height           Float?   // in cm
+  weight           Float?   // in kg
+  emergencyProcedures String?
+  primaryPhysician String?
+  physicianContact String?
+  healthInsuranceProvider String?
+  healthInsuranceNumber   String?
+  healthInsuranceExpiryDate DateTime?
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime? @updatedAt
+  createdBy            String?
+  updatedBy            String?
 }
 
 model Family {
@@ -587,4 +669,42 @@ model Certificate {
   updatedAt   DateTime @updatedAt
 
   @@map("certificates")
+}
+
+enum RetirementStatus {
+  NotEligible
+  Approaching      // When employee is nearing retirement age
+  Eligible         // Has reached retirement age but still working
+  Processing       // Retirement paperwork in progress
+  Retired          // Fully retired
+}
+
+model Retirement {
+  id                Int       @id @default(autoincrement())
+  employeeId        String    @unique
+  employee          Employee  @relation(fields: [employeeId], references: [EmployeeID])
+  requestDate       DateTime  @default(now())
+  effectiveDate     DateTime  @db.Date
+  pensionPlanType   String?   // e.g., "GSIS", "SSS", "Private"
+  pensionAmount     Float?
+  clearanceStatus   Boolean   @default(false)
+  exitInterviewDate DateTime?
+  remarks          String?
+  documents        Document[] 
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  status           RetirementProcessStatus @default(Pending)
+}
+
+enum RetirementProcessStatus {
+  Pending
+  DocumentsSubmitted
+  ClearanceInProgress
+  ExitInterviewScheduled
+  ExitInterviewCompleted
+  BenefitsProcessing
+  Completed
+  Cancelled
 }

@@ -10,7 +10,7 @@ import { FaRegCalendarAlt, FaClock, FaEye, FaPen, FaTrash } from 'react-icons/fa
 
 // Define leave types as string literals
 type RequestType = 'Leave' | 'Undertime';
-type LeaveType = 'Sick' | 'Vacation' | 'Emergency' | 'Maternity';
+type LeaveType = 'Sick' | 'Vacation' | 'Emergency' | 'Maternity' | 'Paternity';
 type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 
 interface ComponentWithBackButton {
@@ -962,6 +962,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         <option value="Vacation">Vacation Leave</option>
                                         <option value="Emergency">Emergency Leave</option>
                                         <option value="Maternity">Maternity Leave</option>
+                                        <option value="Paternity">Paternity Leave</option>
                                     </select>
                                 </div>
                             )}
@@ -1213,6 +1214,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             <option value="Vacation">Vacation Leave</option>
                                             <option value="Emergency">Emergency Leave</option>
                                             <option value="Maternity">Maternity Leave</option>
+                                            <option value="Paternity">Paternity Leave</option>
                                         </select>
                                     </div>
                                 )}
