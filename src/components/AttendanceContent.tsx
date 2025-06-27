@@ -1200,7 +1200,7 @@ const AttendanceContent: React.FC = () => {
   return (
     <div className="text-black p-6 min-h-screen bg-gray-50">
       <div className="flex justify-between items-center mb-6">
-        <div className="flex space-x-6">
+      <div className="flex space-x-6">
         
           <button
             onClick={() => setActiveTab('attendance')}
@@ -1213,7 +1213,7 @@ const AttendanceContent: React.FC = () => {
             Attendance Records
           </button>
           
-          <button
+          {/* <button
             onClick={() => setActiveTab('schedule')}
             className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
               activeTab === 'schedule'
@@ -1222,7 +1222,7 @@ const AttendanceContent: React.FC = () => {
             }`}
           >
             Schedule Assignment
-          </button>
+          </button> */}
         </div>
         {activeTab === 'attendance' && (
           <>
@@ -1501,7 +1501,7 @@ const AttendanceContent: React.FC = () => {
           </>
       )}
           
-      {activeTab === 'schedule' && (
+      {/* {activeTab === 'schedule' && (
         <>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
             <div className="relative flex-1">
@@ -1541,7 +1541,7 @@ const AttendanceContent: React.FC = () => {
             onAdd={handleAddNewSchedule}
           />
         </>
-      )}
+      )} */}
 
       {isModalOpen && <ScheduleModal isEdit={false} editSchedule={null} onClose={handleCloseModal} onSave={handleScheduleSave} facultyList={facultyList} />}
       {isEditModalOpen && <ScheduleModal isEdit={true} editSchedule={editSchedule} onClose={handleCloseEditModal} onSave={handleScheduleSave} facultyList={facultyList} />}

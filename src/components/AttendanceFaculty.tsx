@@ -381,9 +381,18 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
       console.log('Fetching attendance data for faculty:', facultyId);
       const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
       const [summaryData, scheduleData, todayRecord] = await Promise.all([
-        attendanceService.getAttendanceSummary(facultyId.toString(), email),
-        attendanceService.getSchedule(facultyId.toString(), email),
-        attendanceService.getTodayRecord(facultyId.toString(), email)
+        attendanceService.getAttendanceSummary(facultyId.toString(), email).catch(error => {
+          console.error('Error fetching attendance summary:', error);
+          return null;
+        }),
+        attendanceService.getSchedule(facultyId.toString(), email).catch(error => {
+          console.error('Error fetching schedule:', error);
+          return [];
+        }),
+        attendanceService.getTodayRecord(facultyId.toString(), email).catch(error => {
+          console.error('Error fetching today\'s record:', error);
+          return null;
+        })
       ]);
       console.log('Fetched summary data:', summaryData);
       console.log('Fetched schedule data:', scheduleData);
@@ -650,6 +659,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
         </div>
 
         {/* Schedule Section */}
+        {/*
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
@@ -699,6 +709,7 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
             </table>
           </div>
         </div>
+        */}
 
         {/* Attendance History Section */}
         <div className="bg-white rounded-xl shadow-sm p-6">
