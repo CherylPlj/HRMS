@@ -2,46 +2,141 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
 import { clerkClient } from '@clerk/nextjs/server';
+import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ employeeId: string }> }
+  { params }: { params: { employeeId: string } }
 ) {
   try {
+    // Check authentication
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const params = await context.params;
-    const employeeId = params.employeeId;
-
-    if (!employeeId) {
-      return NextResponse.json({ error: 'Employee ID is required' }, { status: 400 });
+    // Get user role
+    const userRole = await getUserRoleFlexible(user.id);
+    if (!userRole || (!userRole.includes('ADMIN') && user.id !== params.employeeId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Get employee data from Supabase
+    const { employeeId } = params;
+
+    // Fetch employee data with all related information
     const { data: employee, error } = await supabaseAdmin
       .from('Employee')
       .select(`
         *,
-        User:UserID (
-          UserID,
-          FirstName,
-          LastName,
-          Email,
-          Status,
-          Photo
+        EmploymentDetail(
+          EmploymentStatus, 
+          HireDate, 
+          ResignationDate, 
+          Designation, 
+          Position, 
+          SalaryGrade,
+          EmployeeType
         ),
-        Department:DepartmentID (
-          DepartmentID,
-          DepartmentName
+        ContactInfo(
+          Email, 
+          Phone, 
+          PresentAddress, 
+          PermanentAddress, 
+          EmergencyContactName, 
+          EmergencyContactNumber
+        ),
+        GovernmentID(
+          SSSNumber, 
+          TINNumber, 
+          PhilHealthNumber, 
+          PagIbigNumber, 
+          GSISNumber, 
+          PRCLicenseNumber, 
+          PRCValidity,
+          BIRNumber,
+          PassportNumber,
+          PassportValidity
+        ),
+        Department(
+          DepartmentName,
+          type
+        ),
+        Family(
+          id, 
+          type, 
+          name, 
+          dateOfBirth, 
+          occupation, 
+          isDependent, 
+          relationship, 
+          contactNumber, 
+          address
+        ),
+        skills(
+          id, 
+          name, 
+          proficiencyLevel, 
+          yearsOfExperience, 
+          description
+        ),
+        MedicalInfo(
+          medicalNotes, 
+          lastCheckup, 
+          vaccination, 
+          allergies, 
+          hasDisability, 
+          disabilityType, 
+          disabilityDetails,
+          accommodationsNeeded,
+          pwdIdNumber,
+          pwdIdValidity,
+          bloodPressure,
+          height,
+          weight,
+          emergencyProcedures,
+          primaryPhysician,
+          physicianContact,
+          healthInsuranceProvider,
+          healthInsuranceNumber,
+          healthInsuranceExpiryDate
+        ),
+        Education(
+          id, 
+          level, 
+          schoolName, 
+          course, 
+          yearGraduated, 
+          honors
+        ),
+        EmploymentHistory(
+          id, 
+          schoolName, 
+          position, 
+          startDate, 
+          endDate, 
+          reasonForLeaving
+        ),
+        certificates(
+          id, 
+          title, 
+          issuedBy, 
+          issueDate, 
+          expiryDate, 
+          description, 
+          fileUrl
         )
       `)
       .eq('EmployeeID', employeeId)
       .single();
 
-    if (error || !employee) {
+    if (error) {
+      return NextResponse.json(
+        { error: 'Failed to fetch employee data' },
+        { status: 500 }
+      );
+    }
+
+    if (!employee) {
       return NextResponse.json(
         { error: 'Employee not found' },
         { status: 404 }
@@ -50,9 +145,9 @@ export async function GET(
 
     return NextResponse.json(employee);
   } catch (error) {
-    console.error('Error fetching employee:', error);
+    console.error('Error fetching employee data:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch employee details' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -138,97 +138,112 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
 
       {/* Add/Edit Form */}
       {showForm && currentRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">
-              {currentRecord.id ? 'Edit Education Record' : 'Add Education Record'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Level</label>
-                <select
-                  value={currentRecord.level}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, level: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                >
-                  <option value="">Select Level</option>
-                  <option value="Elementary">Elementary</option>
-                  <option value="High School">High School</option>
-                  <option value="College">College</option>
-                  <option value="Graduate">Graduate</option>
-                  <option value="Post Graduate">Post Graduate</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">School Name</label>
-                <input
-                  type="text"
-                  value={currentRecord.schoolName}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, schoolName: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Course</label>
-                <input
-                  type="text"
-                  value={currentRecord.course || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, course: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Year Graduated</label>
-                <input
-                  type="number"
-                  value={currentRecord.yearGraduated || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({
-                      ...currentRecord,
-                      yearGraduated: parseInt(e.target.value) || null,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Honors</label>
-                <input
-                  type="text"
-                  value={currentRecord.honors || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, honors: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setCurrentRecord(null);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                {currentRecord.id ? 'Edit Education Record' : 'Add Education Record'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setCurrentRecord(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Level</label>
+                  <select
+                    value={currentRecord.level}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, level: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  >
+                    <option value="">Select Level</option>
+                    <option value="Elementary">Elementary</option>
+                    <option value="High School">High School</option>
+                    <option value="College">College</option>
+                    <option value="Graduate">Graduate</option>
+                    <option value="Post Graduate">Post Graduate</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">School Name</label>
+                  <input
+                    type="text"
+                    value={currentRecord.schoolName}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, schoolName: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Course</label>
+                  <input
+                    type="text"
+                    value={currentRecord.course || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, course: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Year Graduated</label>
+                  <input
+                    type="number"
+                    value={currentRecord.yearGraduated || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({
+                        ...currentRecord,
+                        yearGraduated: parseInt(e.target.value) || null,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Honors</label>
+                  <input
+                    type="text"
+                    value={currentRecord.honors || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, honors: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setCurrentRecord(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

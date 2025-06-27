@@ -39,40 +39,77 @@ export async function PUT(
     const employeeId = params.employeeId;
     const data = await request.json();
 
+    // Convert date strings to Date objects
+    if (data.lastCheckup) data.lastCheckup = new Date(data.lastCheckup);
+    if (data.pwdIdValidity) data.pwdIdValidity = new Date(data.pwdIdValidity);
+    if (data.healthInsuranceExpiryDate) data.healthInsuranceExpiryDate = new Date(data.healthInsuranceExpiryDate);
+
+    // Ensure numeric fields are properly typed
+    if (data.height) data.height = parseFloat(data.height);
+    if (data.weight) data.weight = parseFloat(data.weight);
+    if (data.disabilityPercentage) data.disabilityPercentage = parseInt(data.disabilityPercentage);
+
     const updatedMedicalInfo = await prisma.medicalInfo.upsert({
       where: {
         employeeId: employeeId
       },
-      update: data,
-      create: {
-        ...data,
-        employeeId: employeeId
-      }
-    });
-
-    return NextResponse.json(updatedMedicalInfo);
-  } catch (error) {
-    console.error('Error updating medical info:', error);
-    return NextResponse.json(
-      { error: 'Failed to update medical information' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PATCH(
-  request: Request,
-  { params }: { params: { employeeId: string } }
-) {
-  try {
-    const employeeId = params.employeeId;
-    const data = await request.json();
-
-    const updatedMedicalInfo = await prisma.medicalInfo.update({
-      where: {
-        employeeId: employeeId
+      update: {
+        medicalNotes: data.medicalNotes,
+        lastCheckup: data.lastCheckup,
+        vaccination: data.vaccination,
+        allergies: data.allergies,
+        hasDisability: data.hasDisability,
+        disabilityType: data.disabilityType,
+        disabilityDetails: data.disabilityDetails,
+        accommodationsNeeded: data.accommodationsNeeded,
+        pwdIdNumber: data.pwdIdNumber,
+        pwdIdValidity: data.pwdIdValidity,
+        disabilityCertification: data.disabilityCertification,
+        disabilityPercentage: data.disabilityPercentage,
+        assistiveTechnology: data.assistiveTechnology,
+        mobilityAids: data.mobilityAids,
+        communicationNeeds: data.communicationNeeds,
+        workplaceModifications: data.workplaceModifications,
+        emergencyProtocol: data.emergencyProtocol,
+        bloodPressure: data.bloodPressure,
+        height: data.height,
+        weight: data.weight,
+        emergencyProcedures: data.emergencyProcedures,
+        primaryPhysician: data.primaryPhysician,
+        physicianContact: data.physicianContact,
+        healthInsuranceProvider: data.healthInsuranceProvider,
+        healthInsuranceNumber: data.healthInsuranceNumber,
+        healthInsuranceExpiryDate: data.healthInsuranceExpiryDate
       },
-      data: data
+      create: {
+        employeeId: employeeId,
+        medicalNotes: data.medicalNotes,
+        lastCheckup: data.lastCheckup,
+        vaccination: data.vaccination,
+        allergies: data.allergies,
+        hasDisability: data.hasDisability || false,
+        disabilityType: data.disabilityType,
+        disabilityDetails: data.disabilityDetails,
+        accommodationsNeeded: data.accommodationsNeeded,
+        pwdIdNumber: data.pwdIdNumber,
+        pwdIdValidity: data.pwdIdValidity,
+        disabilityCertification: data.disabilityCertification,
+        disabilityPercentage: data.disabilityPercentage,
+        assistiveTechnology: data.assistiveTechnology,
+        mobilityAids: data.mobilityAids,
+        communicationNeeds: data.communicationNeeds,
+        workplaceModifications: data.workplaceModifications,
+        emergencyProtocol: data.emergencyProtocol,
+        bloodPressure: data.bloodPressure,
+        height: data.height,
+        weight: data.weight,
+        emergencyProcedures: data.emergencyProcedures,
+        primaryPhysician: data.primaryPhysician,
+        physicianContact: data.physicianContact,
+        healthInsuranceProvider: data.healthInsuranceProvider,
+        healthInsuranceNumber: data.healthInsuranceNumber,
+        healthInsuranceExpiryDate: data.healthInsuranceExpiryDate
+      }
     });
 
     return NextResponse.json(updatedMedicalInfo);

@@ -171,113 +171,129 @@ const CertificatesTab: React.FC<CertificatesTabProps> = ({ employeeId }) => {
 
       {/* Add/Edit Form */}
       {showForm && currentCertificate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">
-              {currentCertificate.id ? 'Edit Certificate' : 'Add Certificate'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
-                <input
-                  type="text"
-                  value={currentCertificate.title}
-                  onChange={(e) =>
-                    setCurrentCertificate({ ...currentCertificate, title: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Issued By</label>
-                <input
-                  type="text"
-                  value={currentCertificate.issuedBy}
-                  onChange={(e) =>
-                    setCurrentCertificate({
-                      ...currentCertificate,
-                      issuedBy: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Issue Date</label>
-                <input
-                  type="date"
-                  value={new Date(currentCertificate.issueDate).toISOString().split('T')[0]}
-                  onChange={(e) =>
-                    setCurrentCertificate({
-                      ...currentCertificate,
-                      issueDate: new Date(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Expiry Date (Optional)</label>
-                <input
-                  type="date"
-                  value={currentCertificate.expiryDate
-                    ? new Date(currentCertificate.expiryDate).toISOString().split('T')[0]
-                    : ''}
-                  onChange={(e) =>
-                    setCurrentCertificate({
-                      ...currentCertificate,
-                      expiryDate: e.target.value ? new Date(e.target.value) : null,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
-                <textarea
-                  value={currentCertificate.description || ''}
-                  onChange={(e) =>
-                    setCurrentCertificate({
-                      ...currentCertificate,
-                      description: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Upload Certificate (Optional)</label>
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  className="mt-1 w-full"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                />
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setCurrentCertificate(null);
-                    setSelectedFile(null);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                {currentCertificate.id ? 'Edit Certificate' : 'Add Certificate'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setCurrentCertificate(null);
+                  setSelectedFile(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Title</label>
+                  <input
+                    type="text"
+                    value={currentCertificate.title}
+                    onChange={(e) =>
+                      setCurrentCertificate({ ...currentCertificate, title: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Issued By</label>
+                  <input
+                    type="text"
+                    value={currentCertificate.issuedBy}
+                    onChange={(e) =>
+                      setCurrentCertificate({
+                        ...currentCertificate,
+                        issuedBy: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Issue Date</label>
+                  <input
+                    type="date"
+                    value={new Date(currentCertificate.issueDate).toISOString().split('T')[0]}
+                    onChange={(e) =>
+                      setCurrentCertificate({
+                        ...currentCertificate,
+                        issueDate: new Date(e.target.value),
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Expiry Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={currentCertificate.expiryDate
+                      ? new Date(currentCertificate.expiryDate).toISOString().split('T')[0]
+                      : ''}
+                    onChange={(e) =>
+                      setCurrentCertificate({
+                        ...currentCertificate,
+                        expiryDate: e.target.value ? new Date(e.target.value) : null,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
+                  <textarea
+                    value={currentCertificate.description || ''}
+                    onChange={(e) =>
+                      setCurrentCertificate({
+                        ...currentCertificate,
+                        description: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Upload Certificate (Optional)</label>
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    className="mt-1 w-full"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setCurrentCertificate(null);
+                      setSelectedFile(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
