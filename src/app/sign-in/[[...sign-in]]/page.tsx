@@ -8,7 +8,7 @@ import { useAuth } from "@clerk/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Eye, ArrowLeft, AlertCircle, X } from 'lucide-react';
-import { validatePassword, loginRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
+import { validatePassword, loginRateLimiter, unknownIPRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
 import { getClientIp } from '@/lib/ip';
 import { validateEmailCharacters } from '@/lib/validation';
 
@@ -185,12 +185,12 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
       }
 
       console.log('Submitting password reset for email:', email);
-      
+
       const result = await onSubmit(email);
       
       if (result) {
-        setResetData(result);
-        setStep('pin');
+      setResetData(result);
+      setStep('pin');
         console.log('Password reset email sent successfully');
       } else {
         throw new Error('No result returned from password reset');
@@ -474,26 +474,26 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                   New Password
                 </label>
                 <div className="relative">
-                  <input
-                    id="new-password"
+                <input
+                  id="new-password"
                     type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => {
+                  value={newPassword}
+                  onChange={(e) => {
                       const value = e.target.value;
                       setNewPassword(value);
-                      setError(null);
+                    setError(null);
                       
                       // Real-time password validation
                       const validation = validatePassword(value);
                       setPasswordError(validation);
-                    }}
+                  }}
                     className={`w-full px-3 py-2 pr-10 border ${
                       passwordError ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm focus:outline-none focus:ring-1 ${
+                  } rounded-md shadow-sm focus:outline-none focus:ring-1 ${
                       passwordError ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
-                    }`}
-                    placeholder="Enter new password"
-                  />
+                  }`}
+                  placeholder="Enter new password"
+                />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
@@ -773,12 +773,28 @@ export default function SignInPage() {
     setHasAttemptedSignIn(true);
 
     try {
-      // Get client IP for rate limiting
-      const userIP = await getClientIp();
-
-      // Check rate limiting
+      // Get client IP for rate limiting with fallback and timeout
+      let userIP: string;
       try {
+        // Add timeout to IP fetch to prevent hanging
+        const ipPromise = getClientIp();
+        const timeoutPromise = new Promise<string>((_, reject) => 
+          setTimeout(() => reject(new Error('IP fetch timeout')), 3000)
+        );
+        
+        userIP = await Promise.race([ipPromise, timeoutPromise]);
+      } catch (ipError) {
+        console.warn('IP detection failed, using fallback:', ipError);
+        userIP = 'unknown';
+      }
+
+      // Check rate limiting with appropriate limiter
+      try {
+        if (userIP === 'unknown') {
+          await unknownIPRateLimiter.consume('unknown');
+        } else {
         await loginRateLimiter.consume(userIP);
+        }
       } catch {
         setIsLoading(false);
         showErrorPopup('Too many login attempts. Please try again later.');
@@ -842,7 +858,7 @@ export default function SignInPage() {
       } catch (clerkError: any) {
         recordFailedLoginAttempt(userIP);
         setIsLoading(false);
-        // Override all Clerk error messages with our custom message
+        console.error('Clerk authentication failed:', clerkError);
         showErrorPopup('Invalid Credentials');
         return;
       }
@@ -854,8 +870,31 @@ export default function SignInPage() {
         return;
       }
 
+      // Test database connection first
+      try {
+        const { error: connectionError } = await supabase.from('User').select('UserID').limit(1);
+        if (connectionError && connectionError.message.includes('connection')) {
+          console.error('Database connection issue detected:', connectionError);
+          setIsLoading(false);
+          showErrorPopup('Service temporarily unavailable. Please try again in a moment.');
+          return;
+        }
+      } catch (connError) {
+        console.error('Database connection test failed:', connError);
+        setIsLoading(false);
+        showErrorPopup('Service temporarily unavailable. Please try again in a moment.');
+        return;
+      }
+
       // Now verify the user exists in our database and get their role
-      const { data: userCheck, error: userError } = await supabase
+      // Add retry logic for database queries
+      let userCheck;
+      let userError;
+      const maxDbRetries = 2;
+      
+      for (let attempt = 0; attempt <= maxDbRetries; attempt++) {
+        try {
+          const { data, error } = await supabase
         .from('User')
         .select(`
           UserID,
@@ -871,9 +910,34 @@ export default function SignInPage() {
         .eq('Email', email)
         .single();
 
+          userCheck = data;
+          userError = error;
+          
+          // If successful, break out of retry loop
+          if (!error && data) {
+            break;
+          }
+          
+          // If this is not the last attempt, wait a bit before retrying
+          if (attempt < maxDbRetries) {
+            console.warn(`Database query attempt ${attempt + 1} failed, retrying...`, error);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (dbQueryError) {
+          console.error(`Database query attempt ${attempt + 1} error:`, dbQueryError);
+          userError = dbQueryError as any;
+          
+          // If this is not the last attempt, wait a bit before retrying
+          if (attempt < maxDbRetries) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+
       if (userError || !userCheck) {
         recordFailedLoginAttempt(userIP);
         setIsLoading(false);
+        console.error('Database user verification failed after retries:', userError);
         showErrorPopup('Invalid Credentials');
         return;
       }
@@ -895,7 +959,7 @@ export default function SignInPage() {
       }
 
       // If we get here, both Clerk authentication and database verification passed
-      resetLoginAttempts(userIP); // Reset attempts on successful login
+        resetLoginAttempts(userIP); // Reset attempts on successful login
       
       // Get user role for validation
       const userRole = (userRoles[0].role as any).name.toLowerCase();
@@ -919,21 +983,22 @@ export default function SignInPage() {
       
       // Force a small delay to ensure session is fully established
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Handle redirect
-      if (redirectUrl) {
+        
+        // Handle redirect
+        if (redirectUrl) {
         window.location.href = redirectUrl;
-      } else {
+        } else {
         if (userRole === 'admin' || userRole === 'super admin') {
           router.push('/dashboard/admin');
         } else if (userRole === 'faculty') {
           router.push('/dashboard/faculty');
-        } else {
+      } else {
           router.push('/dashboard');
         }
       }
     } catch (err: any) {
       setIsLoading(false);
+      console.error('Login error:', err);
       // Override all error messages with our custom message for security
       showErrorPopup('Invalid Credentials');
     }
