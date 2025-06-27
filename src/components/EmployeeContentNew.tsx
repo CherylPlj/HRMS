@@ -170,7 +170,7 @@ interface EmployeeFormState {
   Education?: Education[];
   Eligibility?: Eligibility[];
   EmploymentHistory?: EmploymentHistory[];
-  Training?: Training[];
+  trainings?: Training[];
   MedicalInfo?: MedicalInfo;
 
   createdAt: Date | null;
@@ -239,7 +239,7 @@ const EmployeeContentNew = () => {
     Education: [],
     Eligibility: [],
     EmploymentHistory: [],
-    Training: [],
+    trainings: [],
     MedicalInfo: {},
 
     createdAt: null,
@@ -303,7 +303,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     Education: [],
     Eligibility: [],
     EmploymentHistory: [],
-    Training: [],
+    trainings: [],
     MedicalInfo: {},
 
     createdAt: null,
@@ -833,7 +833,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         Education: [],
         Eligibility: [],
         EmploymentHistory: [],
-        Training: [],
+        trainings: [],
         MedicalInfo: {},
         createdAt: null,
         updatedAt: null
@@ -1025,7 +1025,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       Education: [],
       Eligibility: [],
       EmploymentHistory: [],
-      Training: [],
+      trainings: [],
       MedicalInfo: {},
 
       createdAt: null,
@@ -2595,8 +2595,12 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             value={newEmployee.ContractID || ''}
                             onChange={(e) => {
                               const value = e.target.value.trim();
-                              const parsed = value === '' ? null : parseInt(value);
-                              setNewEmployee({...newEmployee, ContractID: isNaN(parsed) ? null : parsed});
+                              if (value === '') {
+                                setNewEmployee({...newEmployee, ContractID: null});
+                              } else {
+                                const parsed = parseInt(value);
+                                setNewEmployee({...newEmployee, ContractID: isNaN(parsed) ? null : parsed});
+                              }
                             }}
                             placeholder="Contract ID (leave empty if none)"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
@@ -3215,8 +3219,12 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             value={editEmployee.ContractID || ''}
                             onChange={(e) => {
                               const value = e.target.value.trim();
-                              const parsed = value === '' ? null : parseInt(value);
-                              setEditEmployee({...editEmployee, ContractID: isNaN(parsed) ? null : parsed});
+                              if (value === '') {
+                                setEditEmployee({...editEmployee, ContractID: null});
+                              } else {
+                                const parsed = parseInt(value);
+                                setEditEmployee({...editEmployee, ContractID: isNaN(parsed) ? null : parsed});
+                              }
                             }}
                             placeholder="Contract ID (leave empty if none)"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
