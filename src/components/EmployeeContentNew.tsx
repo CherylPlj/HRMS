@@ -170,7 +170,7 @@ interface EmployeeFormState {
   Education?: Education[];
   Eligibility?: Eligibility[];
   EmploymentHistory?: EmploymentHistory[];
-  Training?: Training[];
+  trainings?: Training[];
   MedicalInfo?: MedicalInfo;
 
   createdAt: Date | null;
@@ -239,7 +239,7 @@ const EmployeeContentNew = () => {
     Education: [],
     Eligibility: [],
     EmploymentHistory: [],
-    Training: [],
+    trainings: [],
     MedicalInfo: {},
 
     createdAt: null,
@@ -256,9 +256,9 @@ const EmployeeContentNew = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEmployee, setEditedEmployee] = useState<any>(null);
   
-  // State for Edit Employee modal
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
+  // State for Edit Employee modal - TEMPORARILY DISABLED FOR TESTING
+const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     EmployeeID: '',
     UserID: '',
     LastName: '',
@@ -303,7 +303,7 @@ const EmployeeContentNew = () => {
     Education: [],
     Eligibility: [],
     EmploymentHistory: [],
-    Training: [],
+    trainings: [],
     MedicalInfo: {},
 
     createdAt: null,
@@ -445,16 +445,48 @@ const EmployeeContentNew = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [totalEmployees, setTotalEmployees] = useState(0);
 
-  // Add state for departments
-  const [departments, setDepartments] = useState([
-    { id: 1, name: 'Pre-School' },
-    { id: 2, name: 'Primary' },
-    { id: 3, name: 'Intermediate' },
-    { id: 4, name: 'JHS' },
-    { id: 5, name: 'Admin' }
-  ]);
+  // Add state for departments - will be fetched from API
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+
+  // Fetch departments from API
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch('/api/departments');
+      const data = await response.json();
+      
+      if (response.ok) {
+        const departmentOptions = data.map((dept: any) => ({
+          id: dept.DepartmentID,
+          name: dept.DepartmentName
+        }));
+        setDepartments(departmentOptions);
+        console.log('Fetched departments:', departmentOptions);
+      } else {
+        console.error('Failed to fetch departments:', data.error);
+        // Fallback to default departments if API fails
+        setDepartments([
+          { id: 1, name: 'Pre-School' },
+          { id: 2, name: 'Primary' },
+          { id: 3, name: 'Intermediate' },
+          { id: 4, name: 'JHS' },
+          { id: 5, name: 'Admin' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      // Fallback to default departments
+      setDepartments([
+        { id: 1, name: 'Pre-School' },
+        { id: 2, name: 'Primary' },
+        { id: 3, name: 'Intermediate' },
+        { id: 4, name: 'JHS' },
+        { id: 5, name: 'Admin' }
+      ]);
+    }
+  };
 
   useEffect(() => {
+    fetchDepartments();
     fetchEmployees(1);
   }, []);
 
@@ -469,28 +501,66 @@ const EmployeeContentNew = () => {
         throw new Error(data.error || 'Failed to fetch employees');
         }
       
-      const mappedData = data.employees.map((emp: any) => ({
-        employeeId: emp.EmployeeID,
-        id: emp.EmployeeID,
-        firstName: emp.FirstName || '',
-        surname: emp.LastName || '',
+      const mappedData = data.employees.map((emp: any) => {
+        const employmentDetail = emp.EmploymentDetail?.[0] || {};
+        const contactInfo = emp.ContactInfo?.[0] || {};
+        const governmentID = emp.GovernmentID?.[0] || {};
+        const department = emp.Department || {};  // Fixed: Department is an object, not an array
+        const family = emp.Family || [];
+        const skills = emp.skills || [];
+        const trainings = emp.trainings || [];
+        const medicalInfo = emp.MedicalInfo?.[0] || {};
+        
+        // Debug logging for first employee (paginated)
+        if (emp.EmployeeID === '2025-0001') {
+          console.log('DEBUG paginated - Raw employee data:', emp);
+          console.log('DEBUG paginated - Department object:', emp.Department);
+          console.log('DEBUG paginated - Extracted department:', department);
+          console.log('DEBUG paginated - Department name:', department.DepartmentName);
+          console.log('DEBUG paginated - GovernmentID raw:', emp.GovernmentID);
+          console.log('DEBUG paginated - GovernmentID extracted:', governmentID);
+          console.log('DEBUG paginated - ContactInfo raw:', emp.ContactInfo);
+          console.log('DEBUG paginated - ContactInfo extracted:', contactInfo);
+          console.log('DEBUG paginated - Family raw:', emp.Family);
+          console.log('DEBUG paginated - Skills raw:', emp.skills);
+          console.log('DEBUG paginated - MedicalInfo raw:', emp.MedicalInfo);
+        }
+        
+        return {
+          employeeId: emp.EmployeeID,
+          id: emp.EmployeeID,
+          firstName: emp.FirstName || '',
+          surname: emp.LastName || '',
           middleName: emp.MiddleName || '',
-        nameExtension: emp.ExtensionName || '',
-        fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
+          nameExtension: emp.ExtensionName || '',
+          fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
           birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
           birthPlace: emp.PlaceOfBirth || '',
-                sex: emp.Sex || '',
-        civilStatus: emp.CivilStatus || '',
-        email: emp.Email || emp.UserID || 'No email',
-        position: emp.Position || '',
-        designation: emp.Designation || '',
-        departmentId: emp.DepartmentID,
-        photo: emp.Photo || '',
-        status: emp.EmploymentStatus || 'Active',
-        employeeType: emp.EmployeeType || 'Regular',
-        // Add all other fields from the API response
-        ...emp
-        }));
+          sex: emp.Sex || '',
+          civilStatus: emp.CivilStatus || '',
+          email: contactInfo.Email || emp.UserID || '',
+          position: employmentDetail.Position || '',
+          designation: employmentDetail.Designation || '',
+          departmentId: emp.DepartmentID,
+          departmentName: department.DepartmentName || '',
+          photo: emp.Photo || '',
+          status: employmentDetail.EmploymentStatus || 'Active',
+          employeeType: emp.EmployeeType || 'Regular',
+          phone: contactInfo.Phone || '',
+          hireDate: employmentDetail.HireDate || '',
+          salaryGrade: employmentDetail.SalaryGrade || '',
+          // Add all other fields from the API response
+          ...emp,
+          EmploymentDetail: employmentDetail,
+          ContactInfo: contactInfo,
+          GovernmentID: governmentID,
+          Department: department,
+          Family: family,
+          Skills: skills,
+          trainings: trainings,
+          MedicalInfo: medicalInfo
+        };
+      });
       
         setEmployees(mappedData);
       setPagination({
@@ -520,28 +590,51 @@ const EmployeeContentNew = () => {
         throw new Error(data.error || 'Failed to fetch all employees');
       }
       
-      const mappedData = data.employees.map((emp: any) => ({
-        employeeId: emp.EmployeeID,
-        id: emp.EmployeeID,
-        firstName: emp.FirstName || '',
-        surname: emp.LastName || '',
-        middleName: emp.MiddleName || '',
-        nameExtension: emp.ExtensionName || '',
-        fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
-        birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
-        birthPlace: emp.PlaceOfBirth || '',
-        sex: emp.Sex || '',
-        civilStatus: emp.CivilStatus || '',
-        email: emp.Email || emp.UserID || 'No email',
-        position: emp.Position || '',
-        designation: emp.Designation || '',
-        departmentId: emp.DepartmentID,
-        photo: emp.Photo || '',
-        status: emp.EmploymentStatus || 'Active',
-        employeeType: emp.EmployeeType || 'Regular',
-        // Add all other fields from the API response
-        ...emp
-      }));
+      const mappedData = data.employees.map((emp: any) => {
+        const employmentDetail = emp.EmploymentDetail?.[0] || {};
+        const contactInfo = emp.ContactInfo?.[0] || {};
+        const governmentID = emp.GovernmentID?.[0] || {};
+        const department = emp.Department || {};  // Fixed: Department is an object, not an array
+        const family = emp.Family || [];
+        const skills = emp.skills || [];
+        const trainings = emp.trainings || [];
+        const medicalInfo = emp.MedicalInfo?.[0] || {};
+        
+        return {
+          employeeId: emp.EmployeeID,
+          id: emp.EmployeeID,
+          firstName: emp.FirstName || '',
+          surname: emp.LastName || '',
+          middleName: emp.MiddleName || '',
+          nameExtension: emp.ExtensionName || '',
+          fullName: [emp.FirstName, emp.MiddleName, emp.LastName, emp.ExtensionName].filter(Boolean).join(' '),
+          birthDate: emp.DateOfBirth ? new Date(emp.DateOfBirth).toISOString().split('T')[0] : '',
+          birthPlace: emp.PlaceOfBirth || '',
+          sex: emp.Sex || '',
+          civilStatus: emp.CivilStatus || '',
+          email: contactInfo.Email || emp.UserID || '',
+          position: employmentDetail.Position || '',
+          designation: employmentDetail.Designation || '',
+          departmentId: emp.DepartmentID,
+          departmentName: department.DepartmentName || '',
+          photo: emp.Photo || '',
+          status: employmentDetail.EmploymentStatus || 'Active',
+          employeeType: emp.EmployeeType || 'Regular',
+          phone: contactInfo.Phone || '',
+          hireDate: employmentDetail.HireDate || '',
+          salaryGrade: employmentDetail.SalaryGrade || '',
+          // Add all other fields from the API response
+          ...emp,
+          EmploymentDetail: employmentDetail,
+          ContactInfo: contactInfo,
+          GovernmentID: governmentID,
+          Department: department,
+          Family: family,
+          Skills: skills,
+          trainings: trainings,
+          MedicalInfo: medicalInfo
+        };
+      });
       
       setAllEmployees(mappedData);
       setIsLoadingAll(false);
@@ -600,6 +693,11 @@ const EmployeeContentNew = () => {
 
   const handleEmployeeSelect = (employee: any) => {
     console.log('Selected employee:', employee);
+    console.log('GovernmentID data:', employee.GovernmentID);
+    console.log('ContactInfo data:', employee.ContactInfo);
+    console.log('Family data:', employee.Family);
+    console.log('Skills data:', employee.Skills);
+    console.log('MedicalInfo data:', employee.MedicalInfo);
     setSelectedEmployee(employee);
     setEditedEmployee({
       ...employee,
@@ -616,6 +714,7 @@ const EmployeeContentNew = () => {
 
   const handleAddEmployee = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
+    
     try {
       // Validate required fields
       const requiredFields = [
@@ -626,13 +725,14 @@ const EmployeeContentNew = () => {
         { field: 'HireDate', label: 'Hire Date' },
         { field: 'Sex', label: 'Sex' }
       ];
-
+      
       const missingFields = requiredFields.filter(({ field }) => !newEmployee[field as keyof EmployeeFormState]);
+      
       if (missingFields.length > 0) {
         alert(`Please fill in the following required fields: ${missingFields.map(f => f.label).join(', ')}`);
         return;
       }
-
+      
       const employeeData = {
         ...newEmployee,
         // Convert empty strings to null for optional fields
@@ -666,14 +766,16 @@ const EmployeeContentNew = () => {
         ResignationDate: newEmployee.ResignationDate ? new Date(newEmployee.ResignationDate).toISOString() : null,
 
         // Convert string IDs to numbers or null
-        DepartmentID: newEmployee.DepartmentID,
-        ContractID: newEmployee.ContractID,
+        DepartmentID: newEmployee.DepartmentID || null,
+        ContractID: newEmployee.ContractID || null,
 
         // Remove createdAt and updatedAt as they are handled by the database
         createdAt: undefined,
         updatedAt: undefined
       };
 
+
+      
       const response = await fetch('/api/employees', {
         method: 'POST',
         headers: {
@@ -683,11 +785,12 @@ const EmployeeContentNew = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add employee');
+        const errorText = await response.text();
+        throw new Error(`Failed to add employee: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-
+      
       // Reset form and close modal
       setNewEmployee({
         EmployeeID: '',
@@ -730,7 +833,7 @@ const EmployeeContentNew = () => {
         Education: [],
         Eligibility: [],
         EmploymentHistory: [],
-        Training: [],
+        trainings: [],
         MedicalInfo: {},
         createdAt: null,
         updatedAt: null
@@ -738,14 +841,17 @@ const EmployeeContentNew = () => {
       setIsAddModalOpen(false);
       
       // Show success modal
-      setSuccessMessage(`Successfully added employee ${result.FirstName} ${result.LastName}`);
+      const successMsg = `Successfully added employee ${result.FirstName} ${result.LastName}`;
+      setSuccessMessage(successMsg);
       setShowSuccessModal(true);
       
       // Refresh employee list
       await fetchEmployees();
+      
     } catch (error) {
-      console.error('Error adding employee:', error);
-      alert(error instanceof Error ? error.message : 'Failed to add employee. Please try again.');
+      console.error('Error in handleAddEmployee:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add employee. Please try again.';
+      alert(errorMessage);
     }
   };
 
@@ -919,7 +1025,7 @@ const EmployeeContentNew = () => {
       Education: [],
       Eligibility: [],
       EmploymentHistory: [],
-      Training: [],
+      trainings: [],
       MedicalInfo: {},
 
       createdAt: null,
@@ -935,53 +1041,56 @@ const EmployeeContentNew = () => {
 
   // Handle opening edit modal
   const handleEditEmployee = (employee: any) => {
+    console.log('Opening edit modal for employee:', employee);
+    console.log('Available fields:', Object.keys(employee));
+    
     // Populate the edit form with employee data
     setEditEmployee({
       EmployeeID: employee.employeeId || '',
-      UserID: employee.userId || '',
+      UserID: employee.UserID || '',
       LastName: employee.surname || '',
       FirstName: employee.firstName || '',
       MiddleName: employee.middleName || '',
       ExtensionName: employee.nameExtension || '',
       Sex: employee.sex || '',
       Photo: employee.photo || '',
-      DateOfBirth: employee.birthDate || '',
-      PlaceOfBirth: employee.birthPlace || '',
-      CivilStatus: employee.civilStatus || '',
-      Nationality: employee.nationality || '',
-      Religion: employee.religion || '',
-      BloodType: employee.bloodType || '',
-      Email: employee.email || '',
-      Phone: employee.phone || '',
-      Address: employee.address || '',
-      PresentAddress: employee.PresentAddress || '',
-      PermanentAddress: employee.PermanentAddress || '',
+      DateOfBirth: employee.DateOfBirth ? new Date(employee.DateOfBirth).toISOString().split('T')[0] : (employee.birthDate || ''),
+      PlaceOfBirth: employee.PlaceOfBirth || '',
+      CivilStatus: employee.CivilStatus || '',
+      Nationality: employee.Nationality || '',
+      Religion: employee.Religion || '',
+      BloodType: employee.BloodType || '',
+      Email: employee.ContactInfo?.Email || employee.email || '',
+      Phone: employee.ContactInfo?.Phone || employee.phone || '',
+      Address: employee.Address || '',
+      PresentAddress: employee.ContactInfo?.PresentAddress || employee.PresentAddress || '',
+      PermanentAddress: employee.ContactInfo?.PermanentAddress || employee.PermanentAddress || '',
       
       // Government IDs
-      SSSNumber: employee.sss || '',
-      TINNumber: employee.tin || '',
-      PhilHealthNumber: employee.philhealth || '',
-      PagIbigNumber: employee.pagibig || '',
-      GSISNumber: employee.gsis || '',
-      PRCLicenseNumber: employee.PRCLicenseNumber || '',
-      PRCValidity: employee.PRCValidity || '',
+      SSSNumber: employee.GovernmentID?.SSSNumber || '',
+      TINNumber: employee.GovernmentID?.TINNumber || '',
+      PhilHealthNumber: employee.GovernmentID?.PhilHealthNumber || '',
+      PagIbigNumber: employee.GovernmentID?.PagIbigNumber || '',
+      GSISNumber: employee.GovernmentID?.GSISNumber || '',
+      PRCLicenseNumber: employee.GovernmentID?.PRCLicenseNumber || '',
+      PRCValidity: employee.GovernmentID?.PRCValidity || '',
 
-      EmploymentStatus: employee.status || 'Regular',
-      HireDate: employee.hireDate || '',
-      ResignationDate: employee.resignationDate || null,
-      Designation: employee.designation || null,
-      Position: employee.position || '',
+      EmploymentStatus: employee.EmploymentDetail?.EmploymentStatus || employee.status || 'Regular',
+      HireDate: employee.EmploymentDetail?.HireDate ? new Date(employee.EmploymentDetail.HireDate).toISOString().split('T')[0] : (employee.hireDate || ''),
+      ResignationDate: employee.EmploymentDetail?.ResignationDate || employee.resignationDate || null,
+      Designation: employee.EmploymentDetail?.Designation || employee.designation || null,
+      Position: employee.EmploymentDetail?.Position || employee.position || '',
       DepartmentID: employee.DepartmentID || null,
       ContractID: employee.ContractID || null,
-      EmergencyContactName: employee.EmergencyContactName || '',
-      EmergencyContactNumber: employee.EmergencyContactNumber || '',
+      EmergencyContactName: employee.ContactInfo?.EmergencyContactName || employee.EmergencyContactName || '',
+      EmergencyContactNumber: employee.ContactInfo?.EmergencyContactNumber || employee.EmergencyContactNumber || '',
       EmployeeType: employee.EmployeeType || 'Regular',
-      SalaryGrade: employee.SalaryGrade || '',
+      SalaryGrade: employee.EmploymentDetail?.SalaryGrade || employee.SalaryGrade || '',
 
       Education: employee.Education || [],
       Eligibility: employee.Eligibility || [],
       EmploymentHistory: employee.EmploymentHistory || [],
-      Training: employee.Training || [],
+                trainings: employee.trainings || [],
       MedicalInfo: employee.MedicalInfo || {},
 
       createdAt: employee.createdAt || null,
@@ -1046,8 +1155,12 @@ const EmployeeContentNew = () => {
       setSuccessMessage(`Successfully updated employee ${result.FirstName} ${result.LastName}`);
       setShowSuccessModal(true);
       
-      // Refresh employee list
-      await fetchEmployees();
+      // Refresh employee list based on current view mode
+      if (viewMode === 'all') {
+        await fetchAllEmployees();
+      } else {
+        await fetchEmployees(pagination.currentPage);
+      }
     } catch (error) {
       console.error('Error updating employee:', error);
       alert(error instanceof Error ? error.message : 'Failed to update employee. Please try again.');
@@ -1064,16 +1177,22 @@ const EmployeeContentNew = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         {/* Header with back button */}
-        <div className="flex items-center mb-8">
-          <button
-            onClick={handleBackToList}
-            className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Employees
-          </button>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleBackToList}
+              className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Employees
+            </button>
+            <div className="h-6 w-px bg-gray-300"></div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {selectedEmployee?.fullName || `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`.trim()}
+            </h1>
+          </div>
         </div>
 
         {/* Employee Info Card */}
@@ -1106,11 +1225,45 @@ const EmployeeContentNew = () => {
               )}
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {selectedEmployee?.fullName || `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`.trim()}
-              </h2>
-              <p className="text-gray-500">{selectedEmployee?.position}</p>
-              <p className="text-gray-500">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">First Name</label>
+                    <input
+                      type="text"
+                      value={editedEmployee?.firstName || ''}
+                      onChange={(e) => handleEditInputChange('firstName', e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                    <input
+                      type="text"
+                      value={editedEmployee?.surname || ''}
+                      onChange={(e) => handleEditInputChange('surname', e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Position</label>
+                    <input
+                      type="text"
+                      value={editedEmployee?.position || ''}
+                      onChange={(e) => handleEditInputChange('position', e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedEmployee?.fullName || `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`.trim()}
+                  </h2>
+                  <p className="text-gray-500">{selectedEmployee?.position}</p>
+                  <p className="text-gray-500">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1212,23 +1365,23 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">GSIS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.gsis || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.GSISNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">SSS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.sss || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.SSSNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">PhilHealth Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.philhealth || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.PhilHealthNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">Pag-IBIG Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.pagibig || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.PagIbigNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-600">TIN</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.tin || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.TINNumber || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -1240,30 +1393,30 @@ const EmployeeContentNew = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Email Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.Email || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.Email || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Mobile Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.Phone || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.Phone || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-600">Present Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.PresentAddress || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.PresentAddress || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-600">Permanent Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.PermanentAddress || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.PermanentAddress || 'N/A'}</p>
                   </div>
                   <div className="md:col-span-2 border-t pt-4 mt-2">
                     <h4 className="text-md font-semibold text-gray-800 mb-4">Emergency Contact</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-600">Contact Name</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.EmergencyContactName || 'N/A'}</p>
+                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.EmergencyContactName || 'N/A'}</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-600">Contact Number</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.EmergencyContactNumber || 'N/A'}</p>
+                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.EmergencyContactNumber || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
@@ -1275,19 +1428,41 @@ const EmployeeContentNew = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Family Background</h3>
                 <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Spouse Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Name</label>
-                        <p className="mt-1 text-sm text-gray-900">Maria Santos</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Occupation</label>
-                        <p className="mt-1 text-sm text-gray-900">Nurse</p>
+                  {selectedEmployee?.Family?.map((member: any, index: number) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Type</label>
+                          <p className="mt-1 text-sm text-gray-900">{member.type || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Name</label>
+                          <p className="mt-1 text-sm text-gray-900">{member.name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Occupation</label>
+                          <p className="mt-1 text-sm text-gray-900">{member.occupation || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Date of Birth</label>
+                          <p className="mt-1 text-sm text-gray-900">
+                            {member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Contact Number</label>
+                          <p className="mt-1 text-sm text-gray-900">{member.contactNumber || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Dependent</label>
+                          <p className="mt-1 text-sm text-gray-900">{member.isDependent ? 'Yes' : 'No'}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
+                  {(!selectedEmployee?.Family || selectedEmployee?.Family.length === 0) && (
+                    <p className="text-gray-500 italic">No family background information available.</p>
+                  )}
                 </div>
               </div>
             )}
@@ -1415,7 +1590,7 @@ const EmployeeContentNew = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Training Programs</h3>
                 <div className="space-y-4">
-                  {selectedEmployee?.Training?.map((training: Training, index: number) => (
+                  {selectedEmployee?.trainings?.map((training: Training, index: number) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -1439,7 +1614,7 @@ const EmployeeContentNew = () => {
                     </div>
                     </div>
                   ))}
-                  {(!selectedEmployee?.Training || selectedEmployee?.Training.length === 0) && (
+                  {(!selectedEmployee?.trainings || selectedEmployee?.trainings.length === 0) && (
                     <p className="text-gray-500 italic">No training records found.</p>
                   )}
                 </div>
@@ -1476,16 +1651,33 @@ const EmployeeContentNew = () => {
 
             {activeTab === 'other' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Other Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Special Skills</label>
-                    <p className="mt-1 text-sm text-gray-900">Public Speaking, Leadership</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Hobbies</label>
-                    <p className="mt-1 text-sm text-gray-900">Reading, Traveling</p>
-                  </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Skills & Other Information</h3>
+                <div className="space-y-4">
+                  {selectedEmployee?.Skills?.map((skill: any, index: number) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Skill Name</label>
+                          <p className="mt-1 text-sm text-gray-900">{skill.name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Proficiency Level</label>
+                          <p className="mt-1 text-sm text-gray-900">{skill.proficiencyLevel || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Years of Experience</label>
+                          <p className="mt-1 text-sm text-gray-900">{skill.yearsOfExperience || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600">Description</label>
+                          <p className="mt-1 text-sm text-gray-900">{skill.description || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!selectedEmployee?.Skills || selectedEmployee?.Skills.length === 0) && (
+                    <p className="text-gray-500 italic">No skills information available.</p>
+                  )}
                 </div>
               </div>
             )}
@@ -1615,9 +1807,6 @@ const EmployeeContentNew = () => {
                   Email
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -1683,23 +1872,19 @@ const EmployeeContentNew = () => {
                         {employee.designation}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {departments.find(dept => dept.id === employee.DepartmentID)?.name || 'No Department'}
+                    {(() => {
+                      // Debug logging for department display
+                      if (employee.employeeId === '2025-0001') {
+                        console.log('DEBUG table display - Employee object:', employee);
+                        console.log('DEBUG table display - departmentName:', employee.departmentName);
+                        console.log('DEBUG table display - DepartmentID:', employee.DepartmentID);
+                        console.log('DEBUG table display - Department object:', employee.Department);
+                      }
+                      return employee.departmentName || 'No Department';
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      employee.status === 'Active' || employee.status === 'Regular'
-                        ? 'bg-green-100 text-green-800'
-                        : employee.status === 'Resigned'
-                        ? 'bg-red-100 text-red-800'
-                        : employee.status === 'Probationary'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {employee.status}
-                    </span>
+                    {employee.email || 'No email'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -2386,20 +2571,19 @@ const EmployeeContentNew = () => {
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
-                            Department <span className="text-red-500">*</span>
+                            Department
                           </label>
                           <select
                             value={newEmployee.DepartmentID || ''}
                             onChange={(e) => setNewEmployee({...newEmployee, DepartmentID: parseInt(e.target.value) || null})}
-                            required
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           >
                             <option value="">Select department...</option>
-                            <option value="1">Pre-School</option>
-                            <option value="2">Primary</option>
-                            <option value="3">Intermediate</option>
-                            <option value="4">JHS</option>
-                            <option value="5">Admin</option>
+                            {departments.map((dept) => (
+                              <option key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div className="space-y-2">
@@ -2409,10 +2593,19 @@ const EmployeeContentNew = () => {
                           <input
                             type="number"
                             value={newEmployee.ContractID || ''}
-                            onChange={(e) => setNewEmployee({...newEmployee, ContractID: parseInt(e.target.value) || null})}
-                            placeholder="Contract ID"
+                            onChange={(e) => {
+                              const value = e.target.value.trim();
+                              if (value === '') {
+                                setNewEmployee({...newEmployee, ContractID: null});
+                              } else {
+                                const parsed = parseInt(value);
+                                setNewEmployee({...newEmployee, ContractID: isNaN(parsed) ? null : parsed});
+                              }
+                            }}
+                            placeholder="Contract ID (leave empty if none)"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           />
+                          <p className="text-xs text-gray-500">Leave empty if employee has no contract</p>
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
@@ -2780,7 +2973,7 @@ const EmployeeContentNew = () => {
                             <span className="text-red-500 mr-1">*</span>
                             Email
                           </label>
-                          <input
+                    <input
                             type="email"
                             value={editEmployee.Email}
                             onChange={(e) => setEditEmployee({...editEmployee, Email: e.target.value})}
@@ -2807,14 +3000,14 @@ const EmployeeContentNew = () => {
                           <label className="block text-sm font-semibold text-gray-700">
                             Present Address
                           </label>
-                          <input
+                    <input
                             type="text"
                             value={editEmployee.PresentAddress}
                             onChange={(e) => setEditEmployee({...editEmployee, PresentAddress: e.target.value})}
                             placeholder="Complete present address"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
-                          />
-                        </div>
+                    />
+                  </div>
                         <div className="space-y-2 md:col-span-2">
                           <label className="block text-sm font-semibold text-gray-700">
                             Permanent Address
@@ -3007,15 +3200,14 @@ const EmployeeContentNew = () => {
                           <select
                             value={editEmployee.DepartmentID || ''}
                             onChange={(e) => setEditEmployee({...editEmployee, DepartmentID: parseInt(e.target.value) || null})}
-                            required
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           >
                             <option value="">Select department...</option>
-                            <option value="1">Pre-School</option>
-                            <option value="2">Primary</option>
-                            <option value="3">Intermediate</option>
-                            <option value="4">JHS</option>
-                            <option value="5">Admin</option>
+                            {departments.map((dept) => (
+                              <option key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div className="space-y-2">
@@ -3025,8 +3217,16 @@ const EmployeeContentNew = () => {
                           <input
                             type="number"
                             value={editEmployee.ContractID || ''}
-                            onChange={(e) => setEditEmployee({...editEmployee, ContractID: parseInt(e.target.value) || null})}
-                            placeholder="Contract ID"
+                            onChange={(e) => {
+                              const value = e.target.value.trim();
+                              if (value === '') {
+                                setEditEmployee({...editEmployee, ContractID: null});
+                              } else {
+                                const parsed = parseInt(value);
+                                setEditEmployee({...editEmployee, ContractID: isNaN(parsed) ? null : parsed});
+                              }
+                            }}
+                            placeholder="Contract ID (leave empty if none)"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           />
                         </div>

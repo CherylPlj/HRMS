@@ -15,21 +15,11 @@ export const supabase = createClient(
   {
     auth: {
       autoRefreshToken: true,
-      persistSession: false
+      persistSession: true,
+      detectSessionInUrl: true
     },
     db: {
       schema: 'public'
-    },
-    global: {
-      headers: {
-        'x-my-custom-header': 'hrms-auth'
-      }
-    },
-    // Add retry configuration
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
     }
   }
 ); 

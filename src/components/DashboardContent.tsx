@@ -53,20 +53,9 @@ interface Employee {
 }
 
 export default function DashboardContent() {
-  const { user } = useUser();
   const router = useRouter();
-
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (user === null) {
-      router.replace("/sign-in");
-    }
-  }, [user, router]);
-
-  const [dateRange, setDateRange] = useState<[Date, Date]>([
-    new Date(new Date().setDate(1)), // First day of current month
-    new Date(), // Today
-  ]);
+  const { user } = useUser();
+  const [dateRange, setDateRange] = useState<[Date, Date]>([new Date(), new Date()]);
   const [facultyStats, setFacultyStats] = useState({
     total: 0,
     regular: 0,
@@ -74,6 +63,7 @@ export default function DashboardContent() {
     resigned: 0,
     underProbation: 0,
   });
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [activeUsers, setActiveUsers] = useState({
     faculty: 0,
     admin: 0,
@@ -149,8 +139,8 @@ export default function DashboardContent() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-                // Fetch Employee Stats
-        const { data: employees, error: employeeError } = await supabase
+        // Fetch Employee Stats
+        const { data: employeesData, error: employeeError } = await supabase
           .from("Employee")
           .select(`
             *,
@@ -165,10 +155,11 @@ export default function DashboardContent() {
           throw employeeError;
         }
 
-        console.log('Raw employee data from dashboard:', employees); // Debug log
+        console.log('Raw employee data from dashboard:', employeesData); // Debug log
+        setEmployees(employeesData || []);
 
         // Filter out deleted employees
-        const allNonDeletedEmployees = employees?.filter(e => !e.isDeleted) || [];
+        const allNonDeletedEmployees = employeesData?.filter(e => !e.isDeleted) || [];
         console.log('All non-deleted employee data:', allNonDeletedEmployees); // Debug log
 
         // Calculate stats based on EmploymentStatus
@@ -472,13 +463,15 @@ export default function DashboardContent() {
     }
   }, [user?.id]);
 
-  // Build per-day present/absent arrays for the graph
+  // Build per-day present/absent/late arrays for the graph
   const daysCount = Math.floor((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const presentPerDay: number[] = Array(daysCount).fill(0);
   const absentPerDay: number[] = Array(daysCount).fill(0);
+  const latePerDay: number[] = Array(daysCount).fill(0);
   
-  // Get all unique employee IDs from attendance records
-  const employeeIds = Array.from(new Set(attendanceRecords.map((rec) => rec.employeeId)));
+  // Get all active employees (not resigned or deleted)
+  const activeEmployees = employees.filter((emp: Employee) => !emp.isDeleted && emp.EmploymentStatus !== "Resigned");
+  const totalActiveEmployees = activeEmployees.length;
   
   // Calculate attendance for each day
   for (let i = 0; i < daysCount; i++) {
@@ -486,22 +479,31 @@ export default function DashboardContent() {
     day.setDate(day.getDate() + i);
     const dayStr = day.toISOString().split('T')[0];
     
-    let dayPresent = 0;
-    let dayAbsent = 0;
+    // Get all attendance records for this day
+    const dayAttendance = attendanceRecords.filter(rec => rec.date === dayStr);
     
-    for (const employeeId of employeeIds) {
-      const rec = attendanceRecords.find((r) => r.employeeId === employeeId && r.date === dayStr);
-      if (rec) {
-        if (rec.status === 'PRESENT') dayPresent++;
-        else dayAbsent++;
-      } else {
-        dayAbsent++;
-      }
-    }
+    // Count present, absent, and late for this day
+    presentPerDay[i] = dayAttendance.filter(rec => rec.status === 'PRESENT').length;
+    latePerDay[i] = dayAttendance.filter(rec => rec.status === 'LATE').length;
     
-    presentPerDay[i] = dayPresent;
-    absentPerDay[i] = dayAbsent;
+    // Absent is total active employees minus present and late
+    absentPerDay[i] = totalActiveEmployees - (presentPerDay[i] + latePerDay[i]);
   }
+
+  console.log('Attendance calculation debug:', {
+    totalActiveEmployees,
+    sampleDay: {
+      present: presentPerDay[0],
+      absent: absentPerDay[0],
+      late: latePerDay[0]
+    },
+    attendanceRecords: attendanceRecords.length,
+    activeEmployees: activeEmployees.map(emp => ({
+      id: emp.EmployeeID,
+      status: emp.EmploymentStatus
+    }))
+  });
+
   const attendanceOverviewData = {
     labels: Array.from({ length: daysCount }, (_, i) => {
       const d = new Date(dateRange[0]);
@@ -512,16 +514,26 @@ export default function DashboardContent() {
       {
         label: "Present",
         data: presentPerDay,
-        borderColor: "#43a047",
         backgroundColor: "#43a047",
-        fill: false,
+        borderRadius: 4,
+        barPercentage: 0.7,
+        categoryPercentage: 0.8,
       },
       {
         label: "Absent",
         data: absentPerDay,
-        borderColor: "#e53935",
         backgroundColor: "#e53935",
-        fill: false,
+        borderRadius: 4,
+        barPercentage: 0.7,
+        categoryPercentage: 0.8,
+      },
+      {
+        label: "Late",
+        data: latePerDay,
+        backgroundColor: "#ffb300",
+        borderRadius: 4,
+        barPercentage: 0.7,
+        categoryPercentage: 0.8,
       },
     ],
   };
@@ -1007,11 +1019,42 @@ export default function DashboardContent() {
           <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
         </div>
         <div className="h-[350px]">
-          <Line data={attendanceOverviewData} options={{
+          <Bar data={attendanceOverviewData} options={{
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: true } },
-            scales: { y: { beginAtZero: true } },
+            plugins: { 
+              legend: { 
+                display: true,
+                position: 'top',
+                align: 'center',
+                labels: {
+                  boxWidth: 12,
+                  padding: 15,
+                  usePointStyle: true
+                }
+              }
+            },
+            scales: {
+              y: { 
+                beginAtZero: true,
+                grid: {
+                  display: true,
+                  color: 'rgba(0, 0, 0, 0.1)'
+                },
+                ticks: {
+                  precision: 0
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
           }} />
         </div>
       </div>

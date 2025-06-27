@@ -83,7 +83,7 @@ model Employee {
   Nationality      String?
   Religion         String?
   BloodType        String?
-
+  Email            String? @unique
   // Relations
   governmentIds    GovernmentID?
   employmentDetails EmploymentDetail?
@@ -150,20 +150,46 @@ model EmploymentDetail {
   Designation      Designation?
   Position         String?
   SalaryGrade      String?
-  
+  retirementId     Int?             @unique // must be unique for 1:1
+
   // Relation
   employee         Employee @relation(fields: [employeeId], references: [EmployeeID])
-  
+  retirement       Retirement? @relation("EmploymentDetailToRetirement", fields: [retirementId], references: [id])
+
+  // Foreign keys
+  ContractID       Int?
+  DepartmentID     Int?
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime? @updatedAt
   createdBy        String?
   updatedBy        String?
 }
 
+model Retirement {
+  id                Int       @id @default(autoincrement()) @unique
+  employeeId        String    @unique
+  employee          Employee  @relation(fields: [employeeId], references: [EmployeeID])
+  requestDate       DateTime  @default(now())
+  effectiveDate     DateTime  @db.Date
+  pensionPlanType   String?   // e.g., "GSIS", "SSS", "Private"
+  pensionAmount     Float?
+  clearanceStatus   Boolean   @default(false)
+  exitInterviewDate DateTime?
+  remarks           String?
+  documents         Document[] 
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdBy         String?
+  updatedBy         String?
+  status            RetirementProcessStatus @default(Pending)
+  employmentDetail  EmploymentDetail? @relation("EmploymentDetailToRetirement")
+}
+
 model ContactInfo {
   id                    Int      @id @default(autoincrement())
   employeeId            String   @unique
-  Email                String?  @unique
+  Email                 String?
   Phone                String?
   PresentAddress       String?
   PermanentAddress     String?
@@ -678,25 +704,6 @@ enum RetirementStatus {
   Eligible         // Has reached retirement age but still working
   Processing       // Retirement paperwork in progress
   Retired          // Fully retired
-}
-
-model Retirement {
-  id                Int       @id @default(autoincrement())
-  employeeId        String    @unique
-  employee          Employee  @relation(fields: [employeeId], references: [EmployeeID])
-  requestDate       DateTime  @default(now())
-  effectiveDate     DateTime  @db.Date
-  pensionPlanType   String?   // e.g., "GSIS", "SSS", "Private"
-  pensionAmount     Float?
-  clearanceStatus   Boolean   @default(false)
-  exitInterviewDate DateTime?
-  remarks          String?
-  documents        Document[] 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  createdBy        String?
-  updatedBy        String?
-  status           RetirementProcessStatus @default(Pending)
 }
 
 enum RetirementProcessStatus {
