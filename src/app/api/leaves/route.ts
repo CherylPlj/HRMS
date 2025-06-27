@@ -148,6 +148,11 @@ export async function POST(request: NextRequest) {
         // Validate dates
         const start = new Date(StartDate);
         const end = new Date(EndDate);
+        // Calculate days without modifying the original time
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        const requestDays = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             console.error('Invalid date format:', { StartDate, EndDate });
             return NextResponse.json(
@@ -163,9 +168,6 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-
-        // Calculate days for this request
-        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
         // Special validation for maternity leave
         if (LeaveType === LeaveType.Maternity) {

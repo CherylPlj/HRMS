@@ -392,7 +392,23 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     }
   };
 
-  // Add this helper function near the top of the component
+  // Add helper function to detect file type
+  const getFileType = (url: string | undefined, mimeType?: string): 'image' | 'pdf' | 'other' => {
+    if (!url) return 'other';
+    
+    // Check MIME type first if available
+    if (mimeType) {
+      if (mimeType.startsWith('image/')) return 'image';
+      if (mimeType === 'application/pdf') return 'pdf';
+    }
+    
+    // Fallback to URL extension check
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
+    if (extension === 'pdf') return 'pdf';
+    return 'other';
+  };
+
   const getPreviewUrl = (url: string | undefined) => {
     if (!url) return '';
     
@@ -410,7 +426,69 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
       return `https://drive.google.com/file/d/${fileId}/preview`;
     }
     
+    // Handle Supabase Storage URLs
+    if (url.includes('storage.googleapis.com') || url.includes('supabase')) {
+      // For images, return the URL directly
+      if (getFileType(url) === 'image') {
+        return url;
+      }
+      // For PDFs, return the URL directly as modern browsers can preview them
+      if (getFileType(url) === 'pdf') {
+        return url;
+      }
+    }
+    
     return url;
+  };
+
+  // Add preview component to handle different file types
+  const FilePreview: React.FC<{ url: string; documentType?: string }> = ({ url, documentType }) => {
+    const fileType = getFileType(url);
+    
+    return (
+      <div className="w-full flex flex-col">
+        {/* Preview Header */}
+        <div className="border-b pb-4 mb-4">
+          <h3 className="text-lg font-semibold text-[#800000]">{documentType || 'Document Preview'}</h3>
+        </div>
+
+        {/* Preview Content */}
+        <div className="flex justify-center">
+          {fileType === 'image' && (
+            <img 
+              src={url} 
+              alt="Document preview" 
+              className="max-w-full max-h-[calc(70vh-4rem)] object-contain"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/file.svg'; // Fallback to generic file icon
+              }}
+            />
+          )}
+          {fileType === 'pdf' && (
+            <iframe 
+              src={url}
+              title="Document Preview"
+              className="w-full h-[calc(70vh-4rem)] border-0"
+            />
+          )}
+          {fileType === 'other' && (
+            <div className="flex flex-col items-center justify-center h-[calc(70vh-4rem)]">
+              <img src="/file.svg" alt="File icon" className="w-16 h-16 mb-4" />
+              <p>Preview not available</p>
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#a83232]"
+              >
+                Download File
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (!user) {
@@ -892,23 +970,19 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
       {/* File Preview Modal */}
       {previewFileUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-3xl relative flex flex-col items-center">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl relative">
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              className="absolute top-4 right-4 text-gray-500 hover:text-black"
               onClick={() => setPreviewFileUrl(null)}
               title="Close preview"
               aria-label="Close preview"
             >
               <FaTimes />
             </button>
-            <div className="w-full h-[70vh] flex items-center justify-center">
-              <iframe 
-                src={previewFileUrl} 
-                title="Document Preview" 
-                className="w-full h-full border-0"
-                allow="autoplay"
-              />
-            </div>
+            <FilePreview 
+              url={previewFileUrl} 
+              documentType={documents.find(doc => doc.FileUrl === previewFileUrl)?.DocumentType?.DocumentTypeName}
+            />
           </div>
         </div>
       )}

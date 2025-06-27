@@ -69,7 +69,10 @@ const calculateDuration = (startDate: string | Date | null, endDate: string | Da
     try {
         const start = new Date(startDate);
         const end = new Date(endDate);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
+        // Calculate days without modifying the original time
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        const diffTime = Math.abs(endDay.getTime() - startDay.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
     } catch {

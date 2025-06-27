@@ -117,7 +117,12 @@ const calculateDuration = (request: LeaveRequest) => {
         const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
         return `${hours}h ${minutes}m`;
     } else {
-        const days = Math.ceil((new Date(request.EndDate).getTime() - new Date(request.StartDate).getTime()) / (1000 * 60 * 60 * 24));
+        const start = new Date(request.StartDate);
+        const end = new Date(request.EndDate);
+        // Calculate days without modifying the original time
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        const days = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         return `${days} day${days !== 1 ? 's' : ''}`;
     }
 };
@@ -679,7 +684,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     return (
         <div className="container mx-auto p-4">
             {/* Leave Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-[#800000]">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Total Leaves</h3>
                     <p className="text-2xl font-bold text-[#800000]">10</p>
@@ -688,7 +693,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-blue-500">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Remaining</h3>
                     <p className="text-2xl font-bold text-blue-500">
-                        {10 - leaveRequests
+                        {Math.max(0, 10 - leaveRequests
                             .filter(request => {
                                 const leaveDate = new Date(request.StartDate);
                                 const currentDate = new Date();
@@ -702,9 +707,30 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 const end = new Date(leave.EndDate);
                                 const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                                 return total + days;
-                            }, 0)}
+                            }, 0))}
                     </p>
                     <p className="text-xs text-gray-600">Days Left This Month</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-orange-500">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Unpaid Leaves</h3>
+                    <p className="text-2xl font-bold text-orange-500">
+                        {Math.max(0, leaveRequests
+                            .filter(request => {
+                                const leaveDate = new Date(request.StartDate);
+                                const currentDate = new Date();
+                                return request.Status === 'Approved' && 
+                                       request.RequestType === 'Leave' &&
+                                       leaveDate.getMonth() === currentDate.getMonth() &&
+                                       leaveDate.getFullYear() === currentDate.getFullYear();
+                            })
+                            .reduce((total, leave) => {
+                                const start = new Date(leave.StartDate);
+                                const end = new Date(leave.EndDate);
+                                const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                return total + days;
+                            }, 0) - 10)}
+                    </p>
+                    <p className="text-xs text-gray-600">Days This Month</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-yellow-500">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Pending</h3>
@@ -1383,6 +1409,39 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg w-full max-w-2xl mx-4 p-6">
                         <h2 className="text-2xl font-bold mb-4">Confirm {requestType === 'Undertime' ? 'Undertime' : 'Leave'} Request</h2>
+                        
+                        {/* Warning for unpaid leaves */}
+                        {requestType === 'Leave' && startDate && endDate && (
+                            (() => {
+                                const currentDate = new Date();
+                                const usedLeaveDays = leaveRequests
+                                    .filter(request => {
+                                        const leaveDate = new Date(request.StartDate);
+                                        return request.Status === 'Approved' && 
+                                               request.RequestType === 'Leave' &&
+                                               leaveDate.getMonth() === currentDate.getMonth() &&
+                                               leaveDate.getFullYear() === currentDate.getFullYear();
+                                    })
+                                    .reduce((total, leave) => {
+                                        const start = new Date(leave.StartDate);
+                                        const end = new Date(leave.EndDate);
+                                        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                        return total + days;
+                                    }, 0);
+
+                                const newLeaveDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                const totalDays = usedLeaveDays + newLeaveDays;
+                                const unpaidDays = Math.max(0, totalDays - 10);
+
+                                return unpaidDays > 0 ? (
+                                    <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
+                                        <p className="font-medium">Warning: Unpaid Leave Notice</p>
+                                        <p>This request will exceed your monthly leave allowance. {unpaidDays} day{unpaidDays !== 1 ? 's' : ''} will be considered as unpaid leave.</p>
+                                    </div>
+                                ) : null;
+                            })()
+                        )}
+
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

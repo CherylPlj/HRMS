@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
-import { googleDriveService } from '@/services/googleDriveService';
+import { facultyDocumentService } from '@/services/facultyDocumentService';
 
 interface User {
   FirstName: string;
@@ -205,14 +205,14 @@ export async function POST(request: Request) {
       folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
     });
 
-    const uploadResult = await googleDriveService.uploadFile(
+    const uploadResult = await facultyDocumentService.uploadFile(
       file,
       fileName,
       file.type,
       process.env.GOOGLE_DRIVE_FOLDER_ID
     );
 
-    console.log('Google Drive upload successful:', uploadResult);
+    console.log('File upload successful:', uploadResult);
 
     // Check if document already exists
     const { data: existingDoc, error: checkError } = await supabaseAdmin
@@ -230,11 +230,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // If document exists, delete old file from Google Drive
+    // If document exists, delete old file
     if (existingDoc?.FilePath) {
       try {
-        await googleDriveService.deleteFile(existingDoc.FilePath);
-        console.log('Deleted old file from Google Drive:', existingDoc.FilePath);
+        await facultyDocumentService.deleteFile(existingDoc.FilePath, existingDoc.FilePath.includes('supabase') ? 'supabase' : 'google-drive');
+        console.log('Deleted old file:', existingDoc.FilePath);
       } catch (deleteError) {
         console.error('Error deleting old file:', deleteError);
         // Continue with update even if delete fails
@@ -259,8 +259,8 @@ export async function POST(request: Request) {
 
     if (documentError) {
       console.error('Error updating document record:', documentError);
-      // If document record update fails, delete the uploaded file from Google Drive
-      await googleDriveService.deleteFile(uploadResult.fileId);
+      // If document record update fails, delete the uploaded file
+      await facultyDocumentService.deleteFile(uploadResult.fileId, uploadResult.fileId.includes('supabase') ? 'supabase' : 'google-drive');
       return NextResponse.json(
         { error: 'Failed to update document record: ' + documentError.message },
         { status: 500 }

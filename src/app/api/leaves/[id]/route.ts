@@ -61,9 +61,11 @@ export async function PATCH(
 
         const start = new Date(body.StartDate);
         const end = new Date(body.EndDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
 
         // Calculate days for this request
-        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
         // Get all approved leaves for this faculty in the current year (excluding this one)
         const currentYear = new Date().getFullYear();
@@ -154,9 +156,11 @@ export async function PUT(
         const body = await request.json();
         const start = new Date(body.StartDate);
         const end = new Date(body.EndDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
 
         // Calculate days for this request
-        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
         // Special validation for maternity leave
         if (body.LeaveType === LeaveType.Maternity) {

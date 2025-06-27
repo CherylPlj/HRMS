@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FaTrash, FaPen, FaDownload, FaPlus, FaFile, FaEye, FaLink } from 'react-icons/fa';
+import { FaTrash, FaPen, FaDownload, FaPlus, FaFile, FaEye, FaLink, FaTimes } from 'react-icons/fa';
 import { Search } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
 import jsPDF from 'jspdf';
@@ -210,6 +210,105 @@ const getViewUrl = (url: string) => {
   }
 
   return url;
+};
+
+// Add helper function to detect file type
+const getFileType = (url: string | undefined, mimeType?: string): 'image' | 'pdf' | 'other' => {
+  if (!url) return 'other';
+  
+  // Check MIME type first if available
+  if (mimeType) {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType === 'application/pdf') return 'pdf';
+  }
+  
+  // Fallback to URL extension check
+  const extension = url.split('.').pop()?.toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
+  if (extension === 'pdf') return 'pdf';
+  return 'other';
+};
+
+const getPreviewUrl = (url: string | undefined) => {
+  if (!url) return '';
+  
+  // Handle Google Drive URLs
+  const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+    return `https://drive.google.com/file/d/${fileId}/preview`;
+  }
+  
+  // Handle export=download URLs
+  const downloadMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (downloadMatch) {
+    const fileId = downloadMatch[1];
+    return `https://drive.google.com/file/d/${fileId}/preview`;
+  }
+  
+  // Handle Supabase Storage URLs
+  if (url.includes('storage.googleapis.com') || url.includes('supabase')) {
+    // For images, return the URL directly
+    if (getFileType(url) === 'image') {
+      return url;
+    }
+    // For PDFs, return the URL directly as modern browsers can preview them
+    if (getFileType(url) === 'pdf') {
+      return url;
+    }
+  }
+  
+  return url;
+};
+
+// Add preview component to handle different file types
+const FilePreview: React.FC<{ url: string; documentType?: string }> = ({ url, documentType }) => {
+  const fileType = getFileType(url);
+  
+  return (
+    <div className="w-full flex flex-col">
+      {/* Preview Header */}
+      <div className="border-b pb-4 mb-4">
+        <h3 className="text-lg font-semibold text-[#800000]">{documentType || 'Document Preview'}</h3>
+      </div>
+
+      {/* Preview Content */}
+      <div className="flex justify-center">
+        {fileType === 'image' && (
+          <img 
+            src={url} 
+            alt="Document preview" 
+            className="max-w-full max-h-[calc(70vh-4rem)] object-contain"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/file.svg'; // Fallback to generic file icon
+            }}
+          />
+        )}
+        {fileType === 'pdf' && (
+          <iframe 
+            src={url}
+            title="Document Preview"
+            className="w-full h-[calc(70vh-4rem)] border-0"
+          />
+        )}
+        {fileType === 'other' && (
+          <div className="flex flex-col items-center justify-center h-[calc(70vh-4rem)]">
+            <img src="/file.svg" alt="File icon" className="w-16 h-16 mb-4" />
+            <p>Preview not available</p>
+            <a 
+              href={url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#a83232]"
+            >
+              Download File
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 const FacultyContent = () => {
@@ -1948,7 +2047,7 @@ const FacultyContent = () => {
               </div>
               <div className="flex items-center space-x-4">
                 <a
-                  href={getViewUrl(selectedDocument.FileUrl)}
+                  href={getPreviewUrl(selectedDocument.FileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-gray-900"
@@ -1956,90 +2055,30 @@ const FacultyContent = () => {
                 >
                   <FaLink className="w-5 h-5" />
                 </a>
-                <a
-                  href={selectedDocument.DownloadUrl || selectedDocument.FileUrl}
-                  download
-                  className="text-gray-600 hover:text-gray-900"
-                  title="Download Document"
-                >
-                  <FaDownload className="w-5 h-5" />
-                </a>
+                {selectedDocument.DownloadUrl && (
+                  <a
+                    href={selectedDocument.DownloadUrl}
+                    download
+                    className="text-gray-600 hover:text-gray-900"
+                    title="Download Document"
+                  >
+                    <FaDownload className="w-5 h-5" />
+                  </a>
+                )}
                 <button
                   onClick={handleCloseViewer}
                   className="text-gray-500 hover:text-gray-700"
                   title="Close"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <FaTimes className="w-5 h-5" />
                 </button>
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              {(() => {
-                const fileUrl = selectedDocument.FileUrl;
-                if (!fileUrl) return null;
-
-                if (isPdfFile(fileUrl)) {
-                  return (
-                    <iframe
-                      src={getViewUrl(fileUrl)}
-                      style={{ width: '100%', height: '70vh', border: 'none' }}
-                      title="PDF Viewer"
-                    />
-                  );
-                } else if (isDocFile(fileUrl)) {
-                  return (
-                    <iframe
-                      src={`https://docs.google.com/gview?url=${encodeURIComponent(getViewUrl(fileUrl))}&embedded=true`}
-                      style={{ width: '100%', height: '70vh', border: 'none' }}
-                      title="Word Document Viewer"
-                    />
-                  );
-                } else if (isImageFile(fileUrl)) {
-                  return (
-                    <img
-                      src={getViewUrl(fileUrl)}
-                      alt="Document"
-                      style={{ width: '100%', height: '70vh', objectFit: 'contain' }}
-                    />
-                  );
-                } else {
-                  return (
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <p className="text-gray-600 mb-2">
-                        This file type cannot be displayed directly in the viewer.
-                      </p>
-                      <a
-                        href={getViewUrl(fileUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-md hover:bg-red-800 transition-colors"
-                      >
-                        <FaLink className="mr-2" />
-                        Open File in New Tab
-                      </a>
-                    </div>
-                  );
-                }
-              })()}
-              {/* Show fallback message only if all else fails */}
-              {viewerError && selectedDocument.FileUrl && !isPdfFile(selectedDocument.FileUrl ?? '') && !isGoogleDoc(selectedDocument.FileUrl ?? '') && (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <p className="text-gray-600 mb-2">
-                    This file type cannot be displayed directly in the viewer.
-                  </p>
-                  <a
-                    href={selectedDocument.FileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-md hover:bg-red-800 transition-colors"
-                  >
-                    <FaLink className="mr-2" />
-                    Open File in New Tab
-                  </a>
-                </div>
-              )}
+              <FilePreview 
+                url={getPreviewUrl(selectedDocument.FileUrl)} 
+                documentType={selectedDocument.documentTypeName}
+              />
             </div>
           </div>
         </div>
