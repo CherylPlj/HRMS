@@ -714,7 +714,7 @@ export default function DashboardContent() {
             <FaUserPlus className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Recruitment Overview</h2>
           </div>
-          <button 
+          {/* <button 
             // onClick={() => handleCardClick('recruitment')}
             className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
           >
@@ -722,7 +722,7 @@ export default function DashboardContent() {
             <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
             </svg>
-          </button>
+          </button> */}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -864,7 +864,7 @@ export default function DashboardContent() {
             <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
           </div>
-          <button 
+          {/* <button 
             className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
             // onClick={() => handleCardClick('recruitment')}
           >
@@ -872,7 +872,7 @@ export default function DashboardContent() {
             <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
             </svg>
-          </button>
+          </button> */}
         </div>
 
         {upcomingInterviews.length > 0 ? (

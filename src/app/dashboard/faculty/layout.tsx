@@ -313,7 +313,7 @@ export default function FacultyDashboard() {
                   {activeButton === 'dashboard' && 'DASHBOARD'}
                   {activeButton === 'personal-data' && 'PERSONAL DATA'}
                   {activeButton === 'documents' && 'DOCUMENTS'}
-                  {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
+                  {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE REQUEST'}
                 </h1>
               </div>
@@ -321,7 +321,7 @@ export default function FacultyDashboard() {
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
                 {/* Chat Icon */}
-                <a
+                {/* <a
                   ref={chatButtonRef}
                   href="#"
                   className="p-2 rounded-full hover:bg-gray-200 transition"
@@ -329,7 +329,7 @@ export default function FacultyDashboard() {
                   onClick={() => setChatbotVisible(!isChatbotVisible)}
                 >
                   <i className="fas fa-comments text-black text-lg"></i>
-                </a>
+                </a> */}
 
                 {/* Profile Section */}
                 <div className="flex items-center space-x-3">

@@ -14,6 +14,19 @@ import { format, isAfter, startOfToday } from 'date-fns';
 
 // import { useAuth } from '../contexts/AuthContext'; // or wherever your auth context is
 
+const getStatusBadgeColor = (status: string | undefined) => {
+  switch (status) {
+    case 'PRESENT':
+      return 'bg-green-100 text-green-800';
+    case 'ABSENT':
+      return 'bg-red-100 text-red-800';
+    case 'LATE':
+      return 'bg-yellow-100 text-yellow-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
 interface AttendanceFacultyProps {
   onBack: () => void;
 }
@@ -572,90 +585,159 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <div>
-              {/* {onBack && (
-                <button
-                  onClick={onBack}
-                  className="text-[#800000] hover:text-[#600000] transition-colors"
-                >
-                  <i className="fas fa-arrow-left mr-2"></i>
-                  Back to Dashboard
-                </button>
-              )} */}
-              <p className="text-sm text-gray-500">Track your attendance records</p>
-            </div>
-            <div className="mt-4 sm:mt-0 text-right">
-              <div className="text-sm font-medium text-gray-700">
-                <div>Current Time: <span className="text-[#800000] font-semibold">{currentTime}</span></div>
-                <div>Current Date: <span className="text-[#800000] font-semibold">{currentDate}</span></div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div className="flex-grow">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-semibold text-gray-900">Attendance Overview</h2>
+                <div className="text-sm font-medium text-gray-700">
+                  Current Date: <span className="text-[#800000] font-semibold">{currentDate}</span>
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="flex justify-between items-center mb-6">
+                <p className="text-sm text-gray-500">Track your attendance records</p>
+                <div className="text-sm font-medium text-gray-700">
+                  Current Time: <span className="text-[#800000] font-semibold">{currentTime}</span>
+                </div>
+              </div>
+              
+              {/* Status Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-green-500">Present</p>
+                      <h3 className="text-2xl font-bold text-green-700">
+                        {currentRecord?.status === 'PRESENT' 
+                          ? attendanceHistory.filter(record => record.status === 'PRESENT').length + 1 
+                          : attendanceHistory.filter(record => record.status === 'PRESENT').length}
+                      </h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
 
-          {/* Time In/Out Section */}
-          <div className="grid grid-cols-1 gap-4 mt-4">
-            {/* <div className="flex flex-col space-y-2">
-              <label htmlFor="date" className="text-sm font-medium text-gray-700">Select Date (Monday-Friday only)</label>
-              <input
-                type="date"
-                id="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  const newDate = e.target.value;
-                  if (validateDate(newDate)) {
-                    setSelectedDate(newDate);
-                  }
-                }}
-                max={format(new Date(), 'yyyy-MM-dd')}
-                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-              />
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-yellow-500">Late</p>
+                      <h3 className="text-2xl font-bold text-yellow-700">
+                        {currentRecord?.status === 'LATE' 
+                          ? attendanceHistory.filter(record => record.status === 'LATE').length + 1 
+                          : attendanceHistory.filter(record => record.status === 'LATE').length}
+                      </h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-red-500">Absent</p>
+                      <h3 className="text-2xl font-bold text-red-700">
+                        {currentRecord?.status === 'ABSENT' 
+                          ? attendanceHistory.filter(record => record.status === 'ABSENT').length + 1 
+                          : attendanceHistory.filter(record => record.status === 'ABSENT').length}
+                      </h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-blue-500">Total Days</p>
+                      <h3 className="text-2xl font-bold text-blue-700">
+                        {attendanceHistory.length + (currentRecord ? 1 : 0)}
+                      </h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col space-y-2">
-                <label htmlFor="timeIn" className="text-sm font-medium text-gray-700">Time In</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="time"
-                    id="timeIn"
-                    value={timeInValue}
-                    onChange={(e) => setTimeInValue(e.target.value)}
-                    min="06:00"
-                    max="18:00"
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                  />
-                  <button
-                    onClick={handleTimeIn}
-                    disabled={isProcessing || !timeInValue || !selectedDate}
-                    className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isProcessing ? 'Processing...' : 'Time In'}
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-col space-y-2">
-                <label htmlFor="timeOut" className="text-sm font-medium text-gray-700">Time Out</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="time"
-                    id="timeOut"
-                    value={timeOutValue}
-                    onChange={(e) => setTimeOutValue(e.target.value)}
-                    min="06:00"
-                    max="18:00"
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                  />
-                  <button
-                    onClick={handleTimeOut}
-                    disabled={isProcessing || !timeOutValue || !selectedDate}
-                    className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isProcessing ? 'Processing...' : 'Time Out'}
-                  </button>
-                </div>
-              </div>
-            </div> */}
           </div>
+        </div>
+
+        {/* Time In/Out Section */}
+        <div className="grid grid-cols-1 gap-4 mt-4">
+          {/* <div className="flex flex-col space-y-2">
+            <label htmlFor="date" className="text-sm font-medium text-gray-700">Select Date (Monday-Friday only)</label>
+            <input
+              type="date"
+              id="date"
+              value={selectedDate}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                if (validateDate(newDate)) {
+                  setSelectedDate(newDate);
+                }
+              }}
+              max={format(new Date(), 'yyyy-MM-dd')}
+              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="timeIn" className="text-sm font-medium text-gray-700">Time In</label>
+              <div className="flex space-x-2">
+                <input
+                  type="time"
+                  id="timeIn"
+                  value={timeInValue}
+                  onChange={(e) => setTimeInValue(e.target.value)}
+                  min="06:00"
+                  max="18:00"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                />
+                <button
+                  onClick={handleTimeIn}
+                  disabled={isProcessing || !timeInValue || !selectedDate}
+                  className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Time In'}
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="timeOut" className="text-sm font-medium text-gray-700">Time Out</label>
+              <div className="flex space-x-2">
+                <input
+                  type="time"
+                  id="timeOut"
+                  value={timeOutValue}
+                  onChange={(e) => setTimeOutValue(e.target.value)}
+                  min="06:00"
+                  max="18:00"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                />
+                <button
+                  onClick={handleTimeOut}
+                  disabled={isProcessing || !timeOutValue || !selectedDate}
+                  className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Time Out'}
+                </button>
+              </div>
+            </div>
+          </div> */}
         </div>
 
         {/* Schedule Section */}
@@ -794,20 +876,6 @@ function formatTimeWithAmPm(timeStr: string | null | undefined) {
       </div>
     </div>
   );
-};
-
-
-const getStatusBadgeColor = (status: string | undefined) => {
-  switch (status) {
-    case 'PRESENT':
-      return 'bg-green-100 text-green-800';
-    case 'ABSENT':
-      return 'bg-red-100 text-red-800';
-    case 'LATE':
-      return 'bg-yellow-100 text-yellow-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
 };
 
 export default AttendanceFaculty;                                                         `                                         `

@@ -384,7 +384,7 @@ export default function DashboardFaculty() {
           .select('LeaveID, Status')
           .eq('FacultyID', facultyData.FacultyID);
 
-        const availableLeaves = 15; // This should be fetched from a configuration or calculated based on policy
+        const availableLeaves = 10; // This should be fetched from a configuration or calculated based on policy
         const pendingLeaves = leaves?.filter(leave => leave.Status === 'Pending').length || 0;
         const approvedLeaves = leaves?.filter(leave => leave.Status === 'Approved').length || 0;
         const rejectedLeaves = leaves?.filter(leave => leave.Status === 'Rejected').length || 0;

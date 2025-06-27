@@ -470,7 +470,7 @@ export default function AdminDashboard() {
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
                 {/* Chat Icon */}
-                <a
+                {/* <a
                   ref={chatButtonRef}
                   href="#"
                   className="p-2 rounded-full hover:bg-gray-200 transition"
@@ -478,7 +478,7 @@ export default function AdminDashboard() {
                   onClick={() => setChatbotVisible(!isChatbotVisible)}
                 >
                   <i className="fas fa-comments text-black text-lg"></i>
-                </a>
+                </a> */}
 
                 {/* Profile Section */}
                 <div className="flex items-center space-x-3">

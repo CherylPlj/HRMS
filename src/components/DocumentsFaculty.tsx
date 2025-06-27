@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaTimes, FaEye, FaPaperclip, FaFilter, FaTrash, FaUpload } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaEye, FaPaperclip, FaFilter, FaTrash, FaUpload, FaCheck } from 'react-icons/fa';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
@@ -52,6 +52,13 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   const [uploadingStates, setUploadingStates] = useState<{ [key: number]: boolean }>({});
   const [uploadSuccessStates, setUploadSuccessStates] = useState<{ [key: number]: boolean }>({});
 
+  // Add status count calculations
+  const statusCounts = {
+    pending: documentTypes.length - documents.length,
+    submitted: documents.filter(doc => doc.SubmissionStatus === 'Submitted').length,
+    approved: documents.filter(doc => doc.SubmissionStatus === 'Approved').length,
+    rejected: documents.filter(doc => doc.SubmissionStatus === 'Rejected').length
+  };
 
   // Fetch faculty ID for the current user
   useEffect(() => {
@@ -385,12 +392,84 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     }
   };
 
+  // Add this helper function near the top of the component
+  const getPreviewUrl = (url: string | undefined) => {
+    if (!url) return '';
+    
+    // Handle Google Drive URLs
+    const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      const fileId = driveMatch[1];
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+    
+    // Handle export=download URLs
+    const downloadMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (downloadMatch) {
+      const fileId = downloadMatch[1];
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+    
+    return url;
+  };
+
   if (!user) {
     return <div>Please log in to view your documents.</div>;
   }
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-lg">
+      {/* Add Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Pending</p>
+              <h3 className="text-2xl font-bold text-gray-700">{statusCounts.pending}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+              <FaUpload className="text-gray-500" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-500">Submitted</p>
+              <h3 className="text-2xl font-bold text-blue-700">{statusCounts.submitted}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
+              <FaPaperclip className="text-blue-500" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-500">Approved</p>
+              <h3 className="text-2xl font-bold text-green-700">{statusCounts.approved}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center">
+              <FaCheck className="text-green-500" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-red-500">Rejected</p>
+              <h3 className="text-2xl font-bold text-red-700">{statusCounts.rejected}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center">
+              <FaTimes className="text-red-500" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Success Message */}
       {successMessage && (
         <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-800 px-4 py-2 rounded shadow-lg animate-fade-in">
@@ -440,7 +519,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             onChange={e => setSearch(e.target.value)}
             aria-label="Search documents"
           />
-          <button className="p-2" title="Filter documents" aria-label="Filter documents"><FaFilter /></button>
+          {/* <button className="p-2" title="Filter documents" aria-label="Filter documents"><FaFilter /></button> */}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -513,15 +592,20 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                       <FaPaperclip className="text-gray-500" />
                       {doc && doc.FileUrl ? (
                         <React.Fragment>
-                          <a href={doc.FileUrl} className="text-[#800000] underline" target="_blank" rel="noopener noreferrer" title={getFileName(doc.FileUrl)}>
+                          <a 
+                            href={getPreviewUrl(doc.FileUrl)} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-[#800000] hover:underline"
+                            title={getFileName(doc.FileUrl)}
+                          >
                             {truncateFileName(getFileName(doc.FileUrl))}
                           </a>
                           <button
+                            onClick={() => setPreviewFileUrl(getPreviewUrl(doc.FileUrl))}
                             className="text-blue-600 hover:text-blue-800"
                             title="View file"
                             aria-label="View file"
-                            type="button"
-                            onClick={() => setPreviewFileUrl(doc.FileUrl!)}
                           >
                             <FaEye />
                           </button>
@@ -818,30 +902,12 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               <FaTimes />
             </button>
             <div className="w-full h-[70vh] flex items-center justify-center">
-              {/* Google Drive preview logic */}
-              {(() => {
-                const url = previewFileUrl;
-                if (!url) return null;
-                // Google Drive file preview
-                if (url.includes('drive.google.com')) {
-                  // Try to extract file id
-                  const match = url.match(/\/d\/([\w-]+)/) || url.match(/id=([\w-]+)/);
-                  if (match) {
-                    const id = match[1];
-                    const drivePreview = `https://drive.google.com/file/d/${id}/preview`;
-                    return <iframe src={drivePreview} title="Google Drive Preview" className="w-full h-full" />;
-                  }
-                  // If not previewable, show fallback
-                  return <div className="text-gray-500">Cannot preview this Google Drive file.</div>;
-                }
-                if (url.endsWith('.pdf')) {
-                  return <iframe src={url} title="Document Preview" className="w-full h-full" />;
-                }
-                if (url.match(/\.(jpg|jpeg|png|gif)$/i)) {
-                  return <img src={url} alt="Document Preview" className="max-h-full max-w-full" />;
-                }
-                return <div className="text-gray-500">Cannot preview this file type.</div>;
-              })()}
+              <iframe 
+                src={previewFileUrl} 
+                title="Document Preview" 
+                className="w-full h-full border-0"
+                allow="autoplay"
+              />
             </div>
           </div>
         </div>
