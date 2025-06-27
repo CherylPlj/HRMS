@@ -1192,10 +1192,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                  <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
+                <div className="w-full h-full flex items-center justify-center bg-[#800000]">
+                  <span className="text-white font-medium">
+                    {(selectedEmployee?.firstName || '').charAt(0)}{(selectedEmployee?.surname || '').charAt(0)}
+                  </span>
                 </div>
               )}
             </div>
@@ -1735,23 +1735,16 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                          <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                          </svg>
+                        <div className="w-full h-full flex items-center justify-center bg-[#800000]">
+                          <span className="text-white font-medium">
+                            {(employee.firstName || '').charAt(0)}{(employee.surname || '').charAt(0)}
+                          </span>
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-[#800000] flex items-center justify-center">
-                          <span className="text-white font-medium">
-                            {(employee.firstName || '').charAt(0)}{(employee.surname || '').charAt(0)}
-                          </span>
-                        </div>
-                      </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {employee.fullName || `${employee.firstName} ${employee.surname}`.trim()}
