@@ -23,6 +23,7 @@ const publicRoutes = [
     "/api/sync-user-password",
     "/api/ip",
     "/api/vacancies/public",
+    "/api/candidates/public",
     "/terms-of-use",
     "/privacy-statement"
 ];
@@ -48,6 +49,7 @@ const ignoredRoutes = [
     "/api/sync-user-password",
     "/api/ip",
     "/api/vacancies/public",
+    "/api/candidates/public",
     "/terms-of-use",
     "/privacy-statement"
 ];
