@@ -11,6 +11,7 @@ export async function GET(request: Request) {
 
     // Get pagination parameters from URL
     const { searchParams } = new URL(request.url);
+    const all = searchParams.get('all') === 'true';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = (page - 1) * limit;
@@ -24,30 +25,57 @@ export async function GET(request: Request) {
       throw countError;
     }
 
-    // Get employees from Supabase Employee table with pagination
-    const { data: employees, error } = await supabaseAdmin
+    // Build the query with joins
+    let query = supabaseAdmin
       .from('Employee')
-      .select('*')
-      .order('EmployeeID', { ascending: true })
-      .range(offset, offset + limit - 1);
+      .select(`
+        *,
+        EmploymentDetail(EmploymentStatus, HireDate, ResignationDate, Designation, Position, SalaryGrade),
+        ContactInfo(Email, Phone, PresentAddress, PermanentAddress, EmergencyContactName, EmergencyContactNumber),
+        GovernmentID(SSSNumber, TINNumber, PhilHealthNumber, PagIbigNumber, GSISNumber, PRCLicenseNumber, PRCValidity),
+        Department(DepartmentName),
+        Family(id, type, name, dateOfBirth, occupation, isDependent, relationship, contactNumber, address),
+        skills(id, name, proficiencyLevel, yearsOfExperience, description),
+        MedicalInfo(medicalNotes, lastCheckup, vaccination, allergies, hasDisability, disabilityType, disabilityDetails),
+        Education(id, level, schoolName, course, yearGraduated, honors),
+        Eligibility(id, type, rating, licenseNumber, examDate, validUntil),
+        EmploymentHistory(id, schoolName, position, startDate, endDate, reasonForLeaving),
+        trainings(id, title, hours, conductedBy, date),
+        certificates(id, title, issuedBy, issueDate, expiryDate, description, fileUrl)
+      `)
+      .order('EmployeeID', { ascending: true });
+
+    // Apply pagination only if not requesting all records
+    if (!all) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    const { data: employees, error } = await query;
 
     if (error) {
       throw error;
     }
 
-    const totalPages = Math.ceil((totalCount || 0) / limit);
-
-    return NextResponse.json({
-      employees,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalCount: totalCount || 0,
-        limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
-    });
+    // Return different response structure based on whether all records were requested
+    if (all) {
+      return NextResponse.json({
+        employees,
+        totalCount: totalCount || 0
+      });
+    } else {
+      const totalPages = Math.ceil((totalCount || 0) / limit);
+      return NextResponse.json({
+        employees,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount: totalCount || 0,
+          limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
+      });
+    }
   } catch (error) {
     console.error('Error fetching employees:', error);
     return NextResponse.json(
@@ -65,7 +93,6 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    console.log('Received employee data:', data);
     
     // Validate required fields
     const requiredFields = [
@@ -74,9 +101,7 @@ export async function POST(request: Request) {
       'LastName',
       'DateOfBirth',
       'HireDate',
-      'Sex',
-      'Email',
-      'Phone'
+      'Sex'
     ];
     
     for (const field of requiredFields) {
@@ -108,14 +133,18 @@ export async function POST(request: Request) {
         BloodType: data.BloodType || null,
         DepartmentID: data.DepartmentID || null,
         ContractID: data.ContractID || null,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }])
       .select()
       .single();
 
     if (employeeError) {
       console.error('Error creating employee:', employeeError);
-      throw employeeError;
+      return NextResponse.json(
+        { error: `Failed to create employee: ${employeeError.message}` },
+        { status: 500 }
+      );
     }
 
     // Create EmploymentDetail record
@@ -130,7 +159,8 @@ export async function POST(request: Request) {
           Designation: data.Designation || null,
           Position: data.Position || null,
           SalaryGrade: data.SalaryGrade || null,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }]);
 
       if (employmentError) {
@@ -140,7 +170,10 @@ export async function POST(request: Request) {
           .from('Employee')
           .delete()
           .eq('EmployeeID', data.EmployeeID);
-        throw employmentError;
+        return NextResponse.json(
+          { error: `Failed to create employment detail: ${employmentError.message}` },
+          { status: 500 }
+        );
       }
     }
 
@@ -156,7 +189,8 @@ export async function POST(request: Request) {
           PermanentAddress: data.PermanentAddress || null,
           EmergencyContactName: data.EmergencyContactName || null,
           EmergencyContactNumber: data.EmergencyContactNumber || null,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }]);
 
       if (contactError) {
@@ -170,7 +204,10 @@ export async function POST(request: Request) {
           .from('Employee')
           .delete()
           .eq('EmployeeID', data.EmployeeID);
-        throw contactError;
+        return NextResponse.json(
+          { error: `Failed to create contact info: ${contactError.message}` },
+          { status: 500 }
+        );
       }
     }
 
@@ -187,7 +224,8 @@ export async function POST(request: Request) {
           GSISNumber: data.GSISNumber || null,
           PRCLicenseNumber: data.PRCLicenseNumber || null,
           PRCValidity: data.PRCValidity || null,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }]);
 
       if (govIdError) {
@@ -205,13 +243,23 @@ export async function POST(request: Request) {
           .from('Employee')
           .delete()
           .eq('EmployeeID', data.EmployeeID);
-        throw govIdError;
+        return NextResponse.json(
+          { error: `Failed to create government ID: ${govIdError.message}` },
+          { status: 500 }
+        );
       }
     }
 
     return NextResponse.json(newEmployee);
+    
   } catch (error) {
-    console.error('Error creating employee:', error);
+    console.error('Error in POST /api/employees:', error);
+    
+    // Log the full error details for debugging
+    if (error && typeof error === 'object') {
+      console.error('Error details:', JSON.stringify(error, null, 2));
+    }
+    
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create employee' },
       { status: 500 }
