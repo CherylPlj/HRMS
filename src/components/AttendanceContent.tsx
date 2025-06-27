@@ -82,12 +82,18 @@ const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
   }
 };
 
-const formatTime = (timeString: string | null): string => {
+const formatTime = (dateString: string, timeString: string | null): string => {
   if (!timeString) return '-';
-  
+
   try {
-    const date = new Date(`1970-01-01T${timeString}`);
+    // Combine date and time strings into a single ISO string
+    // Assume dateString is in 'yyyy-MM-dd' format and timeString is 'HH:mm' or 'HH:mm:ss'
+    const dateTimeString = `${dateString}T${timeString}`;
+    const date = new Date(dateTimeString);
+
+    // Format the time in 'Asia/Manila' time zone
     return date.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Manila',
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
@@ -137,8 +143,8 @@ const fetchAllFacultyAttendance = async (startDate?: string, endDate?: string): 
       const profilePhoto = await fetchUserProfilePhoto(record.Faculty.User.UserID);
       
       // Format the time strings
-      const timeIn = record.timeIn ? formatTime(record.timeIn) : '-';
-      const timeOut = record.timeOut ? formatTime(record.timeOut) : '-';
+      const timeIn = record.timeIn ? formatTime(record.date, record.timeIn) : '-';
+      const timeOut = record.timeOut ? formatTime(record.date, record.timeOut) : '-';
       
       console.log('Time In:', record.timeIn, 'Formatted:', timeIn); // Debug log
       console.log('Time Out:', record.timeOut, 'Formatted:', timeOut); // Debug log
@@ -1421,8 +1427,8 @@ const AttendanceContent: React.FC = () => {
                                           </tr>
                                         ) : (
                                           facultyAttendanceMap[facultyId].map((rec: any) => {
-                                            const timeIn = rec.timeIn ? formatTime(rec.timeIn) : '-';
-                                            const timeOut = rec.timeOut ? formatTime(rec.timeOut) : '-';
+                                            const timeIn = rec.timeIn ? formatTime(rec.date, rec.timeIn) : '-';
+                                            const timeOut = rec.timeOut ? formatTime(rec.date, rec.timeOut) : '-';
                                             
                                             // Calculate duration if both times are available
                                             let duration = '-';
