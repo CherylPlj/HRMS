@@ -23,26 +23,26 @@ interface FacultyDetails {
     employmentStatus: string;
 }
 
-interface LeaveRequest {
-    LeaveID: number;
-    FacultyID: number;
-    RequestType: RequestType;
-    LeaveType: LeaveType;
-    StartDate: Date;
-    EndDate: Date;
-    TimeIn: string | null;
-    TimeOut: string | null;
-    Reason: string;
-    Status: LeaveStatus;
-    DocumentUrl?: string;
-    CreatedAt: Date;
-    employeeSignature?: string;
-    departmentHeadSignature?: string;
-    Faculty: {
-        Name: string;
-        Department: string;
-    };
-}
+    interface LeaveRequest {
+        LeaveID: number;
+        FacultyID: number;
+        RequestType: RequestType;
+        LeaveType: LeaveType;
+        StartDate: Date;
+        EndDate: Date;
+        TimeIn: string | null; // Backend field name retained for compatibility
+        TimeOut: string | null; // Backend field name retained for compatibility
+        Reason: string;
+        Status: LeaveStatus;
+        DocumentUrl?: string;
+        CreatedAt: Date;
+        employeeSignature?: string;
+        departmentHeadSignature?: string;
+        Faculty: {
+            Name: string;
+            Department: string;
+        };
+    }
 
 interface SupabaseLeave {
     LeaveID: number;
@@ -108,24 +108,24 @@ const checkDateOverlap = (
 };
 
 // Add helper function for calculating duration
-const calculateDuration = (request: LeaveRequest) => {
-    if (request.RequestType === 'Undertime' && request.TimeIn && request.TimeOut) {
-        const timeIn = new Date(request.TimeIn);
-        const timeOut = new Date(request.TimeOut);
-        const diffMs = timeOut.getTime() - timeIn.getTime();
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        return `${hours}h ${minutes}m`;
-    } else {
-        const start = new Date(request.StartDate);
-        const end = new Date(request.EndDate);
-        // Calculate days without modifying the original time
-        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-        const days = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        return `${days} day${days !== 1 ? 's' : ''}`;
-    }
-};
+    const calculateDuration = (request: LeaveRequest) => {
+        if (request.RequestType === 'Undertime' && request.TimeIn && request.TimeOut) {
+            const timeIn = new Date(request.TimeIn);
+            const timeOut = new Date(request.TimeOut);
+            const diffMs = timeOut.getTime() - timeIn.getTime();
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            return `${hours}h ${minutes}m`;
+        } else {
+            const start = new Date(request.StartDate);
+            const end = new Date(request.EndDate);
+            // Calculate days without modifying the original time
+            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            const days = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            return `${days} day${days !== 1 ? 's' : ''}`;
+        }
+    };
 
 const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const { user } = useUser();
@@ -504,8 +504,9 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 LeaveType: leaveType,
                 StartDate: startDate.toISOString(),
                 EndDate: endDate.toISOString(),
-                TimeIn: startTime?.toISOString(),
-                TimeOut: endTime?.toISOString(),
+                // Convert local time to UTC ISO string for backend compatibility
+                TimeIn: startTime ? new Date(startTime.getTime() - startTime.getTimezoneOffset() * 60000).toISOString() : null,
+                TimeOut: endTime ? new Date(endTime.getTime() - endTime.getTimezoneOffset() * 60000).toISOString() : null,
                 Reason: reason,
                 employeeSignature: employeeSignature ? await fileToBase64(employeeSignature) : null,
                 departmentHeadSignature: deptHeadSignature ? await fileToBase64(deptHeadSignature) : null
@@ -894,14 +895,14 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     <p className="font-semibold">End Date:</p>
                                     <p>{new Date(selectedLeave.EndDate).toLocaleDateString()}</p>
                                 </div>
-                                <div>
-                                    <p className="font-semibold">Time In:</p>
-                                    <p>{selectedLeave.TimeIn ? new Date(selectedLeave.TimeIn).toLocaleTimeString() : 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="font-semibold">Time Out:</p>
-                                    <p>{selectedLeave.TimeOut ? new Date(selectedLeave.TimeOut).toLocaleTimeString() : 'N/A'}</p>
-                                </div>
+                            <div>
+                                <p className="font-semibold">Start Time:</p>
+                                <p>{selectedLeave.TimeIn ? new Date(selectedLeave.TimeIn).toLocaleTimeString() : 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="font-semibold">End Time:</p>
+                                <p>{selectedLeave.TimeOut ? new Date(selectedLeave.TimeOut).toLocaleTimeString() : 'N/A'}</p>
+                            </div>
                                 <div>
                                     <p className="font-semibold">Status:</p>
                                     <p>{selectedLeave.Status}</p>
@@ -1266,9 +1267,9 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             </div>
                                         </div>
                                         <div className="relative">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                {requestType === 'Leave' ? 'Start Time' : 'Time In'} <span className="text-red-500">*</span>
-                                            </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Start Time <span className="text-red-500">*</span>
+                                        </label>
                                             <div className="relative">
                                                 <DatePicker
                                                     selected={startTime}
@@ -1309,9 +1310,9 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             </div>
                                         </div>
                                         <div className="relative">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                {requestType === 'Leave' ? 'End Time' : 'Time Out'} <span className="text-red-500">*</span>
-                                            </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            End Time <span className="text-red-500">*</span>
+                                        </label>
                                             <div className="relative">
                                                 <DatePicker
                                                     selected={endTime}
