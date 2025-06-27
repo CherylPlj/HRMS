@@ -132,9 +132,9 @@ export default function DashboardContent() {
   };
 
   // Add navigation handlers
-  const handleCardClick = (module: string) => {
-    router.push(`/dashboard/admin/${module}`);
-  };
+  // const handleCardClick = (module: string) => {
+  //   router.push(`/dashboard/admin/${module}`);
+  // };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -656,7 +656,7 @@ export default function DashboardContent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div 
           className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          onClick={() => handleCardClick('faculty')}
+          // onClick={() => handleCardClick('faculty')}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -669,7 +669,7 @@ export default function DashboardContent() {
 
         <div 
           className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          onClick={() => handleCardClick('recruitment')}
+          // onClick={() => handleCardClick('recruitment')}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -682,7 +682,7 @@ export default function DashboardContent() {
 
         <div 
           className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          onClick={() => handleCardClick('documents')}
+          // onClick={() => handleCardClick('documents')}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -695,7 +695,7 @@ export default function DashboardContent() {
 
         <div 
           className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          onClick={() => handleCardClick('leaves')}
+          // onClick={() => handleCardClick('leaves')}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -715,7 +715,7 @@ export default function DashboardContent() {
             <h2 className="text-2xl font-bold text-gray-800">Recruitment Overview</h2>
           </div>
           <button 
-            onClick={() => handleCardClick('recruitment')}
+            // onClick={() => handleCardClick('recruitment')}
             className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
           >
             View All
@@ -766,6 +766,10 @@ export default function DashboardContent() {
                       grid: {
                         display: true,
                         color: 'rgba(0, 0, 0, 0.1)'
+                      },
+                      ticks: {
+                        stepSize: 1,
+                        precision: 0
                       }
                     },
                     x: {
@@ -862,7 +866,7 @@ export default function DashboardContent() {
           </div>
           <button 
             className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
-            onClick={() => handleCardClick('recruitment')}
+            // onClick={() => handleCardClick('recruitment')}
           >
             View All
             <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -959,6 +963,10 @@ export default function DashboardContent() {
                   beginAtZero: true,
                   grid: {
                     display: true
+                  },
+                  ticks: {
+                    stepSize: 1,
+                    precision: 0
                   }
                 },
                 x: {

@@ -189,6 +189,29 @@ const getStatusOrder = (status: string) => {
   }
 };
 
+// Add this helper function to get a proper view URL for Google Drive files
+const getViewUrl = (url: string) => {
+  // Handle direct download link format
+  const downloadMatch = url.match(/https?:\/\/drive\.google\.com\/uc\?export=download&id=([\w-]+)/);
+  if (downloadMatch) {
+    return `https://drive.google.com/file/d/${downloadMatch[1]}/preview`;
+  }
+
+  // Handle view link format
+  const viewMatch = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\/view/);
+  if (viewMatch) {
+    return `https://drive.google.com/file/d/${viewMatch[1]}/preview`;
+  }
+
+  // Handle web content link format
+  const webContentMatch = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (webContentMatch) {
+    return `https://drive.google.com/file/d/${webContentMatch[1]}/preview`;
+  }
+
+  return url;
+};
+
 const FacultyContent = () => {
   const { user } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -499,6 +522,12 @@ const FacultyContent = () => {
     const doc = documents.find(d => d.DocumentID === docId);
     if (!doc) return;
 
+    setPendingStatusUpdate({
+      docId: docId,
+      newStatus: newStatus,
+      facultyName: doc.facultyName || 'Unknown Faculty',
+      documentType: doc.documentTypeName || 'Unknown Type'
+    });
     setSelectedDocumentId(docId);
     setNewStatus(newStatus);
     setIsStatusUpdateModalOpen(true);
@@ -506,19 +535,22 @@ const FacultyContent = () => {
 
   // Add new handler for confirmed status update
   const handleConfirmedStatusUpdate = async () => {
-    if (!selectedDocumentId || !newStatus) return;
+    if (!selectedDocumentId || !newStatus || !pendingStatusUpdate) return;
 
+    setStatusUpdating(selectedDocumentId);
     try {
-      const response = await fetch(`/api/faculty/documents/${selectedDocumentId}/status`, {
-        method: 'PUT',
+      const response = await fetch(`/api/faculty-documents/${selectedDocumentId}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ SubmissionStatus: newStatus }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to update document status');
+        throw new Error(data.error || 'Failed to update document status');
       }
 
       // Refresh documents list
@@ -531,12 +563,14 @@ const FacultyContent = () => {
       console.error('Error updating document status:', error);
       setNotification({
         type: 'error',
-        message: 'Failed to update document status'
+        message: error instanceof Error ? error.message : 'Failed to update document status'
       });
     } finally {
+      setStatusUpdating(null);
       setIsStatusUpdateModalOpen(false);
       setSelectedDocumentId(null);
       setNewStatus('');
+      setPendingStatusUpdate(null);
     }
   };
 
@@ -1567,7 +1601,7 @@ const FacultyContent = () => {
                                 <FaEye className="w-5 h-5" />
                               </button>
                               <a
-                                href={doc.FileUrl}
+                                href={getViewUrl(doc.FileUrl)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-gray-600 hover:text-gray-900"
@@ -1575,17 +1609,15 @@ const FacultyContent = () => {
                               >
                                 <FaLink className="w-5 h-5" />
                               </a>
+                              <a
+                                href={doc.DownloadUrl || doc.FileUrl}
+                                download
+                                className="text-gray-600 hover:text-gray-900"
+                                title="Download Document"
+                              >
+                                <FaDownload className="w-5 h-5" />
+                              </a>
                             </span>
-                          )}
-                          {doc.DownloadUrl && (
-                            <a
-                              href={doc.DownloadUrl}
-                              download
-                              className="text-gray-600 hover:text-gray-900"
-                              title="Download Document"
-                            >
-                              <FaDownload className="w-5 h-5" />
-                            </a>
                           )}
                         </td>
                       </tr>
@@ -1905,7 +1937,6 @@ const FacultyContent = () => {
       {isViewerOpen && selectedDocument && selectedDocument.FileUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
-            {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
               <div>
                 <h2 className="text-xl font-semibold text-gray-800">
@@ -1917,7 +1948,7 @@ const FacultyContent = () => {
               </div>
               <div className="flex items-center space-x-4">
                 <a
-                  href={selectedDocument.FileUrl}
+                  href={getViewUrl(selectedDocument.FileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-gray-900"
@@ -1926,7 +1957,7 @@ const FacultyContent = () => {
                   <FaLink className="w-5 h-5" />
                 </a>
                 <a
-                  href={selectedDocument.DownloadUrl}
+                  href={selectedDocument.DownloadUrl || selectedDocument.FileUrl}
                   download
                   className="text-gray-600 hover:text-gray-900"
                   title="Download Document"
@@ -1944,60 +1975,23 @@ const FacultyContent = () => {
                 </button>
               </div>
             </div>
-
-            {/* Document Viewer */}
-            <div className="flex-1 p-4 overflow-auto">
+            <div className="flex-1 overflow-auto p-4">
               {(() => {
                 const fileUrl = selectedDocument.FileUrl;
-                if (!fileUrl) {
+                if (!fileUrl) return null;
+
+                if (isPdfFile(fileUrl)) {
                   return (
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <p className="text-gray-600 mb-2">No file URL provided.</p>
-                    </div>
+                    <iframe
+                      src={getViewUrl(fileUrl)}
+                      style={{ width: '100%', height: '70vh', border: 'none' }}
+                      title="PDF Viewer"
+                    />
                   );
-                }
-                if (isGoogleDoc(fileUrl)) {
-                  const exportUrl = getGoogleDocExportUrl(fileUrl, 'pdf');
-                  if (!viewerError) {
-                    return (
-                      <iframe
-                        src={`https://docs.google.com/gview?url=${encodeURIComponent(exportUrl)}&embedded=true`}
-                        style={{ width: '100%', height: '70vh', border: 'none' }}
-                        title="PDF Viewer"
-                      />
-                    );
-                  } else {
-                    return (
-                      <iframe
-                        src={`https://docs.google.com/gview?url=${encodeURIComponent(exportUrl)}&embedded=true`}
-                        style={{ width: '100%', height: '70vh', border: 'none' }}
-                        title="PDF Viewer"
-                      />
-                    );
-                  }
-                } else if (isPdfFile(fileUrl)) {
-                  const pdfUrl = getDirectDriveUrl(fileUrl);
-                  if (!viewerError) {
-                    return (
-                      <iframe
-                        src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
-                        style={{ width: '100%', height: '70vh', border: 'none' }}
-                        title="PDF Viewer"
-                      />
-                    );
-                  } else {
-                    return (
-                      <iframe
-                        src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
-                        style={{ width: '100%', height: '70vh', border: 'none' }}
-                        title="PDF Viewer"
-                      />
-                    );
-                  }
                 } else if (isDocFile(fileUrl)) {
                   return (
                     <iframe
-                      src={`https://docs.google.com/gview?url=${encodeURIComponent(getDirectDriveUrl(fileUrl))}&embedded=true`}
+                      src={`https://docs.google.com/gview?url=${encodeURIComponent(getViewUrl(fileUrl))}&embedded=true`}
                       style={{ width: '100%', height: '70vh', border: 'none' }}
                       title="Word Document Viewer"
                     />
@@ -2005,7 +1999,7 @@ const FacultyContent = () => {
                 } else if (isImageFile(fileUrl)) {
                   return (
                     <img
-                      src={getDirectDriveUrl(fileUrl)}
+                      src={getViewUrl(fileUrl)}
                       alt="Document"
                       style={{ width: '100%', height: '70vh', objectFit: 'contain' }}
                     />
@@ -2017,7 +2011,7 @@ const FacultyContent = () => {
                         This file type cannot be displayed directly in the viewer.
                       </p>
                       <a
-                        href={fileUrl}
+                        href={getViewUrl(fileUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-md hover:bg-red-800 transition-colors"

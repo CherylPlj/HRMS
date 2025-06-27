@@ -460,7 +460,7 @@ export default function AdminDashboard() {
                   {activeButton === 'dashboard' && 'DASHBOARD'}
                   {activeButton === 'document' && 'DOCUMENTS'}
                   {activeButton === 'employees' && 'EMPLOYEES'}
-                  {activeButton === 'attendance' && 'ATTENDANCE & SCHEDULE'}
+                  {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE'}
                   {activeButton === 'user-management' && 'USER MANAGEMENT'}
                   {activeButton === 'session-management' && 'SESSION MANAGEMENT'}

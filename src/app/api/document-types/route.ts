@@ -52,17 +52,16 @@ export async function POST(request: Request) {
       .insert([
         {
           DocumentTypeName: data.DocumentTypeName,
-          Description: data.Description,
-          IsRequired: data.IsRequired || false,
-          CreatedBy: user.id,
-          CreatedDate: new Date().toISOString()
+          AllowedFileTypes: data.AllowedFileTypes || [],
+          Template: data.Template || null
         }
       ])
       .select()
       .single();
 
     if (error) {
-      throw error;
+      console.error('Error creating document type:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(newDocumentType);
