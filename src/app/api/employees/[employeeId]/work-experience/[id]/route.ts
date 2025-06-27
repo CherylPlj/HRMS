@@ -30,9 +30,11 @@ export async function PUT(
         employeeId: employeeId,
       },
       data: {
-        ...data,
+        schoolName: data.schoolName,
+        position: data.position,
         startDate: new Date(data.startDate),
         endDate: data.endDate ? new Date(data.endDate) : null,
+        reasonForLeaving: data.reasonForLeaving
       },
     });
 

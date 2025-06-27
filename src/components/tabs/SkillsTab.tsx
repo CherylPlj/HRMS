@@ -150,93 +150,108 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
 
       {/* Add/Edit Form */}
       {showForm && currentSkill && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">
-              {currentSkill.id ? 'Edit Skill' : 'Add Skill'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Skill Name</label>
-                <input
-                  type="text"
-                  value={currentSkill.name}
-                  onChange={(e) =>
-                    setCurrentSkill({ ...currentSkill, name: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Proficiency Level</label>
-                <select
-                  value={currentSkill.proficiencyLevel}
-                  onChange={(e) =>
-                    setCurrentSkill({
-                      ...currentSkill,
-                      proficiencyLevel: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                >
-                  {proficiencyLevels.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
-                <input
-                  type="number"
-                  value={currentSkill.yearsOfExperience}
-                  onChange={(e) =>
-                    setCurrentSkill({
-                      ...currentSkill,
-                      yearsOfExperience: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
-                <textarea
-                  value={currentSkill.description}
-                  onChange={(e) =>
-                    setCurrentSkill({
-                      ...currentSkill,
-                      description: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  rows={3}
-                />
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setCurrentSkill(null);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                {currentSkill.id ? 'Edit Skill' : 'Add Skill'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setCurrentSkill(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Skill Name</label>
+                  <input
+                    type="text"
+                    value={currentSkill.name}
+                    onChange={(e) =>
+                      setCurrentSkill({ ...currentSkill, name: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Proficiency Level</label>
+                  <select
+                    value={currentSkill.proficiencyLevel}
+                    onChange={(e) =>
+                      setCurrentSkill({
+                        ...currentSkill,
+                        proficiencyLevel: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  >
+                    {proficiencyLevels.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
+                  <input
+                    type="number"
+                    value={currentSkill.yearsOfExperience}
+                    onChange={(e) =>
+                      setCurrentSkill({
+                        ...currentSkill,
+                        yearsOfExperience: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
+                  <textarea
+                    value={currentSkill.description}
+                    onChange={(e) =>
+                      setCurrentSkill({
+                        ...currentSkill,
+                        description: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setCurrentSkill(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

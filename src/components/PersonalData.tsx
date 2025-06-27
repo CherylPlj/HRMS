@@ -10,6 +10,7 @@ import FamilyTab from './tabs/FamilyTab';
 import WorkExperienceTab from './tabs/WorkExperienceTab';
 import SkillsTab from './tabs/SkillsTab';
 import CertificatesTab from './tabs/CertificatesTab';
+import MedicalTab from './tabs/MedicalTab';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -311,13 +312,89 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
           return;
         }
 
-        // Get employee data with department name
+        // Get employee data with all related information
         const { data: employeeData, error: employeeError } = await supabase
           .from('Employee')
           .select(`
             *,
             Department:DepartmentID (
-              DepartmentName
+              DepartmentName,
+              type
+            ),
+            contactInfo (
+              Email,
+              Phone,
+              PresentAddress,
+              PermanentAddress,
+              EmergencyContactName,
+              EmergencyContactNumber
+            ),
+            governmentIds (
+              SSSNumber,
+              TINNumber,
+              PhilHealthNumber,
+              PagIbigNumber,
+              GSISNumber,
+              PRCLicenseNumber,
+              PRCValidity
+            ),
+            employmentDetails (
+              EmploymentStatus,
+              HireDate,
+              ResignationDate,
+              Designation,
+              Position,
+              EmployeeType,
+              SalaryGrade
+            ),
+            Family (
+              id,
+              type,
+              name,
+              dateOfBirth,
+              occupation,
+              isDependent,
+              relationship,
+              contactNumber,
+              address
+            ),
+            Education (
+              id,
+              level,
+              schoolName,
+              course,
+              yearGraduated,
+              honors
+            ),
+            EmploymentHistory (
+              id,
+              schoolName,
+              position,
+              startDate,
+              endDate,
+              reasonForLeaving
+            ),
+            MedicalInfo (
+              medicalNotes,
+              lastCheckup,
+              vaccination,
+              allergies
+            ),
+            skills (
+              id,
+              name,
+              proficiencyLevel,
+              yearsOfExperience,
+              description
+            ),
+            certificates (
+              id,
+              title,
+              issuedBy,
+              issueDate,
+              expiryDate,
+              description,
+              fileUrl
             )
           `)
           .eq('UserID', userData.UserID)
@@ -342,7 +419,35 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
 
         const transformedData: FacultyDetails = {
           ...employeeData,
-          DepartmentName: employeeData.Department?.DepartmentName || 'Unknown Department'
+          DepartmentName: employeeData.Department?.DepartmentName || 'Unknown Department',
+          // Map contact info
+          ...(employeeData.contactInfo || {}),
+          // Map government IDs
+          ...(employeeData.governmentIds || {}),
+          // Map employment details
+          ...(employeeData.employmentDetails || {}),
+          // Ensure required fields have default values
+          LastName: employeeData.LastName || '',
+          FirstName: employeeData.FirstName || '',
+          MiddleName: employeeData.MiddleName || '',
+          ExtensionName: employeeData.ExtensionName || '',
+          Sex: employeeData.Sex || '',
+          DateOfBirth: employeeData.DateOfBirth || '',
+          PlaceOfBirth: employeeData.PlaceOfBirth || '',
+          CivilStatus: employeeData.CivilStatus || '',
+          Nationality: employeeData.Nationality || '',
+          Religion: employeeData.Religion || '',
+          BloodType: employeeData.BloodType || '',
+          Email: employeeData.contactInfo?.Email || '',
+          Phone: employeeData.contactInfo?.Phone || '',
+          PresentAddress: employeeData.contactInfo?.PresentAddress || '',
+          PermanentAddress: employeeData.contactInfo?.PermanentAddress || '',
+          EmergencyContactName: employeeData.contactInfo?.EmergencyContactName || '',
+          EmergencyContactNumber: employeeData.contactInfo?.EmergencyContactNumber || '',
+          Position: employeeData.employmentDetails?.Position || '',
+          EmploymentStatus: employeeData.employmentDetails?.EmploymentStatus || '',
+          HireDate: employeeData.employmentDetails?.HireDate || '',
+          EmployeeType: employeeData.employmentDetails?.EmployeeType || ''
         };
 
         setFacultyDetails(transformedData);
@@ -1118,8 +1223,6 @@ const handleDownload = () => {
           </div>
         )}
 
-
-
         {/* Work Experience Tab - renamed to Employment History */}
         {activeTab === 'employment' && (
           <div className="space-y-8">
@@ -1162,52 +1265,10 @@ const handleDownload = () => {
           </div>
         )}
 
-
-
         {/* Medical Information Tab */}
         {activeTab === 'medical' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Medical Condition</label>
-                {isEditing ? (
-                  <textarea
-                    value={editedDetails?.MedicalCondition || ''}
-                    onChange={(e) => handleInputChange('MedicalCondition', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                    rows={3}
-                  />
-                ) : (
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.MedicalCondition || 'N/A'}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Allergies</label>
-                {isEditing ? (
-                  <textarea
-                    value={editedDetails?.Allergies || ''}
-                    onChange={(e) => handleInputChange('Allergies', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                    rows={3}
-                  />
-                ) : (
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.Allergies || 'N/A'}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Medical Checkup</label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={editedDetails?.LastMedicalCheckup || ''}
-                    onChange={(e) => handleInputChange('LastMedicalCheckup', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  />
-                ) : (
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.LastMedicalCheckup || 'N/A'}</p>
-                )}
-              </div>
-            </div>
+            <MedicalTab employeeId={facultyDetails?.EmployeeID || ''} />
           </div>
         )}
 

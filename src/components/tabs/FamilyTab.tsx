@@ -161,130 +161,145 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
 
       {/* Add/Edit Form */}
       {showForm && currentRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">
-              {currentRecord.id ? 'Edit Family Member' : 'Add Family Member'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
-                <select
-                  value={currentRecord.type}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, type: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                >
-                  <option value="">Select Type</option>
-                  <option value="Spouse">Spouse</option>
-                  <option value="Child">Child</option>
-                  <option value="Parent">Parent</option>
-                  <option value="Sibling">Sibling</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
-                <input
-                  type="text"
-                  value={currentRecord.name}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, name: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Relationship</label>
-                <input
-                  type="text"
-                  value={currentRecord.relationship || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, relationship: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                <input
-                  type="date"
-                  value={currentRecord.dateOfBirth ? new Date(currentRecord.dateOfBirth).toISOString().split('T')[0] : ''}
-                  onChange={(e) =>
-                    setCurrentRecord({
-                      ...currentRecord,
-                      dateOfBirth: e.target.value ? new Date(e.target.value) : null,
-                    })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Occupation</label>
-                <input
-                  type="text"
-                  value={currentRecord.occupation || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, occupation: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Contact Number</label>
-                <input
-                  type="tel"
-                  value={currentRecord.contactNumber || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, contactNumber: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Address</label>
-                <input
-                  type="text"
-                  value={currentRecord.address || ''}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, address: e.target.value })
-                  }
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={currentRecord.isDependent}
-                  onChange={(e) =>
-                    setCurrentRecord({ ...currentRecord, isDependent: e.target.checked })
-                  }
-                  className="rounded border-gray-300"
-                />
-                <label className="text-sm font-medium text-gray-700">Is Dependent</label>
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setCurrentRecord(null);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                {currentRecord.id ? 'Edit Family Member' : 'Add Family Member'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setCurrentRecord(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Type</label>
+                  <select
+                    value={currentRecord.type}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, type: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Spouse">Spouse</option>
+                    <option value="Child">Child</option>
+                    <option value="Parent">Parent</option>
+                    <option value="Sibling">Sibling</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <input
+                    type="text"
+                    value={currentRecord.name}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, name: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Relationship</label>
+                  <input
+                    type="text"
+                    value={currentRecord.relationship || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, relationship: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={currentRecord.dateOfBirth ? new Date(currentRecord.dateOfBirth).toISOString().split('T')[0] : ''}
+                    onChange={(e) =>
+                      setCurrentRecord({
+                        ...currentRecord,
+                        dateOfBirth: e.target.value ? new Date(e.target.value) : null,
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Occupation</label>
+                  <input
+                    type="text"
+                    value={currentRecord.occupation || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, occupation: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Contact Number</label>
+                  <input
+                    type="tel"
+                    value={currentRecord.contactNumber || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, contactNumber: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                  <input
+                    type="text"
+                    value={currentRecord.address || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, address: e.target.value })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={currentRecord.isDependent}
+                    onChange={(e) =>
+                      setCurrentRecord({ ...currentRecord, isDependent: e.target.checked })
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  <label className="text-sm font-medium text-gray-700">Is Dependent</label>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setCurrentRecord(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
