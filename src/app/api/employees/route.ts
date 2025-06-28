@@ -112,32 +112,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate a unique Employee ID on the server side to prevent race conditions
-    let employeeId = data.EmployeeID;
-    
-    // If no Employee ID provided or if it already exists, generate a new one
-    if (!employeeId) {
-      employeeId = await generateUniqueEmployeeId();
-    } else {
-      // Check if the provided Employee ID already exists
-      const { data: existingEmployee } = await supabaseAdmin
-        .from('Employee')
-        .select('EmployeeID')
-        .eq('EmployeeID', employeeId)
-        .single();
-      
-      if (existingEmployee) {
-        // Employee ID already exists, generate a new one
-        employeeId = await generateUniqueEmployeeId();
-        console.log(`Employee ID ${data.EmployeeID} already exists, generated new ID: ${employeeId}`);
-      }
-    }
-
-    // Start a transaction by creating the main employee record first
-    const { data: newEmployee, error: employeeError } = await supabaseAdmin
-      .from('Employee')
-      .insert([{
-        EmployeeID: employeeId,
+    // Start a Supabase transaction
+    const { data: newEmployee, error: employeeError } = await supabaseAdmin.rpc('create_employee_transaction', {
+      p_employee_data: {
+        EmployeeID: data.EmployeeID || await generateUniqueEmployeeId(),
         UserID: data.UserID || null,
         LastName: data.LastName,
         FirstName: data.FirstName,
@@ -155,119 +133,46 @@ export async function POST(request: Request) {
         ContractID: data.ContractID || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      }])
-      .select()
-      .single();
+      },
+      p_employment_data: data.HireDate || data.EmploymentStatus || data.Designation || data.Position || data.SalaryGrade ? {
+        EmploymentStatus: data.EmploymentStatus || 'Regular',
+        HireDate: data.HireDate,
+        ResignationDate: data.ResignationDate || null,
+        Designation: data.Designation || null,
+        Position: data.Position || null,
+        SalaryGrade: data.SalaryGrade || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } : null,
+      p_contact_data: data.Email || data.Phone || data.PresentAddress || data.PermanentAddress || data.EmergencyContactName || data.EmergencyContactNumber ? {
+        Email: data.Email || null,
+        Phone: data.Phone || null,
+        PresentAddress: data.PresentAddress || null,
+        PermanentAddress: data.PermanentAddress || null,
+        EmergencyContactName: data.EmergencyContactName || null,
+        EmergencyContactNumber: data.EmergencyContactNumber || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } : null,
+      p_government_data: data.SSSNumber || data.TINNumber || data.PhilHealthNumber || data.PagIbigNumber || data.GSISNumber || data.PRCLicenseNumber || data.PRCValidity ? {
+        SSSNumber: data.SSSNumber || null,
+        TINNumber: data.TINNumber || null,
+        PhilHealthNumber: data.PhilHealthNumber || null,
+        PagIbigNumber: data.PagIbigNumber || null,
+        GSISNumber: data.GSISNumber || null,
+        PRCLicenseNumber: data.PRCLicenseNumber || null,
+        PRCValidity: data.PRCValidity || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } : null
+    });
 
     if (employeeError) {
-      console.error('Error creating employee:', employeeError);
+      console.error('Error in create_employee_transaction:', employeeError);
       return NextResponse.json(
         { error: `Failed to create employee: ${employeeError.message}` },
         { status: 500 }
       );
-    }
-
-    // Create EmploymentDetail record
-    if (data.HireDate || data.EmploymentStatus || data.Designation || data.Position || data.SalaryGrade) {
-      const { error: employmentError } = await supabaseAdmin
-        .from('EmploymentDetail')
-        .insert([{
-          employeeId: employeeId,
-          EmploymentStatus: data.EmploymentStatus || 'Regular',
-          HireDate: data.HireDate,
-          ResignationDate: data.ResignationDate || null,
-          Designation: data.Designation || null,
-          Position: data.Position || null,
-          SalaryGrade: data.SalaryGrade || null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }]);
-
-      if (employmentError) {
-        console.error('Error creating employment detail:', employmentError);
-        // Rollback: delete the employee record
-        await supabaseAdmin
-          .from('Employee')
-          .delete()
-          .eq('EmployeeID', employeeId);
-        return NextResponse.json(
-          { error: `Failed to create employment detail: ${employmentError.message}` },
-          { status: 500 }
-        );
-      }
-    }
-
-    // Create ContactInfo record
-    if (data.Email || data.Phone || data.PresentAddress || data.PermanentAddress || data.EmergencyContactName || data.EmergencyContactNumber) {
-      const { error: contactError } = await supabaseAdmin
-        .from('ContactInfo')
-        .insert([{
-          employeeId: employeeId,
-          Email: data.Email || null,
-          Phone: data.Phone || null,
-          PresentAddress: data.PresentAddress || null,
-          PermanentAddress: data.PermanentAddress || null,
-          EmergencyContactName: data.EmergencyContactName || null,
-          EmergencyContactNumber: data.EmergencyContactNumber || null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }]);
-
-      if (contactError) {
-        console.error('Error creating contact info:', contactError);
-        // Rollback: delete related records
-        await supabaseAdmin
-          .from('EmploymentDetail')
-          .delete()
-          .eq('employeeId', employeeId);
-        await supabaseAdmin
-          .from('Employee')
-          .delete()
-          .eq('EmployeeID', employeeId);
-        return NextResponse.json(
-          { error: `Failed to create contact info: ${contactError.message}` },
-          { status: 500 }
-        );
-      }
-    }
-
-    // Create GovernmentID record
-    if (data.SSSNumber || data.TINNumber || data.PhilHealthNumber || data.PagIbigNumber || data.GSISNumber || data.PRCLicenseNumber || data.PRCValidity) {
-      const { error: govIdError } = await supabaseAdmin
-        .from('GovernmentID')
-        .insert([{
-          employeeId: employeeId,
-          SSSNumber: data.SSSNumber || null,
-          TINNumber: data.TINNumber || null,
-          PhilHealthNumber: data.PhilHealthNumber || null,
-          PagIbigNumber: data.PagIbigNumber || null,
-          GSISNumber: data.GSISNumber || null,
-          PRCLicenseNumber: data.PRCLicenseNumber || null,
-          PRCValidity: data.PRCValidity || null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }]);
-
-      if (govIdError) {
-        console.error('Error creating government ID:', govIdError);
-        // Rollback: delete related records
-        await supabaseAdmin
-          .from('ContactInfo')
-          .delete()
-          .eq('employeeId', employeeId);
-        await supabaseAdmin
-          .from('EmploymentDetail')
-          .delete()
-          .eq('employeeId', employeeId);
-        await supabaseAdmin
-          .from('Employee')
-          .delete()
-          .eq('EmployeeID', employeeId);
-        return NextResponse.json(
-          { error: `Failed to create government ID: ${govIdError.message}` },
-          { status: 500 }
-        );
-      }
     }
 
     return NextResponse.json(newEmployee);

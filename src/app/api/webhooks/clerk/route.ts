@@ -5,12 +5,49 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Resend } from 'resend';
 import { createClerkClient } from '@clerk/clerk-sdk-node';
+import { generateUserId } from '@/lib/generateUserId';
+import { WebhookEvent as ClerkWebhookEvent } from '@clerk/nextjs/server';
 
 // Initialize Resend only if API key is available
 // const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 const MAX_AUTO_RESEND_ATTEMPTS = 3;
+
+// Define our custom event types
+interface InvitationExpiredEvent {
+  id: string;
+  email_address: string;
+}
+
+interface InvitationAcceptedEvent {
+  id: string;
+  email_address: string;
+  user_id: string;
+}
+
+interface UserDeletedEvent {
+  id: string;
+}
+
+// Define the mapping between event types and their data
+interface WebhookEventDataMap {
+  'user.created': UserCreatedEvent;
+  'user.updated': UserUpdatedEvent;
+  'user.deleted': UserDeletedEvent;
+  'session.created': SessionCreatedEvent;
+  'session.ended': SessionEndedEvent;
+  'invitation.expired': InvitationExpiredEvent;
+  'invitation.accepted': InvitationAcceptedEvent;
+}
+
+// Extend the Clerk webhook event type to include our custom events
+type CustomWebhookEventType = keyof WebhookEventDataMap;
+
+interface CustomWebhookEvent extends Omit<ClerkWebhookEvent, 'type' | 'data'> {
+  type: CustomWebhookEventType;
+  data: WebhookEventDataMap[CustomWebhookEventType];
+}
 
 // Define webhook event types
 type WebhookEventType = 
@@ -43,17 +80,6 @@ interface SessionCreatedEvent {
 }
 
 interface SessionEndedEvent {
-  user_id: string;
-}
-
-interface InvitationExpiredEvent {
-  id: string;
-  email_address: string;
-}
-
-interface InvitationAcceptedEvent {
-  id: string;
-  email_address: string;
   user_id: string;
 }
 
@@ -114,11 +140,10 @@ async function logActivity(
 
 export async function POST(req: Request) {
   try {
-    // Get the headers
-    const headersList = await headers();
-    const svix_id = headersList.get('svix-id');
-    const svix_timestamp = headersList.get('svix-timestamp');
-    const svix_signature = headersList.get('svix-signature');
+    // Get the headers from the request
+    const svix_id = req.headers.get('svix-id');
+    const svix_timestamp = req.headers.get('svix-timestamp');
+    const svix_signature = req.headers.get('svix-signature');
 
     // If there are no headers, error out
     if (!svix_id || !svix_timestamp || !svix_signature) {
@@ -136,7 +161,7 @@ export async function POST(req: Request) {
     // Create a new Svix instance with your webhook secret
     const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET || '');
 
-    let evt: WebhookEvent;
+    let evt: CustomWebhookEvent;
 
     // Verify the payload with the headers
     try {
@@ -144,7 +169,7 @@ export async function POST(req: Request) {
         'svix-id': svix_id,
         'svix-timestamp': svix_timestamp,
         'svix-signature': svix_signature,
-      }) as WebhookEvent;
+      }) as CustomWebhookEvent;
     } catch (err) {
       console.error('Error verifying webhook:', err);
       return NextResponse.json(
@@ -155,209 +180,139 @@ export async function POST(req: Request) {
 
     console.log('Webhook event received:', evt.type);
 
-    const eventType = evt.type as WebhookEventType;
+    const eventType = evt.type;
     const ipAddress = req.headers.get('x-forwarded-for') || 'system';
 
     switch (eventType) {
       case 'user.created': {
-        const { id, email_addresses, first_name, last_name, image_url } = evt.data as UserCreatedEvent;
+        const { id, email_addresses, first_name, last_name } = evt.data as UserCreatedEvent;
         const email = email_addresses[0]?.email_address;
 
-        console.log('Processing user.created webhook:', {
-          clerkId: id,
-          email,
-          firstName: first_name,
-          lastName: last_name
-        });
-
         if (!email) {
-          console.error('No email found in webhook data:', evt.data);
+          console.error('No email address found in user.created webhook');
           return NextResponse.json(
-            { error: 'No email found' },
+            { error: 'No email address found' },
             { status: 400 }
           );
         }
 
         try {
-          let userData = null;
-          let findError = null;
-          let retryCount = 0;
+          // Add retry mechanism for database operations
           const maxRetries = 3;
+          const retryDelay = 1000; // 1 second
+          let retryCount = 0;
+          let userData;
+          let dbError;
 
-          // Retry loop for finding the user
-          while (retryCount < maxRetries && (!userData || findError)) {
-            if (retryCount > 0) {
-              console.log(`Retry ${retryCount} - Waiting before searching for user...`);
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
-            }
-
-            // First, try to find user by ClerkID (existing user)
-            const result = await supabaseAdmin
+          while (retryCount < maxRetries) {
+            // Find user by email (case insensitive)
+            const { data, error } = await supabaseAdmin
               .from('User')
-              .select('UserID, FirstName, LastName, Status, ClerkID, PasswordHash')
-              .eq('ClerkID', id)
+              .select('UserID, Status, ClerkID')
+              .ilike('Email', email)
               .single();
 
-            if (result.error && result.error.code === 'PGRST116') { // No rows returned
-              // If not found by ClerkID, try to find by email
-              const emailResult = await supabaseAdmin
-                .from('User')
-                .select('UserID, FirstName, LastName, Status, ClerkID, PasswordHash')
-                .eq('Email', email)
-                .single();
-
-              userData = emailResult.data;
-              findError = emailResult.error;
-            } else {
-              userData = result.data;
-              findError = result.error;
+            if (error) {
+              if (error.code === 'PGRST116') { // Not found
+                break; // Exit loop to create new user
+              }
+              console.error(`Database query attempt ${retryCount + 1} failed:`, error);
+              if (retryCount < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                retryCount++;
+                continue;
+              }
+              throw error;
             }
 
-            console.log(`Search attempt ${retryCount + 1} result:`, { userData, findError });
-            retryCount++;
+            userData = data;
+            break;
           }
 
-          let userIdForLogging = id;
-          
           if (userData) {
-            // Retry loop for updating the user
-            retryCount = 0;
-            let updateResult = null;
-            let updateError = null;
-
-            while (retryCount < maxRetries && (!updateResult || updateError)) {
-              if (retryCount > 0) {
-                console.log(`Retry ${retryCount} - Waiting before updating user...`);
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
-              }
-
-              const result = await supabaseAdmin
-                .from('User')
-                .update({ 
-                  ClerkID: id,
-                  Status: 'Active',
-                  DateModified: new Date().toISOString(),
-                  LastLogin: new Date().toISOString(),
-                  Photo: image_url || null,
-                  PasswordHash: 'CLERK_MANAGED'
-                })
-                .eq('UserID', userData.UserID)
-                .select();
-
-              updateResult = result.data;
-              updateError = result.error;
-
-              console.log(`Update attempt ${retryCount + 1} result:`, { updateResult, updateError });
-              retryCount++;
+            // If user already has a ClerkID, log a warning but don't fail
+            if (userData.ClerkID) {
+              console.warn('User already has a ClerkID:', {
+                email: email,
+                existingClerkId: userData.ClerkID,
+                newClerkId: id
+              });
             }
 
-            if (updateError || !updateResult) {
-              console.error('Error updating user with ClerkID after retries:', updateError);
-              await logActivity(
-                userData.UserID,
-                'user_creation_error',
-                'User',
-                `Failed to update user ${userData.UserID} with ClerkID after ${maxRetries} attempts`,
-                ipAddress
-              );
-              return NextResponse.json(
-                { error: 'Failed to update user with ClerkID' },
-                { status: 500 }
-              );
-            }
-
-            userIdForLogging = userData.UserID;
-
-            // Log the user activation
-            await logActivity(
-              userData.UserID,
-              'user_activated',
-              'User',
-              `User ${userData.FirstName} ${userData.LastName} (${email}) accepted invitation and activated their account. ClerkID: ${id}`,
-              ipAddress
-            );
-          } else {
-            // This is a direct signup (not through invitation) - create a new user record
-            console.log(`Direct signup detected for ${email} - creating new user record`);
-            
-            // Generate a unique UserID
-            const { generateUserId } = await import('@/lib/generateUserId');
-            const userId = await generateUserId(new Date());
-
-            const { data: newUser, error: createError } = await supabaseAdmin
+            // Update user with new ClerkID and ensure status is Active
+            const { error: updateError } = await supabaseAdmin
               .from('User')
-              .insert({
-                UserID: userId,
-                FirstName: first_name || '',
-                LastName: last_name || '',
-                Email: email,
-                Status: 'Active',
+              .update({
                 ClerkID: id,
-                PasswordHash: 'CLERK_MANAGED',
-                Photo: image_url || null,
+                Status: 'Active',
+                PasswordHash: 'CLERK_MANAGED', // Standardize password hash for Clerk users
                 DateModified: new Date().toISOString(),
                 LastLogin: new Date().toISOString()
               })
-              .select()
-              .single();
+              .eq('UserID', userData.UserID);
 
-            if (createError) {
-              console.error('Error creating new user record:', createError);
-              await logActivity(
-                id,
-                'user_creation_error',
-                'User',
-                `Failed to create user record for direct signup ${email}`,
-                ipAddress
-              );
+            if (updateError) {
+              console.error('Error updating user:', updateError);
               return NextResponse.json(
-                { error: 'Failed to create user record' },
+                { error: 'Error updating user' },
                 { status: 500 }
               );
             }
 
+            console.log('Successfully updated user with ClerkID:', id);
+
+            // Log the activity
+            await logActivity(
+              userData.UserID,
+              'user_created',
+              'User',
+              `User account created in authentication system`,
+              'system'
+            );
+          } else {
+            // Generate a new UserID for the user
+            const userId = await generateUserId(new Date());
+
+            // Create new user record
+            const { error: createError } = await supabaseAdmin
+              .from('User')
+              .insert({
+                UserID: userId,
+                ClerkID: id,
+                FirstName: first_name || email.split('@')[0],
+                LastName: last_name || '',
+                Email: email.toLowerCase(),
+                Status: 'Active',
+                DateCreated: new Date().toISOString(),
+                LastLogin: new Date().toISOString(),
+                PasswordHash: 'CLERK_MANAGED' // Standardize password hash for new Clerk users
+              });
+
+            if (createError) {
+              console.error('Error creating user:', createError);
+              return NextResponse.json(
+                { error: 'Error creating user' },
+                { status: 500 }
+              );
+            }
+
+            console.log('Successfully created new user with ClerkID:', id);
+
+            // Log the activity
             await logActivity(
               userId,
               'user_created',
               'User',
-              `Created new user record for direct signup ${first_name} ${last_name} (${email})`,
-              ipAddress
+              `New user account created`,
+              'system'
             );
-          }
-
-          // Send welcome email only if RESEND_API_KEY is configured
-          if (process.env.RESEND_API_KEY && userData) {
-            const resend = new Resend(process.env.RESEND_API_KEY);
-            try {
-              await resend.emails.send({
-                from: 'HRMS <noreply@yourdomain.com>',
-                to: email,
-                subject: 'Welcome to HRMS - Your Account is Active',
-                html: `
-                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h1>Welcome to HRMS!</h1>
-                    <p>Dear ${userData.FirstName} ${userData.LastName},</p>
-                    <p>Your account has been successfully activated. You can now log in to the HRMS system.</p>
-                    <p>Best regards,<br>HRMS Team</p>
-                  </div>
-                `
-              });
-            } catch (emailError) {
-              console.error('Error sending welcome email:', emailError);
-              // Don't fail the webhook if email fails
-            }
-          } else {
-            console.warn('Resend API key not configured or user data not found, skipping welcome email');
           }
 
           return NextResponse.json({ success: true });
         } catch (error) {
           console.error('Error processing user.created webhook:', error);
           return NextResponse.json(
-            { 
-              error: 'Internal Server Error',
-              details: error instanceof Error ? error.message : 'Unknown error'
-            },
+            { error: 'Internal Server Error' },
             { status: 500 }
           );
         }
@@ -421,7 +376,7 @@ export async function POST(req: Request) {
       }
 
       case 'user.deleted': {
-        const { id } = evt.data as { id: string };
+        const { id } = evt.data as UserDeletedEvent;
         try {
           // Find the user by ClerkID first
           const { data: userData, error: findError } = await supabaseAdmin
@@ -585,139 +540,119 @@ export async function POST(req: Request) {
       }
 
       case 'invitation.accepted': {
-        const data = evt.data as unknown as InvitationAcceptedEvent;
-        const { id, email_address, user_id } = data;
-
+        const { id, email_address, user_id } = evt.data as InvitationAcceptedEvent;
+        
         console.log('Processing invitation.accepted webhook:', {
           invitationId: id,
           email: email_address,
-          clerkUserId: user_id
+          userId: user_id
         });
 
         try {
-          let userData = null;
-          let findError = null;
-          let retryCount = 0;
-          const maxRetries = 3;
+          // Find user by email (case insensitive)
+          const { data: userData, error: findError } = await supabaseAdmin
+            .from('User')
+            .select('UserID, Status, ClerkID, invitationId, PasswordHash')
+            .ilike('Email', email_address)
+            .single();
 
-          // Retry loop for finding the user
-          while (retryCount < maxRetries && (!userData || findError)) {
-            if (retryCount > 0) {
-              console.log(`Retry ${retryCount} - Waiting before searching for user...`);
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
-            }
-
-            // Find the user by email address and update with ClerkID
-            const result = await supabaseAdmin
-              .from('User')
-              .select('UserID, FirstName, LastName, Status, ClerkID, PasswordHash')
-              .eq('Email', email_address)
-              .eq('Status', 'Invited')
-              .single();
-
-            userData = result.data;
-            findError = result.error;
-
-            console.log(`Search attempt ${retryCount + 1} result:`, { userData, findError });
-            retryCount++;
-          }
-
-          if (findError || !userData) {
-            console.error('Error finding invited user by email after retries:', findError);
-            await logActivity(
-              user_id,
-              'invitation_accepted_error',
-              'User',
-              `Failed to find invited user with email ${email_address} after ${maxRetries} attempts`,
-              ipAddress
-            );
+          if (findError) {
+            console.error('Error finding user:', findError);
             return NextResponse.json(
-              { error: 'User not found or not in invited status' },
-              { status: 404 }
-            );
-          }
-
-          // Retry loop for updating the user
-          retryCount = 0;
-          let updateResult = null;
-          let updateError = null;
-
-          while (retryCount < maxRetries && (!updateResult || updateError)) {
-            if (retryCount > 0) {
-              console.log(`Retry ${retryCount} - Waiting before updating user...`);
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
-            }
-
-            const result = await supabaseAdmin
-              .from('User')
-              .update({
-                ClerkID: user_id,
-                Status: 'Active',
-                DateModified: new Date().toISOString(),
-                PasswordHash: 'CLERK_MANAGED'
-              })
-              .eq('UserID', userData.UserID)
-              .select();
-
-            updateResult = result.data;
-            updateError = result.error;
-
-            console.log(`Update attempt ${retryCount + 1} result:`, { updateResult, updateError });
-            retryCount++;
-          }
-
-          if (updateError || !updateResult) {
-            console.error('Error updating user with ClerkID after retries:', updateError);
-            await logActivity(
-              user_id,
-              'invitation_accepted_error',
-              'User',
-              `Failed to update user ${userData.UserID} with ClerkID after ${maxRetries} attempts`,
-              ipAddress
-            );
-            return NextResponse.json(
-              { error: 'Failed to update user with ClerkID' },
+              { error: 'Error finding user' },
               { status: 500 }
             );
           }
 
-          await logActivity(
-            userData.UserID,
-            'invitation_accepted',
-            'User',
-            `Invitation accepted by ${userData.FirstName} ${userData.LastName} (${email_address}). ClerkID ${user_id} assigned and user activated.`,
-            ipAddress
+          if (!userData) {
+            console.error('No user found for email:', email_address);
+            return NextResponse.json(
+              { error: 'User not found' },
+              { status: 404 }
+            );
+          }
+
+          // Get the Clerk user to verify their status
+          const clerkUser = await clerk.users.getUser(user_id);
+          const isVerified = clerkUser.emailAddresses.some(
+            email => email.verification?.status === 'verified'
           );
 
-          console.log(`Successfully processed invitation acceptance for user ${userData.UserID}, assigned ClerkID: ${user_id}`);
-          
+          if (!isVerified) {
+            console.log('User email not yet verified, waiting for verification');
+            return NextResponse.json({ success: true });
+          }
+
+          // Only update if the user is in the correct state
+          if (userData.Status !== 'Active' && userData.PasswordHash === 'CLERK_PENDING') {
+            // Update user with new ClerkID, status, and standardize password hash
+            const { error: updateError } = await supabaseAdmin
+              .from('User')
+              .update({
+                ClerkID: user_id,
+                Status: 'Active',
+                PasswordHash: 'CLERK_MANAGED', // Standardize password hash for Clerk users
+                DateModified: new Date().toISOString(),
+                LastLogin: new Date().toISOString()
+              })
+              .eq('UserID', userData.UserID)
+              .eq('PasswordHash', 'CLERK_PENDING'); // Only update if password hash is still pending
+
+            if (updateError) {
+              console.error('Error updating user:', updateError);
+              return NextResponse.json(
+                { error: 'Error updating user' },
+                { status: 500 }
+              );
+            }
+
+            console.log('Successfully updated user with ClerkID:', user_id);
+
+            // Log the activity
+            await logActivity(
+              userData.UserID,
+              'invitation_accepted',
+              'User',
+              `User accepted invitation and account was activated`,
+              'system'
+            );
+          } else {
+            console.log('User already activated or in wrong state:', {
+              status: userData.Status,
+              passwordHash: userData.PasswordHash
+            });
+          }
+
+          // Clean up WebhookPending entry if it exists
+          if (userData.invitationId) {
+            const { error: cleanupError } = await supabaseAdmin
+              .from('WebhookPending')
+              .delete()
+              .eq('invitationId', userData.invitationId);
+
+            if (cleanupError) {
+              console.error('Error cleaning up webhook pending:', cleanupError);
+            }
+          }
+
           return NextResponse.json({ success: true });
         } catch (error) {
           console.error('Error processing invitation.accepted webhook:', error);
           return NextResponse.json(
-            { 
-              error: 'Internal Server Error',
-              details: error instanceof Error ? error.message : 'Unknown error'
-            },
+            { error: 'Internal Server Error' },
             { status: 500 }
           );
         }
       }
 
       default:
-        console.warn('Unhandled webhook event type:', eventType);
-        return NextResponse.json(
-          { error: 'Unhandled webhook event type' },
-          { status: 400 }
-        );
+        console.log('Unhandled webhook event type:', eventType);
+        return NextResponse.json({ success: true });
     }
   } catch (error) {
     console.error('Error in webhook handler:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal Server Error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }

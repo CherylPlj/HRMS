@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 async function fixUserRoles() {
   try {
@@ -110,5 +111,46 @@ async function fixUserRoles() {
   }
 }
 
+async function fixPasswordHashes() {
+  try {
+    // Update all users with ClerkID to have CLERK_MANAGED
+    const { error: updateError } = await supabaseAdmin
+      .from('User')
+      .update({
+        PasswordHash: 'CLERK_MANAGED',
+        DateModified: new Date().toISOString()
+      })
+      .not('ClerkID', 'is', null);
+
+    if (updateError) {
+      console.error('Error updating password hashes:', updateError);
+      return;
+    }
+
+    // Update all invited users without ClerkID to have CLERK_PENDING
+    const { error: pendingError } = await supabaseAdmin
+      .from('User')
+      .update({
+        PasswordHash: 'CLERK_PENDING',
+        DateModified: new Date().toISOString()
+      })
+      .is('ClerkID', null)
+      .eq('Status', 'Invited');
+
+    if (pendingError) {
+      console.error('Error updating pending users:', pendingError);
+      return;
+    }
+
+    console.log('Successfully standardized password hashes');
+  } catch (error) {
+    console.error('Error in fixPasswordHashes:', error);
+  }
+}
+
 fixUserRoles()
-  .catch(console.error); 
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error('Script failed:', error);
+    process.exit(1);
+  }); 

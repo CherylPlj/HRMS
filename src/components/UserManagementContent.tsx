@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
-import { Search, ChevronUp, ChevronDown, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Plus, Trash2, UserPlus, RefreshCw, Lock, UserCheck } from 'lucide-react';
 
 interface UserRecord {
   EmployeeID: string | null;
@@ -51,7 +51,7 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-export default function UserManagementContent() {
+const UserManagementContent: React.FC = () => {
   const { user } = useUser();
   const [userRecords, setUserRecords] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,18 +65,18 @@ export default function UserManagementContent() {
   const [selectedRecord, setSelectedRecord] = useState<UserRecord | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; alt: string } | null>(null);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-  
-  // Add state for role selection modal
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<UserRecord | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState<string | null>(null);
+  const [isRefreshingHash, setIsRefreshingHash] = useState<string | null>(null);
+  const [isActivating, setIsActivating] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState('All Roles');
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-
-
 
       // Fetch all user roles at once
       const { data: allRoleData, error: roleError } = await supabase
@@ -120,45 +120,37 @@ export default function UserManagementContent() {
             UserID,
             DepartmentID,
             Photo,
-            employmentDetails:EmploymentDetail(
+            employmentDetail:EmploymentDetail (
               Position,
               Designation,
               EmploymentStatus,
               HireDate
             ),
-            contactInfo:ContactInfo(
+            contactInfo:ContactInfo (
               Email
             ),
-            Department(
+            Department (
               DepartmentName
-            )
-          `);
-
-        if (empError) throw empError;
-
-        // Fetch users for student employees (exclude deleted users)
-        const { data: userData, error: userError } = await supabase
-          .from('User')
-          .select(`
+            ),
+            User (
             UserID,
-            EmployeeID,
             FirstName,
             LastName,
             Email,
             Photo,
             Status,
             LastLogin
-          `)
-          .eq('isDeleted', false);
+            )
+          `);
 
-        if (userError) throw userError;
+        if (empError) throw empError;
 
-        const userRecordsList: UserRecord[] = [];
-        const processedUserIds = new Set<string>();
-
-        // Process employees with student designation
-        for (const employee of employeeData || []) {
-          const userAccount = userData?.find(u => u.EmployeeID === employee.EmployeeID);
+        // Process employees
+        const userRecordsList: UserRecord[] = employeeData?.map((employee: any) => {
+          const employmentDetail = employee.employmentDetail || {};
+          const contactInfo = employee.contactInfo || {};
+          const department = employee.Department || {};
+          const userAccount = employee.User || null;
           
           let userWithRoles: any[] = [];
           if (userAccount) {
@@ -168,67 +160,27 @@ export default function UserManagementContent() {
               Photo: userAccount.Photo,
               Role: roles
             }];
-            processedUserIds.add(userAccount.UserID);
           }
 
-          // Flatten the nested structure to match UserRecord interface
-          const employmentDetail = employee.employmentDetails?.[0] || {};
-          const contactInfo = employee.contactInfo?.[0] || {};
-          const department = employee.Department?.[0] || {};
-
-          userRecordsList.push({
+          return {
             EmployeeID: employee.EmployeeID,
             FirstName: employee.FirstName,
             LastName: employee.LastName,
             MiddleName: employee.MiddleName,
             ExtensionName: employee.ExtensionName,
-            Email: contactInfo.Email,
+            Email: contactInfo.Email || userAccount?.Email,
             Position: employmentDetail.Position,
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
-            Photo: employee.Photo || (userAccount?.Photo || null),
+            Photo: employee.Photo || null,
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
             User: userWithRoles,
             isUserOnly: false
-          });
-        }
-
-        // Add standalone users with Student role (users not linked to employee records)
-        for (const user of userData || []) {
-          if (!processedUserIds.has(user.UserID) && (!user.EmployeeID)) {
-            const roles = roleMap.get(user.UserID) || [];
-            const hasStudentRole = roles.some((r: any) => r.role?.name === 'Student');
-            
-            if (hasStudentRole) {
-              userRecordsList.push({
-                EmployeeID: null,
-                FirstName: user.FirstName,
-                LastName: user.LastName,
-                MiddleName: null,
-                ExtensionName: null,
-                Email: user.Email,
-                Position: null,
-                Designation: 'Student',
-                DepartmentID: null,
-                UserID: user.UserID,
-                Photo: user.Photo,
-                Department: null,
-                EmploymentStatus: null,
-                HireDate: null,
-                User: [{
-                  ...user,
-                  Photo: user.Photo,
-                  Role: roles
-                }],
-                isUserOnly: true
-              });
-              processedUserIds.add(user.UserID);
-            }
-          }
-        }
+          };
+        }) || [];
 
         setUserRecords(userRecordsList);
       } else if (viewType === 'faculty') {
@@ -244,45 +196,37 @@ export default function UserManagementContent() {
             UserID,
             DepartmentID,
             Photo,
-            employmentDetails:EmploymentDetail(
+            employmentDetail:EmploymentDetail (
               Position,
               Designation,
               EmploymentStatus,
               HireDate
             ),
-            contactInfo:ContactInfo(
+            contactInfo:ContactInfo (
               Email
             ),
-            Department(
+            Department (
               DepartmentName
-            )
-          `);
-
-        if (empError) throw empError;
-
-        // Fetch users for faculty employees (exclude deleted users)
-        const { data: userData, error: userError } = await supabase
-          .from('User')
-          .select(`
+            ),
+            User (
             UserID,
-            EmployeeID,
             FirstName,
             LastName,
             Email,
             Photo,
             Status,
             LastLogin
-          `)
-          .eq('isDeleted', false);
+            )
+          `);
 
-        if (userError) throw userError;
+        if (empError) throw empError;
 
-        const userRecordsList: UserRecord[] = [];
-        const processedUserIds = new Set<string>();
-
-        // Process employees with faculty designation
-        for (const employee of employeeData || []) {
-          const userAccount = userData?.find(u => u.EmployeeID === employee.EmployeeID);
+        // Process employees
+        const userRecordsList: UserRecord[] = employeeData?.map((employee: any) => {
+          const employmentDetail = employee.employmentDetail || {};
+          const contactInfo = employee.contactInfo || {};
+          const department = employee.Department || {};
+          const userAccount = employee.User || null;
           
           let userWithRoles: any[] = [];
           if (userAccount) {
@@ -292,67 +236,27 @@ export default function UserManagementContent() {
               Photo: userAccount.Photo,
               Role: roles
             }];
-            processedUserIds.add(userAccount.UserID);
           }
 
-          // Flatten the nested structure to match UserRecord interface
-          const employmentDetail = employee.employmentDetails?.[0] || {};
-          const contactInfo = employee.contactInfo?.[0] || {};
-          const department = employee.Department?.[0] || {};
-
-          userRecordsList.push({
+          return {
             EmployeeID: employee.EmployeeID,
             FirstName: employee.FirstName,
             LastName: employee.LastName,
             MiddleName: employee.MiddleName,
             ExtensionName: employee.ExtensionName,
-            Email: contactInfo.Email,
+            Email: contactInfo.Email || userAccount?.Email,
             Position: employmentDetail.Position,
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
-            Photo: employee.Photo || (userAccount?.Photo || null),
+            Photo: employee.Photo || null,
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
             User: userWithRoles,
             isUserOnly: false
-          });
-        }
-
-        // Add standalone users with Faculty role (users not linked to employee records)
-        for (const user of userData || []) {
-          if (!processedUserIds.has(user.UserID) && (!user.EmployeeID)) {
-            const roles = roleMap.get(user.UserID) || [];
-            const hasFacultyRole = roles.some((r: any) => r.role?.name === 'Faculty');
-            
-            if (hasFacultyRole) {
-              userRecordsList.push({
-                EmployeeID: null,
-                FirstName: user.FirstName,
-                LastName: user.LastName,
-                MiddleName: null,
-                ExtensionName: null,
-                Email: user.Email,
-                Position: null,
-                Designation: 'Faculty',
-                DepartmentID: null,
-                UserID: user.UserID,
-                Photo: user.Photo,
-                Department: null,
-                EmploymentStatus: null,
-                HireDate: null,
-                User: [{
-                  ...user,
-                  Photo: user.Photo,
-                  Role: roles
-                }],
-                isUserOnly: true
-              });
-              processedUserIds.add(user.UserID);
-            }
-          }
-        }
+          };
+        }) || [];
 
         setUserRecords(userRecordsList);
       } else if (viewType === 'employees') {
@@ -437,7 +341,7 @@ export default function UserManagementContent() {
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
-            Photo: employee.Photo || (userAccount?.Photo || null),
+            Photo: employee.Photo || null,
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
@@ -530,7 +434,7 @@ export default function UserManagementContent() {
             Designation: employmentDetail.Designation,
             DepartmentID: employee.DepartmentID,
             UserID: employee.UserID,
-            Photo: employee.Photo || (userAccount?.Photo || null),
+            Photo: employee.Photo || null,
             Department: department.DepartmentName ? [{ DepartmentName: department.DepartmentName }] : null,
             EmploymentStatus: employmentDetail.EmploymentStatus,
             HireDate: employmentDetail.HireDate,
@@ -718,7 +622,11 @@ export default function UserManagementContent() {
   };
 
   const handleDeleteAccount = async (userRecord: UserRecord) => {
+    if (isDeleting) return; // Prevent double-clicking
+    
     try {
+      setIsDeleting(true); // Start deletion process
+      
       // Get current user ID for logging - using current user from Clerk
       if (!user) {
         setNotification({
@@ -731,6 +639,7 @@ export default function UserManagementContent() {
       const currentUserId = user.id;
 
       if (userRecord.EmployeeID) {
+        console.log(`Attempting to delete employee with ID: ${userRecord.EmployeeID}`);
         // Employee record exists - delete both employee and account (if any)
         const response = await fetch(`/api/employees/${userRecord.EmployeeID}`, {
           method: 'DELETE',
@@ -739,17 +648,21 @@ export default function UserManagementContent() {
           },
         });
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to delete employee and account');
+        if (!response.ok && response.status !== 207) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to delete employee (HTTP ${response.status})`);
         }
 
+        const result = await response.json();
+        console.log('Delete response:', result);
+
         setNotification({
-          type: 'success',
-          message: result.clerkDeleted 
-            ? 'Employee and account deleted successfully (employee soft-deleted, user hard-deleted, authentication account removed)'
-            : 'Employee record soft-deleted and user account hard-deleted successfully'
+          type: response.status === 207 ? 'info' : 'success',
+          message: result.clerkError 
+            ? `Employee record deleted but there was an issue removing the authentication account: ${result.clerkError}`
+            : result.clerkDeleted 
+              ? 'Employee and account deleted successfully'
+              : 'Employee record deleted successfully'
         });
       } else if (userRecord.User.length > 0) {
         // User-only record (no employee) - delete just the user account
@@ -764,32 +677,56 @@ export default function UserManagementContent() {
           }),
         });
 
+        if (!response.ok && response.status !== 207) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to delete user (HTTP ${response.status})`);
+        }
+
         const result = await response.json();
+        console.log('Delete user response:', result);
+
+        setNotification({
+          type: response.status === 207 ? 'info' : 'success',
+          message: result.clerkError 
+            ? `User account deleted from system but there was an issue removing the authentication account: ${result.clerkError}`
+            : result.clerkDeleted 
+              ? 'User account deleted successfully'
+              : 'User account deleted from system'
+        });
+      } else {
+        // No employee record or user account - delete from database only
+        const response = await fetch('/api/deleteUser', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userRecord.UserID || userRecord.Email,
+            createdBy: currentUserId,
+            deleteFromDbOnly: true
+          }),
+        });
 
         if (!response.ok) {
-          throw new Error(result.error || 'Failed to delete account');
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to delete record (HTTP ${response.status})`);
         }
+
+        const result = await response.json();
+        console.log('Delete record response:', result);
 
         setNotification({
           type: 'success',
-          message: result.clerkDeleted 
-            ? 'User account hard-deleted successfully (both system and authentication account removed)'
-            : 'User account hard-deleted successfully (system account removed)'
+          message: 'Record deleted successfully'
         });
-      } else {
-        // Should not happen, but handle gracefully
-        setNotification({
-          type: 'error',
-          message: 'No record to delete found'
-        });
-        return;
       }
 
       // Refresh data
-      fetchData();
+      await fetchData();
       setShowDeleteModal(false);
       setSelectedRecord(null);
     } catch (error) {
+      console.error('Delete operation failed:', error);
       setNotification({
         type: 'error',
         message: `Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -797,6 +734,8 @@ export default function UserManagementContent() {
       // Close modal even on error so user can try again
       setShowDeleteModal(false);
       setSelectedRecord(null);
+    } finally {
+      setIsDeleting(false); // Reset deletion state
     }
   };
 
@@ -855,58 +794,173 @@ export default function UserManagementContent() {
     });
   };
 
+  // Helper to get all unique roles from userRecords
+  const allRoles = Array.from(new Set(userRecords.flatMap(user =>
+    user.User && user.User[0] && user.User[0].Role
+      ? user.User[0].Role.map((r: any) => r.role.name)
+      : []
+  )));
+
+  // Update filteredAndSortedUserRecords to include role filter
   const filteredAndSortedUserRecords = getSortedData(
-    userRecords.filter((userRecord: UserRecord) => {
-      const fullName = [userRecord.FirstName, userRecord.MiddleName, userRecord.LastName, userRecord.ExtensionName]
-        .filter(Boolean)
-        .join(' ');
-      
-      const matchesSearch = 
-        fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (userRecord.Email && userRecord.Email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (userRecord.EmployeeID && userRecord.EmployeeID.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const hasAccount = userRecord.User.length > 0;
-      const employeeStatus = hasAccount ? userRecord.User[0].Status : 'No Account';
-      
-      const matchesStatus = statusFilter === 'All' || 
-          (statusFilter === 'No Account' && !hasAccount) ||
-          (statusFilter === 'Active' && hasAccount && employeeStatus === 'Active') ||
-          (statusFilter === 'Inactive' && hasAccount && employeeStatus === 'Inactive') ||
-          (statusFilter === 'Invited' && hasAccount && employeeStatus === 'Invited');
+    userRecords.filter((user) => {
+      const matchesSearch =
+        user.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.LastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.Email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.EmployeeID && user.EmployeeID.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesStatus =
+        statusFilter === 'All' ||
+        (statusFilter === 'No Account' && user.User.length === 0) ||
+        (user.User.length > 0 && user.User[0].Status === statusFilter);
+      const userRoles = user.User && user.User[0] && user.User[0].Role
+        ? user.User[0].Role.map((r: any) => r.role.name)
+        : [];
+      const matchesRole =
+        roleFilter === 'All Roles' || userRoles.includes(roleFilter);
 
-      // Filter by view type based on designation
-      let matchesViewType = true;
-      const designation = userRecord.Designation ? userRecord.Designation.toLowerCase() : '';
-      
-      if (viewType === 'faculty') {
-        // Show users with Faculty designation OR Faculty role
-        const hasFacultyRole = userRecord.User.some((u: any) => 
-          u.Role?.some((r: any) => r.role?.name === 'Faculty')
+      // Only show 'No Account' if there is no other record with the same email that has an account
+      if (user.User.length === 0 && user.Email) {
+        const hasAccountWithSameEmail = userRecords.some(
+          (u) => u.Email === user.Email && u.User.length > 0
         );
-        matchesViewType = designation === 'faculty' || hasFacultyRole;
-
-      } else if (viewType === 'students') {
-        // Show users with Student designation OR Student role
-        const hasStudentRole = userRecord.User.some((u: any) => 
-          u.Role?.some((r: any) => r.role?.name === 'Student')
-        );
-        matchesViewType = designation === 'student' || hasStudentRole;
-      } else if (viewType === 'employees') {
-        // Show all users except those with Faculty/Student designation OR Faculty/Student roles
-        const hasFacultyRole = userRecord.User.some((u: any) => 
-          u.Role?.some((r: any) => r.role?.name === 'Faculty')
-        );
-        const hasStudentRole = userRecord.User.some((u: any) => 
-          u.Role?.some((r: any) => r.role?.name === 'Student')
-        );
-        matchesViewType = designation !== 'faculty' && designation !== 'student' && !hasFacultyRole && !hasStudentRole;
+        if (hasAccountWithSameEmail) {
+          return false;
+        }
       }
-      // For 'users' viewType, show all (matchesViewType remains true)
-        
-      return matchesSearch && matchesStatus && matchesViewType;
+
+      return matchesSearch && matchesStatus && matchesRole;
     })
   );
+
+  const handleRefreshClerkId = async (userRecord: UserRecord) => {
+    if (!userRecord.Email || isRefreshing === userRecord.Email) return;
+    
+    try {
+      setIsRefreshing(userRecord.Email);
+      
+      const response = await fetch('/api/users/refresh-clerk-id', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userRecord.Email,
+          userId: userRecord.User[0]?.UserID
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // If we got search errors, display them in detail
+        if (result.details && Array.isArray(result.details)) {
+          throw new Error(`${result.error}:\n${result.details.join('\n')}`);
+        }
+        throw new Error(result.error || 'Failed to refresh ClerkID');
+      }
+
+      setNotification({
+        type: 'success',
+        message: `ClerkID refreshed successfully (found via ${result.searchMethod})`
+      });
+
+      // Refresh the data to show updated ClerkID
+      await fetchData();
+    } catch (error) {
+      console.error('Error refreshing ClerkID:', error);
+      setNotification({
+        type: 'error',
+        message: `Failed to refresh ClerkID: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setIsRefreshing(null);
+    }
+  };
+
+  const handleRefreshPasswordHash = async (userRecord: UserRecord) => {
+    if (!userRecord.Email || isRefreshingHash === userRecord.Email) return;
+    
+    try {
+      setIsRefreshingHash(userRecord.Email);
+      
+      const response = await fetch('/api/users/refresh-password-hash', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userRecord.Email,
+          userId: userRecord.User[0]?.UserID
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to refresh password hash');
+      }
+
+      setNotification({
+        type: 'success',
+        message: 'Password hash refreshed successfully'
+      });
+
+      // Refresh the data to show updated status
+      await fetchData();
+    } catch (error) {
+      console.error('Error refreshing password hash:', error);
+      setNotification({
+        type: 'error',
+        message: `Failed to refresh password hash: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setIsRefreshingHash(null);
+    }
+  };
+
+  const handleActivateUser = async (userRecord: UserRecord) => {
+    if (!userRecord.User?.[0]?.UserID) {
+      setNotification({
+        type: 'error',
+        message: 'User ID not found'
+      });
+      return;
+    }
+
+    setIsActivating(userRecord.User[0].UserID);
+
+    try {
+      const response = await fetch('/api/updateUserStatus', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userRecord.User[0].UserID,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to activate user');
+      }
+
+      await fetchData(); // Refresh the data
+      setNotification({
+        type: 'success',
+        message: 'User activated successfully'
+      });
+    } catch (error) {
+      console.error('Error activating user:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to activate user'
+      });
+    } finally {
+      setIsActivating(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -947,52 +1001,6 @@ export default function UserManagementContent() {
         </p>
       </div>
 
-      {/* View Type Toggle */}
-      <div className="mb-6">
-        <div className="inline-flex rounded-lg bg-gray-100 p-1">
-          <button
-            onClick={() => setViewType('users')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              viewType === 'users'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            All Users
-          </button>
-          <button
-            onClick={() => setViewType('employees')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              viewType === 'employees'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Employees
-          </button>
-          <button
-            onClick={() => setViewType('faculty')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              viewType === 'faculty'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Faculty
-          </button>
-          <button
-            onClick={() => setViewType('students')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              viewType === 'students'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Students
-          </button>
-        </div>
-      </div>
-
       {/* Search and Filter Section */}
       <div className="mb-8 flex flex-wrap gap-4">
         <div className="flex-1 min-w-[300px]">
@@ -1017,6 +1025,16 @@ export default function UserManagementContent() {
           <option value="Active">Active Account</option>
           <option value="Inactive">Inactive Account</option>
           <option value="Invited">Invited</option>
+        </select>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+        >
+          <option value="All Roles">All Roles</option>
+          {allRoles.map((role) => (
+            <option key={role} value={role}>{role}</option>
+          ))}
         </select>
       </div>
 
@@ -1048,105 +1066,11 @@ export default function UserManagementContent() {
                     <th className="w-16 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Photo
                     </th>
-                    <th 
-                      className="w-80 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Name</span>
-                        <div className="flex flex-col">
-                          <ChevronUp 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'name' && sortConfig.direction === 'asc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                          <ChevronDown 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'name' && sortConfig.direction === 'desc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                        </div>
-                      </div>
-                    </th>
-                    <th 
-                      className="w-48 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                      onClick={() => handleSort('designation')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Designation</span>
-                        <div className="flex flex-col">
-                          <ChevronUp 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'designation' && sortConfig.direction === 'asc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                          <ChevronDown 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'designation' && sortConfig.direction === 'desc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                        </div>
-                      </div>
-                    </th>
-                    <th 
-                      className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                      onClick={() => handleSort('status')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Account Status</span>
-                        <div className="flex flex-col">
-                          <ChevronUp 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'status' && sortConfig.direction === 'asc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                          <ChevronDown 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'status' && sortConfig.direction === 'desc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                        </div>
-                      </div>
-                    </th>
-                    <th 
-                      className="w-36 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                      onClick={() => handleSort('lastLogin')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Last Login</span>
-                        <div className="flex flex-col">
-                          <ChevronUp 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'lastLogin' && sortConfig.direction === 'asc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                          <ChevronDown 
-                            className={`h-3 w-3 ${
-                              sortConfig?.key === 'lastLogin' && sortConfig.direction === 'desc' 
-                                ? 'text-gray-900' 
-                                : 'text-gray-400'
-                            }`} 
-                          />
-                        </div>
-                      </div>
-                    </th>
-                    <th className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th className="w-80 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="w-64 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="w-48 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">User Roles</th>
+                    <th className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Status</th>
+                    <th className="w-32 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -1163,94 +1087,109 @@ export default function UserManagementContent() {
                     
                     return (
                       <tr key={uniqueKey} className="hover:bg-gray-50">
-                        <td className="w-16 px-6 py-4 whitespace-nowrap">
-                          <div 
-                            className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const photoUrl = userRecord.Photo || (hasAccount ? userRecord.User[0]?.Photo : null);
-                              if (photoUrl) {
-                                handlePhotoClick(e, photoUrl, fullName);
-                              }
-                            }}
-                          >
-                            {(userRecord.Photo || (hasAccount ? userRecord.User[0]?.Photo : null)) ? (
-                              <img 
-                                src={userRecord.Photo || userRecord.User[0]?.Photo || ''} 
-                                alt={fullName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                            )}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <img
+                              className="h-10 w-10 rounded-full object-cover cursor-pointer"
+                              src={userRecord.Photo || '/avatar.png'}
+                              alt={`${fullName}'s photo`}
+                              onClick={(e) => handlePhotoClick(e, userRecord.Photo || '/avatar.png', `${fullName}'s photo`)}
+                            />
                           </div>
                         </td>
-                        <td className="w-80 px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-[#800000] flex items-center justify-center">
-                                <span className="text-white font-medium">
-                                  {(userRecord.FirstName || '').charAt(0)}{(userRecord.LastName || '').charAt(0)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-4 min-w-0 flex-1">
-                              <div className="text-sm font-medium text-gray-900 truncate">
-                                {fullName || 'Name not provided'}
-                              </div>
-                              <div className="text-sm text-gray-500 truncate">
-                                {userRecord.Email || 'No email'}
-                              </div>
-                            </div>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{fullName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm text-gray-900">{userRecord.Email || 'No email'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm text-gray-900">
+                            {userRecord.User && userRecord.User[0] && userRecord.User[0].Role && userRecord.User[0].Role.length > 0
+                              ? userRecord.User[0].Role.map((r: any) => r.role.name).join(', ')
+                              : 'No role'}
                           </div>
                         </td>
-                        <td className="w-48 px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <span className="truncate">
-                            {userRecord.Designation || 
-                             (hasAccount && userRecord.User[0].Role.length > 0 
-                              ? userRecord.User[0].Role.map((r: any) => r.role?.name || 'Unknown Role').join(', ')
-                              : 'Not specified')
-                            }
-                          </span>
-                        </td>
-                        <td className="w-40 px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            !hasAccount ? 'bg-gray-100 text-gray-800' :
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             accountStatus === 'Active' ? 'bg-green-100 text-green-800' :
                             accountStatus === 'Inactive' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            accountStatus === 'Invited' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
                           }`}>
                             {accountStatus}
                           </span>
                         </td>
-                        <td className="w-36 px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {hasAccount && userRecord.User[0].LastLogin 
-                            ? new Date(userRecord.User[0].LastLogin).toLocaleDateString()
-                            : 'Never'
-                          }
-                        </td>
-                        <td className="w-32 px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            {!hasAccount && (
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <div className="flex justify-center space-x-2">
+                            {/* Actions column */}
+                            {userRecord.User.length > 0 ? (
+                              <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => showRoleSelectionModal(userRecord)}
-                                className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
-                                title="Create Account"
-                              >
-                                <UserPlus className="h-4 w-4" />
+                                  onClick={() => handleRefreshClerkId(userRecord)}
+                                  disabled={isRefreshing === userRecord.Email}
+                                  className={`text-blue-600 hover:text-blue-800 ${
+                                    isRefreshing === userRecord.Email ? 'opacity-50 cursor-not-allowed' : ''
+                                  }`}
+                                  title="Refresh ClerkID"
+                                >
+                                  {isRefreshing === userRecord.Email ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                                  ) : (
+                                    <RefreshCw className="h-5 w-5" />
+                                  )}
                               </button>
+                                <button
+                                  onClick={() => handleRefreshPasswordHash(userRecord)}
+                                  disabled={isRefreshingHash === userRecord.Email}
+                                  className={`text-blue-600 hover:text-blue-800 ${
+                                    isRefreshingHash === userRecord.Email ? 'opacity-50 cursor-not-allowed' : ''
+                                  }`}
+                                  title="Refresh Password Hash"
+                                >
+                                  {isRefreshingHash === userRecord.Email ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                                  ) : (
+                                    <Lock className="h-5 w-5" />
+                                  )}
+                                </button>
+                                {userRecord.User[0]?.Status === 'Invited' && (
+                                  <button
+                                    onClick={() => handleActivateUser(userRecord)}
+                                    disabled={isActivating === userRecord.User[0].UserID}
+                                    className="text-green-600 hover:text-green-800 transition-colors relative group"
+                                    title="Activate User"
+                                  >
+                                    {isActivating === userRecord.User[0].UserID ? (
+                                      <div className="animate-spin">
+                                        <RefreshCw size={20} />
+                                      </div>
+                                    ) : (
+                                      <UserCheck size={20} />
+                                    )}
+                                    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                      Activate User
+                                    </span>
+                                  </button>
                             )}
                             <button
                               onClick={() => confirmDelete(userRecord)}
-                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                              title="Delete Employee and Account"
+                                  className="text-red-600 hover:text-red-800"
+                                  disabled={isDeleting}
+                                  title="Delete Account"
                             >
-                              <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-5 w-5" />
                             </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => showRoleSelectionModal(userRecord)}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="Create Account"
+                              >
+                                <UserPlus className="h-5 w-5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1259,52 +1198,25 @@ export default function UserManagementContent() {
                 </tbody>
               </table>
             </div>
-
-            {filteredAndSortedUserRecords.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No records found matching the current filters.</p>
-              </div>
-            )}
           </>
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedRecord && (
+      {/* Photo Modal */}
+      {isPhotoModalOpen && selectedPhoto && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Confirm Deletion
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Are you sure you want to delete{' '}
-              <span className="font-medium">
-                {[selectedRecord.FirstName, selectedRecord.LastName].filter(Boolean).join(' ') || 'this user'}
-              </span>
-              {selectedRecord.EmployeeID ? (
-                <>? This will soft-delete their employee record and hard-delete their user account (including authentication account).{' '}</>
-              ) : (
-                <>? This will permanently delete their user account (including authentication account).{' '}</>
-              )}
-              This action cannot be undone for the user account.
-            </p>
-            <div className="flex justify-end space-x-3">
+          <div className="bg-white p-4 rounded-lg shadow-xl max-w-2xl">
+            <img
+              src={selectedPhoto.url}
+              alt={selectedPhoto.alt}
+              className="max-h-[80vh] w-auto"
+            />
               <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setSelectedRecord(null);
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              onClick={handleClosePhotoModal}
+              className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
               >
-                Cancel
+              Close
               </button>
-              <button
-                onClick={() => handleDeleteAccount(selectedRecord)}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
-              >
-                Delete
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1312,50 +1224,39 @@ export default function UserManagementContent() {
       {/* Role Selection Modal */}
       {showRoleModal && selectedUserForRole && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Select Role for Account Creation
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Creating account for{' '}
-              <span className="font-medium">
-                {[selectedUserForRole.FirstName, selectedUserForRole.LastName].filter(Boolean).join(' ')}
-              </span>
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Role
-              </label>
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Select Role for {[selectedUserForRole.FirstName, selectedUserForRole.LastName].filter(Boolean).join(' ')}</h3>
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-[#800000] focus:border-[#800000]"
+              className="w-full p-2 border border-gray-300 rounded mb-4"
               >
-                <option value="">Choose a role...</option>
-                <option value="Faculty">Faculty</option>
-                <option value="Admin">Admin</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Registrar">Registrar</option>
+              <option value="">Select a role...</option>
+              <option value="super admin">Super Admin</option>
+              <option value="student">Student</option>
+              <option value="cashier">Cashier</option>
+              <option value="registrar">Registrar</option>
+              <option value="faculty">Faculty</option>
+              <option value="admin">Admin</option>
               </select>
-            </div>
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-2">
               <button
                 onClick={() => {
                   setShowRoleModal(false);
                   setSelectedUserForRole(null);
                   setSelectedRole('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRoleSelection}
                 disabled={!selectedRole}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                className={`px-4 py-2 rounded ${
                   selectedRole 
-                    ? 'bg-[#800000] hover:bg-[#600000]' 
-                    : 'bg-gray-400 cursor-not-allowed'
+                    ? 'bg-[#800000] text-white hover:bg-[#600000]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
                 Create Account
@@ -1365,34 +1266,49 @@ export default function UserManagementContent() {
         </div>
       )}
 
-      {/* Photo Modal */}
-      {isPhotoModalOpen && selectedPhoto && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
-          onClick={handleClosePhotoModal}
-        >
-          <div 
-            className="relative bg-white rounded-lg p-2 max-w-4xl max-h-[90vh]"
-            onClick={e => e.stopPropagation()}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Delete</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete {[selectedRecord.FirstName, selectedRecord.LastName].filter(Boolean).join(' ')}
+              {selectedRecord.User.length > 0 ? "'s account" : "'s record"}?
+              {selectedRecord.User.length > 0 && " This will remove their access to the system."}
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedRecord(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={isDeleting}
           >
+                Cancel
+              </button>
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 bg-white rounded-full p-1"
-              onClick={handleClosePhotoModal}
+                onClick={() => handleDeleteAccount(selectedRecord)}
+                className={`px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center ${
+                  isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={isDeleting}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
             </button>
-            <div className="flex items-center justify-center min-h-[200px]">
-              <img
-                src={selectedPhoto.url}
-                alt={selectedPhoto.alt}
-                className="max-w-full max-h-[85vh] object-contain"
-              />
             </div>
           </div>
         </div>
       )}
     </div>
   );
-} 
+};
+
+export default UserManagementContent;
