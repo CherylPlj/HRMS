@@ -40,7 +40,7 @@ async function logActivity(
 
 export async function DELETE(request: Request) {
   try {
-    const { userId, createdBy } = await request.json();
+    const { userId, createdBy, deleteFromDbOnly } = await request.json();
 
     if (!userId || !createdBy) {
       return NextResponse.json(
@@ -53,10 +53,10 @@ export async function DELETE(request: Request) {
     const { data: userData, error: userFetchError } = await supabase
       .from('User')
       .select('FirstName, LastName, Email, ClerkID, EmployeeID')
-      .eq('UserID', userId)
+      .or(`UserID.eq.${userId},Email.eq.${userId}`)
       .single();
 
-    if (userFetchError) {
+    if (userFetchError && !deleteFromDbOnly) {
       console.error('Error fetching user details:', userFetchError);
       return NextResponse.json(
         { error: 'Failed to fetch user details' },
@@ -64,42 +64,50 @@ export async function DELETE(request: Request) {
       );
     }
 
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete from Clerk first if ClerkID exists
+    // Delete from Clerk first if ClerkID exists and we're not doing a DB-only delete
     let clerkDeleted = false;
-    if (userData.ClerkID && userData.ClerkID.trim() !== '') {
+    let clerkError = null;
+    if (!deleteFromDbOnly && userData?.ClerkID && userData.ClerkID.trim() !== '') {
       try {
         // First verify if the Clerk user exists
+        let clerkUser = null;
         try {
-          const clerkUser = await clerk.users.getUser(userData.ClerkID);
-          if (clerkUser) {
+          clerkUser = await clerk.users.getUser(userData.ClerkID);
+        } catch (getError: any) {
+          // If error is not a "not found" error, it's a real error
+          if (!getError.message?.includes('could not be found')) {
+            throw getError;
+          }
+          console.warn(`Clerk user not found for ClerkID: ${userData.ClerkID}`);
+        }
+
+        if (clerkUser) {
+          try {
             await clerk.users.deleteUser(userData.ClerkID);
             console.log(`Successfully deleted Clerk user: ${userData.ClerkID}`);
             clerkDeleted = true;
-          } else {
-            console.warn(`Clerk user not found for ClerkID: ${userData.ClerkID}`);
+          } catch (deleteError: any) {
+            // If we get a specific error about user not found, consider it a success
+            if (deleteError.message?.includes('could not be found')) {
+              console.log(`Clerk user ${userData.ClerkID} was already deleted`);
+              clerkDeleted = true;
+            } else {
+              throw deleteError;
+            }
           }
-        } catch (clerkGetError) {
-          console.warn(`Error getting Clerk user (may not exist): ${userData.ClerkID}`, clerkGetError);
         }
-      } catch (clerkError) {
-        console.error('Error deleting Clerk user:', clerkError);
-        // Continue with database deletion even if Clerk deletion fails
+      } catch (error: any) {
+        console.error('Error deleting Clerk user:', error);
+        clerkError = error.message || 'Unknown error deleting Clerk user';
+        // Don't return here - we'll handle the error after database cleanup
       }
-    } else {
-      console.warn(`No valid ClerkID found for user ${userId} (${userData.Email})`);
     }
 
-    // If user has an associated employee record, soft delete it
+    // If user has an associated employee record and we're not doing a DB-only delete, soft delete it
     let employeeSoftDeleted = false;
-    if (userData.EmployeeID) {
+    if (!deleteFromDbOnly && userData?.EmployeeID) {
       try {
+        // First soft delete the employee record
         const { error: employeeUpdateError } = await supabase
           .from('Employee')
           .update({
@@ -115,30 +123,52 @@ export async function DELETE(request: Request) {
           employeeSoftDeleted = true;
           console.log(`Successfully soft deleted employee: ${userData.EmployeeID}`);
         }
+
+        // Also update any related records to maintain consistency
+        const relatedTables = ['ContactInfo', 'GovernmentID', 'EmploymentDetail', 'Education', 'WorkExperience', 'Family', 'Certificate', 'Skill'];
+        
+        for (const table of relatedTables) {
+          const { error: relatedError } = await supabase
+            .from(table)
+            .update({
+              isDeleted: true,
+              DateModified: new Date().toISOString(),
+              updatedBy: createdBy
+            })
+            .eq('employeeId', userData.EmployeeID);
+
+          if (relatedError) {
+            console.error(`Error soft deleting ${table}:`, relatedError);
+          }
+        }
       } catch (employeeError) {
-        console.error('Error soft deleting employee:', employeeError);
+        console.error('Error soft deleting employee and related records:', employeeError);
       }
     }
 
-    // Hard delete user from User table
-    const { error: deleteError } = await supabase
-      .from('User')
-      .delete()
-      .eq('UserID', userId);
+    // Hard delete user from User table if it exists
+    let userDeleted = false;
+    if (userData) {
+      const { error: deleteError } = await supabase
+        .from('User')
+        .delete()
+        .or(`UserID.eq.${userId},Email.eq.${userId}`);
 
-    if (deleteError) {
-      console.error('Error hard deleting user:', deleteError);
-      return NextResponse.json(
-        { error: 'Failed to delete user from database' },
-        { status: 500 }
-      );
+      if (deleteError) {
+        console.error('Error hard deleting user:', deleteError);
+        return NextResponse.json(
+          { error: 'Failed to delete user from database' },
+          { status: 500 }
+        );
+      }
+      userDeleted = true;
     }
 
     // Log the activity
     const activityDetails = [
-      `Hard deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})`,
-      clerkDeleted ? 'Clerk account deleted' : 'No Clerk account found',
-      employeeSoftDeleted ? `Employee record soft deleted (${userData.EmployeeID})` : 'No employee record found'
+      userData ? `Hard deleted user: ${userData.FirstName} ${userData.LastName} (${userData.Email})` : `Deleted record for ${userId}`,
+      !deleteFromDbOnly && clerkDeleted ? 'Clerk account deleted' : `Clerk account deletion ${clerkError ? 'failed: ' + clerkError : 'not attempted'}`,
+      !deleteFromDbOnly && employeeSoftDeleted ? `Employee record soft deleted (${userData?.EmployeeID})` : 'No employee record affected'
     ].join(' - ');
 
     await logActivity(
@@ -149,17 +179,27 @@ export async function DELETE(request: Request) {
       request.headers.get('x-forwarded-for') || 'system'
     );
 
+    // If Clerk deletion failed but everything else succeeded, return a 207 status
+    const status = clerkError ? 207 : 200;
+    
     return NextResponse.json({ 
-      message: 'User account deleted successfully',
+      message: deleteFromDbOnly 
+        ? 'Record deleted successfully'
+        : clerkError 
+          ? 'User account deleted from database but Clerk deletion failed' 
+          : 'User account deleted successfully',
       userId,
       clerkDeleted,
       employeeSoftDeleted,
+      userDeleted,
+      clerkError,
       details: {
-        userHardDeleted: true,
+        userDeleted,
         clerkDeleted,
-        employeeSoftDeleted
+        employeeSoftDeleted,
+        clerkError
       }
-    });
+    }, { status });
   } catch (error: unknown) {
     console.error('Error deleting user account:', error);
     return NextResponse.json(

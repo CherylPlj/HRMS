@@ -3282,14 +3282,16 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 <p className="text-sm text-blue-600 mb-3">
                   Your CSV file should include the following columns:
                 </p>
-                <div className="bg-white p-3 rounded border text-sm font-mono">
-                  EmployeeID,firstName,lastName,email,dateOfBirth,hireDate,position,designation,address,phone,employmentStatus,employeeType,emergencyContactName,emergencyContactNumber,passwordHash
+                <div className="w-full overflow-x-auto">
+                  <div className="bg-white p-3 rounded border text-sm font-mono whitespace-nowrap min-w-max inline-block">
+                    EmployeeID,UserID,LastName,FirstName,MiddleName,ExtensionName,Sex,Photo,DateOfBirth,PlaceOfBirth,CivilStatus,Nationality,Religion,BloodType,Email,Phone,Address,PresentAddress,PermanentAddress,SSSNumber,TINNumber,PhilHealthNumber,PagIbigNumber,GSISNumber,PRCLicenseNumber,PRCValidity,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,ContractID,EmergencyContactName,EmergencyContactNumber,EmployeeType,SalaryGrade,passwordHash
+                  </div>
                 </div>
                 <button
                   onClick={() => {
                     const csvContent =
-                      "EmployeeID,firstName,lastName,email,dateOfBirth,hireDate,position,designation,address,phone,employmentStatus,employeeType,emergencyContactName,emergencyContactNumber,passwordHash\n" +
-                      "2018-0017,Ronel,Reyes,ronel.reyes@example.com,1990-01-01,2018-01-01,Faculty,Faculty,6965 Sto. Niño St. Maligaya Brgy. 177 Caloocan City,0935-8141526,Regular,Regular,Consuelo Reyes,0935-8141526,dummyhash";
+                      "EmployeeID,UserID,LastName,FirstName,MiddleName,ExtensionName,Sex,Photo,DateOfBirth,PlaceOfBirth,CivilStatus,Nationality,Religion,BloodType,Email,Phone,Address,PresentAddress,PermanentAddress,SSSNumber,TINNumber,PhilHealthNumber,PagIbigNumber,GSISNumber,PRCLicenseNumber,PRCValidity,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,ContractID,EmergencyContactName,EmergencyContactNumber,EmployeeType,SalaryGrade,passwordHash\n" +
+                      "2018-0017,USR-001,Reyes,Ronel,Garcia,,Jr.,Male,,1990-01-01,Manila,Single,Filipino,Christian,O+,ronel.reyes@example.com,0935-8141526,6965 Sto. Niño St. Maligaya Brgy. 177 Caloocan City,Same as Present,Same as Present,12-3456789-0,123-456-789,12-345678901-2,1234-5678-9012,123456789,1234567,2025-12-31,Regular,2018-01-01,,Faculty,Faculty,2,1,Consuelo Reyes,0935-8141526,Regular,12,dummyhash";
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');

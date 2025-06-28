@@ -4,6 +4,33 @@ import { currentUser } from '@clerk/nextjs/server';
 import { clerkClient } from '@clerk/nextjs/server';
 import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
 
+// Add helper function to log activities
+async function logActivity(
+  userId: string,
+  actionType: string,
+  entityAffected: string,
+  actionDetails: string,
+  ipAddress: string = 'system'
+) {
+  try {
+    await supabaseAdmin
+      .from('ActivityLog')
+      .insert([
+        {
+          UserID: userId,
+          ActionType: actionType,
+          EntityAffected: entityAffected,
+          ActionDetails: actionDetails,
+          Timestamp: new Date().toISOString(),
+          IPAddress: ipAddress
+        }
+      ]);
+    console.log('Activity logged successfully:', { actionType, userId });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { employeeId: string } }
@@ -311,54 +338,164 @@ export async function DELETE(
     }
 
     const { employeeId } = await context.params;
+    console.log(`Attempting to delete employee with ID: ${employeeId}`);
 
     // Get employee data first to check if it exists and get associated User data
     const { data: employee, error: fetchError } = await supabaseAdmin
       .from('Employee')
       .select(`
         *,
-        User:UserID (
-          UserID,
-          ClerkID
+        User (
+        UserID, 
+          ClerkID,
+          FirstName,
+          LastName,
+          Email
         )
       `)
       .eq('EmployeeID', employeeId)
       .single();
 
-    if (fetchError || !employee) {
+    if (fetchError) {
+      console.error('Error fetching employee:', fetchError);
       return NextResponse.json(
-        { error: 'Employee not found' },
+        { error: `Error fetching employee: ${fetchError.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (!employee) {
+      console.error(`Employee not found with ID: ${employeeId}`);
+      return NextResponse.json(
+        { error: `Employee not found with ID: ${employeeId}` },
         { status: 404 }
       );
     }
 
-    // If there's an associated user, delete from Clerk first
-    if (employee.User?.ClerkID) {
-      try {
-        const clerk = await clerkClient();
-        await clerk.users.deleteUser(employee.User.ClerkID);
-        console.log(`Successfully deleted Clerk user: ${employee.User.ClerkID}`);
-      } catch (clerkError) {
-        console.error('Error deleting Clerk user:', clerkError);
-        // Continue with deletion even if Clerk deletion fails
+    let clerkDeleted = false;
+    let clerkError = null;
+
+    // If there's an associated user, delete from Clerk and database
+    if (employee.User?.ClerkID && employee.User.ClerkID.trim() !== '') {
+        try {
+          // First verify if the Clerk user exists
+        let clerkUser = null;
+          try {
+          const clerk = await clerkClient();
+          clerkUser = await clerk.users.getUser(employee.User.ClerkID);
+        } catch (getError: any) {
+          // If error is not a "not found" error, it's a real error
+          if (!getError.message?.includes('could not be found')) {
+            throw getError;
+          }
+          console.warn(`Clerk user not found for ClerkID: ${employee.User.ClerkID}`);
+        }
+
+            if (clerkUser) {
+          try {
+            const clerk = await clerkClient();
+            await clerk.users.deleteUser(employee.User.ClerkID);
+              console.log(`Successfully deleted Clerk user: ${employee.User.ClerkID}`);
+            clerkDeleted = true;
+          } catch (deleteError: any) {
+            // If we get a specific error about user not found, consider it a success
+            if (deleteError.message?.includes('could not be found')) {
+              console.log(`Clerk user ${employee.User.ClerkID} was already deleted`);
+              clerkDeleted = true;
+            } else {
+              throw deleteError;
+            }
+          }
+            }
+      } catch (error: any) {
+        console.error('Error deleting Clerk user:', error);
+        clerkError = error.message || 'Unknown error deleting Clerk user';
+        // Continue with database deletion even if Clerk deletion fails
+        }
+
+      // Delete the User record from the database
+      const { error: userDeleteError } = await supabaseAdmin
+        .from('User')
+        .delete()
+        .eq('UserID', employee.User.UserID);
+
+      if (userDeleteError) {
+        console.error('Error deleting user record:', userDeleteError);
+        throw new Error(`Failed to delete user record: ${userDeleteError.message}`);
       }
     }
 
-    // Delete from Supabase
+    // Instead of hard deleting, soft delete the employee and related records
     const { error: deleteError } = await supabaseAdmin
       .from('Employee')
-      .delete()
+      .update({
+        isDeleted: true,
+        DateModified: new Date().toISOString(),
+        updatedBy: user.id
+      })
       .eq('EmployeeID', employeeId);
 
     if (deleteError) {
-      throw deleteError;
+      console.error('Error soft deleting employee record:', deleteError);
+      throw new Error(`Failed to soft delete employee record: ${deleteError.message}`);
     }
 
-    return NextResponse.json({ message: 'Employee deleted successfully' });
+    // Soft delete all related records
+    const relatedTables = ['ContactInfo', 'GovernmentID', 'EmploymentDetail', 'Education', 'WorkExperience', 'Family', 'Certificate', 'Skill'];
+    
+    for (const table of relatedTables) {
+      const { error: relatedError } = await supabaseAdmin
+        .from(table)
+        .update({
+          isDeleted: true,
+          DateModified: new Date().toISOString(),
+          updatedBy: user.id
+        })
+        .eq('employeeId', employeeId);
+
+      if (relatedError) {
+        console.error(`Error soft deleting ${table}:`, relatedError);
+      }
+    }
+
+    console.log(`Successfully soft deleted employee with ID: ${employeeId} and related records`);
+
+    // Log the activity
+    const activityDetails = [
+      `Soft deleted employee: ${employee.FirstName} ${employee.LastName}`,
+      employee.User ? `User account deleted (${employee.User.Email})` : 'No user account found',
+      clerkDeleted ? 'Clerk account deleted' : `Clerk account deletion ${clerkError ? 'failed: ' + clerkError : 'not attempted'}`
+    ].join(' - ');
+
+    await logActivity(
+      user.id,
+      'employee_soft_deleted',
+      'Employee',
+      activityDetails,
+      request.headers.get('x-forwarded-for') || 'system'
+    );
+
+    // If Clerk deletion failed but everything else succeeded, return a 207 status
+    const status = clerkError ? 207 : 200;
+
+    return NextResponse.json({ 
+      message: clerkError 
+        ? 'Employee soft deleted from database but Clerk deletion failed' 
+        : 'Employee soft deleted successfully',
+      employeeId,
+      clerkDeleted,
+      clerkError,
+      details: {
+        employeeSoftDeleted: true,
+        userDeleted: true,
+        clerkDeleted,
+        clerkError
+      }
+    }, { status });
   } catch (error) {
     console.error('Error deleting employee:', error);
     return NextResponse.json(
-      { error: 'Failed to delete employee' },
+      { error: error instanceof Error ? error.message : 'Failed to delete employee' },
       { status: 500 }
     );
   }

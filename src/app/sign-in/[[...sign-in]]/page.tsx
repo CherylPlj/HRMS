@@ -631,26 +631,46 @@ export default function SignInPage() {
       
       if (isLoaded && isSignedIn && user && !isLoading && !pendingReset) {
         try {
-          // Get user's role from Supabase
-          const { data: userData, error } = await supabase
-            .from('User')
-            .select(`
-              UserID,
-              Status,
-              isDeleted,
-              UserRole (
-                role:Role (
-                  name
-                )
-              )
-            `)
-            .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
-            .single();
+          // Add initial delay to ensure Clerk auth is fully propagated
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
-          if (error) {
+          // Get user's role from Supabase with retries
+          let userData = null;
+          let error = null;
+          const maxRetries = 3;
+          const retryDelay = 1000;
+
+          for (let i = 0; i < maxRetries; i++) {
+            const result = await supabase
+              .from('User')
+              .select(`
+                UserID,
+                Status,
+                isDeleted,
+                UserRole (
+                  role:Role (
+                    name
+                  )
+                )
+              `)
+              .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
+              .single();
+
+            if (result.data && !result.error) {
+              userData = result.data;
+              break;
+            }
+
+            error = result.error;
+            if (i < maxRetries - 1) {
+              console.log(`Retry ${i + 1} for user data fetch`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+          }
+
+          if (error || !userData) {
             console.error("Error fetching user role:", error);
-            // Redirect to default dashboard if role lookup fails
-            window.location.href = '/dashboard';
+            // Don't redirect if we can't verify the user
             return;
           }
 
@@ -680,10 +700,7 @@ export default function SignInPage() {
 
           console.log(`Redirecting authenticated ${role} user to dashboard...`);
 
-          // Small delay to ensure proper state sync
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Redirect based on role
+          // Use window.location.href for hard redirect to ensure clean state
           if (role === 'admin' || role === 'super admin') {
             window.location.href = '/dashboard/admin';
           } else if (role === 'faculty') {
@@ -693,8 +710,8 @@ export default function SignInPage() {
           }
         } catch (error) {
           console.error("Error during authentication verification:", error);
-          // Fallback to default dashboard if any error occurs
-          window.location.href = '/dashboard';
+          // Don't redirect on error, let the user try again
+          return;
         }
       }
     };
@@ -793,7 +810,7 @@ export default function SignInPage() {
         if (userIP === 'unknown') {
           await unknownIPRateLimiter.consume('unknown');
         } else {
-        await loginRateLimiter.consume(userIP);
+          await loginRateLimiter.consume(userIP);
         }
       } catch {
         setIsLoading(false);
@@ -870,86 +887,93 @@ export default function SignInPage() {
         return;
       }
 
-      // Test database connection first
-      try {
-        const { error: connectionError } = await supabase.from('User').select('UserID').limit(1);
-        if (connectionError && connectionError.message.includes('connection')) {
-          console.error('Database connection issue detected:', connectionError);
+      // Add initial delay to allow Clerk auth to propagate
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Add retry mechanism for new users
+      const maxRetries = 5; // Increased from 3 to 5
+      const retryDelay = 1000; // 1 second
+      let retryCount = 0;
+      let userCheck;
+      let userError;
+
+      while (retryCount < maxRetries) {
+        // Test database connection first
+        try {
+          const { error: connectionError } = await supabase.from('User').select('UserID').limit(1);
+          if (connectionError && connectionError.message.includes('connection')) {
+            console.error('Database connection issue detected:', connectionError);
+            setIsLoading(false);
+            showErrorPopup('Service temporarily unavailable. Please try again in a moment.');
+            return;
+          }
+        } catch (connError) {
+          console.error('Database connection test failed:', connError);
           setIsLoading(false);
           showErrorPopup('Service temporarily unavailable. Please try again in a moment.');
           return;
         }
-      } catch (connError) {
-        console.error('Database connection test failed:', connError);
-        setIsLoading(false);
-        showErrorPopup('Service temporarily unavailable. Please try again in a moment.');
-        return;
-      }
 
-      // Now verify the user exists in our database and get their role
-      // Add retry logic for database queries
-      let userCheck;
-      let userError;
-      const maxDbRetries = 2;
-      
-      for (let attempt = 0; attempt <= maxDbRetries; attempt++) {
+        // Now verify the user exists in our database and get their role
         try {
           const { data, error } = await supabase
-        .from('User')
-        .select(`
-          UserID,
-          Status,
-          Email,
-          isDeleted,
-          UserRole!inner (
-            role:Role (
-              name
-            )
-          )
-        `)
-        .eq('Email', email)
-        .single();
+            .from('User')
+            .select(`
+              UserID,
+              Status,
+              isDeleted,
+              UserRole (
+                role:Role (
+                  name
+                )
+              )
+            `)
+            .eq('Email', email.toLowerCase().trim())
+            .single();
 
           userCheck = data;
           userError = error;
-          
-          // If successful, break out of retry loop
-          if (!error && data) {
-            break;
+
+          if (userCheck && userCheck.UserRole?.[0]?.role) {
+            break; // User found with role, exit retry loop
           }
-          
-          // If this is not the last attempt, wait a bit before retrying
-          if (attempt < maxDbRetries) {
-            console.warn(`Database query attempt ${attempt + 1} failed, retrying...`, error);
-            await new Promise(resolve => setTimeout(resolve, 500));
+
+          // If user not found or no role and we haven't exceeded retries, wait and try again
+          if (retryCount < maxRetries - 1) {
+            console.log(`User not found or no role in database, retry ${retryCount + 1} of ${maxRetries}`);
+            // Exponential backoff: wait longer between each retry
+            await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, retryCount)));
+            retryCount++;
+          } else {
+            // Sign out of Clerk since we couldn't verify the user in our database
+            if (clerk) {
+              await clerk.signOut();
+            }
+            recordFailedLoginAttempt(userIP);
+            setIsLoading(false);
+            showErrorPopup('Account setup in progress. Please try again in a few moments.');
+            return;
           }
-        } catch (dbQueryError) {
-          console.error(`Database query attempt ${attempt + 1} error:`, dbQueryError);
-          userError = dbQueryError as any;
-          
-          // If this is not the last attempt, wait a bit before retrying
-          if (attempt < maxDbRetries) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+        } catch (dbError) {
+          console.error('Database query error:', dbError);
+          userError = dbError;
+          break;
         }
       }
 
-      if (userError || !userCheck) {
-        recordFailedLoginAttempt(userIP);
-        setIsLoading(false);
-        console.error('Database user verification failed after retries:', userError);
-        showErrorPopup('Invalid Credentials');
-        return;
-      }
-
-      const userRoles = (userCheck as unknown as UserCheck).UserRole;
-      if (!userRoles || userRoles.length === 0) {
+      if (userError || !userCheck || !userCheck.UserRole?.[0]?.role) {
+        // Sign out of Clerk since we couldn't verify the user
+        if (clerk) {
+          await clerk.signOut();
+        }
         recordFailedLoginAttempt(userIP);
         setIsLoading(false);
         showErrorPopup('Invalid Credentials');
         return;
       }
 
+      const userRoles = userCheck.UserRole;
+      
       // Check if user is deleted or inactive
       if (userCheck.isDeleted || userCheck.Status !== 'Active') {
         recordFailedLoginAttempt(userIP);
@@ -959,7 +983,7 @@ export default function SignInPage() {
       }
 
       // If we get here, both Clerk authentication and database verification passed
-        resetLoginAttempts(userIP); // Reset attempts on successful login
+      resetLoginAttempts(userIP); // Reset attempts on successful login
       
       // Get user role for validation
       const userRole = (userRoles[0].role as any).name.toLowerCase();

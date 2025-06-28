@@ -402,7 +402,6 @@ async function main() {
                 HireDate: new Date('2024-01-01'),
                 Designation: 'Faculty',
                 Position: 'Math Teacher',
-                EmployeeType: 'Regular',
             }
         },
         {
@@ -426,7 +425,6 @@ async function main() {
                 HireDate: new Date('2022-01-01'),
                 Designation: 'Faculty',
                 Position: 'English Teacher',
-                EmployeeType: 'Regular',
             }
         },
     ];
@@ -459,7 +457,6 @@ async function main() {
                             HireDate: employeeData.employmentDetails.HireDate,
                             Designation: employeeData.employmentDetails.Designation as any,
                             Position: employeeData.employmentDetails.Position,
-                            EmployeeType: employeeData.employmentDetails.EmployeeType as any,
                         }
                     }
                 }
@@ -502,7 +499,6 @@ async function main() {
                         HireDate: faculty.HireDate,
                         ResignationDate: faculty.ResignationDate,
                         Position: faculty.Position || '',
-                        EmployeeType: faculty.EmployeeType,
                     }
                 }
             },
@@ -545,7 +541,6 @@ async function main() {
                         EmploymentStatus: 'Regular',
                         HireDate: new Date(),
                         Position: '',
-                        EmployeeType: 'Regular',
                     }
                 }
             },

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createClerkClient } from '@clerk/clerk-sdk-node';
 import { headers } from 'next/headers';
 import { generateUserId } from '@/lib/generateUserId';
+import crypto from 'crypto';
 
 // Initialize Supabase client with service role key for admin operations
 const supabase = createClient(
@@ -14,31 +15,18 @@ const supabase = createClient(
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 // Define valid roles and statuses
-const VALID_ROLES = ['admin', 'faculty', 'registrar', 'cashier', 'super admin'] as const;
+const VALID_ROLES = ['super admin', 'student', 'cashier', 'registrar', 'faculty', 'admin'] as const;
 const VALID_STATUS = ['Invited', 'Active', 'Inactive'] as const;
 
 type Role = typeof VALID_ROLES[number];
 type Status = typeof VALID_STATUS[number];
 
-// Generate a secure temporary password
-function generateTemporaryPassword(): string {
-  const length = 16;
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  let password = "";
-  
-  // Ensure at least one of each required character type
-  password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // Uppercase
-  password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]; // Lowercase
-  password += "0123456789"[Math.floor(Math.random() * 10)]; // Number
-  password += "!@#$%^&*"[Math.floor(Math.random() * 8)]; // Special character
-  
-  // Fill the rest randomly
-  for (let i = password.length; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  
-  // Shuffle the password to randomize character positions
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+// Generate a temporary password hash for database records
+function generateTemporaryPasswordHash(): string {
+  // Generate a random string
+  const tempPassword = crypto.randomBytes(32).toString('hex');
+  // Create a hash of the temporary password
+  return crypto.createHash('sha256').update(tempPassword).digest('hex');
 }
 
 // Activity logging function
@@ -70,6 +58,7 @@ async function logActivity(
 
 export async function POST(request: Request) {
   let newUser: { UserID: string } | undefined;
+  let userId: string | undefined;
   
   try {
     const headersList = await headers();
@@ -119,23 +108,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user already exists in Supabase (including soft-deleted users)
-    // Check if user already exists (only check active users since soft-deleted users have null emails)
-    const { data: existingUser, error: checkError } = await supabase
+    // Check if user already exists in Supabase with this email (including all statuses)
+    const { data: existingUsers, error: checkError } = await supabase
       .from('User')
-      .select('UserID, Status, isDeleted, EmployeeID')
-      .eq('Email', email)
-      .eq('isDeleted', false)
-      .single();
+      .select('UserID, Status, isDeleted, Email')
+      .eq('Email', email);
 
-    if (checkError && checkError.code !== 'PGRST116') {
+    if (checkError) {
       return NextResponse.json(
         { error: 'Error checking existing user' },
         { status: 500 }
       );
     }
 
-    // Also check if user exists in Clerk (this can cause 422 errors)
+    // Check for any existing active or invited users
+    const activeOrInvitedUser = existingUsers?.find(user => 
+      !user.isDeleted && (user.Status === 'Active' || user.Status === 'Invited')
+    );
+
+    // Find any existing user with "No Account" status that we can update
+    const noAccountUser = existingUsers?.find(user => 
+      !user.isDeleted && user.Status === 'No Account'
+    );
+
+    if (activeOrInvitedUser) {
+      return NextResponse.json(
+        { error: `User already exists with status: ${activeOrInvitedUser.Status}` },
+        { status: 409 }
+      );
+    }
+
+    // Also check if user exists in Clerk
     try {
       const existingClerkUsers = await clerk.users.getUserList({
         emailAddress: [email]
@@ -146,7 +149,7 @@ export async function POST(request: Request) {
         console.log('Found existing Clerk user:', clerkUser.id, 'for email:', email);
         
         // If there's a Clerk user but no active Supabase user, this is an orphaned account
-        if (!existingUser || existingUser.isDeleted) {
+        if (!activeOrInvitedUser) {
           console.log('Orphaned Clerk account detected - User does not exist in Supabase or is deleted');
           
           // Try to delete the orphaned Clerk account automatically
@@ -163,6 +166,11 @@ export async function POST(request: Request) {
               { status: 409 }
             );
           }
+        } else {
+          return NextResponse.json(
+            { error: 'User already exists in authentication system' },
+            { status: 409 }
+          );
         }
       }
     } catch (clerkCheckError) {
@@ -170,68 +178,92 @@ export async function POST(request: Request) {
       // Continue with the process - this is just a precautionary check
     }
 
-    if (existingUser) {
-      // If user exists (whether deleted or not), return error
-      return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 409 }
-      );
-    }
+    // Generate a unique UserID using centralized function if we don't have a noAccountUser
+    userId = noAccountUser ? noAccountUser.UserID : await generateUserId(new Date());
 
-    // Generate a unique UserID using centralized function
-    const userId = await generateUserId(new Date());
+    // If we have a noAccountUser, update it. Otherwise, create a new user.
+    const userOperation = noAccountUser ? 
+      supabase
+        .from('User')
+        .update({
+          FirstName: firstName,
+          LastName: lastName,
+          Email: email,
+          Status: 'Invited',
+          createdBy: createdBy,
+          DateModified: new Date().toISOString(),
+          PasswordHash: 'CLERK_PENDING' // Add temporary password hash
+        })
+        .eq('UserID', userId)
+        .select()
+        .single()
+      :
+      supabase
+        .from('User')
+        .insert({
+          UserID: userId,
+          FirstName: firstName,
+          LastName: lastName,
+          Email: email,
+          Status: 'Invited',
+          createdBy: createdBy,
+          DateCreated: new Date().toISOString(),
+          DateModified: new Date().toISOString(),
+          PasswordHash: 'CLERK_PENDING' // Use consistent format for pending Clerk users
+        })
+        .select()
+        .single();
 
-    // Create user in Supabase first
-    const { data: newUserData, error: createError } = await supabase
-      .from('User')
-      .insert({
-        UserID: userId,
-        FirstName: firstName,
-        LastName: lastName,
-        Email: email,
-        Role: role,
-        Status: 'Pending',
-        CreatedBy: createdBy,
-        DateCreated: new Date().toISOString(),
-        DateModified: new Date().toISOString()
-      })
-      .select()
-      .single();
+    const { data: newUserData, error: createError } = await userOperation;
 
     if (createError) {
-      throw new Error(`Failed to create user in database: ${createError.message}`);
+      throw new Error(`Failed to ${noAccountUser ? 'update' : 'create'} user in database: ${createError.message}`);
     }
 
     newUser = newUserData;
 
-    // Get the role ID from the Role table
+    // If we're updating a noAccountUser, first remove any existing role assignments
+    if (noAccountUser) {
+      const { error: deleteRoleError } = await supabase
+        .from('UserRole')
+        .delete()
+        .eq('userId', userId);
+
+      if (deleteRoleError) {
+        console.error('Error deleting existing role assignments:', deleteRoleError);
+        // Continue anyway as this is not critical
+      }
+    }
+
+    // Get role ID from Role table
+    console.log('Looking for role:', role);
     const { data: roleData, error: roleError } = await supabase
       .from('Role')
-      .select('id')
-      .eq('name', role.charAt(0).toUpperCase() + role.slice(1).toLowerCase())
+      .select('id, name')
+      .ilike('name', role)
       .single();
 
     if (roleError) {
-      return NextResponse.json(
-        { error: 'Error getting role ID' },
-        { status: 500 }
-      );
+      console.error('Error finding role:', roleError);
+      throw new Error(`Failed to find role: ${roleError.message}`);
     }
 
-    // Assign role to user
-    const { error: roleAssignError } = await supabase
+    console.log('Found existing role:', roleData);
+
+    // Create UserRole record
+    const { error: userRoleError } = await supabase
       .from('UserRole')
       .insert({
         userId: userId,
         roleId: roleData.id
       });
 
-    if (roleAssignError) {
-      return NextResponse.json(
-        { error: 'Error assigning role to user' },
-        { status: 500 }
-      );
+    if (userRoleError) {
+      console.error('Error creating user role:', userRoleError);
+      throw new Error(`Failed to assign role: ${userRoleError.message}`);
     }
+
+    console.log('Successfully assigned role to user');
 
     // Create actual Clerk invitation (not direct user creation)
     try {
@@ -255,7 +287,13 @@ export async function POST(request: Request) {
         try {
           invitation = await clerk.invitations.createInvitation({
             emailAddress: email,
-            redirectUrl: redirectUrl
+            redirectUrl: redirectUrl,
+            publicMetadata: {
+              userId: userId, // Store our database UserID in Clerk metadata
+              firstName: firstName,
+              lastName: lastName,
+              role: role
+            }
           });
           console.log('Clerk invitation created successfully:', invitation.id);
           break;
@@ -275,7 +313,8 @@ export async function POST(request: Request) {
                 });
                 
                 if (existingClerkUsers.data && existingClerkUsers.data.length > 0) {
-                  await clerk.users.deleteUser(existingClerkUsers.data[0].id);
+                  const existingClerkUser = existingClerkUsers.data[0];
+                  await clerk.users.deleteUser(existingClerkUser.id);
                   console.log('Deleted orphaned Clerk account during retry');
                   await new Promise(resolve => setTimeout(resolve, 2000));
                   continue;
@@ -299,23 +338,43 @@ export async function POST(request: Request) {
         throw new Error('Failed to create invitation after retries');
       }
 
-      // Update the Supabase user record to stay in "Invited" status
+      // Update existing user record with invitation ID
       const { error: updateError } = await supabase
         .from('User')
         .update({
-          Status: 'Invited',
+          invitationId: invitation.id,
           DateModified: new Date().toISOString()
         })
         .eq('UserID', userId);
 
       if (updateError) {
-        // If updating Supabase fails, revoke the Clerk invitation to maintain consistency
+        // If updating user fails, revoke the Clerk invitation
         try {
           await clerk.invitations.revokeInvitation(invitation.id);
         } catch (revokeError) {
-          console.error('Failed to revoke invitation after Supabase error:', revokeError);
+          console.error('Failed to revoke invitation after user update error:', revokeError);
         }
         throw new Error(`Failed to update user in database: ${updateError.message}`);
+      }
+
+      // Set up a webhook handler to update ClerkID when user accepts invitation
+      const { error: webhookError } = await supabase
+        .from('WebhookPending')
+        .insert({
+          type: 'clerk_invitation',
+          invitationId: invitation.id,
+          userId: userId,
+          email: email.toLowerCase().trim(),
+          createdAt: new Date().toISOString(),
+          metadata: {
+            firstName,
+            lastName,
+            role
+          }
+        });
+
+      if (webhookError) {
+        console.error('Failed to create webhook pending record:', webhookError);
       }
 
       // Send email with credentials using the existing email infrastructure
@@ -404,25 +463,33 @@ export async function POST(request: Request) {
         clerkTraceId: (clerkError as any)?.clerkTraceId
       });
       
-      // If Clerk invitation creation fails, delete the Supabase user
-      await supabase
-        .from('User')
-        .delete()
-        .eq('UserID', userId);
+      // If Clerk invitation creation fails, mark the user as failed
+      if (userId) {
+        await supabase
+          .from('User')
+          .update({
+            Status: 'Failed',
+            DateModified: new Date().toISOString()
+          })
+          .eq('UserID', userId);
+      }
 
       throw new Error('Failed to send invitation');
     }
 
   } catch (error: unknown) {
-    // Clean up the Supabase user if it was created
-    if (newUser?.UserID) {
+    // Mark the user as failed if it exists and userId is defined
+    if (userId) {
       try {
         await supabase
           .from('User')
-          .delete()
-          .eq('UserID', newUser.UserID);
+          .update({
+            Status: 'Failed',
+            DateModified: new Date().toISOString()
+          })
+          .eq('UserID', userId);
       } catch (cleanupError) {
-        console.error('Failed to clean up user after error:', cleanupError);
+        console.error('Failed to mark user as failed after error:', cleanupError);
       }
     }
 
