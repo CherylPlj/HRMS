@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
-    const employeeId = params.employeeId;
+    const { employeeId } = await context.params;
 
     const medicalInfo = await prisma.medicalInfo.findUnique({
       where: {
@@ -33,10 +33,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
-    const employeeId = params.employeeId;
+    const { employeeId } = await context.params;
     const data = await request.json();
 
     // Convert date strings to Date objects
@@ -124,10 +124,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
-    const employeeId = params.employeeId;
+    const { employeeId } = await context.params;
 
     await prisma.medicalInfo.delete({
       where: {

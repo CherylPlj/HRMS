@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -12,7 +13,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId } = params;
+    const { employeeId } = await context.params;
+
+    // Get user role and check authorization
+    const userRole = await getUserRoleFlexible(userId);
+    if (!userRole || (!userRole.includes('ADMIN') && !userRole.includes('FACULTY') && userId !== employeeId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const familyRecords = await prisma.family.findMany({
       where: {
@@ -35,7 +42,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -43,7 +50,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId } = params;
+    const { employeeId } = await context.params;
     const data = await request.json();
 
     // Validate required fields

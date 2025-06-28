@@ -3,16 +3,17 @@ import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
+    const { employeeId, id } = await context.params;
     const data = await request.json();
-    const id = parseInt(params.id);
+    const skillId = parseInt(id);
 
     const skill = await prisma.skill.update({
       where: {
-        id,
-        employeeId: params.employeeId,
+        id: skillId,
+        employeeId: employeeId,
       },
       data,
     });
@@ -29,15 +30,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { employeeId, id } = await context.params;
+    const skillId = parseInt(id);
 
     await prisma.skill.delete({
       where: {
-        id,
-        employeeId: params.employeeId,
+        id: skillId,
+        employeeId: employeeId,
       },
     });
 

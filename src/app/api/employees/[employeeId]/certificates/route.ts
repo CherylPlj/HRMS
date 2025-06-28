@@ -3,12 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { employeeId } = await context.params;
+    
     const certificates = await prisma.certificate.findMany({
       where: {
-        employeeId: params.employeeId,
+        employeeId: employeeId,
       },
       orderBy: {
         issueDate: 'desc',
@@ -27,9 +29,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { employeeId } = await context.params;
     const formData = await request.formData();
     const fileData = formData.get('file') as File | null;
     const jsonData = formData.get('data') as string;
@@ -45,7 +48,7 @@ export async function POST(
     const certificate = await prisma.certificate.create({
       data: {
         ...data,
-        employeeId: params.employeeId,
+        employeeId: employeeId,
         fileUrl,
       },
     });

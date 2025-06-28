@@ -3,12 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { employeeId } = await context.params;
+    
     const skills = await prisma.skill.findMany({
       where: {
-        employeeId: params.employeeId,
+        employeeId: employeeId,
       },
       orderBy: {
         name: 'asc',
@@ -27,15 +29,16 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { employeeId } = await context.params;
     const data = await request.json();
 
     const skill = await prisma.skill.create({
       data: {
         ...data,
-        employeeId: params.employeeId,
+        employeeId: employeeId,
       },
     });
 

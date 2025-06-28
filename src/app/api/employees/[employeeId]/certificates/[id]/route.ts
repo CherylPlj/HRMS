@@ -3,14 +3,15 @@ import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
+    const { employeeId, id } = await context.params;
     const formData = await request.formData();
     const fileData = formData.get('file') as File | null;
     const jsonData = formData.get('data') as string;
     const data = JSON.parse(jsonData);
-    const id = parseInt(params.id);
+    const certificateId = parseInt(id);
 
     let fileUrl = data.fileUrl;
     if (fileData) {
@@ -21,8 +22,8 @@ export async function PUT(
 
     const certificate = await prisma.certificate.update({
       where: {
-        id,
-        employeeId: params.employeeId,
+        id: certificateId,
+        employeeId: employeeId,
       },
       data: {
         ...data,
@@ -42,16 +43,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { employeeId, id } = await context.params;
+    const certificateId = parseInt(id);
 
     // Get the certificate to check if it has a file
     const certificate = await prisma.certificate.findUnique({
       where: {
-        id,
-        employeeId: params.employeeId,
+        id: certificateId,
+        employeeId: employeeId,
       },
     });
 
@@ -62,8 +64,8 @@ export async function DELETE(
 
     await prisma.certificate.delete({
       where: {
-        id,
-        employeeId: params.employeeId,
+        id: certificateId,
+        employeeId: employeeId,
       },
     });
 

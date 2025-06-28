@@ -1,15 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
+import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
 
 // GET /api/employees/[employeeId]/education
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { employeeId } = await context.params;
+
+    // Get user role and check authorization
+    const userRole = await getUserRoleFlexible(userId);
+    if (!userRole || (!userRole.includes('ADMIN') && !userRole.includes('FACULTY') && userId !== employeeId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    
     const education = await prisma.education.findMany({
       where: {
-        employeeId: params.employeeId,
+        employeeId: employeeId,
       },
       orderBy: {
         yearGraduated: 'desc',
@@ -18,7 +33,7 @@ export async function GET(
 
     return NextResponse.json(education);
   } catch (error) {
-    console.error('Error fetching education records:', error);
+    console.error('Error fetching education:', error);
     return NextResponse.json(
       { error: 'Failed to fetch education records' },
       { status: 500 }
@@ -29,14 +44,16 @@ export async function GET(
 // POST /api/employees/[employeeId]/education
 export async function POST(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { employeeId } = await context.params;
     const data = await request.json();
+
     const education = await prisma.education.create({
       data: {
         ...data,
-        employeeId: params.employeeId,
+        employeeId: employeeId,
       },
     });
 
@@ -53,14 +70,17 @@ export async function POST(
 // PUT /api/employees/[employeeId]/education/[id]
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
+    const { employeeId, id } = await context.params;
     const data = await request.json();
+    const educationId = parseInt(id);
+
     const education = await prisma.education.update({
       where: {
-        id: parseInt(params.id),
-        employeeId: params.employeeId,
+        id: educationId,
+        employeeId: employeeId,
       },
       data,
     });
@@ -78,17 +98,20 @@ export async function PUT(
 // DELETE /api/employees/[employeeId]/education/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
+    const { employeeId, id } = await context.params;
+    const educationId = parseInt(id);
+
     await prisma.education.delete({
       where: {
-        id: parseInt(params.id),
-        employeeId: params.employeeId,
+        id: educationId,
+        employeeId: employeeId,
       },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ message: 'Education record deleted successfully' });
   } catch (error) {
     console.error('Error deleting education record:', error);
     return NextResponse.json(

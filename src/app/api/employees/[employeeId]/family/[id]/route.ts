@@ -4,7 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -12,8 +12,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId, id } = params;
+    const { employeeId, id } = await context.params;
     const data = await request.json();
+    const familyId = parseInt(id);
 
     // Validate required fields
     if (!data.type || !data.name) {
@@ -26,7 +27,7 @@ export async function PUT(
     // Update family record
     const familyRecord = await prisma.family.update({
       where: {
-        id: parseInt(id),
+        id: familyId,
         employeeId: employeeId,
       },
       data,
@@ -44,7 +45,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { employeeId: string; id: string } }
+  context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -52,12 +53,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId, id } = params;
+    const { employeeId, id } = await context.params;
+    const familyId = parseInt(id);
 
     // Delete family record
     await prisma.family.delete({
       where: {
-        id: parseInt(id),
+        id: familyId,
         employeeId: employeeId,
       },
     });

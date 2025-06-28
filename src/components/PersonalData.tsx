@@ -11,6 +11,7 @@ import WorkExperienceTab from './tabs/WorkExperienceTab';
 import SkillsTab from './tabs/SkillsTab';
 import CertificatesTab from './tabs/CertificatesTab';
 import MedicalTab from './tabs/MedicalTab';
+import { fetchWithRetry } from '@/lib/apiUtils';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -19,85 +20,61 @@ const supabase = createClient(
 );
 
 interface FacultyDetails {
-  // Personal Details
+  // Basic Employee Info
   EmployeeID: string;
   UserID: string;
-  FacultyID: number | null;
   LastName: string;
   FirstName: string;
-  MiddleName: string;
-  ExtensionName: string;
-  Sex: string;
-  Photo: string;
+  MiddleName: string | null;
+  ExtensionName: string | null;
+  Sex: string | null;
+  Photo: string | null;
   DateOfBirth: string;
-  PlaceOfBirth: string;
-  CivilStatus: string;
-  Nationality: string;
-  Religion: string;
-  BloodType: string;
-  Email: string;
-  Phone: string;
-  Address: string;
-  PresentAddress: string;
-  PermanentAddress: string;
-  
+  PlaceOfBirth: string | null;
+  CivilStatus: string | null;
+  Nationality: string | null;
+  Religion: string | null;
+  BloodType: string | null;
+  Email: string | null;
+  DepartmentID: number | null;
+  ContractID: number | null;
+  Position: string | null;
+  HireDate: string;
+  DepartmentName?: string;
+
+  // Contact Info
+  Phone: string | null;
+  PresentAddress: string | null;
+  PermanentAddress: string | null;
+  EmergencyContactName: string | null;
+  EmergencyContactNumber: string | null;
+
   // Government IDs
-  SSSNumber: string;
-  TINNumber: string;
-  PhilHealthNumber: string;
-  PagIbigNumber: string;
-  GSISNumber: string;
-  PRCLicenseNumber: string;
-  PRCValidity: string;
+  SSSNumber: string | null;
+  TINNumber: string | null;
+  PhilHealthNumber: string | null;
+  PagIbigNumber: string | null;
+  GSISNumber: string | null;
+  PRCLicenseNumber: string | null;
+  PRCValidity: string | null;
 
   // Employment Details
   EmploymentStatus: string;
-  HireDate: string;
   ResignationDate: string | null;
   Designation: string | null;
-  Position: string;
-  DepartmentID: number | null;
-  ContractID: number | null;
-  EmergencyContactName: string;
-  EmergencyContactNumber: string;
-  EmployeeType: string;
-  SalaryGrade: string;
-
-  // Family Background
-  SpouseName?: string;
-  SpouseOccupation?: string;
-  Children?: {
-    Name: string;
-    DateOfBirth: string;
-  }[];
-
-  // Educational Background
-  CollegeName?: string;
-  CollegeDegree?: string;
-  CollegeYearGraduated?: number;
-  GraduateSchoolName?: string;
-  GraduateDegree?: string;
-  GraduateYearCompleted?: number;
-
-  // Work Experience
-  WorkExperience?: {
-    Company: string;
-    Position: string;
-    StartDate: string;
-    EndDate?: string;
-    Responsibilities?: string;
-  }[];
+  EmployeeType: string | null;
+  SalaryGrade: string | null;
 
   // Medical Information
-  MedicalCondition?: string;
-  Allergies?: string;
-  LastMedicalCheckup?: string;
+  MedicalCondition: string | null;
+  Allergies: string | null;
+  LastMedicalCheckup: string | null;
 
-  // Other Information
-  AdditionalInfo?: string;
-
+  // Metadata
   createdAt?: Date | null;
   updatedAt?: Date | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
 }
 
 interface PublicMetadata {
@@ -178,7 +155,7 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   }
 
   const syncClerkDataWithFaculty = async (userData: ClerkUserData) => {
-    if (!userData || !facultyDetails?.FacultyID) return;
+    if (!userData || !facultyDetails?.EmployeeID) return;
 
     try {
       const updateData = {
@@ -216,292 +193,332 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     }
   }, [user, facultyDetails]);
 
-  useEffect(() => {
-    const fetchFacultyDetails = async () => {
-      if (!user) {
-        setLoading(false);
+  const fetchFacultyDetails = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const userEmail = user.emailAddresses[0]?.emailAddress;
+      const publicMetadata = user.publicMetadata as PublicMetadata;
+      
+      if (!userEmail) {
+        setNotification({
+          type: 'error',
+          message: 'No email address found. Please verify your email in Clerk account settings.'
+        });
         return;
       }
 
-      try {
-        const userEmail = user.emailAddresses[0]?.emailAddress;
-        const publicMetadata = user.publicMetadata as PublicMetadata;
-        
-        if (!userEmail) {
-          setNotification({
-            type: 'error',
-            message: 'No email address found. Please verify your email in Clerk account settings.'
-          });
-          return;
-        }
+      // Get user data
+      console.log('Fetching user data for email:', userEmail);
+      const { data: userData, error: userError } = await supabase
+        .from('User')
+        .select('UserID, Email, EmployeeID')
+        .eq('Email', userEmail)
+        .single();
 
-        // Get user data
-        const { data: userData, error: userError } = await supabase
-          .from('User')
-          .select('UserID, Email')
-          .eq('Email', userEmail)
-          .single();
+      console.log('User data result:', { userData, userError });
 
-        if (userError) {
-          console.error('User lookup error:', userError);
-          
-          // Check if this is a new employee from invitation
-          if (publicMetadata?.Role === 'Faculty' && publicMetadata.facultyData) {
-            // Create employee record using invitation metadata
-            const employeeData = {
-              UserID: user.id,
-              DateOfBirth: new Date(publicMetadata.facultyData.DateOfBirth).toISOString(),
-              Phone: publicMetadata.facultyData.Phone || null,
-              Address: publicMetadata.facultyData.Address || null,
-              EmploymentStatus: publicMetadata.facultyData.EmploymentStatus,
-              HireDate: new Date(publicMetadata.facultyData.HireDate).toISOString(),
-              ResignationDate: publicMetadata.facultyData.ResignationDate || null,
-              Position: publicMetadata.facultyData.Position,
-              DepartmentID: publicMetadata.facultyData.DepartmentID,
-              ContractID: null,
-              EmergencyContactName: null,
-              EmergencyContactNumber: null
-            };
-
-            const { data: newEmployeeData, error: createError } = await supabase
-              .from('Employee')
-              .insert([employeeData])
-              .select(`
-                *,
-                Department:DepartmentID (
-                  DepartmentName
-                )
-              `)
-              .single();
-
-            if (createError) {
-              setNotification({
-                type: 'error',
-                message: 'Failed to create employee profile. Please contact IT support.'
-              });
-              return;
-            }
-
-            if (newEmployeeData) {
-              const transformedData: FacultyDetails = {
-                ...newEmployeeData,
-                DepartmentName: newEmployeeData.Department?.DepartmentName || 'Unknown Department'
-              };
-              setFacultyDetails(transformedData);
-              setEditedDetails(transformedData);
-              setNotification({
-                type: 'success',
-                message: 'Employee profile created successfully!'
-              });
-              return;
-            }
-          }
-
-          setNotification({
-            type: 'error',
-            message: 'Account not found. Please contact IT support to set up your account.'
-          });
-          return;
-        }
-
-        if (!userData) {
-          setNotification({
-            type: 'error',
-            message: 'Your email is not registered. Please contact HR to complete your registration.'
-          });
-          return;
-        }
-
-        // Get employee data with all related information
-        const { data: employeeData, error: employeeError } = await supabase
-          .from('Employee')
-          .select(`
-            *,
-            Department:DepartmentID (
-              DepartmentName,
-              type
-            ),
-            contactInfo (
-              Email,
-              Phone,
-              PresentAddress,
-              PermanentAddress,
-              EmergencyContactName,
-              EmergencyContactNumber
-            ),
-            governmentIds (
-              SSSNumber,
-              TINNumber,
-              PhilHealthNumber,
-              PagIbigNumber,
-              GSISNumber,
-              PRCLicenseNumber,
-              PRCValidity
-            ),
-            employmentDetails (
-              EmploymentStatus,
-              HireDate,
-              ResignationDate,
-              Designation,
-              Position,
-              EmployeeType,
-              SalaryGrade
-            ),
-            Family (
-              id,
-              type,
-              name,
-              dateOfBirth,
-              occupation,
-              isDependent,
-              relationship,
-              contactNumber,
-              address
-            ),
-            Education (
-              id,
-              level,
-              schoolName,
-              course,
-              yearGraduated,
-              honors
-            ),
-            EmploymentHistory (
-              id,
-              schoolName,
-              position,
-              startDate,
-              endDate,
-              reasonForLeaving
-            ),
-            MedicalInfo (
-              medicalNotes,
-              lastCheckup,
-              vaccination,
-              allergies
-            ),
-            skills (
-              id,
-              name,
-              proficiencyLevel,
-              yearsOfExperience,
-              description
-            ),
-            certificates (
-              id,
-              title,
-              issuedBy,
-              issueDate,
-              expiryDate,
-              description,
-              fileUrl
-            )
-          `)
-          .eq('UserID', userData.UserID)
-          .single();
-
-        if (employeeError) {
-          console.error('Employee data error:', employeeError);
-          setNotification({
-            type: 'error',
-            message: 'Unable to load employee data. If this persists, please contact IT support.'
-          });
-          return;
-        }
-
-        if (!employeeData) {
-          setNotification({
-            type: 'error',
-            message: 'Employee profile not found. Please contact HR to set up your profile.'
-          });
-          return;
-        }
-
-        const transformedData: FacultyDetails = {
-          ...employeeData,
-          DepartmentName: employeeData.Department?.DepartmentName || 'Unknown Department',
-          // Map contact info
-          ...(employeeData.contactInfo || {}),
-          // Map government IDs
-          ...(employeeData.governmentIds || {}),
-          // Map employment details
-          ...(employeeData.employmentDetails || {}),
-          // Ensure required fields have default values
-          LastName: employeeData.LastName || '',
-          FirstName: employeeData.FirstName || '',
-          MiddleName: employeeData.MiddleName || '',
-          ExtensionName: employeeData.ExtensionName || '',
-          Sex: employeeData.Sex || '',
-          DateOfBirth: employeeData.DateOfBirth || '',
-          PlaceOfBirth: employeeData.PlaceOfBirth || '',
-          CivilStatus: employeeData.CivilStatus || '',
-          Nationality: employeeData.Nationality || '',
-          Religion: employeeData.Religion || '',
-          BloodType: employeeData.BloodType || '',
-          Email: employeeData.contactInfo?.Email || '',
-          Phone: employeeData.contactInfo?.Phone || '',
-          PresentAddress: employeeData.contactInfo?.PresentAddress || '',
-          PermanentAddress: employeeData.contactInfo?.PermanentAddress || '',
-          EmergencyContactName: employeeData.contactInfo?.EmergencyContactName || '',
-          EmergencyContactNumber: employeeData.contactInfo?.EmergencyContactNumber || '',
-          Position: employeeData.employmentDetails?.Position || '',
-          EmploymentStatus: employeeData.employmentDetails?.EmploymentStatus || '',
-          HireDate: employeeData.employmentDetails?.HireDate || '',
-          EmployeeType: employeeData.employmentDetails?.EmployeeType || ''
-        };
-
-        setFacultyDetails(transformedData);
-        setEditedDetails(transformedData);
-        setNotification(null);
-
-        // Set up real-time subscription for updates
-        if (!subscription) {
-          const newSubscription = supabase
-            .channel('employee_changes')
-            .on('postgres_changes', {
-              event: '*',
-              schema: 'public',
-              table: 'Employee',
-              filter: `UserID=eq.${userData.UserID}`
-            }, async (payload) => {
-              // Fetch updated employee data
-              const { data: updatedEmployeeData, error: updateError } = await supabase
-                .from('Employee')
-                .select(`
-                  *,
-                  Department:DepartmentID (
-                    DepartmentName
-                  )
-                `)
-                .eq('UserID', userData.UserID)
-                .single();
-
-              if (!updateError && updatedEmployeeData) {
-                const transformedUpdatedData: FacultyDetails = {
-                  ...updatedEmployeeData,
-                  DepartmentName: updatedEmployeeData.Department?.DepartmentName || 'Unknown Department'
-                };
-                setFacultyDetails(transformedUpdatedData);
-                setEditedDetails(transformedUpdatedData);
-              }
-            })
-            .subscribe();
-
-          setSubscription(newSubscription);
-        }
-      } catch (error) {
-        console.error('Error fetching employee details:', error);
+      if (userError) {
+        console.error('User lookup error:', userError);
         setNotification({
           type: 'error',
-          message: error instanceof Error 
-            ? `Error: ${error.message}`
-            : 'An unexpected error occurred while loading your data. Please try again later.',
+          message: 'Account not found. Please contact IT support to set up your account.'
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      if (!userData) {
+        setNotification({
+          type: 'error',
+          message: 'Your email is not registered. Please contact HR to complete your registration.'
+        });
+        return;
+      }
+
+      // If we have EmployeeID directly in User table, use that
+      if (userData.EmployeeID) {
+        console.log('Found EmployeeID in User record:', userData.EmployeeID);
+        
+        // Use the simplified API endpoint with retry logic
+        try {
+          const response = await fetchWithRetry(`/api/employees/${userData.EmployeeID}`);
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch employee data');
+          }
+
+          const employeeData = await response.json();
+          console.log('Successfully fetched employee data:', employeeData);
+
+          // Transform and use the data directly
+          const transformedData: FacultyDetails = {
+            EmployeeID: employeeData.EmployeeID,
+            UserID: employeeData.UserID,
+            LastName: employeeData.LastName || '',
+            FirstName: employeeData.FirstName || '',
+            MiddleName: employeeData.MiddleName || '',
+            ExtensionName: employeeData.ExtensionName || '',
+            Sex: employeeData.Sex || '',
+            Photo: employeeData.Photo || '',
+            DateOfBirth: employeeData.DateOfBirth || '',
+            PlaceOfBirth: employeeData.PlaceOfBirth || '',
+            CivilStatus: employeeData.CivilStatus || '',
+            Nationality: employeeData.Nationality || '',
+            Religion: employeeData.Religion || '',
+            BloodType: employeeData.BloodType || '',
+            Email: employeeData.ContactInfo?.Email || employeeData.Email || '',
+            DepartmentID: employeeData.DepartmentID,
+            ContractID: employeeData.ContractID,
+            Position: employeeData.EmploymentDetail?.Position || '',
+            HireDate: employeeData.EmploymentDetail?.HireDate || '',
+            DepartmentName: employeeData.Department?.DepartmentName || '',
+
+            // Contact Info
+            Phone: employeeData.ContactInfo?.Phone || '',
+            PresentAddress: employeeData.ContactInfo?.PresentAddress || '',
+            PermanentAddress: employeeData.ContactInfo?.PermanentAddress || '',
+            EmergencyContactName: employeeData.ContactInfo?.EmergencyContactName || '',
+            EmergencyContactNumber: employeeData.ContactInfo?.EmergencyContactNumber || '',
+
+            // Government IDs
+            SSSNumber: employeeData.GovernmentID?.SSSNumber || '',
+            TINNumber: employeeData.GovernmentID?.TINNumber || '',
+            PhilHealthNumber: employeeData.GovernmentID?.PhilHealthNumber || '',
+            PagIbigNumber: employeeData.GovernmentID?.PagIbigNumber || '',
+            GSISNumber: employeeData.GovernmentID?.GSISNumber || '',
+            PRCLicenseNumber: employeeData.GovernmentID?.PRCLicenseNumber || '',
+            PRCValidity: employeeData.GovernmentID?.PRCValidity || '',
+
+            // Employment Details
+            EmploymentStatus: employeeData.EmploymentDetail?.EmploymentStatus || '',
+            ResignationDate: employeeData.EmploymentDetail?.ResignationDate || null,
+            Designation: employeeData.EmploymentDetail?.Designation || null,
+            EmployeeType: employeeData.EmploymentDetail?.EmployeeType || '',
+            SalaryGrade: employeeData.EmploymentDetail?.SalaryGrade || '',
+
+            // Medical Information
+            MedicalCondition: employeeData.MedicalInfo?.medicalNotes || '',
+            Allergies: employeeData.MedicalInfo?.allergies || '',
+            LastMedicalCheckup: employeeData.MedicalInfo?.lastCheckup || '',
+
+            // Metadata
+            createdAt: employeeData.createdAt || null,
+            updatedAt: employeeData.updatedAt || null,
+            createdBy: employeeData.createdBy || null,
+            updatedBy: employeeData.updatedBy || null
+          };
+
+          setFacultyDetails(transformedData);
+          setEditedDetails(transformedData);
+          setNotification(null);
+          return;
+        } catch (error) {
+          console.error('Error fetching employee data via API:', error);
+          // Fall through to the alternative lookup method below
+        }
+      }
+
+      // Get employee data with all related information via API
+      console.log('Looking up employee with UserID:', userData.UserID);
+      
+      // First try to get all employees and find the one with matching UserID or Email
+      try {
+        const employeesResponse = await fetchWithRetry('/api/employees');
+        
+        if (!employeesResponse.ok) {
+          throw new Error('Failed to fetch employee list');
+        }
+        
+        const employees = await employeesResponse.json();
+        const employeeMatch = employees.find((emp: any) => 
+          emp.UserID === userData.UserID || emp.Email === userEmail
+        );
+        
+        if (!employeeMatch) {
+          console.error('No employee record found for:', { 
+            UserID: userData.UserID, 
+            Email: userEmail 
+          });
+          setNotification({
+            type: 'error',
+            message: 'Unable to find your employee record. Please contact HR.'
+          });
+          return;
+        }
+        
+                 console.log('Found employee match:', employeeMatch);
+         const response = await fetchWithRetry(`/api/employees/${employeeMatch.EmployeeID}`);
+         
+         if (!response.ok) {
+           const errorData = await response.json();
+           throw new Error(errorData.error || 'Failed to fetch employee data');
+         }
+         
+         const employeeData = await response.json();
+         
+         // Transform the data to match our interface
+         const transformedData: FacultyDetails = {
+           EmployeeID: employeeData.EmployeeID,
+           UserID: employeeData.UserID,
+           LastName: employeeData.LastName || '',
+           FirstName: employeeData.FirstName || '',
+           MiddleName: employeeData.MiddleName || '',
+           ExtensionName: employeeData.ExtensionName || '',
+           Sex: employeeData.Sex || '',
+           Photo: employeeData.Photo || '',
+           DateOfBirth: employeeData.DateOfBirth || '',
+           PlaceOfBirth: employeeData.PlaceOfBirth || '',
+           CivilStatus: employeeData.CivilStatus || '',
+           Nationality: employeeData.Nationality || '',
+           Religion: employeeData.Religion || '',
+           BloodType: employeeData.BloodType || '',
+           Email: employeeData.ContactInfo?.Email || employeeData.Email || '',
+           DepartmentID: employeeData.DepartmentID,
+           ContractID: employeeData.ContractID,
+           Position: employeeData.EmploymentDetail?.Position || employeeData.Position || '',
+           HireDate: employeeData.EmploymentDetail?.HireDate || employeeData.HireDate || '',
+           DepartmentName: employeeData.Department?.DepartmentName || '',
+
+           // Contact Info
+           Phone: employeeData.ContactInfo?.Phone || '',
+           PresentAddress: employeeData.ContactInfo?.PresentAddress || '',
+           PermanentAddress: employeeData.ContactInfo?.PermanentAddress || '',
+           EmergencyContactName: employeeData.ContactInfo?.EmergencyContactName || '',
+           EmergencyContactNumber: employeeData.ContactInfo?.EmergencyContactNumber || '',
+
+           // Government IDs
+           SSSNumber: employeeData.GovernmentID?.SSSNumber || '',
+           TINNumber: employeeData.GovernmentID?.TINNumber || '',
+           PhilHealthNumber: employeeData.GovernmentID?.PhilHealthNumber || '',
+           PagIbigNumber: employeeData.GovernmentID?.PagIbigNumber || '',
+           GSISNumber: employeeData.GovernmentID?.GSISNumber || '',
+           PRCLicenseNumber: employeeData.GovernmentID?.PRCLicenseNumber || '',
+           PRCValidity: employeeData.GovernmentID?.PRCValidity || '',
+
+           // Employment Details
+           EmploymentStatus: employeeData.EmploymentDetail?.EmploymentStatus || employeeData.EmploymentStatus || '',
+           ResignationDate: employeeData.EmploymentDetail?.ResignationDate || null,
+           Designation: employeeData.EmploymentDetail?.Designation || null,
+           EmployeeType: employeeData.EmploymentDetail?.EmployeeType || '',
+           SalaryGrade: employeeData.EmploymentDetail?.SalaryGrade || '',
+
+           // Medical Information
+           MedicalCondition: employeeData.MedicalInfo?.medicalNotes || '',
+           Allergies: employeeData.MedicalInfo?.allergies || '',
+           LastMedicalCheckup: employeeData.MedicalInfo?.lastCheckup || '',
+
+           // Metadata
+           createdAt: employeeData.createdAt || null,
+           updatedAt: employeeData.updatedAt || null,
+           createdBy: employeeData.createdBy || null,
+           updatedBy: employeeData.updatedBy || null
+         };
+
+         setFacultyDetails(transformedData);
+         setEditedDetails(transformedData);
+         setNotification(null);
+       } catch (error) {
+         console.error('Error fetching employee via API lookup:', error);
+         setNotification({
+           type: 'error',
+           message: 'Failed to load employee data. Please try again later.'
+         });
+         return;
+       }
+      
+      // Set up real-time subscription for updates
+      if (!subscription) {
+        const newSubscription = supabase
+          .channel('employee_changes')
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'Employee',
+            filter: `UserID=eq.${userData.UserID}`
+          }, async () => {
+            // Fetch updated data from API when changes occur
+            if (facultyDetails?.UserID) {
+              try {
+                const response = await fetchWithRetry(`/api/employees/${facultyDetails.EmployeeID}`);
+                if (response.ok) {
+                  const updatedData = await response.json();
+                  // Transform the updated data and set state
+                  const transformedUpdatedData: FacultyDetails = {
+                    EmployeeID: updatedData.EmployeeID,
+                    UserID: updatedData.UserID,
+                    LastName: updatedData.LastName || '',
+                    FirstName: updatedData.FirstName || '',
+                    MiddleName: updatedData.MiddleName || '',
+                    ExtensionName: updatedData.ExtensionName || '',
+                    Sex: updatedData.Sex || '',
+                    Photo: updatedData.Photo || '',
+                    DateOfBirth: updatedData.DateOfBirth || '',
+                    PlaceOfBirth: updatedData.PlaceOfBirth || '',
+                    CivilStatus: updatedData.CivilStatus || '',
+                    Nationality: updatedData.Nationality || '',
+                    Religion: updatedData.Religion || '',
+                    BloodType: updatedData.BloodType || '',
+                    Email: updatedData.ContactInfo?.Email || updatedData.Email || '',
+                    DepartmentID: updatedData.DepartmentID,
+                    ContractID: updatedData.ContractID,
+                    Position: updatedData.EmploymentDetail?.Position || updatedData.Position || '',
+                    HireDate: updatedData.EmploymentDetail?.HireDate || updatedData.HireDate || '',
+                    DepartmentName: updatedData.Department?.DepartmentName || '',
+                    Phone: updatedData.ContactInfo?.Phone || '',
+                    PresentAddress: updatedData.ContactInfo?.PresentAddress || '',
+                    PermanentAddress: updatedData.ContactInfo?.PermanentAddress || '',
+                    EmergencyContactName: updatedData.ContactInfo?.EmergencyContactName || '',
+                    EmergencyContactNumber: updatedData.ContactInfo?.EmergencyContactNumber || '',
+                    SSSNumber: updatedData.GovernmentID?.SSSNumber || '',
+                    TINNumber: updatedData.GovernmentID?.TINNumber || '',
+                    PhilHealthNumber: updatedData.GovernmentID?.PhilHealthNumber || '',
+                    PagIbigNumber: updatedData.GovernmentID?.PagIbigNumber || '',
+                    GSISNumber: updatedData.GovernmentID?.GSISNumber || '',
+                    PRCLicenseNumber: updatedData.GovernmentID?.PRCLicenseNumber || '',
+                    PRCValidity: updatedData.GovernmentID?.PRCValidity || '',
+                    EmploymentStatus: updatedData.EmploymentDetail?.EmploymentStatus || updatedData.EmploymentStatus || '',
+                    ResignationDate: updatedData.EmploymentDetail?.ResignationDate || null,
+                    Designation: updatedData.EmploymentDetail?.Designation || null,
+                    EmployeeType: updatedData.EmploymentDetail?.EmployeeType || '',
+                    SalaryGrade: updatedData.EmploymentDetail?.SalaryGrade || '',
+                    MedicalCondition: updatedData.MedicalInfo?.medicalNotes || '',
+                    Allergies: updatedData.MedicalInfo?.allergies || '',
+                    LastMedicalCheckup: updatedData.MedicalInfo?.lastCheckup || '',
+                    createdAt: updatedData.createdAt || null,
+                    updatedAt: updatedData.updatedAt || null,
+                    createdBy: updatedData.createdBy || null,
+                    updatedBy: updatedData.updatedBy || null
+                  };
+                  setFacultyDetails(transformedUpdatedData);
+                  setEditedDetails(transformedUpdatedData);
+                }
+              } catch (error) {
+                console.error('Error updating data from subscription:', error);
+              }
+            }
+          })
+          .subscribe();
+
+        setSubscription(newSubscription);
+      }
+    } catch (error) {
+      console.error('Error fetching employee details:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error 
+          ? `Error: ${error.message}`
+          : 'An unexpected error occurred while loading your data. Please try again later.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFacultyDetails();
 
     // Cleanup subscription when component unmounts
@@ -668,16 +685,6 @@ const handleDownload = () => {
       
       let processedValue: any = value;
 
-      // Handle special cases for complex fields
-      if (field === 'Children' || field === 'WorkExperience') {
-        try {
-          processedValue = JSON.parse(value);
-        } catch (e) {
-          console.error(`Error parsing ${field} data:`, e);
-          return prev;
-        }
-      }
-
       // Handle special case for dates
       if (field === 'DateOfBirth' || field === 'HireDate' || field === 'ResignationDate' || 
           field === 'PRCValidity' || field === 'LastMedicalCheckup') {
@@ -685,8 +692,7 @@ const handleDownload = () => {
       }
 
       // Handle special case for numbers
-      if (field === 'DepartmentID' || field === 'ContractID' || field === 'FacultyID' ||
-          field === 'CollegeYearGraduated' || field === 'GraduateYearCompleted') {
+      if (field === 'DepartmentID' || field === 'ContractID') {
         processedValue = value ? parseInt(value, 10) : null;
       }
 
@@ -1282,13 +1288,13 @@ const handleDownload = () => {
                   <label className="block text-sm font-medium text-gray-700">Additional Information</label>
                   {isEditing ? (
                     <textarea
-                      value={editedDetails?.AdditionalInfo || ''}
-                      onChange={(e) => handleInputChange('AdditionalInfo', e.target.value)}
+                      value={editedDetails?.MedicalCondition || ''}
+                      onChange={(e) => handleInputChange('MedicalCondition', e.target.value)}
                       className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       rows={4}
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-gray-900">{facultyDetails?.AdditionalInfo || 'N/A'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{facultyDetails?.MedicalCondition || 'N/A'}</p>
                   )}
                 </div>
               </div>

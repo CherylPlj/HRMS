@@ -6,7 +6,7 @@ import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
 
 export async function GET(
   request: Request,
-  { params }: { params: { employeeId: string } }
+  context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     // Check authentication
@@ -15,123 +15,20 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user role
-    const userRole = await getUserRoleFlexible(user.id);
-    if (!userRole || (!userRole.includes('ADMIN') && user.id !== params.employeeId)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { employeeId } = await context.params;
+    console.log('Fetching employee with ID:', employeeId);
 
-    const { employeeId } = params;
-
-    // Fetch employee data with all related information
+    // Start with basic employee data only
     const { data: employee, error } = await supabaseAdmin
       .from('Employee')
-      .select(`
-        *,
-        EmploymentDetail(
-          EmploymentStatus, 
-          HireDate, 
-          ResignationDate, 
-          Designation, 
-          Position, 
-          SalaryGrade,
-          EmployeeType
-        ),
-        ContactInfo(
-          Email, 
-          Phone, 
-          PresentAddress, 
-          PermanentAddress, 
-          EmergencyContactName, 
-          EmergencyContactNumber
-        ),
-        GovernmentID(
-          SSSNumber, 
-          TINNumber, 
-          PhilHealthNumber, 
-          PagIbigNumber, 
-          GSISNumber, 
-          PRCLicenseNumber, 
-          PRCValidity,
-          BIRNumber,
-          PassportNumber,
-          PassportValidity
-        ),
-        Department(
-          DepartmentName,
-          type
-        ),
-        Family(
-          id, 
-          type, 
-          name, 
-          dateOfBirth, 
-          occupation, 
-          isDependent, 
-          relationship, 
-          contactNumber, 
-          address
-        ),
-        skills(
-          id, 
-          name, 
-          proficiencyLevel, 
-          yearsOfExperience, 
-          description
-        ),
-        MedicalInfo(
-          medicalNotes, 
-          lastCheckup, 
-          vaccination, 
-          allergies, 
-          hasDisability, 
-          disabilityType, 
-          disabilityDetails,
-          accommodationsNeeded,
-          pwdIdNumber,
-          pwdIdValidity,
-          bloodPressure,
-          height,
-          weight,
-          emergencyProcedures,
-          primaryPhysician,
-          physicianContact,
-          healthInsuranceProvider,
-          healthInsuranceNumber,
-          healthInsuranceExpiryDate
-        ),
-        Education(
-          id, 
-          level, 
-          schoolName, 
-          course, 
-          yearGraduated, 
-          honors
-        ),
-        EmploymentHistory(
-          id, 
-          schoolName, 
-          position, 
-          startDate, 
-          endDate, 
-          reasonForLeaving
-        ),
-        certificates(
-          id, 
-          title, 
-          issuedBy, 
-          issueDate, 
-          expiryDate, 
-          description, 
-          fileUrl
-        )
-      `)
+      .select('*')
       .eq('EmployeeID', employeeId)
       .single();
 
     if (error) {
+      console.error('Employee fetch error:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch employee data' },
+        { error: 'Database error: ' + error.message },
         { status: 500 }
       );
     }
@@ -143,11 +40,77 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(employee);
+    // Fetch related data separately to avoid complex joins
+    let employmentDetail = null;
+    let contactInfo = null;
+    let governmentId = null;
+    let department = null;
+
+    try {
+      // Employment detail
+      const { data: empDetail } = await supabaseAdmin
+        .from('EmploymentDetail')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      employmentDetail = empDetail;
+    } catch (e) {
+      console.log('No employment detail found');
+    }
+
+    try {
+      // Contact info
+      const { data: contact } = await supabaseAdmin
+        .from('ContactInfo')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      contactInfo = contact;
+    } catch (e) {
+      console.log('No contact info found');
+    }
+
+    try {
+      // Government ID
+      const { data: govId } = await supabaseAdmin
+        .from('GovernmentID')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      governmentId = govId;
+    } catch (e) {
+      console.log('No government ID found');
+    }
+
+    try {
+      // Department
+      if (employee.DepartmentID) {
+        const { data: dept } = await supabaseAdmin
+          .from('Department')
+          .select('DepartmentName, type')
+          .eq('DepartmentID', employee.DepartmentID)
+          .single();
+        department = dept;
+      }
+    } catch (e) {
+      console.log('No department found');
+    }
+
+    // Combine all data
+    const result = {
+      ...employee,
+      EmploymentDetail: employmentDetail,
+      ContactInfo: contactInfo,
+      GovernmentID: governmentId,
+      Department: department
+    };
+
+    console.log('Successfully fetched employee data');
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching employee data:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
     );
   }
