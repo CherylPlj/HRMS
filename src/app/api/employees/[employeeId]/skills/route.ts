@@ -35,9 +35,12 @@ export async function POST(
     const { employeeId } = await context.params;
     const data = await request.json();
 
+    // Remove any id field from the data to let Prisma auto-generate it
+    const { id, ...skillData } = data;
+
     const skill = await prisma.skill.create({
       data: {
-        ...data,
+        ...skillData,
         employeeId: employeeId,
       },
     });

@@ -176,6 +176,19 @@ export async function PATCH(
       return NextResponse.json(updatedEmployee);
     }
 
+    // Get current employment details before updating
+    let currentEmploymentDetail = null;
+    try {
+      const { data: currentEmp } = await supabaseAdmin
+        .from('EmploymentDetail')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      currentEmploymentDetail = currentEmp;
+    } catch (e) {
+      console.log('No current employment detail found');
+    }
+
     // Update employee in Supabase Employee table (only basic fields)
     const updateFields: any = {
       updatedAt: new Date().toISOString()
@@ -210,8 +223,16 @@ export async function PATCH(
       throw employeeError;
     }
 
+    // Check if employment-related fields are being updated
+    const employmentFieldsChanged = 
+      data.HireDate !== undefined || 
+      data.EmploymentStatus !== undefined || 
+      data.Designation !== undefined || 
+      data.Position !== undefined || 
+      data.SalaryGrade !== undefined;
+
     // Update or create EmploymentDetail record
-    if (data.HireDate !== undefined || data.EmploymentStatus !== undefined || data.Designation !== undefined || data.Position !== undefined || data.SalaryGrade !== undefined) {
+    if (employmentFieldsChanged) {
       const { error: employmentError } = await supabaseAdmin
         .from('EmploymentDetail')
         .upsert({
@@ -230,6 +251,59 @@ export async function PATCH(
       if (employmentError) {
         console.error('Error updating employment detail:', employmentError);
         throw employmentError;
+      }
+
+      // Check if position, salary, or employment status changed and create promotion history record
+      const positionChanged = currentEmploymentDetail && 
+        currentEmploymentDetail.Position !== data.Position && 
+        data.Position !== undefined;
+      
+      const salaryChanged = currentEmploymentDetail && 
+        currentEmploymentDetail.SalaryGrade !== data.SalaryGrade && 
+        data.SalaryGrade !== undefined;
+      
+      const statusChanged = currentEmploymentDetail && 
+        currentEmploymentDetail.EmploymentStatus !== data.EmploymentStatus && 
+        data.EmploymentStatus !== undefined;
+
+      if (positionChanged || salaryChanged || statusChanged) {
+        // Determine promotion type based on what changed
+        let promotionType = 'Other';
+        if (positionChanged && salaryChanged) {
+          promotionType = 'Promotion';
+        } else if (positionChanged) {
+          promotionType = 'Position Change';
+        } else if (salaryChanged) {
+          promotionType = 'Salary Adjustment';
+        } else if (statusChanged) {
+          promotionType = 'Status Change';
+        }
+
+        // Create promotion history record
+        const { error: promotionError } = await supabaseAdmin
+          .from('PromotionHistory')
+          .insert({
+            employeeId: employeeId,
+            fromPosition: currentEmploymentDetail?.Position || null,
+            toPosition: data.Position || currentEmploymentDetail?.Position || null,
+            fromSalaryGrade: currentEmploymentDetail?.SalaryGrade || null,
+            toSalaryGrade: data.SalaryGrade || currentEmploymentDetail?.SalaryGrade || null,
+            effectiveDate: new Date().toISOString(),
+            promotionType: promotionType,
+            remarks: `Automatic record created due to ${promotionType.toLowerCase()}`,
+            approvedBy: user.id,
+            createdBy: user.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+
+        if (promotionError) {
+          console.error('Error creating promotion history record:', promotionError);
+          // Don't throw error here as the main update was successful
+          // Just log it for debugging
+        } else {
+          console.log(`Promotion history record created for employee ${employeeId}: ${promotionType}`);
+        }
       }
     }
 
@@ -280,7 +354,80 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(updatedEmployee);
+    // Fetch the complete updated data to return
+    const { data: completeEmployee, error: fetchError } = await supabaseAdmin
+      .from('Employee')
+      .select('*')
+      .eq('EmployeeID', employeeId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching updated employee:', fetchError);
+      throw fetchError;
+    }
+
+    // Fetch related data
+    let employmentDetail = null;
+    let contactInfo = null;
+    let governmentId = null;
+    let department = null;
+
+    try {
+      const { data: empDetail } = await supabaseAdmin
+        .from('EmploymentDetail')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      employmentDetail = empDetail;
+    } catch (e) {
+      console.log('No employment detail found');
+    }
+
+    try {
+      const { data: contact } = await supabaseAdmin
+        .from('ContactInfo')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      contactInfo = contact;
+    } catch (e) {
+      console.log('No contact info found');
+    }
+
+    try {
+      const { data: govId } = await supabaseAdmin
+        .from('GovernmentID')
+        .select('*')
+        .eq('employeeId', employeeId)
+        .single();
+      governmentId = govId;
+    } catch (e) {
+      console.log('No government ID found');
+    }
+
+    try {
+      if (completeEmployee.DepartmentID) {
+        const { data: dept } = await supabaseAdmin
+          .from('Department')
+          .select('DepartmentName, type')
+          .eq('DepartmentID', completeEmployee.DepartmentID)
+          .single();
+        department = dept;
+      }
+    } catch (e) {
+      console.log('No department found');
+    }
+
+    // Return complete updated data
+    const result = {
+      ...completeEmployee,
+      EmploymentDetail: employmentDetail,
+      ContactInfo: contactInfo,
+      GovernmentID: governmentId,
+      Department: department
+    };
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error updating employee:', error);
     return NextResponse.json(

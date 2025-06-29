@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
-import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
+import { currentUser } from '@clerk/nextjs/server';
 
 // GET /api/employees/[employeeId]/education
 export async function GET(
@@ -9,17 +8,30 @@ export async function GET(
   context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { employeeId } = await context.params;
 
-    // Get user role and check authorization
-    const userRole = await getUserRoleFlexible(userId);
-    if (!userRole || (!userRole.includes('ADMIN') && !userRole.includes('FACULTY') && userId !== employeeId)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Check if this employee record belongs to the current user
+    const employee = await prisma.employee.findUnique({
+      where: { EmployeeID: employeeId },
+      select: { UserID: true }
+    });
+    
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    // Allow access if user is viewing their own record
+    if (employee.UserID !== user.id) {
+      // Check if user has admin role
+      const userRole = user.publicMetadata?.role?.toString().toLowerCase();
+      if (!userRole?.includes('admin')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
     
     const education = await prisma.education.findMany({
@@ -47,12 +59,39 @@ export async function POST(
   context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { employeeId } = await context.params;
     const data = await request.json();
 
+    // Check if this employee record belongs to the current user
+    const employee = await prisma.employee.findUnique({
+      where: { EmployeeID: employeeId },
+      select: { UserID: true }
+    });
+    
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    // Allow access if user is adding to their own record
+    if (employee.UserID !== user.id) {
+      // Check if user has admin role
+      const userRole = user.publicMetadata?.role?.toString().toLowerCase();
+      if (!userRole?.includes('admin')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    // Exclude id field from data to avoid unique constraint errors
+    const { id, ...educationData } = data;
+
     const education = await prisma.education.create({
       data: {
-        ...data,
+        ...educationData,
         employeeId: employeeId,
       },
     });

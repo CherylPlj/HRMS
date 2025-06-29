@@ -543,7 +543,7 @@ export default function DashboardContent() {
     labels: Object.keys(departmentStats),
     datasets: [
       {
-        label: "Faculty by Department",
+        label: "Employees by Department",
         data: Object.values(departmentStats),
         backgroundColor: departmentColors.slice(0, Object.keys(departmentStats).length),
       },
@@ -929,16 +929,16 @@ export default function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Faculty Overview Section */}
+        {/* Employee Overview Section */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaGraduationCap className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Faculty Overview</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
               <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.regular}</p>
-              <p className="text-gray-600 font-medium">Regular Faculty</p>
+              <p className="text-gray-600 font-medium">Regular Employee</p>
             </div>
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
               <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.underProbation}</p>

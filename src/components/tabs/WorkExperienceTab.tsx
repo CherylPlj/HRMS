@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 
 interface WorkExperience {
   id?: number;
@@ -15,15 +15,32 @@ interface WorkExperienceTabProps {
   employeeId: string;
 }
 
+interface Notification {
+  type: 'success' | 'error';
+  message: string;
+}
+
 const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => {
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<WorkExperience | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchWorkExperiences();
   }, [employeeId]);
+
+  // Auto-hide notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const fetchWorkExperiences = async () => {
     try {
@@ -31,9 +48,18 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
       if (response.ok) {
         const data = await response.json();
         setWorkExperiences(data);
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Failed to fetch work experiences'
+        });
       }
     } catch (error) {
       console.error('Error fetching work experiences:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to fetch work experiences'
+      });
     }
   };
 
@@ -41,6 +67,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
     e.preventDefault();
     if (!currentRecord) return;
 
+    setIsSubmitting(true);
     try {
       const url = `/api/employees/${employeeId}/work-experience${currentRecord.id ? `/${currentRecord.id}` : ''}`;
       const method = currentRecord.id ? 'PUT' : 'POST';
@@ -57,9 +84,22 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
         await fetchWorkExperiences();
         setShowForm(false);
         setCurrentRecord(null);
+        setNotification({
+          type: 'success',
+          message: currentRecord.id ? 'Work experience updated successfully!' : 'Work experience added successfully!'
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save work experience');
       }
     } catch (error) {
       console.error('Error saving work experience:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to save work experience'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -73,14 +113,47 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
 
       if (response.ok) {
         await fetchWorkExperiences();
+        setNotification({
+          type: 'success',
+          message: 'Work experience deleted successfully!'
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete work experience');
       }
     } catch (error) {
       console.error('Error deleting work experience:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete work experience'
+      });
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div className={`p-4 rounded-lg flex items-center justify-between ${
+          notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <div className="flex items-center">
+            {notification.type === 'success' ? (
+              <FaCheck className="w-5 h-5 mr-2" />
+            ) : (
+              <FaTimes className="w-5 h-5 mr-2" />
+            )}
+            {notification.message}
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <FaTimes className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Work Experience</h3>
         <button
@@ -171,7 +244,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
             <div className="overflow-y-auto flex-1">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Company/Institution Name</label>
+                  <label className="block text-sm font-medium text-gray-700">Company/Institution Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={currentRecord.schoolName}
@@ -183,7 +256,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Position</label>
+                  <label className="block text-sm font-medium text-gray-700">Position <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={currentRecord.position}
@@ -195,7 +268,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700">Start Date <span className="text-red-500">*</span></label>
                   <input
                     type="date"
                     value={currentRecord.startDate ? new Date(currentRecord.startDate).toISOString().split('T')[0] : ''}
@@ -245,14 +318,16 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                       setCurrentRecord(null);
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
                   >
-                    Save
+                    {isSubmitting ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </form>

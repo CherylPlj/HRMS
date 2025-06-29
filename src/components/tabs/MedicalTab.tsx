@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 
 interface MedicalInfo {
   id?: number;
@@ -38,27 +38,56 @@ interface MedicalInfo {
 
 interface MedicalTabProps {
   employeeId: string;
+  bloodType?: string | null;
 }
 
-const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
+interface Notification {
+  type: 'success' | 'error';
+  message: string;
+}
+
+const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
   const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<MedicalInfo | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchMedicalInfo();
   }, [employeeId]);
+
+  // Auto-hide notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const fetchMedicalInfo = async () => {
     try {
       const response = await fetch(`/api/employees/${employeeId}/medical`);
       if (response.ok) {
         const data = await response.json();
-        setMedicalInfo(data);
+        // If no medical info exists, data will be an empty object
+        setMedicalInfo(Object.keys(data).length === 0 ? null : data);
+      } else {
+        console.error('Error fetching medical information:', response.status, response.statusText);
+        setNotification({
+          type: 'error',
+          message: 'Failed to fetch medical information'
+        });
       }
     } catch (error) {
       console.error('Error fetching medical information:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to fetch medical information'
+      });
     }
   };
 
@@ -66,9 +95,11 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
     e.preventDefault();
     if (!currentRecord) return;
 
+    setIsSubmitting(true);
     try {
-      const url = `/api/employees/${employeeId}/medical${currentRecord.id ? `/${currentRecord.id}` : ''}`;
-      const method = currentRecord.id ? 'PUT' : 'POST';
+      // Medical information is stored as a single record per employee, so always use PUT
+      const url = `/api/employees/${employeeId}/medical`;
+      const method = 'PUT'; // Always use PUT since we're updating the single medical record
 
       const response = await fetch(url, {
         method,
@@ -82,9 +113,25 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
         await fetchMedicalInfo();
         setShowForm(false);
         setCurrentRecord(null);
+        setNotification({
+          type: 'success',
+          message: 'Medical information updated successfully!'
+        });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setNotification({
+          type: 'error',
+          message: errorData.error || 'Failed to update medical information'
+        });
       }
     } catch (error) {
       console.error('Error saving medical information:', error);
+      setNotification({
+        type: 'error',
+        message: 'An error occurred while saving medical information'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -121,12 +168,35 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
         </button>
       </div>
 
+      {/* Notification */}
+      {notification && (
+        <div className={`p-4 rounded-lg flex items-center justify-between ${
+          notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <div className="flex items-center">
+            {notification.type === 'success' ? (
+              <FaCheck className="w-5 h-5 mr-2" />
+            ) : (
+              <FaTimes className="w-5 h-5 mr-2" />
+            )}
+            {notification.message}
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <FaTimes className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Display Medical Information */}
       {!showForm && medicalInfo && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-8">
+          {/* Basic Medical Information */}
           <div>
-            <h4 className="font-medium mb-4">Basic Medical Information</h4>
-            <div className="space-y-4">
+            <h4 className="font-medium mb-4 text-lg">Basic Medical Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Medical Notes</label>
                 <p className="mt-1 text-sm text-gray-900">{medicalInfo.medicalNotes || 'N/A'}</p>
@@ -157,12 +227,17 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
                 <label className="block text-sm font-medium text-gray-700">Vaccination</label>
                 <p className="mt-1 text-sm text-gray-900">{medicalInfo.vaccination || 'N/A'}</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Blood Type</label>
+                <p className="mt-1 text-sm text-gray-900">{bloodType || 'N/A'}</p>
+              </div>
             </div>
           </div>
 
+          {/* Disability Information */}
           <div>
-            <h4 className="font-medium mb-4">Disability Information</h4>
-            <div className="space-y-4">
+            <h4 className="font-medium mb-4 text-lg">Disability Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Has Disability</label>
                 <p className="mt-1 text-sm text-gray-900">{medicalInfo.hasDisability ? 'Yes' : 'No'}</p>
@@ -220,9 +295,10 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
             </div>
           </div>
 
+          {/* Healthcare Information */}
           <div>
-            <h4 className="font-medium mb-4">Healthcare Information</h4>
-            <div className="space-y-4">
+            <h4 className="font-medium mb-4 text-lg">Healthcare Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Primary Physician</label>
                 <p className="mt-1 text-sm text-gray-900">{medicalInfo.primaryPhysician || 'N/A'}</p>
@@ -275,11 +351,11 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
               </button>
             </div>
             <div className="overflow-y-auto flex-1">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Basic Medical Information */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Basic Medical Information</h4>
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Basic Medical Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-lg">Basic Medical Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Medical Notes</label>
                       <textarea
@@ -348,7 +424,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
                           setCurrentRecord({ ...currentRecord, allergies: e.target.value })
                         }
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                        rows={2}
+                        rows={3}
                       />
                     </div>
                     <div>
@@ -359,14 +435,16 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
                           setCurrentRecord({ ...currentRecord, vaccination: e.target.value })
                         }
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                        rows={2}
+                        rows={3}
                       />
                     </div>
                   </div>
+                </div>
 
-                  {/* Disability Information */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Disability Information</h4>
+                {/* Disability Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-lg">Disability Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="flex items-center">
                         <input
@@ -511,10 +589,12 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
                       </>
                     )}
                   </div>
+                </div>
 
-                  {/* Healthcare Information */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Healthcare Information</h4>
+                {/* Healthcare Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-lg">Healthcare Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Primary Physician</label>
                       <input
@@ -598,10 +678,22 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
 
                 <div className="flex justify-end gap-2 mt-4">
                   <button
-                    type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setCurrentRecord(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                    disabled={isSubmitting}
                   >
-                    Save
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </form>

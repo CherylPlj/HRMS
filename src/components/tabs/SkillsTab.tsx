@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 
 interface Skill {
   id: number;
@@ -14,15 +14,32 @@ interface SkillsTabProps {
   employeeId: string;
 }
 
+interface Notification {
+  type: 'success' | 'error';
+  message: string;
+}
+
 const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentSkill, setCurrentSkill] = useState<Skill | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchSkills();
   }, [employeeId]);
+
+  // Auto-hide notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const fetchSkills = async () => {
     try {
@@ -30,9 +47,18 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
       if (response.ok) {
         const data = await response.json();
         setSkills(data);
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Failed to fetch skills'
+        });
       }
     } catch (error) {
       console.error('Error fetching skills:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to fetch skills'
+      });
     }
   };
 
@@ -40,6 +66,7 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
     e.preventDefault();
     if (!currentSkill) return;
 
+    setIsSubmitting(true);
     try {
       const url = `/api/employees/${employeeId}/skills${currentSkill.id ? `/${currentSkill.id}` : ''}`;
       const method = currentSkill.id ? 'PUT' : 'POST';
@@ -56,9 +83,22 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
         await fetchSkills();
         setShowForm(false);
         setCurrentSkill(null);
+        setNotification({
+          type: 'success',
+          message: currentSkill.id ? 'Skill updated successfully!' : 'Skill added successfully!'
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save skill');
       }
     } catch (error) {
       console.error('Error saving skill:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to save skill'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -72,9 +112,20 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
 
       if (response.ok) {
         await fetchSkills();
+        setNotification({
+          type: 'success',
+          message: 'Skill deleted successfully!'
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete skill');
       }
     } catch (error) {
       console.error('Error deleting skill:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete skill'
+      });
     }
   };
 
@@ -87,6 +138,28 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div className={`p-4 rounded-lg flex items-center justify-between ${
+          notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <div className="flex items-center">
+            {notification.type === 'success' ? (
+              <FaCheck className="w-5 h-5 mr-2" />
+            ) : (
+              <FaTimes className="w-5 h-5 mr-2" />
+            )}
+            {notification.message}
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <FaTimes className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Skills</h3>
         <button
@@ -171,7 +244,7 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
             <div className="overflow-y-auto flex-1">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Skill Name</label>
+                  <label className="block text-sm font-medium text-gray-700">Skill Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={currentSkill.name}
@@ -183,7 +256,7 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Proficiency Level</label>
+                  <label className="block text-sm font-medium text-gray-700">Proficiency Level <span className="text-red-500">*</span></label>
                   <select
                     value={currentSkill.proficiencyLevel}
                     onChange={(e) =>
@@ -203,7 +276,7 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
+                  <label className="block text-sm font-medium text-gray-700">Years of Experience <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     value={currentSkill.yearsOfExperience}
@@ -240,14 +313,16 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
                       setCurrentSkill(null);
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
                   >
-                    Save
+                    {isSubmitting ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </form>

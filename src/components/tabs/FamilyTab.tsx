@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { getFamilyData, addFamilyMember, updateFamilyMember, deleteFamilyMember } from '@/lib/employeeService';
 
 interface Family {
   id: number;
@@ -22,6 +23,11 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Family | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchFamilyRecords();
@@ -29,13 +35,24 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
 
   const fetchFamilyRecords = async () => {
     try {
-      const response = await fetch(`/api/employees/${employeeId}/family`);
-      if (response.ok) {
-        const data = await response.json();
-        setFamilyRecords(data);
+      setLoading(true);
+      const result = await getFamilyData(employeeId);
+      if (result.success) {
+        setFamilyRecords(result.data || []);
+      } else {
+        setNotification({
+          type: 'error',
+          message: result.error || 'Failed to fetch family records'
+        });
       }
     } catch (error) {
       console.error('Error fetching family records:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to fetch family records'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,46 +60,119 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
     e.preventDefault();
     if (!currentRecord) return;
 
+    setLoading(true);
+    setNotification(null);
+
     try {
-      const url = `/api/employees/${employeeId}/family${currentRecord.id ? `/${currentRecord.id}` : ''}`;
-      const method = currentRecord.id ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(currentRecord),
-      });
-
-      if (response.ok) {
-        await fetchFamilyRecords();
-        setShowForm(false);
-        setCurrentRecord(null);
+      if (currentRecord.id) {
+        // Update existing record
+        const result = await updateFamilyMember(employeeId, currentRecord.id, currentRecord);
+        
+        if (result.success) {
+          await fetchFamilyRecords();
+          setShowForm(false);
+          setCurrentRecord(null);
+          setNotification({
+            type: 'success',
+            message: 'Family member updated successfully!'
+          });
+          // Auto-hide success notification after 3 seconds
+          setTimeout(() => setNotification(null), 3000);
+        } else {
+          setNotification({
+            type: 'error',
+            message: result.error || 'Failed to update family member'
+          });
+        }
+      } else {
+        // Add new record
+        const result = await addFamilyMember(employeeId, currentRecord);
+        
+        if (result.success) {
+          await fetchFamilyRecords();
+          setShowForm(false);
+          setCurrentRecord(null);
+          setNotification({
+            type: 'success',
+            message: 'Family member added successfully!'
+          });
+          // Auto-hide success notification after 3 seconds
+          setTimeout(() => setNotification(null), 3000);
+        } else {
+          setNotification({
+            type: 'error',
+            message: result.error || 'Failed to add family member'
+          });
+        }
       }
     } catch (error) {
       console.error('Error saving family record:', error);
+      setNotification({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this record?')) return;
 
-    try {
-      const response = await fetch(`/api/employees/${employeeId}/family/${id}`, {
-        method: 'DELETE',
-      });
+    setLoading(true);
+    setNotification(null);
 
-      if (response.ok) {
+    try {
+      const result = await deleteFamilyMember(employeeId, id);
+
+      if (result.success) {
         await fetchFamilyRecords();
+        setNotification({
+          type: 'success',
+          message: 'Family member deleted successfully!'
+        });
+        // Auto-hide success notification after 3 seconds
+        setTimeout(() => setNotification(null), 3000);
+      } else {
+        setNotification({
+          type: 'error',
+          message: result.error || 'Failed to delete family member'
+        });
       }
     } catch (error) {
       console.error('Error deleting family record:', error);
+      setNotification({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div className={`p-4 rounded-lg ${
+          notification.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <div className="flex justify-between items-center">
+            <p>{notification.message}</p>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-current hover:opacity-70"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Family Members</h3>
         <button
@@ -149,7 +239,8 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                 </button>
                 <button
                   onClick={() => handleDelete(record.id)}
-                  className="text-red-600 hover:text-red-800"
+                  disabled={loading}
+                  className={`${loading ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'}`}
                 >
                   <FaTrash />
                 </button>
@@ -182,7 +273,7 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
             <div className="overflow-y-auto flex-1">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Type</label>
+                  <label className="block text-sm font-medium text-gray-700">Type <span className="text-red-500">*</span></label>
                   <select
                     value={currentRecord.type}
                     onChange={(e) =>
@@ -200,7 +291,7 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <label className="block text-sm font-medium text-gray-700">Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={currentRecord.name}
@@ -293,9 +384,14 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                    disabled={loading}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                      loading 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-[#800000] hover:bg-red-800'
+                    }`}
                   >
-                    Save
+                    {loading ? 'Saving...' : (currentRecord.id ? 'Update' : 'Add')}
                   </button>
                 </div>
               </form>

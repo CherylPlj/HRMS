@@ -112,16 +112,66 @@ export async function POST(request: Request) {
       }
     }
 
+    // Ensure HireDate is a valid date
+    const hireDate = new Date(data.HireDate);
+    if (isNaN(hireDate.getTime())) {
+      return NextResponse.json(
+        { error: 'Invalid HireDate format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate EmploymentStatus enum values
+    const validEmploymentStatuses = ['Hired', 'Resigned', 'Regular', 'Probationary', 'Part_Time', 'Retired'];
+    const employmentStatus = data.EmploymentStatus || 'Regular';
+    
+    if (!validEmploymentStatuses.includes(employmentStatus)) {
+      return NextResponse.json(
+        { error: `Invalid EmploymentStatus: ${employmentStatus}. Must be one of: ${validEmploymentStatuses.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate Designation enum values if provided
+    const validDesignations = ['President', 'Admin_Officer', 'Vice_President', 'Registrar', 'Faculty', 'Principal', 'Cashier'];
+    const designation = data.Designation;
+    
+    if (designation && !validDesignations.includes(designation)) {
+      return NextResponse.json(
+        { error: `Invalid Designation: ${designation}. Must be one of: ${validDesignations.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate Sex enum values
+    const validSexValues = ['Male', 'Female', 'Intersex'];
+    const sex = data.Sex;
+    
+    if (!validSexValues.includes(sex)) {
+      return NextResponse.json(
+        { error: `Invalid Sex: ${sex}. Must be one of: ${validSexValues.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     // Start a Supabase transaction
-    const { data: newEmployee, error: employeeError } = await supabaseAdmin.rpc('create_employee_transaction', {
-      p_employee_data: {
+    console.log('Creating employee with data:', {
+      employmentStatus,
+      designation: data.Designation,
+      hireDate: data.HireDate
+    });
+    
+    // Temporarily test direct insertion instead of using the function
+    const { data: newEmployee, error: employeeError } = await supabaseAdmin
+      .from('Employee')
+      .insert({
         EmployeeID: data.EmployeeID || await generateUniqueEmployeeId(),
         UserID: data.UserID || null,
         LastName: data.LastName,
         FirstName: data.FirstName,
         MiddleName: data.MiddleName || null,
         ExtensionName: data.ExtensionName || null,
-        Sex: data.Sex,
+        Sex: sex,
         Photo: data.Photo || null,
         DateOfBirth: data.DateOfBirth,
         PlaceOfBirth: data.PlaceOfBirth || null,
@@ -133,46 +183,91 @@ export async function POST(request: Request) {
         ContractID: data.ContractID || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      },
-      p_employment_data: data.HireDate || data.EmploymentStatus || data.Designation || data.Position || data.SalaryGrade ? {
-        EmploymentStatus: data.EmploymentStatus || 'Regular',
-        HireDate: data.HireDate,
-        ResignationDate: data.ResignationDate || null,
-        Designation: data.Designation || null,
-        Position: data.Position || null,
-        SalaryGrade: data.SalaryGrade || null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      } : null,
-      p_contact_data: data.Email || data.Phone || data.PresentAddress || data.PermanentAddress || data.EmergencyContactName || data.EmergencyContactNumber ? {
-        Email: data.Email || null,
-        Phone: data.Phone || null,
-        PresentAddress: data.PresentAddress || null,
-        PermanentAddress: data.PermanentAddress || null,
-        EmergencyContactName: data.EmergencyContactName || null,
-        EmergencyContactNumber: data.EmergencyContactNumber || null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      } : null,
-      p_government_data: data.SSSNumber || data.TINNumber || data.PhilHealthNumber || data.PagIbigNumber || data.GSISNumber || data.PRCLicenseNumber || data.PRCValidity ? {
-        SSSNumber: data.SSSNumber || null,
-        TINNumber: data.TINNumber || null,
-        PhilHealthNumber: data.PhilHealthNumber || null,
-        PagIbigNumber: data.PagIbigNumber || null,
-        GSISNumber: data.GSISNumber || null,
-        PRCLicenseNumber: data.PRCLicenseNumber || null,
-        PRCValidity: data.PRCValidity || null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      } : null
-    });
+      })
+      .select()
+      .single();
 
     if (employeeError) {
-      console.error('Error in create_employee_transaction:', employeeError);
+      console.error('Error creating employee:', employeeError);
       return NextResponse.json(
         { error: `Failed to create employee: ${employeeError.message}` },
         { status: 500 }
       );
+    }
+
+    // Now try to create the employment detail
+    console.log('Creating employment detail with status:', employmentStatus);
+    const { error: employmentError } = await supabaseAdmin
+      .from('EmploymentDetail')
+      .insert({
+        employeeId: newEmployee.EmployeeID,
+        EmploymentStatus: employmentStatus,
+        HireDate: hireDate.toISOString().split('T')[0],
+        ResignationDate: data.ResignationDate || null,
+        // Designation: data.Designation || null,
+        Position: data.Position || null,
+        SalaryGrade: data.SalaryGrade || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+    if (employmentError) {
+      console.error('Error creating employment detail:', employmentError);
+      return NextResponse.json(
+        { error: `Failed to create employment detail: ${employmentError.message}` },
+        { status: 500 }
+      );
+    }
+
+    // Create contact info if provided
+    if (data.Email || data.Phone || data.PresentAddress || data.PermanentAddress || data.EmergencyContactName || data.EmergencyContactNumber) {
+      const { error: contactError } = await supabaseAdmin
+        .from('ContactInfo')
+        .insert({
+          employeeId: newEmployee.EmployeeID,
+          Email: data.Email || null,
+          Phone: data.Phone || null,
+          PresentAddress: data.PresentAddress || null,
+          PermanentAddress: data.PermanentAddress || null,
+          EmergencyContactName: data.EmergencyContactName || null,
+          EmergencyContactNumber: data.EmergencyContactNumber || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+      if (contactError) {
+        console.error('Error creating contact info:', contactError);
+        return NextResponse.json(
+          { error: `Failed to create contact info: ${contactError.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Create government ID if provided
+    if (data.SSSNumber || data.TINNumber || data.PhilHealthNumber || data.PagIbigNumber || data.GSISNumber || data.PRCLicenseNumber || data.PRCValidity) {
+      const { error: govIdError } = await supabaseAdmin
+        .from('GovernmentID')
+        .insert({
+          employeeId: newEmployee.EmployeeID,
+          SSSNumber: data.SSSNumber || null,
+          TINNumber: data.TINNumber || null,
+          PhilHealthNumber: data.PhilHealthNumber || null,
+          PagIbigNumber: data.PagIbigNumber || null,
+          GSISNumber: data.GSISNumber || null,
+          PRCLicenseNumber: data.PRCLicenseNumber || null,
+          PRCValidity: data.PRCValidity || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+      if (govIdError) {
+        console.error('Error creating government ID:', govIdError);
+        return NextResponse.json(
+          { error: `Failed to create government ID: ${govIdError.message}` },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(newEmployee);

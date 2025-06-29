@@ -3,6 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync } from 'react-icons/fa';
 import { Search } from 'lucide-react';
+import MedicalTab from './tabs/MedicalTab';
+import SkillsTab from './tabs/SkillsTab';
+import CertificatesTab from './tabs/CertificatesTab';
+import WorkExperienceTab from './tabs/WorkExperienceTab';
+import PromotionHistoryTab from './tabs/PromotionHistoryTab';
+import ContactInfoTab from './tabs/ContactInfoTab';
+import GovernmentIDsTab from './tabs/GovernmentIDsTab';
 
 // Define interfaces for the PDS sections
 interface PersonalInfo {
@@ -301,6 +308,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Add state for "Same as Present Address" checkbox
+  const [sameAsPresentAddress, setSameAsPresentAddress] = useState(false);
+  const [editSameAsPresentAddress, setEditSameAsPresentAddress] = useState(false);
+
   // Tabs configuration
   const tabs = [
     { id: 'personal', label: 'Personal Information', icon: FaUserCircle },
@@ -308,7 +319,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     { id: 'contact', label: 'Contact Information', icon: FaPhone },
     { id: 'family', label: 'Family Background', icon: FaUsers },
     { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
-    { id: 'work', label: 'Work Experience', icon: FaBriefcase },
+    { id: 'work', label: 'Employment History', icon: FaBriefcase },
     { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
     { id: 'other', label: 'Other Information', icon: FaEllipsisH },
   ];
@@ -1008,6 +1019,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       createdAt: null,
       updatedAt: null
     });
+    // Reset checkbox states
+    setSameAsPresentAddress(false);
   };
 
   // Handle closing the add employee modal
@@ -1071,6 +1084,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       createdAt: employee.createdAt || null,
       updatedAt: employee.updatedAt || null
     });
+    // Initialize checkbox state based on whether addresses are the same
+    const presentAddress = employee.ContactInfo?.PresentAddress || employee.PresentAddress || '';
+    const permanentAddress = employee.ContactInfo?.PermanentAddress || employee.PermanentAddress || '';
+    setEditSameAsPresentAddress(presentAddress === permanentAddress && presentAddress !== '');
     setIsEditModalOpen(true);
   };
 
@@ -1145,6 +1162,27 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   // Handle closing the edit employee modal
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
+    setEditSameAsPresentAddress(false);
+  };
+
+  // Helper function to calculate years of service
+  const calculateYearsOfService = (hireDate: string): string => {
+    if (!hireDate) return 'N/A';
+    const hire = new Date(hireDate);
+    const now = new Date();
+    const years = now.getFullYear() - hire.getFullYear();
+    const months = now.getMonth() - hire.getMonth();
+    
+    if (months < 0) {
+      return `${years - 1} years, ${12 + months} months`;
+    }
+    return `${years} years, ${months} months`;
+  };
+
+  // Helper function to format designation display
+  const formatDesignation = (designation: string | null): string => {
+    if (!designation) return 'N/A';
+    return designation.replace(/_/g, ' ');
   };
 
   // If an employee is selected, show the personal data tabs
@@ -1247,6 +1285,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               <p className="text-lg font-semibold text-gray-800">{selectedEmployee?.position}</p>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-500">Designation</label>
+              <p className="text-lg font-semibold text-gray-800">{formatDesignation(selectedEmployee?.designation)}</p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-500">Department</label>
               <p className="text-lg font-semibold text-gray-800">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
             </div>
@@ -1336,66 +1378,38 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
             {activeTab === 'government' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Government IDs</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-600">GSIS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.GSISNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-600">SSS Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.SSSNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-600">PhilHealth Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.PhilHealthNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-600">Pag-IBIG Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.PagIbigNumber || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-600">TIN</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.GovernmentID?.TINNumber || 'N/A'}</p>
-                  </div>
-                </div>
+                <GovernmentIDsTab 
+                  employeeId={selectedEmployee?.employeeId || ''}
+                  governmentIDs={{
+                    SSSNumber: selectedEmployee?.GovernmentID?.SSSNumber || null,
+                    TINNumber: selectedEmployee?.GovernmentID?.TINNumber || null,
+                    PhilHealthNumber: selectedEmployee?.GovernmentID?.PhilHealthNumber || null,
+                    PagIbigNumber: selectedEmployee?.GovernmentID?.PagIbigNumber || null,
+                    GSISNumber: selectedEmployee?.GovernmentID?.GSISNumber || null,
+                    PRCLicenseNumber: selectedEmployee?.GovernmentID?.PRCLicenseNumber || null,
+                    PRCValidity: selectedEmployee?.GovernmentID?.PRCValidity || null,
+                  }}
+                  isEditing={false}
+                  onInputChange={() => {}}
+                />
               </div>
             )}
 
             {activeTab === 'contact' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Email Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.Email || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Mobile Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.Phone || 'N/A'}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600">Present Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.PresentAddress || 'N/A'}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600">Permanent Address</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.PermanentAddress || 'N/A'}</p>
-                  </div>
-                  <div className="md:col-span-2 border-t pt-4 mt-2">
-                    <h4 className="text-md font-semibold text-gray-800 mb-4">Emergency Contact</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Contact Name</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.EmergencyContactName || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Contact Number</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.ContactInfo?.EmergencyContactNumber || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ContactInfoTab 
+                  employeeId={selectedEmployee?.employeeId || ''}
+                  contactInfo={{
+                    Email: selectedEmployee?.ContactInfo?.Email || null,
+                    Phone: selectedEmployee?.ContactInfo?.Phone || null,
+                    PresentAddress: selectedEmployee?.ContactInfo?.PresentAddress || null,
+                    PermanentAddress: selectedEmployee?.ContactInfo?.PermanentAddress || null,
+                    EmergencyContactName: selectedEmployee?.ContactInfo?.EmergencyContactName || null,
+                    EmergencyContactNumber: selectedEmployee?.ContactInfo?.EmergencyContactNumber || null,
+                  }}
+                  isEditing={false}
+                  onInputChange={() => {}}
+                />
               </div>
             )}
 
@@ -1482,42 +1496,53 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
 
             {activeTab === 'work' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Work Experience</h3>
-                <div className="space-y-4">
-                  {selectedEmployee?.EmploymentHistory?.map((work: EmploymentHistory, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+              <div className="space-y-8">
+                {/* Current Employment at SJSFI Section */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-medium text-gray-900">Employment Details at SJSFI</h3>
+                  
+                  {/* Current Employment Summary */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h4 className="text-md font-medium text-blue-900 mb-3">Current Position</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                          <label className="block text-sm font-medium text-gray-600">School Name</label>
-                          <p className="mt-1 text-sm text-gray-900">{work.schoolName || 'N/A'}</p>
+                        <label className="block text-sm font-medium text-blue-700">Position</label>
+                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.position || 'N/A'}</p>
                       </div>
                       <div>
-                          <label className="block text-sm font-medium text-gray-600">Position</label>
-                          <p className="mt-1 text-sm text-gray-900">{work.position || 'N/A'}</p>
+                        <label className="block text-sm font-medium text-blue-700">Designation</label>
+                        <p className="mt-1 text-sm text-blue-900">{formatDesignation(selectedEmployee?.designation) || 'N/A'}</p>
                       </div>
                       <div>
-                          <label className="block text-sm font-medium text-gray-600">Start Date</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {work.startDate ? new Date(work.startDate).toLocaleDateString() : 'N/A'}
-                          </p>
+                        <label className="block text-sm font-medium text-blue-700">Employment Status</label>
+                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.status || 'N/A'}</p>
                       </div>
                       <div>
-                          <label className="block text-sm font-medium text-gray-600">End Date</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {work.endDate ? new Date(work.endDate).toLocaleDateString() : 'Present'}
-                          </p>
+                        <label className="block text-sm font-medium text-blue-700">Hire Date</label>
+                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.hireDate || 'N/A'}</p>
                       </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-600">Reason for Leaving</label>
-                          <p className="mt-1 text-sm text-gray-900">{work.reasonForLeaving || 'N/A'}</p>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-700">Years of Service</label>
+                        <p className="mt-1 text-sm text-blue-900">{calculateYearsOfService(selectedEmployee?.hireDate || '')}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-700">Salary Grade</label>
+                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.salaryGrade || 'N/A'}</p>
+                      </div>
                     </div>
                   </div>
-                    </div>
-                  ))}
-                  {(!selectedEmployee?.EmploymentHistory || selectedEmployee?.EmploymentHistory.length === 0) && (
-                    <p className="text-gray-500 italic">No employment history found.</p>
-                  )}
+
+                  {/* Promotion History Timeline */}
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Position & Salary History</h4>
+                    <PromotionHistoryTab employeeId={selectedEmployee?.employeeId || ''} />
+                  </div>
+                </div>
+
+                {/* Previous Work Experience Section */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-6">Previous Employment History</h3>
+                  <WorkExperienceTab employeeId={selectedEmployee?.employeeId || ''} />
                 </div>
               </div>
             )}
@@ -1526,61 +1551,23 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
             {activeTab === 'medical' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Medical Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Medical Notes</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.MedicalInfo?.medicalNotes || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Last Checkup</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {selectedEmployee?.MedicalInfo?.lastCheckup 
-                        ? new Date(selectedEmployee.MedicalInfo.lastCheckup).toLocaleDateString() 
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Vaccination Status</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.MedicalInfo?.vaccination || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Allergies</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.MedicalInfo?.allergies || 'N/A'}</p>
-                  </div>
-                </div>
+                <MedicalTab 
+                  employeeId={selectedEmployee?.employeeId || ''} 
+                  bloodType={selectedEmployee?.BloodType || selectedEmployee?.bloodType || null}
+                />
               </div>
             )}
 
             {activeTab === 'other' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Skills & Other Information</h3>
-                <div className="space-y-4">
-                  {selectedEmployee?.Skills?.map((skill: any, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Skill Name</label>
-                          <p className="mt-1 text-sm text-gray-900">{skill.name || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Proficiency Level</label>
-                          <p className="mt-1 text-sm text-gray-900">{skill.proficiencyLevel || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Years of Experience</label>
-                          <p className="mt-1 text-sm text-gray-900">{skill.yearsOfExperience || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Description</label>
-                          <p className="mt-1 text-sm text-gray-900">{skill.description || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {(!selectedEmployee?.Skills || selectedEmployee?.Skills.length === 0) && (
-                    <p className="text-gray-500 italic">No skills information available.</p>
-                  )}
+              <div className="space-y-8">
+                {/* Skills Section */}
+                <div>
+                  <SkillsTab employeeId={selectedEmployee?.employeeId || ''} />
+                </div>
+
+                {/* Certificates Section */}
+                <div className="border-t pt-6">
+                  <CertificatesTab employeeId={selectedEmployee?.employeeId || ''} />
                 </div>
               </div>
             )}
@@ -1759,7 +1746,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                     {employee.position}
                   </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {employee.designation}
+                        {formatDesignation(employee.designation)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {
@@ -2268,10 +2255,30 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                     <input
                             type="text"
                             value={newEmployee.PresentAddress}
-                            onChange={(e) => setNewEmployee({...newEmployee, PresentAddress: e.target.value})}
+                            onChange={(e) => {
+                              setNewEmployee({...newEmployee, PresentAddress: e.target.value});
+                              if (sameAsPresentAddress) {
+                                setNewEmployee((prev) => ({...prev, PermanentAddress: e.target.value}));
+                              }
+                            }}
                             placeholder="Complete present address"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
                     />
+                  <div className="flex items-center mt-2">
+                    <input
+                      type="checkbox"
+                      checked={sameAsPresentAddress}
+                      onChange={(e) => {
+                        setSameAsPresentAddress(e.target.checked);
+                        if (e.target.checked) {
+                          setNewEmployee((prev) => ({...prev, PermanentAddress: prev.PresentAddress}));
+                        }
+                      }}
+                      className="rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2"
+                      id="sameAsPresentAddressAdd"
+                    />
+                    <label htmlFor="sameAsPresentAddressAdd" className="text-sm text-gray-700">Same as Present Address</label>
+                  </div>
                   </div>
                         <div className="space-y-2 md:col-span-2">
                           <label className="block text-sm font-semibold text-gray-700">
@@ -2283,6 +2290,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             onChange={(e) => setNewEmployee({...newEmployee, PermanentAddress: e.target.value})}
                             placeholder="Complete permanent address"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                            disabled={sameAsPresentAddress}
                           />
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -2882,7 +2890,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                       <div className="flex items-center mb-6">
                         <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">2</div>
                         <h3 className="text-xl font-bold text-gray-800">Contact Information</h3>
-                      </div>
+                  </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="flex text-sm font-semibold text-gray-700 items-center">
@@ -2919,10 +2927,30 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                     <input
                             type="text"
                             value={editEmployee.PresentAddress}
-                            onChange={(e) => setEditEmployee({...editEmployee, PresentAddress: e.target.value})}
+                            onChange={(e) => {
+                              setEditEmployee({...editEmployee, PresentAddress: e.target.value});
+                              if (editSameAsPresentAddress) {
+                                setEditEmployee((prev) => ({...prev, PermanentAddress: e.target.value}));
+                              }
+                            }}
                             placeholder="Complete present address"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
                     />
+                  <div className="flex items-center mt-2">
+                    <input
+                      type="checkbox"
+                      checked={editSameAsPresentAddress}
+                      onChange={(e) => {
+                        setEditSameAsPresentAddress(e.target.checked);
+                        if (e.target.checked) {
+                          setEditEmployee((prev) => ({...prev, PermanentAddress: prev.PresentAddress}));
+                        }
+                      }}
+                      className="rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2"
+                      id="sameAsPresentAddressEdit"
+                    />
+                    <label htmlFor="sameAsPresentAddressEdit" className="text-sm text-gray-700">Same as Present Address</label>
+                  </div>
                   </div>
                         <div className="space-y-2 md:col-span-2">
                           <label className="block text-sm font-semibold text-gray-700">
@@ -2934,6 +2962,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             onChange={(e) => setEditEmployee({...editEmployee, PermanentAddress: e.target.value})}
                             placeholder="Complete permanent address"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                            disabled={editSameAsPresentAddress}
                           />
                         </div>
                       </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { getEducationData, addEducationRecord, updateEducationRecord, deleteEducationRecord } from '@/lib/employeeService';
 
 interface Education {
   id: number;
@@ -19,6 +20,11 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Education | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchEducationRecords();
@@ -26,13 +32,24 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
 
   const fetchEducationRecords = async () => {
     try {
-      const response = await fetch(`/api/employees/${employeeId}/education`);
-      if (response.ok) {
-        const data = await response.json();
-        setEducationRecords(data);
+      setLoading(true);
+      const result = await getEducationData(employeeId);
+      if (result.success) {
+        setEducationRecords(result.data || []);
+      } else {
+        setNotification({
+          type: 'error',
+          message: result.error || 'Failed to fetch education records'
+        });
       }
     } catch (error) {
       console.error('Error fetching education records:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to fetch education records'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,46 +57,119 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
     e.preventDefault();
     if (!currentRecord) return;
 
+    setLoading(true);
+    setNotification(null);
+
     try {
-      const url = `/api/employees/${employeeId}/education${currentRecord.id ? `/${currentRecord.id}` : ''}`;
-      const method = currentRecord.id ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(currentRecord),
-      });
-
-      if (response.ok) {
-        await fetchEducationRecords();
-        setShowForm(false);
-        setCurrentRecord(null);
+      if (currentRecord.id) {
+        // Update existing record
+        const result = await updateEducationRecord(employeeId, currentRecord.id, currentRecord);
+        
+        if (result.success) {
+          await fetchEducationRecords();
+          setShowForm(false);
+          setCurrentRecord(null);
+          setNotification({
+            type: 'success',
+            message: 'Education record updated successfully!'
+          });
+          // Auto-hide success notification after 3 seconds
+          setTimeout(() => setNotification(null), 3000);
+        } else {
+          setNotification({
+            type: 'error',
+            message: result.error || 'Failed to update education record'
+          });
+        }
+      } else {
+        // Add new record
+        const result = await addEducationRecord(employeeId, currentRecord);
+        
+        if (result.success) {
+          await fetchEducationRecords();
+          setShowForm(false);
+          setCurrentRecord(null);
+          setNotification({
+            type: 'success',
+            message: 'Education record added successfully!'
+          });
+          // Auto-hide success notification after 3 seconds
+          setTimeout(() => setNotification(null), 3000);
+        } else {
+          setNotification({
+            type: 'error',
+            message: result.error || 'Failed to add education record'
+          });
+        }
       }
     } catch (error) {
       console.error('Error saving education record:', error);
+      setNotification({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this record?')) return;
 
-    try {
-      const response = await fetch(`/api/employees/${employeeId}/education/${id}`, {
-        method: 'DELETE',
-      });
+    setLoading(true);
+    setNotification(null);
 
-      if (response.ok) {
+    try {
+      const result = await deleteEducationRecord(employeeId, id);
+
+      if (result.success) {
         await fetchEducationRecords();
+        setNotification({
+          type: 'success',
+          message: 'Education record deleted successfully!'
+        });
+        // Auto-hide success notification after 3 seconds
+        setTimeout(() => setNotification(null), 3000);
+      } else {
+        setNotification({
+          type: 'error',
+          message: result.error || 'Failed to delete education record'
+        });
       }
     } catch (error) {
       console.error('Error deleting education record:', error);
+      setNotification({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div className={`p-4 rounded-lg ${
+          notification.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <div className="flex justify-between items-center">
+            <p>{notification.message}</p>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-current hover:opacity-70"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Education Records</h3>
         <button
@@ -126,7 +216,8 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                 </button>
                 <button
                   onClick={() => handleDelete(record.id)}
-                  className="text-red-600 hover:text-red-800"
+                  disabled={loading}
+                  className={`${loading ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'}`}
                 >
                   <FaTrash />
                 </button>
@@ -159,7 +250,7 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
             <div className="overflow-y-auto flex-1">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Level</label>
+                  <label className="block text-sm font-medium text-gray-700">Level <span className="text-red-500">*</span></label>
                   <select
                     value={currentRecord.level}
                     onChange={(e) =>
@@ -177,7 +268,7 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">School Name</label>
+                  <label className="block text-sm font-medium text-gray-700">School Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={currentRecord.schoolName}
@@ -237,9 +328,14 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#800000] rounded-md hover:bg-red-800"
+                    disabled={loading}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                      loading 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-[#800000] hover:bg-red-800'
+                    }`}
                   >
-                    Save
+                    {loading ? 'Saving...' : (currentRecord.id ? 'Update' : 'Add')}
                   </button>
                 </div>
               </form>

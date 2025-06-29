@@ -102,6 +102,7 @@ model Employee {
   Department        Department?         @relation(fields: [DepartmentID], references: [DepartmentID])
   employmentDetails EmploymentDetail?
   EmploymentHistory EmploymentHistory[]
+  PromotionHistory  PromotionHistory[]
   Faculty           Faculty?
   Family            Family[]
   governmentIds     GovernmentID?
@@ -433,6 +434,24 @@ model EmploymentHistory {
   employee         Employee  @relation(fields: [employeeId], references: [EmployeeID])
 }
 
+model PromotionHistory {
+  id           Int       @id @default(autoincrement())
+  employeeId   String
+  fromPosition String?
+  toPosition   String
+  fromSalaryGrade String?
+  toSalaryGrade   String?
+  effectiveDate   DateTime
+  promotionType   String?  // "Promotion", "Transfer", "Salary Adjustment", etc.
+  remarks         String?
+  approvedBy      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  employee        Employee  @relation(fields: [employeeId], references: [EmployeeID])
+}
+
 model Skill {
   id                Int       @id @default(autoincrement())
   employeeId        String
@@ -575,12 +594,14 @@ enum EmploymentStatus {
   Resigned
   Regular
   Probationary
+  Part_Time
   Retired
 }
 
 enum EmployeeType {
   Regular
   Probationary
+  Part_Time
   Resigned
 }
 

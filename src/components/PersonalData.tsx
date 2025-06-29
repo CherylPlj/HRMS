@@ -11,6 +11,9 @@ import WorkExperienceTab from './tabs/WorkExperienceTab';
 import SkillsTab from './tabs/SkillsTab';
 import CertificatesTab from './tabs/CertificatesTab';
 import MedicalTab from './tabs/MedicalTab';
+import PromotionHistoryTab from './tabs/PromotionHistoryTab';
+import GovernmentIDsTab from './tabs/GovernmentIDsTab';
+import ContactInfoTab from './tabs/ContactInfoTab';
 import { fetchWithRetry } from '@/lib/apiUtils';
 
 // Initialize Supabase client
@@ -147,6 +150,29 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     index: number;
     dependent: Dependent | null;
   }>({ index: -1, dependent: null });
+  const [sameAsPresentAddress, setSameAsPresentAddress] = useState(false);
+  const [lastEditTime, setLastEditTime] = useState<number>(0);
+
+  // Separate edit states for each tab
+  const [editingTabs, setEditingTabs] = useState<{
+    personal: boolean;
+    government: boolean;
+    contact: boolean;
+    family: boolean;
+    education: boolean;
+    employment: boolean;
+    medical: boolean;
+    other: boolean;
+  }>({
+    personal: false,
+    government: false,
+    contact: false,
+    family: false,
+    education: false,
+    employment: false,
+    medical: false,
+    other: false,
+  });
 
   interface ClerkUserData {
     firstName: string;
@@ -313,7 +339,14 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
           };
 
           setFacultyDetails(transformedData);
-          setEditedDetails(transformedData);
+          
+          // Only set editedDetails if user is not actively editing
+          if (!isUserActivelyEditing()) {
+            setEditedDetails(transformedData);
+          } else {
+            console.log('User is actively editing during initial load, not updating editedDetails');
+          }
+          
           setNotification(null);
           return;
         } catch (error) {
@@ -419,7 +452,14 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
          };
 
          setFacultyDetails(transformedData);
-         setEditedDetails(transformedData);
+         
+         // Only set editedDetails if user is not actively editing
+         if (!isUserActivelyEditing()) {
+           setEditedDetails(transformedData);
+         } else {
+           console.log('User is actively editing during initial load, not updating editedDetails');
+         }
+         
          setNotification(null);
        } catch (error) {
          console.error('Error fetching employee via API lookup:', error);
@@ -493,8 +533,16 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                     createdBy: updatedData.createdBy || null,
                     updatedBy: updatedData.updatedBy || null
                   };
+                  
+                  // Always update facultyDetails with the latest data
                   setFacultyDetails(transformedUpdatedData);
-                  setEditedDetails(transformedUpdatedData);
+                  
+                  // Only update editedDetails if user is not actively editing
+                  if (!isUserActivelyEditing()) {
+                    setEditedDetails(transformedUpdatedData);
+                  } else {
+                    console.log('User is actively editing, not updating editedDetails to preserve input');
+                  }
                 }
               } catch (error) {
                 console.error('Error updating data from subscription:', error);
@@ -589,6 +637,282 @@ const handleDownload = () => {
   const handleEdit = () => {
     setEditedDetails(facultyDetails ? { ...facultyDetails } : null);
     setIsEditing(true);
+    setSameAsPresentAddress(false);
+  };
+
+  // Tab-specific edit functions
+  const handleStartEditTab = (tabName: keyof typeof editingTabs) => {
+    setEditedDetails(facultyDetails ? { ...facultyDetails } : null);
+    setEditingTabs(prev => ({ ...prev, [tabName]: true }));
+    setSameAsPresentAddress(false);
+    setValidationErrors({});
+    setLastEditTime(Date.now());
+  };
+
+  const handleCancelEditTab = (tabName: keyof typeof editingTabs) => {
+    setEditingTabs(prev => ({ ...prev, [tabName]: false }));
+    setEditedDetails(facultyDetails);
+    setSameAsPresentAddress(false);
+    setValidationErrors({});
+  };
+
+  const handleSaveTab = async (tabName: keyof typeof editingTabs) => {
+    if (!editedDetails || !user) {
+      setNotification({
+        type: 'error',
+        message: 'No data to save. Please try again.'
+      });
+      return;
+    }
+
+    // Validate only the fields relevant to the current tab
+    if (!validateTabForm(tabName)) {
+      setNotification({
+        type: 'error',
+        message: 'Please fix the validation errors before saving.'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      if (!editedDetails.EmployeeID) {
+        setNotification({
+          type: 'error',
+          message: 'Employee ID not found. Please contact IT support.'
+        });
+        return;
+      }
+
+      // Log the data being sent for debugging
+      const dataToSend = {
+        ...editedDetails,
+        DateOfBirth: new Date(editedDetails.DateOfBirth).toISOString(),
+        HireDate: new Date(editedDetails.HireDate).toISOString(),
+        ResignationDate: editedDetails.ResignationDate ? new Date(editedDetails.ResignationDate).toISOString() : null,
+        PRCValidity: editedDetails.PRCValidity ? new Date(editedDetails.PRCValidity).toISOString() : null,
+        LastMedicalCheckup: editedDetails.LastMedicalCheckup ? new Date(editedDetails.LastMedicalCheckup).toISOString() : null,
+        MedicalCondition: editedDetails.MedicalCondition || null,
+        Allergies: editedDetails.Allergies || null
+      };
+
+      console.log('Saving data for tab:', tabName);
+      console.log('Data being sent:', dataToSend);
+      console.log('Government IDs being sent:', {
+        SSSNumber: dataToSend.SSSNumber,
+        TINNumber: dataToSend.TINNumber,
+        PhilHealthNumber: dataToSend.PhilHealthNumber,
+        PagIbigNumber: dataToSend.PagIbigNumber,
+        GSISNumber: dataToSend.GSISNumber,
+        PRCLicenseNumber: dataToSend.PRCLicenseNumber,
+        PRCValidity: dataToSend.PRCValidity,
+      });
+      console.log('Contact Info being sent:', {
+        Email: dataToSend.Email,
+        Phone: dataToSend.Phone,
+        PresentAddress: dataToSend.PresentAddress,
+        PermanentAddress: dataToSend.PermanentAddress,
+        EmergencyContactName: dataToSend.EmergencyContactName,
+        EmergencyContactNumber: dataToSend.EmergencyContactNumber,
+      });
+
+      const response = await fetch(`/api/employees/${editedDetails.EmployeeID}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to save changes';
+        
+        try {
+          const errorData = await response.json();
+          console.log('Error data:', errorData);
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.log('Parse error:', parseError);
+          if (response.status === 405) {
+            errorMessage = 'Method not allowed. Please contact support.';
+          } else if (response.status === 401) {
+            errorMessage = 'You are not authorized to perform this action.';
+          } else if (response.status === 404) {
+            errorMessage = 'Employee not found.';
+          } else if (response.status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('Response data received:', data);
+      
+      // Transform the API response to match our FacultyDetails interface
+      const transformedData: FacultyDetails = {
+        // Basic Employee Info
+        EmployeeID: data.EmployeeID,
+        UserID: data.UserID,
+        LastName: data.LastName || '',
+        FirstName: data.FirstName || '',
+        MiddleName: data.MiddleName || '',
+        ExtensionName: data.ExtensionName || '',
+        Sex: data.Sex || '',
+        Photo: data.Photo || '',
+        DateOfBirth: data.DateOfBirth || '',
+        PlaceOfBirth: data.PlaceOfBirth || '',
+        CivilStatus: data.CivilStatus || '',
+        Nationality: data.Nationality || '',
+        Religion: data.Religion || '',
+        BloodType: data.BloodType || '',
+        DepartmentID: data.DepartmentID,
+        ContractID: data.ContractID,
+        Position: data.EmploymentDetail?.Position || data.Position || '',
+        HireDate: data.EmploymentDetail?.HireDate || data.HireDate || '',
+        DepartmentName: data.Department?.DepartmentName || '',
+
+        // Contact Info - from nested ContactInfo object
+        Email: data.ContactInfo?.Email || data.Email || '',
+        Phone: data.ContactInfo?.Phone || '',
+        PresentAddress: data.ContactInfo?.PresentAddress || '',
+        PermanentAddress: data.ContactInfo?.PermanentAddress || '',
+        EmergencyContactName: data.ContactInfo?.EmergencyContactName || '',
+        EmergencyContactNumber: data.ContactInfo?.EmergencyContactNumber || '',
+
+        // Government IDs - from nested GovernmentID object
+        SSSNumber: data.GovernmentID?.SSSNumber || '',
+        TINNumber: data.GovernmentID?.TINNumber || '',
+        PhilHealthNumber: data.GovernmentID?.PhilHealthNumber || '',
+        PagIbigNumber: data.GovernmentID?.PagIbigNumber || '',
+        GSISNumber: data.GovernmentID?.GSISNumber || '',
+        PRCLicenseNumber: data.GovernmentID?.PRCLicenseNumber || '',
+        PRCValidity: data.GovernmentID?.PRCValidity || '',
+
+        // Employment Details
+        EmploymentStatus: data.EmploymentDetail?.EmploymentStatus || data.EmploymentStatus || '',
+        ResignationDate: data.EmploymentDetail?.ResignationDate || null,
+        Designation: data.EmploymentDetail?.Designation || null,
+        EmployeeType: data.EmploymentDetail?.EmployeeType || '',
+        SalaryGrade: data.EmploymentDetail?.SalaryGrade || '',
+
+        // Medical Information
+        MedicalCondition: data.MedicalInfo?.medicalNotes || data.MedicalCondition || '',
+        Allergies: data.MedicalInfo?.allergies || data.Allergies || '',
+        LastMedicalCheckup: data.MedicalInfo?.lastCheckup || data.LastMedicalCheckup || '',
+
+        // Metadata
+        createdAt: data.createdAt || null,
+        updatedAt: data.updatedAt || null,
+        createdBy: data.createdBy || null,
+        updatedBy: data.updatedBy || null
+      };
+
+      console.log('Transformed data:', transformedData);
+
+      setFacultyDetails(transformedData);
+      setEditedDetails(transformedData);
+      setEditingTabs(prev => ({ ...prev, [tabName]: false }));
+      setValidationErrors({});
+      setShowSuccessModal(true);
+      
+    } catch (error: unknown) {
+      console.error('Save error:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Error saving changes. Please try again later.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Tab-specific validation
+  const validateTabForm = (tabName: keyof typeof editingTabs): boolean => {
+    const errors: ValidationErrors = {};
+    
+    if (!editedDetails) return false;
+
+    switch (tabName) {
+      case 'personal':
+        // Basic validation for personal info
+        break;
+      case 'contact':
+        errors.Phone = validatePhone(editedDetails.Phone || '');
+        errors.PresentAddress = validateAddress(editedDetails.PresentAddress || '');
+        errors.PermanentAddress = validateAddress(editedDetails.PermanentAddress || '');
+        errors.Email = validateEmail(editedDetails.Email || '');
+        
+        const emergencyContactErrors = validateEmergencyContact(
+          editedDetails.EmergencyContactName || '',
+          editedDetails.EmergencyContactNumber || ''
+        );
+        
+        if (emergencyContactErrors.name) {
+          errors.EmergencyContactName = emergencyContactErrors.name;
+        }
+        if (emergencyContactErrors.number) {
+          errors.EmergencyContactNumber = emergencyContactErrors.number;
+        }
+        break;
+      case 'government':
+        // Government IDs don't need special validation
+        break;
+      default:
+        // Other tabs don't need validation here
+        break;
+    }
+
+    setValidationErrors(errors);
+    return !Object.values(errors).some(error => error !== undefined);
+  };
+
+  // Check if any tab is currently being edited
+  const isAnyTabEditing = () => {
+    return ['personal', 'government', 'contact'].some(tabId => 
+      editingTabs[tabId as keyof typeof editingTabs]
+    );
+  };
+
+  // Helper function to check if user is actively editing
+  const isUserActivelyEditing = () => {
+    const timeSinceLastEdit = Date.now() - lastEditTime;
+    const hasRecentEdit = timeSinceLastEdit < 5000; // 5 seconds
+    const hasActiveTab = isAnyTabEditing();
+    
+    return hasRecentEdit || hasActiveTab;
+  };
+
+  // Handle tab switching with unsaved changes warning
+  const handleTabSwitch = (tabId: string) => {
+    // Only check for unsaved changes on tabs that use the main editing system
+    if (['personal', 'government', 'contact'].includes(activeTab)) {
+      const currentTabEditing = editingTabs[activeTab as keyof typeof editingTabs];
+      
+      if (currentTabEditing) {
+        const hasChanges = JSON.stringify(editedDetails) !== JSON.stringify(facultyDetails);
+        
+        if (hasChanges) {
+          const confirmSwitch = confirm(
+            'You have unsaved changes in the current tab. Do you want to switch tabs and lose these changes?'
+          );
+          
+          if (!confirmSwitch) {
+            return;
+          }
+          
+          // Cancel editing for current tab
+          handleCancelEditTab(activeTab as keyof typeof editingTabs);
+        }
+      }
+    }
+    
+    setActiveTab(tabId);
   };
 
   // Validation functions
@@ -641,32 +965,6 @@ const handleDownload = () => {
     return errors;
   };
 
-  const validateForm = (): boolean => {
-    const errors: ValidationErrors = {};
-    
-    if (editedDetails) {
-      errors.Phone = validatePhone(editedDetails.Phone || '');
-      errors.PresentAddress = validateAddress(editedDetails.PresentAddress || '');
-      errors.PermanentAddress = validateAddress(editedDetails.PermanentAddress || '');
-      errors.Email = validateEmail(editedDetails.Email || '');
-      
-      const emergencyContactErrors = validateEmergencyContact(
-        editedDetails.EmergencyContactName || '',
-        editedDetails.EmergencyContactNumber || ''
-      );
-      
-      if (emergencyContactErrors.name) {
-        errors.EmergencyContactName = emergencyContactErrors.name;
-      }
-      if (emergencyContactErrors.number) {
-        errors.EmergencyContactNumber = emergencyContactErrors.number;
-      }
-    }
-
-    setValidationErrors(errors);
-    return !Object.values(errors).some(error => error !== undefined);
-  };
-
   const calculateYearsOfService = (hireDate: string): string => {
     if (!hireDate) return 'N/A';
     const start = new Date(hireDate);
@@ -675,10 +973,14 @@ const handleDownload = () => {
     return `${years} years`;
   };
 
-  const handleInputChange = (field: keyof FacultyDetails, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     if (!editedDetails) return;
 
     console.log('Handling input change:', { field, value });
+
+    // Update the last edit time to track active editing
+    const currentTime = Date.now();
+    setLastEditTime(currentTime);
 
     setEditedDetails((prev) => {
       if (!prev) return null;
@@ -714,85 +1016,10 @@ const handleDownload = () => {
     }
   };
 
-  // Update handleSave to include validation
-  const handleSave = async () => {
-    if (!editedDetails || !user) {
-      console.log('No edited details or user:', { editedDetails, user });
-      setNotification({
-        type: 'error',
-        message: 'No data to save. Please try again.'
-      });
-      return;
-    }
-
-    if (!validateForm()) {
-      console.log('Form validation failed:', validationErrors);
-      setNotification({
-        type: 'error',
-        message: 'Please fix the validation errors before saving.'
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      if (!editedDetails.EmployeeID) {
-        console.log('No employee ID found:', editedDetails);
-        setNotification({
-          type: 'error',
-          message: 'Employee ID not found. Please contact IT support.'
-        });
-        return;
-      }
-
-      console.log('Starting save process with data:', editedDetails);
-
-      const response = await fetch(`/api/employees/${editedDetails.EmployeeID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...editedDetails,
-          DateOfBirth: new Date(editedDetails.DateOfBirth).toISOString(),
-          HireDate: new Date(editedDetails.HireDate).toISOString(),
-          ResignationDate: editedDetails.ResignationDate ? new Date(editedDetails.ResignationDate).toISOString() : null,
-          PRCValidity: editedDetails.PRCValidity ? new Date(editedDetails.PRCValidity).toISOString() : null,
-          LastMedicalCheckup: editedDetails.LastMedicalCheckup ? new Date(editedDetails.LastMedicalCheckup).toISOString() : null,
-          MedicalCondition: editedDetails.MedicalCondition || null,
-          Allergies: editedDetails.Allergies || null
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save changes');
-      }
-
-      const data = await response.json();
-      console.log('Save successful, received data:', data);
-
-      const transformedData: FacultyDetails = {
-        ...data,
-        DepartmentName: data.Department?.DepartmentName || 'Unknown Department'
-      };
-
-      setFacultyDetails(transformedData);
-      setEditedDetails(transformedData);
-      setIsEditing(false);
-      setValidationErrors({});
-      setShowSuccessModal(true);
-      
-      console.log('Save process completed successfully');
-    } catch (error: unknown) {
-      console.error('Save error:', error);
-      setNotification({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Error saving changes. Please try again later.'
-      });
-    } finally {
-      setLoading(false);
+  const handleSameAsPresentAddress = (checked: boolean) => {
+    setSameAsPresentAddress(checked);
+    if (checked && editedDetails?.PresentAddress) {
+      handleInputChange('PermanentAddress', editedDetails.PresentAddress);
     }
   };
 
@@ -827,63 +1054,89 @@ const handleDownload = () => {
           </h1>
         </div>
         <div className="flex gap-2">
-          {isEditing ? (
-            <>
+          {/* Only show edit buttons for specific tabs that use the main editing system */}
+          {['personal', 'government', 'contact'].includes(activeTab) ? (
+            editingTabs[activeTab as keyof typeof editingTabs] ? (
+              <>
+                <button
+                  onClick={() => handleSaveTab(activeTab as keyof typeof editingTabs)}
+                  className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => handleCancelEditTab(activeTab as keyof typeof editingTabs)}
+                  className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
               <button
-                onClick={handleSave}
-                className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+                onClick={() => handleStartEditTab(activeTab as keyof typeof editingTabs)}
+                className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
               >
-                Save
+                <FaEdit /> Edit
               </button>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditedDetails(facultyDetails);
-                }}
-                className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={handleEdit}
-              className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
-            >
-              <FaEdit /> Edit
-            </button>
-          )}
+            )
+          ) : null}
         </div>
       </div>
 
       {/* Tabs Navigation */}
       <div className="mb-6 border-b">
         <nav className="flex space-x-4">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-4 flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-[#800000] text-[#800000]'
-                  : 'text-gray-500'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            // Only show editing indicators for tabs that use the main editing system
+            const isMainEditingTab = ['personal', 'government', 'contact'].includes(tab.id);
+            const isTabEditing = isMainEditingTab ? editingTabs[tab.id as keyof typeof editingTabs] : false;
+            const hasChanges = isTabEditing && JSON.stringify(editedDetails) !== JSON.stringify(facultyDetails);
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabSwitch(tab.id)}
+                className={`py-2 px-4 flex items-center gap-2 relative ${
+                  activeTab === tab.id
+                    ? 'border-b-2 border-[#800000] text-[#800000]'
+                    : 'text-gray-500'
+                } ${isTabEditing ? 'bg-yellow-50' : ''}`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                {isTabEditing && (
+                  <span className="ml-1 text-xs bg-yellow-500 text-white px-1 rounded-full">
+                    {hasChanges ? 'Modified' : 'Editing'}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
       {/* Tab Content */}
       <div className="bg-white rounded-lg shadow p-6">
+        {/* Unsaved Changes Warning - only for main editing tabs */}
+        {['personal', 'government', 'contact'].includes(activeTab) && editingTabs[activeTab as keyof typeof editingTabs] && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm text-yellow-800">
+                You have unsaved changes. Please save or cancel your changes before switching tabs.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Personal Information Tab */}
         {activeTab === 'personal' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Last Name</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <input
                   type="text"
                   value={editedDetails?.LastName || ''}
@@ -896,7 +1149,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">First Name</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <input
                   type="text"
                   value={editedDetails?.FirstName || ''}
@@ -909,7 +1162,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Middle Name</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <input
                   type="text"
                   value={editedDetails?.MiddleName || ''}
@@ -922,7 +1175,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Extension Name</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <input
                   type="text"
                   value={editedDetails?.ExtensionName || ''}
@@ -935,7 +1188,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Sex</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <select
                   value={editedDetails?.Sex || ''}
                   onChange={(e) => handleInputChange('Sex', e.target.value)}
@@ -951,7 +1204,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <input
                   type="date"
                   value={editedDetails?.DateOfBirth || ''}
@@ -964,7 +1217,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Place of Birth</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <input
                   type="text"
                   value={editedDetails?.PlaceOfBirth || ''}
@@ -977,7 +1230,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Civil Status</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <select
                   value={editedDetails?.CivilStatus || ''}
                   onChange={(e) => handleInputChange('CivilStatus', e.target.value)}
@@ -996,7 +1249,7 @@ const handleDownload = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Blood Type</label>
-              {isEditing ? (
+              {editingTabs.personal ? (
                 <select
                   value={editedDetails?.BloodType || ''}
                   onChange={(e) => handleInputChange('BloodType', e.target.value)}
@@ -1021,197 +1274,43 @@ const handleDownload = () => {
 
         {/* Government IDs Tab */}
         {activeTab === 'government' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">SSS Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.SSSNumber || ''}
-                  onChange={(e) => handleInputChange('SSSNumber', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.SSSNumber || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">TIN Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.TINNumber || ''}
-                  onChange={(e) => handleInputChange('TINNumber', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.TINNumber || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">PhilHealth Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.PhilHealthNumber || ''}
-                  onChange={(e) => handleInputChange('PhilHealthNumber', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PhilHealthNumber || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Pag-IBIG Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.PagIbigNumber || ''}
-                  onChange={(e) => handleInputChange('PagIbigNumber', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PagIbigNumber || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">GSIS Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.GSISNumber || ''}
-                  onChange={(e) => handleInputChange('GSISNumber', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.GSISNumber || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">PRC License Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.PRCLicenseNumber || ''}
-                  onChange={(e) => handleInputChange('PRCLicenseNumber', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PRCLicenseNumber || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">PRC Validity</label>
-              {isEditing ? (
-                <input
-                  type="date"
-                  value={editedDetails?.PRCValidity || ''}
-                  onChange={(e) => handleInputChange('PRCValidity', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PRCValidity || 'N/A'}</p>
-              )}
-            </div>
+          <div className="space-y-6">
+            <GovernmentIDsTab 
+              employeeId={facultyDetails?.EmployeeID || ''}
+              governmentIDs={{
+                SSSNumber: editingTabs.government ? (editedDetails?.SSSNumber || null) : (facultyDetails?.SSSNumber || null),
+                TINNumber: editingTabs.government ? (editedDetails?.TINNumber || null) : (facultyDetails?.TINNumber || null),
+                PhilHealthNumber: editingTabs.government ? (editedDetails?.PhilHealthNumber || null) : (facultyDetails?.PhilHealthNumber || null),
+                PagIbigNumber: editingTabs.government ? (editedDetails?.PagIbigNumber || null) : (facultyDetails?.PagIbigNumber || null),
+                GSISNumber: editingTabs.government ? (editedDetails?.GSISNumber || null) : (facultyDetails?.GSISNumber || null),
+                PRCLicenseNumber: editingTabs.government ? (editedDetails?.PRCLicenseNumber || null) : (facultyDetails?.PRCLicenseNumber || null),
+                PRCValidity: editingTabs.government ? (editedDetails?.PRCValidity || null) : (facultyDetails?.PRCValidity || null),
+              }}
+              isEditing={editingTabs.government}
+              onInputChange={handleInputChange}
+            />
           </div>
         )}
 
         {/* Contact Information Tab */}
         {activeTab === 'contact' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  value={editedDetails?.Email || ''}
-                  onChange={(e) => handleInputChange('Email', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.Email || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone</label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  value={editedDetails?.Phone || ''}
-                  onChange={(e) => handleInputChange('Phone', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.Phone || 'N/A'}</p>
-              )}
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Present Address</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.PresentAddress || ''}
-                  onChange={(e) => handleInputChange('PresentAddress', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PresentAddress || 'N/A'}</p>
-              )}
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Permanent Address</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedDetails?.PermanentAddress || ''}
-                  onChange={(e) => handleInputChange('PermanentAddress', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PermanentAddress || 'N/A'}</p>
-              )}
-            </div>
-            
-            {/* Emergency Contact Section */}
-            <div className="col-span-2 mt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Emergency Contact</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Contact Name</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedDetails?.EmergencyContactName || ''}
-                      onChange={(e) => handleInputChange('EmergencyContactName', e.target.value)}
-                      className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                      placeholder="Enter emergency contact name"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">{facultyDetails?.EmergencyContactName || 'N/A'}</p>
-                  )}
-                  {validationErrors.EmergencyContactName && (
-                    <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContactName}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Contact Number</label>
-                  {isEditing ? (
-                    <input
-                      type="tel"
-                      value={editedDetails?.EmergencyContactNumber || ''}
-                      onChange={(e) => handleInputChange('EmergencyContactNumber', e.target.value)}
-                      className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                      placeholder="Enter emergency contact number"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">{facultyDetails?.EmergencyContactNumber || 'N/A'}</p>
-                  )}
-                  {validationErrors.EmergencyContactNumber && (
-                    <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContactNumber}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <ContactInfoTab 
+              employeeId={facultyDetails?.EmployeeID || ''}
+              contactInfo={{
+                Email: editingTabs.contact ? (editedDetails?.Email || null) : (facultyDetails?.Email || null),
+                Phone: editingTabs.contact ? (editedDetails?.Phone || null) : (facultyDetails?.Phone || null),
+                PresentAddress: editingTabs.contact ? (editedDetails?.PresentAddress || null) : (facultyDetails?.PresentAddress || null),
+                PermanentAddress: editingTabs.contact ? (editedDetails?.PermanentAddress || null) : (facultyDetails?.PermanentAddress || null),
+                EmergencyContactName: editingTabs.contact ? (editedDetails?.EmergencyContactName || null) : (facultyDetails?.EmergencyContactName || null),
+                EmergencyContactNumber: editingTabs.contact ? (editedDetails?.EmergencyContactNumber || null) : (facultyDetails?.EmergencyContactNumber || null),
+              }}
+              isEditing={editingTabs.contact}
+              onInputChange={handleInputChange}
+              validationErrors={validationErrors}
+              sameAsPresentAddress={sameAsPresentAddress}
+              onSameAsPresentAddressChange={handleSameAsPresentAddress}
+            />
           </div>
         )}
 
@@ -1235,37 +1334,44 @@ const handleDownload = () => {
             {/* Current Employment at SJSFI Section */}
             <div className="space-y-6">
               <h3 className="text-lg font-medium text-gray-900">Employment Details at SJSFI</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Position</label>
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.Position || 'N/A'}</p>
+              
+              {/* Current Employment Summary */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="text-md font-medium text-blue-900 mb-3">Current Position</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">Position</label>
+                    <p className="mt-1 text-sm text-blue-900">{facultyDetails?.Position || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">Employment Status</label>
+                    <p className="mt-1 text-sm text-blue-900">{facultyDetails?.EmploymentStatus || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">Hire Date</label>
+                    <p className="mt-1 text-sm text-blue-900">{facultyDetails?.HireDate || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">Years of Service</label>
+                    <p className="mt-1 text-sm text-blue-900">{calculateYearsOfService(facultyDetails?.HireDate || '')}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">Salary Grade</label>
+                    <p className="mt-1 text-sm text-blue-900">{facultyDetails?.SalaryGrade || 'N/A'}</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Employment Status</label>
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.EmploymentStatus || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Hire Date</label>
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.HireDate || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Years of Service</label>
-                  <p className="mt-1 text-sm text-gray-900">{calculateYearsOfService(facultyDetails?.HireDate || '')}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Employee Type</label>
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.EmployeeType || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Salary Grade</label>
-                  <p className="mt-1 text-sm text-gray-900">{facultyDetails?.SalaryGrade || 'N/A'}</p>
-                </div>
+              </div>
+
+              {/* Promotion History Timeline */}
+              <div>
+                <h4 className="text-md font-medium text-gray-900 mb-4">Position & Salary History</h4>
+                <PromotionHistoryTab employeeId={facultyDetails?.EmployeeID || ''} />
               </div>
             </div>
 
             {/* Previous Work Experience Section */}
             <div className="border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">Employment History</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-6">Previous Employment History</h3>
               <WorkExperienceTab employeeId={facultyDetails?.EmployeeID || ''} />
             </div>
           </div>
@@ -1281,27 +1387,8 @@ const handleDownload = () => {
         {/* Other Information Tab */}
         {activeTab === 'other' && (
           <div className="space-y-8">
-            {/* Additional Information Section */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Additional Information</label>
-                  {isEditing ? (
-                    <textarea
-                      value={editedDetails?.MedicalCondition || ''}
-                      onChange={(e) => handleInputChange('MedicalCondition', e.target.value)}
-                      className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                      rows={4}
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">{facultyDetails?.MedicalCondition || 'N/A'}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Skills Section */}
-            <div className="border-t pt-6">
+            <div>
               <SkillsTab employeeId={facultyDetails?.EmployeeID || ''} />
             </div>
 

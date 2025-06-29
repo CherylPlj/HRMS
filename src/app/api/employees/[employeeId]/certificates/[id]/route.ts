@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function PUT(
   request: NextRequest,
@@ -15,9 +16,46 @@ export async function PUT(
 
     let fileUrl = data.fileUrl;
     if (fileData) {
-      // Handle file upload to your storage service (e.g., Supabase Storage)
-      // Update the file URL
-      fileUrl = 'URL_TO_UPLOADED_FILE';
+      try {
+        // Create a unique filename
+        const timestamp = Date.now();
+        const fileExt = fileData.name.split('.').pop();
+        const fileName = `certificates/${employeeId}/certificate_${timestamp}.${fileExt}`;
+
+        // Convert file to buffer
+        const bytes = await fileData.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          .from('certificates')
+          .upload(fileName, buffer, {
+            contentType: fileData.type,
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Supabase upload error:', uploadError);
+          return NextResponse.json(
+            { error: 'Failed to upload certificate file to cloud storage' },
+            { status: 500 }
+          );
+        }
+
+        // Get the public URL
+        const { data: urlData } = supabaseAdmin.storage
+          .from('certificates')
+          .getPublicUrl(fileName);
+
+        fileUrl = urlData.publicUrl;
+        console.log('Certificate file uploaded to Supabase successfully:', fileUrl);
+      } catch (uploadError) {
+        console.error('Error uploading certificate file:', uploadError);
+        return NextResponse.json(
+          { error: 'Failed to upload certificate file' },
+          { status: 500 }
+        );
+      }
     }
 
     const certificate = await prisma.certificate.update({
@@ -26,11 +64,16 @@ export async function PUT(
         employeeId: employeeId,
       },
       data: {
-        ...data,
+        title: data.title,
+        issuedBy: data.issuedBy,
+        issueDate: new Date(data.issueDate),
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+        description: data.description,
         fileUrl,
       },
     });
 
+    console.log('Certificate updated successfully:', certificate);
     return NextResponse.json(certificate);
   } catch (error) {
     console.error('Error updating certificate:', error);
@@ -58,8 +101,27 @@ export async function DELETE(
     });
 
     if (certificate?.fileUrl) {
-      // Delete the file from storage if it exists
-      // Implement file deletion logic here
+      try {
+        // Extract the file path from the Supabase URL
+        const url = new URL(certificate.fileUrl);
+        const filePath = url.pathname.split('/').pop(); // Get the filename
+        
+        if (filePath) {
+          // Delete the file from Supabase Storage
+          const { error: deleteError } = await supabaseAdmin.storage
+            .from('certificates')
+            .remove([filePath]);
+          
+          if (deleteError) {
+            console.error('Error deleting certificate file from Supabase:', deleteError);
+          } else {
+            console.log('Certificate file deleted from Supabase:', filePath);
+          }
+        }
+      } catch (deleteError) {
+        console.error('Error deleting certificate file:', deleteError);
+        // Continue with certificate deletion even if file deletion fails
+      }
     }
 
     await prisma.certificate.delete({
@@ -69,6 +131,7 @@ export async function DELETE(
       },
     });
 
+    console.log('Certificate deleted successfully');
     return NextResponse.json({ message: 'Certificate deleted successfully' });
   } catch (error) {
     console.error('Error deleting certificate:', error);

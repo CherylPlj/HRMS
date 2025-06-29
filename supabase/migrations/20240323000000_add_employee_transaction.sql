@@ -48,10 +48,10 @@ BEGIN
       )
       VALUES (
         v_employee_id,
-        p_employment_data->>'EmploymentStatus',
+        (p_employment_data->>'EmploymentStatus')::"EmploymentStatus",
         (p_employment_data->>'HireDate')::date,
         (p_employment_data->>'ResignationDate')::date,
-        p_employment_data->>'Designation',
+        (p_employment_data->>'Designation')::"Designation",
         p_employment_data->>'Position',
         p_employment_data->>'SalaryGrade',
         (p_employment_data->>'createdAt')::timestamp,

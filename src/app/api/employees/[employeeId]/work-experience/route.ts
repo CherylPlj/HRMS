@@ -4,7 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId } = params;
+    const { employeeId } = await params;
 
     const workExperience = await prisma.employmentHistory.findMany({
       where: {
@@ -35,7 +35,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -43,7 +43,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId } = params;
+    const { employeeId } = await params;
     const data = await request.json();
 
     // Validate required fields
@@ -77,7 +77,7 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -85,7 +85,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId } = params;
+    const { employeeId } = await params;
     const data = await request.json();
 
     // Convert date strings to Date objects
@@ -120,7 +120,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { employeeId: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -128,7 +128,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { employeeId } = params;
+    const { employeeId } = await params;
     const url = new URL(request.url);
     const id = parseInt(url.searchParams.get('id') || '');
 
