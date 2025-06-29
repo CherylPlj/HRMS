@@ -184,7 +184,7 @@ const EmployeeContentNew = () => {
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [designationFilter, setDesignationFilter] = useState('all');
 
   // State for Add Employee modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -664,7 +664,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     const email = employee.email?.toLowerCase() || '';
     const position = employee.position?.toLowerCase() || '';
     const departmentId = employee.DepartmentID?.toString() || '';
-    const status = employee.status?.toLowerCase() || '';
+    const designation = employee.designation?.toLowerCase() || '';
     const searchQuery = searchTerm.toLowerCase();
 
     const matchesSearch = 
@@ -676,11 +676,11 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       departmentFilter === 'all' || 
       departmentId === departmentFilter;
     
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      status === statusFilter.toLowerCase();
+    const matchesDesignation = 
+      designationFilter === 'all' || 
+      designation === designationFilter.toLowerCase();
 
-    return matchesSearch && matchesDepartment && matchesStatus;
+    return matchesSearch && matchesDepartment && matchesDesignation;
   });
 
   const handleEmployeeSelect = (employee: any) => {
@@ -708,6 +708,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     e.preventDefault();
     
     try {
+      setIsAddingEmployee(true);
+      
       // Validate required fields
       const requiredFields = [
         { field: 'EmployeeID', label: 'Employee ID' },
@@ -842,6 +844,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       console.error('Error in handleAddEmployee:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to add employee. Please try again.';
       alert(errorMessage);
+    } finally {
+      setIsAddingEmployee(false);
     }
   };
 
@@ -912,6 +916,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   
   // State for generate employee ID loading
   const [isGeneratingEmployeeId, setIsGeneratingEmployeeId] = useState(false);
+
+  // State for form submission loading
+  const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
 
   // Handle generate user ID - automatically prevents duplicates by finding next available number
   const handleGenerateUserId = async () => {
@@ -1096,6 +1104,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     e.preventDefault();
     
     try {
+      setIsUpdatingEmployee(true);
+      
       const employeeData = {
         ...editEmployee,
         // Convert empty strings to null for optional fields
@@ -1156,6 +1166,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     } catch (error) {
       console.error('Error updating employee:', error);
       alert(error instanceof Error ? error.message : 'Failed to update employee. Please try again.');
+    } finally {
+      setIsUpdatingEmployee(false);
     }
   };
 
@@ -1652,13 +1664,18 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
           ))}
         </select>
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={designationFilter}
+          onChange={(e) => setDesignationFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
         >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">All Designations</option>
+          <option value="president">President</option>
+          <option value="admin_officer">Admin Officer</option>
+          <option value="vice_president">Vice President</option>
+          <option value="registrar">Registrar</option>
+          <option value="faculty">Faculty</option>
+          <option value="principal">Principal</option>
+          <option value="cashier">Cashier</option>
         </select>
       </div>
 
@@ -2601,9 +2618,17 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 </button>
                 <button
                   type="submit"
-                      className="px-8 py-3 text-white bg-gradient-to-r from-[#800000] to-red-700 rounded-lg hover:from-red-800 hover:to-red-900 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                  disabled={isAddingEmployee}
+                  className="px-8 py-3 text-white bg-gradient-to-r from-[#800000] to-red-700 rounded-lg hover:from-red-800 hover:to-red-900 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                 >
-                  Add Employee
+                  {isAddingEmployee ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Adding Employee...
+                    </>
+                  ) : (
+                    'Add Employee'
+                  )}
                 </button>
                   </div>
                 </div>
@@ -3247,9 +3272,17 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                     </button>
                     <button
                       type="submit"
-                      className="px-8 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                      disabled={isUpdatingEmployee}
+                      className="px-8 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                     >
-                      Update Employee
+                      {isUpdatingEmployee ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Updating Employee...
+                        </>
+                      ) : (
+                        'Update Employee'
+                      )}
                     </button>
                   </div>
                 </div>

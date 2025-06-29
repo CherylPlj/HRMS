@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH } from 'react-icons/fa';
+import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaTimes } from 'react-icons/fa';
 import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import jsPDF from 'jspdf';
@@ -152,6 +152,14 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   }>({ index: -1, dependent: null });
   const [sameAsPresentAddress, setSameAsPresentAddress] = useState(false);
   const [lastEditTime, setLastEditTime] = useState<number>(0);
+  
+  // Photo modal states
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Separate edit states for each tab
   const [editingTabs, setEditingTabs] = useState<{
@@ -802,9 +810,9 @@ const handleDownload = () => {
         SalaryGrade: data.EmploymentDetail?.SalaryGrade || '',
 
         // Medical Information
-        MedicalCondition: data.MedicalInfo?.medicalNotes || data.MedicalCondition || '',
-        Allergies: data.MedicalInfo?.allergies || data.Allergies || '',
-        LastMedicalCheckup: data.MedicalInfo?.lastCheckup || data.LastMedicalCheckup || '',
+        MedicalCondition: data.MedicalInfo?.medicalNotes || '',
+        Allergies: data.MedicalInfo?.allergies || '',
+        LastMedicalCheckup: data.MedicalInfo?.lastCheckup || '',
 
         // Metadata
         createdAt: data.createdAt || null,
@@ -819,7 +827,7 @@ const handleDownload = () => {
       setEditedDetails(transformedData);
       setEditingTabs(prev => ({ ...prev, [tabName]: false }));
       setValidationErrors({});
-      setShowSuccessModal(true);
+      showSuccessNotification('Changes saved successfully!');
       
     } catch (error: unknown) {
       console.error('Save error:', error);
@@ -1023,6 +1031,156 @@ const handleDownload = () => {
     }
   };
 
+  // Photo handling functions
+  const showSuccessNotification = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessToast(true);
+    setTimeout(() => {
+      setShowSuccessToast(false);
+    }, 3000); // Hide after 3 seconds
+  };
+
+  const handlePhotoClick = () => {
+    if (editingTabs.personal) {
+      setShowPhotoModal(true);
+      setPhotoPreview(null);
+      setPhotoFile(null);
+    }
+  };
+
+  const handlePhotoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setNotification({
+          type: 'error',
+          message: 'Please select an image file (PNG, JPG, JPEG, etc.)'
+        });
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setNotification({
+          type: 'error',
+          message: 'File size must be less than 5MB'
+        });
+        return;
+      }
+
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!photoFile || !editedDetails?.EmployeeID) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', photoFile);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload photo');
+      }
+
+      const result = await response.json();
+      
+      // Update the edited details with the new photo URL
+      const updatedDetails = { ...editedDetails, Photo: result.url };
+      
+      // Save the updated details to the database
+      const saveResponse = await fetch(`/api/employees/${editedDetails.EmployeeID}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedDetails),
+      });
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        throw new Error(errorData.error || 'Failed to save photo to database');
+      }
+
+      // Update both editedDetails and facultyDetails
+      setEditedDetails(updatedDetails);
+      setFacultyDetails(prev => prev ? { ...prev, Photo: result.url } : null);
+      
+      setShowPhotoModal(false);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      
+      showSuccessNotification('Photo uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to upload photo. Please try again.'
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemoveExistingPhoto = async () => {
+    if (!editedDetails?.EmployeeID) return;
+
+    setUploadingPhoto(true);
+    try {
+      // Update the edited details to remove the photo
+      const updatedDetails = { ...editedDetails, Photo: null };
+      
+      const response = await fetch(`/api/employees/${editedDetails.EmployeeID}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedDetails),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove photo');
+      }
+
+      const result = await response.json();
+      
+      // Update both editedDetails and facultyDetails
+      setEditedDetails(updatedDetails);
+      setFacultyDetails(prev => prev ? { ...prev, Photo: null } : null);
+      setShowPhotoModal(false);
+      
+      showSuccessNotification('Photo removed successfully!');
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to remove photo. Please try again.'
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   // Define tabs configuration
   const tabs = [
     { id: 'personal', label: 'Personal Information', icon: FaUserCircle },
@@ -1037,22 +1195,60 @@ const handleDownload = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Success Toast Notification */}
+      {showSuccessToast && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-right duration-300">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <span className="font-medium">{successMessage}</span>
+          <button
+            onClick={() => setShowSuccessToast(false)}
+            className="ml-2 hover:bg-green-600 rounded-full p-1 transition-colors"
+          >
+            <FaTimes className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back
-          </button>
           <div className="h-6 w-px bg-gray-300"></div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            {facultyDetails ? `${facultyDetails.FirstName || ''} ${facultyDetails.MiddleName ? facultyDetails.MiddleName + ' ' : ''}${facultyDetails.LastName || ''}`.trim() : 'Personal Data'}
-          </h1>
+          
+          {/* Photo and Name Section */}
+          <div className="flex items-center gap-4">
+            {/* Photo Display */}
+            <div 
+              className={`relative ${editingTabs.personal ? 'cursor-pointer' : ''}`}
+              onClick={handlePhotoClick}
+            >
+              {facultyDetails?.Photo ? (
+                <img
+                  src={facultyDetails.Photo}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-300 hover:border-[#800000] transition-colors"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 hover:border-[#800000] transition-colors">
+                  <FaUserCircle className="w-8 h-8 text-gray-400" />
+                </div>
+              )}
+              
+              {/* Edit indicator */}
+              {editingTabs.personal && (
+                <div className="absolute -bottom-1 -right-1 bg-[#800000] text-white rounded-full p-1">
+                  <FaCamera className="w-3 h-3" />
+                </div>
+              )}
+            </div>
+            
+            {/* Name */}
+            <h1 className="text-2xl font-bold text-gray-800">
+              {facultyDetails ? `${facultyDetails.FirstName || ''} ${facultyDetails.MiddleName ? facultyDetails.MiddleName + ' ' : ''}${facultyDetails.LastName || ''}`.trim() : 'Personal Data'}
+            </h1>
+          </div>
         </div>
+        
         <div className="flex gap-2">
           {/* Only show edit buttons for specific tabs that use the main editing system */}
           {['personal', 'government', 'contact'].includes(activeTab) ? (
@@ -1399,6 +1595,118 @@ const handleDownload = () => {
           </div>
         )}
       </div>
+
+      {/* Photo Upload Modal */}
+      {showPhotoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Update Profile Photo</h3>
+              <button
+                onClick={() => setShowPhotoModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Current Photo Preview */}
+              <div className="text-center">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Photo</label>
+                {facultyDetails?.Photo ? (
+                  <img
+                    src={facultyDetails.Photo}
+                    alt="Current Profile"
+                    className="w-24 h-24 rounded-full object-cover mx-auto border-2 border-gray-300"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-2 border-gray-300">
+                    <FaUserCircle className="w-12 h-12 text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* New Photo Preview */}
+              {photoPreview && (
+                <div className="text-center">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">New Photo Preview</label>
+                  <img
+                    src={photoPreview}
+                    alt="New Profile Preview"
+                    className="w-24 h-24 rounded-full object-cover mx-auto border-2 border-[#800000]"
+                  />
+                </div>
+              )}
+
+              {/* Upload Section */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Upload New Photo
+                </label>
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <FaUpload className="w-8 h-8 mb-4 text-gray-500" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">PNG, JPG, JPEG up to 5MB</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handlePhotoFileChange}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                {photoFile ? (
+                  <>
+                    <button
+                      onClick={handleUploadPhoto}
+                      disabled={uploadingPhoto}
+                      className="flex-1 bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50"
+                    >
+                      {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                    </button>
+                    <button
+                      onClick={handleRemovePhoto}
+                      disabled={uploadingPhoto}
+                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {facultyDetails?.Photo && (
+                      <button
+                        onClick={handleRemoveExistingPhoto}
+                        disabled={uploadingPhoto}
+                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {uploadingPhoto ? 'Removing...' : 'Remove Current Photo'}
+                      </button>
+                    )}
+                  </>
+                )}
+                <button
+                  onClick={() => setShowPhotoModal(false)}
+                  disabled={uploadingPhoto}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Modal */}
       {showSuccessModal && (
