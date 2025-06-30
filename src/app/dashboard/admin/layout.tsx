@@ -10,6 +10,7 @@ import EmployeeContentNew from '@/components/EmployeeContentNew';
 import RecruitmentContent from '@/components/RecruitmentContent';
 import UserManagementContent from '@/components/UserManagementContent';
 import SessionManagementContent from '@/components/SessionManagementContent';
+import Chatbot from '@/components/Chatbot';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '@clerk/nextjs'; // Add this import
@@ -24,11 +25,6 @@ interface UserRole {
 
 interface UserRoleData {
   UserRole: UserRole[];
-}
-
-interface ChatMessage {
-  type: 'user' | 'ai';
-  content: string;
 }
 
 interface FacultyData {
@@ -64,14 +60,11 @@ export default function AdminDashboard() {
   const [isNotificationsVisible, setNotificationsVisible] = useState(false); // State for Notifications Popup
   const [activeTab, setActiveTab] = useState('all'); // State for active tab in notifications
   const [isChatbotVisible, setChatbotVisible] = useState(false); // State for Chatbot Popup
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
   const [userRole, setUserRole] = useState<string>(''); // Store user role to show Super Admin features
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
   const router = useRouter();
 
-  const chatbotRef = useRef<HTMLDivElement | null>(null);
   const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
   const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +76,7 @@ export default function AdminDashboard() {
     if (chatButtonRef.current) {
       const buttonRect = chatButtonRef.current.getBoundingClientRect();
       setChatbotPosition({
-        x: buttonRect.left - 150, // Offset to center the chatbot
+        x: buttonRect.left - 190, // Offset to center the chatbot (380px width / 2)
         y: buttonRect.bottom + 10 // 10px gap below the button
       });
     }
@@ -95,63 +88,6 @@ export default function AdminDashboard() {
       positionChatbot();
     }
   }, [isChatbotVisible]);
-
-  const handleDragStart = (e: React.MouseEvent) => {
-    const chatbot = chatbotRef.current;
-    if (!chatbot) return;
-
-    const offsetX = e.clientX - chatbot.getBoundingClientRect().left;
-    const offsetY = e.clientY - chatbot.getBoundingClientRect().top;
-
-    const handleDrag = (moveEvent: MouseEvent) => {
-      setChatbotPosition({
-        x: moveEvent.clientX - offsetX,
-        y: moveEvent.clientY - offsetY,
-      });
-    };
-
-    const handleDragEnd = () => {
-      document.removeEventListener('mousemove', handleDrag);
-      document.removeEventListener('mouseup', handleDragEnd);
-    };
-
-    document.addEventListener('mousemove', handleDrag);
-    document.addEventListener('mouseup', handleDragEnd);
-  };
-
-  const handleSendMessage = async (message: string) => {
-    if (message.trim()) {
-      // Add user message to chat
-      setChatMessages(prev => [...prev, { type: 'user', content: message }]);
-      setChatInput('');
-
-      try {
-        // Send message to API
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message }),
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.details || data.error || `HTTP error! status: ${response.status}`);
-        }
-
-        // Add AI response to chat
-        setChatMessages(prev => [...prev, { type: 'ai', content: data.response }]);
-      } catch (error: unknown) {
-        console.error('Error sending message:', error);
-        setChatMessages(prev => [...prev, { 
-          type: 'ai', 
-          content: `Error: ${error instanceof Error ? error.message : 'Failed to get response. Please try again.'}`
-        }]);
-      }
-    }
-  };
 
   // Check user's role and redirect if not admin
   useEffect(() => {
@@ -600,90 +536,21 @@ export default function AdminDashboard() {
       )}
 
       {/* Chatbot Popup */}
-      {isChatbotVisible && (
-        <div
-          ref={chatbotRef}
-          className="fixed bg-white shadow-lg rounded-lg z-50 border border-gray-200"
-          style={{
-            width: 350,
-            height: 420,
-            top: chatbotPosition.y,
-            left: chatbotPosition.x,
-          }}
-        >
-          <div
-            className="p-4 bg-[#800000] text-white flex items-center justify-between rounded-t-lg cursor-move"
-            onMouseDown={handleDragStart}
-          >
-            <h3 className="text-lg font-semibold">SJSFI Chatbot</h3>
-            <button
-              title='Close'
-              className="text-white hover:text-gray-300"
-              onClick={() => setChatbotVisible(false)}
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-          <div className="flex flex-col h-[calc(100%-48px)]">
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
-              {chatMessages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`${
-                    message.type === 'user' 
-                      ? 'bg-[#800000] text-white ml-auto' 
-                      : 'bg-gray-100 text-gray-800'
-                  } p-2 rounded-lg shadow-md text-sm max-w-[80%] ${
-                    message.type === 'user' ? 'ml-auto' : 'mr-auto'
-                  }`}
-                >
-                  {message.content}
-                </div>
-              ))}
-            </div>
-            <div className="p-4">
-              <h4 className="text-sm font-bold text-gray-700 mb-2">Suggested chat prompts</h4>
-              <ul className="space-y-2">
-                <li
-                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I manage faculty schedules?")}
-                >
-                  How do I manage faculty schedules?
-                </li>
-                <li
-                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I add a new faculty member?")}
-                >
-                  How do I add a new faculty member?
-                </li>
-                <li
-                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I approve leave requests?")}
-                >
-                  How do I approve leave requests?
-                </li>
-              </ul>
-            </div>
-            <div className="p-3 border-t">
-              <div className="flex items-center space-x-2 px-1">
-                <input
-                  type="text"
-                  placeholder="Write a question..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
-                />
-                <button
-                  className="px-3 py-2 bg-[#800000] text-white rounded hover:bg-red-700 text-sm whitespace-nowrap"
-                  onClick={() => handleSendMessage(chatInput)}
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Chatbot
+        isVisible={isChatbotVisible}
+        onClose={() => setChatbotVisible(false)}
+        position={chatbotPosition}
+        onPositionChange={setChatbotPosition}
+        suggestedPrompts={[
+          "How do I manage faculty schedules?",
+          "How do I add a new faculty member?",
+          "How do I approve leave requests?",
+          "How do I view attendance reports?",
+          "How do I manage employee documents?"
+        ]}
+        title="SJSFI Admin Assistant"
+        userRole="admin"
+      />
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalVisible && (
