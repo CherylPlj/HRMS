@@ -8,7 +8,7 @@ import { useAuth } from "@clerk/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Eye, ArrowLeft, AlertCircle, X } from 'lucide-react';
-import { validatePassword, loginRateLimiter, unknownIPRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
+import { validatePassword, loginRateLimiter, unknownIPRateLimiter } from '@/lib/security';
 import { getClientIp } from '@/lib/ip';
 import { validateEmailCharacters } from '@/lib/validation';
 
@@ -818,14 +818,6 @@ export default function SignInPage() {
         return;
       }
 
-      // Check IP-based login attempts
-      const { blocked, remainingAttempts } = checkLoginAttempts(userIP);
-      if (blocked) {
-        setIsLoading(false);
-        showErrorPopup('Account temporarily locked due to too many failed attempts. Please try again later.');
-        return;
-      }
-
       if (!email || !password) {
         setIsLoading(false);
         showErrorPopup('Please fill in all fields');
@@ -873,7 +865,6 @@ export default function SignInPage() {
           password: password,
         });
       } catch (clerkError: any) {
-        recordFailedLoginAttempt(userIP);
         setIsLoading(false);
         console.error('Clerk authentication failed:', clerkError);
         showErrorPopup('Invalid Credentials');
@@ -881,7 +872,6 @@ export default function SignInPage() {
       }
 
       if (result.status !== "complete") {
-        recordFailedLoginAttempt(userIP);
         setIsLoading(false);
         showErrorPopup('Invalid Credentials');
         return;
@@ -949,7 +939,6 @@ export default function SignInPage() {
             if (clerk) {
               await clerk.signOut();
             }
-            recordFailedLoginAttempt(userIP);
             setIsLoading(false);
             showErrorPopup('Account setup in progress. Please try again in a few moments.');
             return;
@@ -966,7 +955,6 @@ export default function SignInPage() {
         if (clerk) {
           await clerk.signOut();
         }
-        recordFailedLoginAttempt(userIP);
         setIsLoading(false);
         showErrorPopup('Invalid Credentials');
         return;
@@ -976,29 +964,23 @@ export default function SignInPage() {
       
       // Check if user is deleted or inactive
       if (userCheck.isDeleted || userCheck.Status !== 'Active') {
-        recordFailedLoginAttempt(userIP);
         setIsLoading(false);
         showErrorPopup('Invalid Credentials');
         return;
       }
 
-      // If we get here, both Clerk authentication and database verification passed
-      resetLoginAttempts(userIP); // Reset attempts on successful login
-      
       // Get user role for validation
       const userRole = (userRoles[0].role as any).name.toLowerCase();
       
       // Role-based login validation
       if (portal) {
         if (portal === 'admin' && userRole !== 'admin' && userRole !== 'super admin') {
-          recordFailedLoginAttempt(userIP);
           setIsLoading(false);
           showErrorPopup('Invalid Credentials');
           return;
         }
         
         if (portal === 'faculty' && userRole !== 'faculty') {
-          recordFailedLoginAttempt(userIP);
           setIsLoading(false);
           showErrorPopup('Invalid Credentials');
           return;
