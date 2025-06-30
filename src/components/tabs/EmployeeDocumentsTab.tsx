@@ -286,183 +286,183 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
   return (
     <div>
       <div className="mb-6 flex items-center gap-4">
-        <div className="relative w-80">
-          <input
-            type="text"
-            placeholder="Search documents..."
-            value={documentSearchTerm}
-            onChange={(e) => setDocumentSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-          />
+          <div className="relative w-80">
+            <input
+              type="text"
+              placeholder="Search documents..."
+              value={documentSearchTerm}
+              onChange={(e) => setDocumentSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+            />
           <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-        </div>
+          </div>
 
         {/* Filter Options for Documents */}
-        <div className="flex items-center gap-4 flex-grow">
-          <div className="w-64">
-            <select
-              id="documentTypeFilter"
-              value={selectedDocumentType}
-              onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
-              title="Filter by Document Type"
+          <div className="flex items-center gap-4 flex-grow">
+            <div className="w-64">
+                <select
+                  id="documentTypeFilter"
+                  value={selectedDocumentType}
+                  onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
+                  title="Filter by Document Type"
+                >
+                  <option value="all">All Document Types</option>
+                  {documentTypes.map((type) => (
+                    <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
+                      {type.DocumentTypeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            <div className="w-64">
+                <select
+                  id="documentStatusFilter"
+                  value={selectedDocumentStatus}
+                  onChange={(e) => setSelectedDocumentStatus(e.target.value)}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
+                  title="Filter by Submission Status"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+            <button
+              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+              onClick={openAddDocTypeModal}
             >
-              <option value="all">All Document Types</option>
-              {documentTypes.map((type) => (
-                <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
-                  {type.DocumentTypeName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="w-64">
-            <select
-              id="documentStatusFilter"
-              value={selectedDocumentStatus}
-              onChange={(e) => setSelectedDocumentStatus(e.target.value)}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
-              title="Filter by Submission Status"
+              <FaPlus /> Add New Document Type
+            </button>
+            <button
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300"
+              onClick={() => setShowDocTypeListModal(true)}
+              title="Manage Document Types"
+              type="button"
             >
-              <option value="all">All Statuses</option>
-              <option value="Submitted">Submitted</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+              <FaPen /> / <FaTrash/>
+            </button>
           </div>
-          <button
-            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
-            onClick={openAddDocTypeModal}
-          >
-            <FaPlus /> Add New Document Type
-          </button>
-          <button
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300"
-            onClick={() => setShowDocTypeListModal(true)}
-            title="Manage Document Types"
-            type="button"
-          >
-            <FaPen /> / <FaTrash/>
-          </button>
         </div>
-      </div>
 
       {/* Document Management Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border rounded-lg">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border rounded-lg">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {docLoading ? (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-gray-400">Loading documents...</td>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {docLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">Loading documents...</td>
+                </tr>
             ) : filteredDocuments.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
-              </tr>
-            ) : (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
+                </tr>
+              ) : (
               filteredDocuments
-                .sort((a, b) => {
-                  // Custom order: Submitted (1), Pending (2), Rejected (3), Approved (4)
-                  const getStatusOrder = (status: string) => {
-                    switch (status) {
-                      case 'Submitted': return 1;
-                      case 'Rejected': return 2;
-                      case 'Approved': return 3;
-                      default: return 4;
+                  .sort((a, b) => {
+                    // Custom order: Submitted (1), Pending (2), Rejected (3), Approved (4)
+                    const getStatusOrder = (status: string) => {
+                      switch (status) {
+                        case 'Submitted': return 1;
+                        case 'Rejected': return 2;
+                        case 'Approved': return 3;
+                        default: return 4;
+                      }
+                    };
+                    const orderA = getStatusOrder(a.SubmissionStatus);
+                    const orderB = getStatusOrder(b.SubmissionStatus);
+                    if (orderA !== orderB) {
+                      return orderA - orderB;
                     }
-                  };
-                  const orderA = getStatusOrder(a.SubmissionStatus);
-                  const orderB = getStatusOrder(b.SubmissionStatus);
-                  if (orderA !== orderB) {
-                    return orderA - orderB;
-                  }
-                  // If same status, sort by date (newest first)
-                  return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
-                })
-                .map((doc, idx) => {
-                  return (
-                    <tr
-                      key={doc.DocumentID}
-                      className="hover:bg-gray-100 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+                    // If same status, sort by date (newest first)
+                    return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
+                  })
+                  .map((doc, idx) => {
+                    return (
+                      <tr
+                        key={doc.DocumentID}
+                        className="hover:bg-gray-100 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{doc.employeeName || 'Unknown Employee'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
-                          ${
-                            doc.SubmissionStatus === 'Approved'
-                              ? 'bg-green-100 text-green-800'
-                              : doc.SubmissionStatus === 'Rejected'
-                              ? 'bg-red-100 text-red-800'
-                              : doc.SubmissionStatus === 'Submitted'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-900' // For Pending
-                          }
-                        `}>
-                          {doc.SubmissionStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 flex items-center space-x-2">
-                        <select
-                          title="Change Submission Status"
-                          value={doc.SubmissionStatus}
-                          onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
-                          disabled={statusUpdating === doc.DocumentID}
-                          className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        >
-                          <option value="Submitted">Submitted</option>
-                          <option value="Approved">Approved</option>
-                          <option value="Rejected">Rejected</option>
-                        </select>
-                        {doc.FileUrl && (
-                          <span className="flex items-center space-x-1">
-                            <button
-                              onClick={() => handleViewDocument(doc)}
-                              className="text-gray-600 hover:text-gray-900"
-                              title="View Document"
-                            >
-                              <FaEye className="w-5 h-5" />
-                            </button>
-                            <a
-                              href={getViewUrl(doc.FileUrl)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-gray-600 hover:text-gray-900"
-                              title="Open in New Tab"
-                            >
-                              <FaLink className="w-5 h-5" />
-                            </a>
-                            <a
-                              href={doc.DownloadUrl || doc.FileUrl}
-                              download
-                              className="text-gray-600 hover:text-gray-900"
-                              title="Download Document"
-                            >
-                              <FaDownload className="w-5 h-5" />
-                            </a>
+                        <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
+                            ${
+                              doc.SubmissionStatus === 'Approved'
+                                ? 'bg-green-100 text-green-800'
+                                : doc.SubmissionStatus === 'Rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : doc.SubmissionStatus === 'Submitted'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-900' // For Pending
+                            }
+                          `}>
+                            {doc.SubmissionStatus}
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-            )}
-          </tbody>
-        </table>
-      </div>
+                        </td>
+                        <td className="px-6 py-4 flex items-center space-x-2">
+                          <select
+                            title="Change Submission Status"
+                            value={doc.SubmissionStatus}
+                            onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
+                            disabled={statusUpdating === doc.DocumentID}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          >
+                            <option value="Submitted">Submitted</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+                          {doc.FileUrl && (
+                            <span className="flex items-center space-x-1">
+                              <button
+                                onClick={() => handleViewDocument(doc)}
+                                className="text-gray-600 hover:text-gray-900"
+                                title="View Document"
+                              >
+                                <FaEye className="w-5 h-5" />
+                              </button>
+                              <a
+                                href={getViewUrl(doc.FileUrl)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gray-600 hover:text-gray-900"
+                                title="Open in New Tab"
+                              >
+                                <FaLink className="w-5 h-5" />
+                              </a>
+                              <a
+                                href={doc.DownloadUrl || doc.FileUrl}
+                                download
+                                className="text-gray-600 hover:text-gray-900"
+                                title="Download Document"
+                              >
+                                <FaDownload className="w-5 h-5" />
+                              </a>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+              )}
+            </tbody>
+          </table>
+        </div>
 
       {/* Status Update Confirmation Modal */}
       {isStatusUpdateModalOpen && pendingStatusUpdate && (

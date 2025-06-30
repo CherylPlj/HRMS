@@ -602,6 +602,7 @@ enum EmployeeType {
   Regular
   Probationary
   Part_Time
+  Retired
   Resigned
 }
 
@@ -707,6 +708,7 @@ enum Sex {
 
 enum EmploymentType {
   FullTime
+  Part_Time
 }
 
 enum RetirementStatus {

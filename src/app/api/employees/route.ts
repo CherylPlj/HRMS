@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         trainings(id, title, hours, conductedBy, date),
         certificates(id, title, issuedBy, issueDate, expiryDate, description, fileUrl)
       `)
-      .order('EmployeeID', { ascending: true });
+      .order('createdAt', { ascending: false });
 
     // Apply pagination only if not requesting all records
     if (!all) {
@@ -204,7 +204,7 @@ export async function POST(request: Request) {
         EmploymentStatus: employmentStatus,
         HireDate: hireDate.toISOString().split('T')[0],
         ResignationDate: data.ResignationDate || null,
-        // Designation: data.Designation || null,
+        Designation: data.Designation || null,
         Position: data.Position || null,
         SalaryGrade: data.SalaryGrade || null,
         createdAt: new Date().toISOString(),
@@ -361,7 +361,7 @@ export async function PATCH(request: Request) {
     const { data: updatedEmployee, error: employeeError } = await supabaseAdmin
       .from('Employee')
       .update({
-        UserID: data.UserID || null,
+        UserID: data.UserID && data.UserID.trim() !== '' ? data.UserID.trim() : null,
         LastName: data.LastName,
         FirstName: data.FirstName,
         MiddleName: data.MiddleName || null,
@@ -383,6 +383,21 @@ export async function PATCH(request: Request) {
 
     if (employeeError) {
       console.error('Error updating employee:', employeeError);
+      
+      // Handle specific database errors
+      if (employeeError.code === '23505') {
+        if (employeeError.message.includes('UserID')) {
+          return NextResponse.json(
+            { error: 'UserID already exists. Please use a different UserID or leave it empty.' },
+            { status: 400 }
+          );
+        }
+        return NextResponse.json(
+          { error: 'A record with this information already exists.' },
+          { status: 400 }
+        );
+      }
+      
       throw employeeError;
     }
 

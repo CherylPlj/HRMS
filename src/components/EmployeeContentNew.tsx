@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync } from 'react-icons/fa';
+import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync, FaDownload, FaFileCsv, FaFilePdf } from 'react-icons/fa';
 import { Search } from 'lucide-react';
 import MedicalTab from './tabs/MedicalTab';
 import SkillsTab from './tabs/SkillsTab';
@@ -177,15 +177,92 @@ interface ApiResponse {
   error?: string;
 }
 
+
+// Place at the top with other useState hooks
+const allExportColumns = [
+  { key: 'EmployeeID', label: 'Employee ID' },
+  { key: 'UserID', label: 'User ID' },
+  { key: 'FirstName', label: 'First Name' },
+  { key: 'LastName', label: 'Last Name' },
+  { key: 'MiddleName', label: 'Middle Name' },
+  { key: 'ExtensionName', label: 'Extension Name' },
+  { key: 'Sex', label: 'Sex' },
+  { key: 'DateOfBirth', label: 'Date of Birth' },
+  { key: 'PlaceOfBirth', label: 'Place of Birth' },
+  { key: 'CivilStatus', label: 'Civil Status' },
+  { key: 'Nationality', label: 'Nationality' },
+  { key: 'Religion', label: 'Religion' },
+  { key: 'BloodType', label: 'Blood Type' },
+  { key: 'Email', label: 'Email' },
+  { key: 'Phone', label: 'Phone' },
+  { key: 'PresentAddress', label: 'Present Address' },
+  { key: 'PermanentAddress', label: 'Permanent Address' },
+  { key: 'Position', label: 'Position' },
+  { key: 'Designation', label: 'Designation' },
+  { key: 'Department', label: 'Department' },
+  { key: 'EmploymentStatus', label: 'Employment Status' },
+  { key: 'HireDate', label: 'Hire Date' },
+  { key: 'ResignationDate', label: 'Resignation Date' },
+  { key: 'SalaryGrade', label: 'Salary Grade' },
+  { key: 'EmployeeType', label: 'Employee Type' },
+  { key: 'SSSNumber', label: 'SSS Number' },
+  { key: 'TINNumber', label: 'TIN Number' },
+  { key: 'PhilHealthNumber', label: 'PhilHealth Number' },
+  { key: 'PagIbigNumber', label: 'Pag-IBIG Number' },
+  { key: 'GSISNumber', label: 'GSIS Number' },
+  { key: 'PRCLicenseNumber', label: 'PRC License Number' },
+  { key: 'PRCValidity', label: 'PRC Validity' },
+  { key: 'EmergencyContactName', label: 'Emergency Contact Name' },
+  { key: 'EmergencyContactNumber', label: 'Emergency Contact Number' },
+  { key: 'createdAt', label: 'Created At' },
+  { key: 'updatedAt', label: 'Updated At' },
+];
+
+// Place at the top with other constants
+const exportColumnSections = [
+  {
+    title: 'Personal Information',
+    keys: [
+      'EmployeeID', 'UserID', 'FirstName', 'LastName', 'MiddleName', 'ExtensionName',
+      'Sex', 'DateOfBirth', 'PlaceOfBirth', 'CivilStatus', 'Nationality', 'Religion', 'BloodType'
+    ],
+  },
+  {
+    title: 'Contact Information',
+    keys: [
+      'Email', 'Phone', 'PresentAddress', 'PermanentAddress', 'EmergencyContactName', 'EmergencyContactNumber'
+    ],
+  },
+  {
+    title: 'Employment Details',
+    keys: [
+      'Position', 'Designation', 'Department', 'EmploymentStatus', 'HireDate', 'ResignationDate',
+      'SalaryGrade', 'EmployeeType', 'createdAt', 'updatedAt'
+    ],
+  },
+  {
+    title: 'Government IDs',
+    keys: [
+      'SSSNumber', 'TINNumber', 'PhilHealthNumber', 'PagIbigNumber', 'GSISNumber', 'PRCLicenseNumber', 'PRCValidity'
+    ],
+  },
+];
+
 const EmployeeContentNew = () => {
   // State for active tab
   const [activeTab, setActiveTab] = useState('personal');
   
   // State for search and filters
+  const [nameOrder, setNameOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [designationFilter, setDesignationFilter] = useState('all');
-
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [exportOrderBy, setExportOrderBy] = useState<'LastName' | 'FirstName' | 'EmployeeID'>('LastName');
+  const [exportOrderDir, setExportOrderDir] = useState<'asc' | 'desc'>('asc');
+  const [pdfOrientation, setPdfOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [hireDateFrom, setHireDateFrom] = useState('');
+  const [hireDateTo, setHireDateTo] = useState('');
   // State for Add Employee modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState<EmployeeFormState>({
@@ -243,6 +320,19 @@ const EmployeeContentNew = () => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+
+  // State for Export Employee modal
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'pdf'>('csv');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportFilters, setExportFilters] = useState({
+    department: 'all',
+    designation: 'all',
+    status: 'all',
+    search: ''
+  });
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(allExportColumns.map(col => col.key));
+  const [pdfPaperSize, setPdfPaperSize] = useState<'a4' | 'letter' | 'legal'>('a4');
 
   // State for editing mode and edited employee
   const [isEditing, setIsEditing] = useState(false);
@@ -665,6 +755,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     const position = employee.position?.toLowerCase() || '';
     const departmentId = employee.DepartmentID?.toString() || '';
     const designation = employee.designation?.toLowerCase() || '';
+    const status = employee.status?.toLowerCase() || '';
     const searchQuery = searchTerm.toLowerCase();
 
     const matchesSearch = 
@@ -680,7 +771,25 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       designationFilter === 'all' || 
       designation === designationFilter.toLowerCase();
 
-    return matchesSearch && matchesDepartment && matchesDesignation;
+    const matchesStatus = 
+      statusFilter === 'all' || 
+      status === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesDepartment && matchesDesignation && matchesStatus;
+  })
+  // Sort by name order
+  .sort((a, b) => {
+    if (nameOrder === 'asc') {
+      // Sort by name A-Z when explicitly selected
+      const nameA = (a.firstName || '').toLowerCase();
+      const nameB = (b.firstName || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    } else {
+      // Default: Sort by creation date (latest first)
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    }
   });
 
   const handleEmployeeSelect = (employee: any) => {
@@ -724,6 +833,37 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       
       if (missingFields.length > 0) {
         alert(`Please fill in the following required fields: ${missingFields.map(f => f.label).join(', ')}`);
+        return;
+      }
+
+      // Validate birth date (1955-2007)
+      const birthDate = new Date(newEmployee.DateOfBirth);
+      const minBirthDate = new Date('1955-01-01');
+      const maxBirthDate = new Date('2007-12-31');
+      
+      if (birthDate < minBirthDate || birthDate > maxBirthDate) {
+        alert('Birth date must be between 1955 and 2007');
+        return;
+      }
+
+      // Validate hire date (not future, not earlier than 1996)
+      const hireDate = new Date(newEmployee.HireDate);
+      const today = new Date();
+      const minHireDate = new Date('1996-01-01');
+      
+      if (hireDate > today) {
+        alert('Hire date cannot be in the future');
+        return;
+      }
+      
+      if (hireDate < minHireDate) {
+        alert('Hire date cannot be earlier than 1996');
+        return;
+      }
+
+      // Validate that hire date is not before birth date
+      if (hireDate < birthDate) {
+        alert('Hire date cannot be before birth date');
         return;
       }
       
@@ -876,24 +1016,138 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     }
   };
 
+  const [errorMessage, setErrorMessage] = useState('');
+
   const handleImportEmployees = async () => {
     if (!importFile) return;
     setIsImporting(true);
+    setErrorMessage('');
     try {
       for (const row of importPreview) {
-        await fetch('/api/employees/import', {
+        const response = await fetch('/api/employees/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(row),
         });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to import employee');
+        }
       }
       setIsImportModalOpen(false);
       setImportFile(null);
       setImportPreview([]);
+      setSuccessMessage('Employees imported successfully!');
+      setShowSuccessModal(true);
+      await fetchEmployees();
     } catch (error) {
       console.error('Error importing employees:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to import employees.');
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  // Handle export employees
+  const handleExportEmployees = async () => {
+    setIsExporting(true);
+    setErrorMessage('');
+    try {
+      const params = new URLSearchParams({
+        format: exportFormat,
+        department: exportFilters.department,
+        designation: exportFilters.designation,
+        status: exportFilters.status,
+        search: exportFilters.search,
+        columns: selectedExportColumns.join(','),
+        orderBy: exportOrderBy,
+        orderDir: exportOrderDir,
+      });
+      if (exportFormat === 'pdf') {
+        params.append('paperSize', pdfPaperSize);
+      }
+      const response = await fetch(`/api/employees/export?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to export employees');
+      }
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `employees_export_${new Date().toISOString().split('T')[0]}`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setIsExportModalOpen(false);
+      setSuccessMessage(`Successfully exported ${exportFormat.toUpperCase()} file`);
+      setShowSuccessModal(true);
+      await fetchEmployees();
+    } catch (error) {
+      console.error('Error exporting employees:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to export employees.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Handle quick export with current filters
+  const handleQuickExport = async (format: 'csv' | 'pdf') => {
+    setIsExporting(true);
+    try {
+      // Build query parameters using current filters
+      const params = new URLSearchParams({
+        format: format,
+        department: departmentFilter,
+        designation: designationFilter,
+        status: statusFilter,
+        search: searchTerm
+      });
+
+      const response = await fetch(`/api/employees/export?${params}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to export employees');
+      }
+
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `employees_export_${new Date().toISOString().split('T')[0]}`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Show success message
+      setSuccessMessage(`Successfully exported ${format.toUpperCase()} file with current filters`);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error exporting employees:', error);
+      alert('Failed to export employees. Please try again.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1105,6 +1359,44 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     
     try {
       setIsUpdatingEmployee(true);
+      
+      // Validate birth date (1955-2007)
+      if (editEmployee.DateOfBirth) {
+        const birthDate = new Date(editEmployee.DateOfBirth);
+        const minBirthDate = new Date('1955-01-01');
+        const maxBirthDate = new Date('2007-12-31');
+        
+        if (birthDate < minBirthDate || birthDate > maxBirthDate) {
+          alert('Birth date must be between 1955 and 2007');
+          return;
+        }
+      }
+
+      // Validate hire date (not future, not earlier than 1996)
+      if (editEmployee.HireDate) {
+        const hireDate = new Date(editEmployee.HireDate);
+        const today = new Date();
+        const minHireDate = new Date('1996-01-01');
+        
+        if (hireDate > today) {
+          alert('Hire date cannot be in the future');
+          return;
+        }
+        
+        if (hireDate < minHireDate) {
+          alert('Hire date cannot be earlier than 1996');
+          return;
+        }
+
+        // Validate that hire date is not before birth date
+        if (editEmployee.DateOfBirth) {
+          const birthDate = new Date(editEmployee.DateOfBirth);
+          if (hireDate < birthDate) {
+            alert('Hire date cannot be before birth date');
+            return;
+          }
+        }
+      }
       
       const employeeData = {
         ...editEmployee,
@@ -1607,6 +1899,12 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
           >
             <FaUpload /> Import Employees
           </button>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
+          >
+            <FaDownload /> Export Employees
+          </button>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -1629,6 +1927,34 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               </>
             )}
           </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleQuickExport('csv')}
+              disabled={isExporting}
+              className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              title="Export current view as CSV"
+            >
+              {isExporting ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+              ) : (
+                <FaFileCsv className="w-4 h-4" />
+              )}
+              CSV
+            </button>
+            <button
+              onClick={() => handleQuickExport('pdf')}
+              disabled={isExporting}
+              className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              title="Export current view as PDF"
+            >
+              {isExporting ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+              ) : (
+                <FaFilePdf className="w-4 h-4" />
+              )}
+              PDF
+            </button>
+          </div>
           {viewMode === 'all' && (
             <span className="text-sm text-gray-600">
               Showing all {allEmployees.length} employees
@@ -1638,7 +1964,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       </div>
 
       {/* Search and Filter Section */}
-      <div className="mb-8 flex flex-wrap gap-4">
+      <div className="mb-8 flex flex-wrap gap-4 items-center">
         <div className="flex-1 min-w-[300px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -1676,6 +2002,27 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
           <option value="faculty">Faculty</option>
           <option value="principal">Principal</option>
           <option value="cashier">Cashier</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+        >
+          <option value="all">All Statuses</option>
+          <option value="Regular">Regular</option>
+          <option value="Probationary">Probationary</option>
+          <option value="Resigned">Resigned</option>
+          <option value="Hired">Hired</option>
+        </select>
+        {/* Order by Name Dropdown */}
+        <select
+          value={nameOrder}
+          onChange={e => setNameOrder(e.target.value as 'asc' | 'desc')}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+          title="Order by Name"
+        >
+          <option value="desc">Latest Added</option>
+          <option value="asc">Name A-Z</option>
         </select>
       </div>
 
@@ -3146,7 +3493,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             required
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                           />
-                        </div>
+                  </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
                             Designation <span className="text-red-500">*</span>
@@ -3346,14 +3693,22 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 </p>
                 <div className="w-full overflow-x-auto">
                   <div className="bg-white p-3 rounded border text-sm font-mono whitespace-nowrap min-w-max inline-block">
-                    EmployeeID,UserID,LastName,FirstName,MiddleName,ExtensionName,Sex,Photo,DateOfBirth,PlaceOfBirth,CivilStatus,Nationality,Religion,BloodType,Email,Phone,Address,PresentAddress,PermanentAddress,SSSNumber,TINNumber,PhilHealthNumber,PagIbigNumber,GSISNumber,PRCLicenseNumber,PRCValidity,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,ContractID,EmergencyContactName,EmergencyContactNumber,EmployeeType,SalaryGrade,passwordHash
+                    EmployeeID,LastName,FirstName,MiddleName,ExtensionName,Sex,Photo,DateOfBirth,PlaceOfBirth,CivilStatus,Nationality,Religion,BloodType,Email,Phone,Address,PresentAddress,PermanentAddress,SSSNumber,TINNumber,PhilHealthNumber,PagIbigNumber,GSISNumber,PRCLicenseNumber,PRCValidity,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,ContractID,EmergencyContactName,EmergencyContactNumber,EmployeeType,SalaryGrade
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    const csvContent =
-                      "EmployeeID,UserID,LastName,FirstName,MiddleName,ExtensionName,Sex,Photo,DateOfBirth,PlaceOfBirth,CivilStatus,Nationality,Religion,BloodType,Email,Phone,Address,PresentAddress,PermanentAddress,SSSNumber,TINNumber,PhilHealthNumber,PagIbigNumber,GSISNumber,PRCLicenseNumber,PRCValidity,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,ContractID,EmergencyContactName,EmergencyContactNumber,EmployeeType,SalaryGrade,passwordHash\n" +
-                      "2018-0017,USR-001,Reyes,Ronel,Garcia,,Jr.,Male,,1990-01-01,Manila,Single,Filipino,Christian,O+,ronel.reyes@example.com,0935-8141526,6965 Sto. Niño St. Maligaya Brgy. 177 Caloocan City,Same as Present,Same as Present,12-3456789-0,123-456-789,12-345678901-2,1234-5678-9012,123456789,1234567,2025-12-31,Regular,2018-01-01,,Faculty,Faculty,2,1,Consuelo Reyes,0935-8141526,Regular,12,dummyhash";
+                    const csvHeaders = [
+                      'EmployeeID','LastName','FirstName','MiddleName','ExtensionName','Sex','Photo','DateOfBirth','PlaceOfBirth','CivilStatus','Nationality','Religion','BloodType','Email','Phone','Address','PresentAddress','PermanentAddress','SSSNumber','TINNumber','PhilHealthNumber','PagIbigNumber','GSISNumber','PRCLicenseNumber','PRCValidity','EmploymentStatus','HireDate','ResignationDate','Designation','Position','DepartmentID','ContractID','EmergencyContactName','EmergencyContactNumber','EmployeeType','SalaryGrade'
+                    ];
+                    const csvRows = [
+                      csvHeaders.join(','),
+                      // 5 sample faculty rows with ISO date format
+                      '2024-0101,Garcia,Juan,Cruz,,Male,,1980-02-15,Manila,Single,Filipino,Catholic,A+,juan.sjsfi@gmail.com,09171234567,123 Main St.,123 Main St.,123 Main St.,12-3456789-0,123-456-789,12-345678901-2,1234-5678-9012,123456789,1234567,2024-12-31,Regular,2010-06-01,,Faculty,Teacher I,21,,Maria Garcia,09181234567,Regular,12',
+                      '2024-0102,Reyes,Ana,Lopez,,Female,,1985-07-20,Quezon City,Married,Filipino,Christian,B+,ana.sjsfi@gmail.com,09181239876,456 Second St.,456 Second St.,456 Second St.,22-3333333-3,333-444-555,22-333444555-6,3456-7890-1234,192837465,5647382,2024-09-23,Probationary,2015-08-15,,Faculty,Teacher II,22,,Pedro Reyes,09181239876,Probationary,13',
+                      '2024-0103,Santos,Mark,David,,Male,,1992-11-05,Makati,Single,Filipino,Christian,O+,mark.sjsfi@gmail.com,09183456789,789 Third Ave.,789 Third Ave.,789 Third Ave.,33-4444444-4,444-555-666,33-444555666-7,4567-8901-2345,564738291,8374652,2024-12-05,Regular,2018-11-20,,Faculty,Teacher III,23,,Julia Santos,09183456789,Regular,14'
+                    ];
+                    const csvContent = csvRows.join('\n');
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -3516,6 +3871,370 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               <button
                 onClick={() => setShowSuccessModal(false)}
                 className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Employee Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold">Export Employees</h2>
+                  <p className="text-blue-100 mt-1">Choose export format and filters</p>
+                </div>
+                <button
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-full"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-8">
+              <div className="space-y-8">
+                {/* Export Format Selection */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                  <div className="flex items-center mb-6">
+                    <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">1</div>
+                    <h3 className="text-xl font-bold text-gray-800">Export Format</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat('csv')}
+                      className={`p-4 border-2 rounded-lg transition-all duration-200 flex items-center gap-3 ${
+                        exportFormat === 'csv'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <FaFileCsv className={`w-6 h-6 ${exportFormat === 'csv' ? 'text-blue-600' : 'text-gray-400'}`} />
+                      <div className="text-left">
+                        <div className="font-semibold">CSV Format</div>
+                        <div className="text-sm opacity-75">Spreadsheet format for Excel/Google Sheets</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat('pdf')}
+                      className={`p-4 border-2 rounded-lg transition-all duration-200 flex items-center gap-3 ${
+                        exportFormat === 'pdf'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <FaFilePdf className={`w-6 h-6 ${exportFormat === 'pdf' ? 'text-blue-600' : 'text-gray-400'}`} />
+                      <div className="text-left">
+                        <div className="font-semibold">PDF Format</div>
+                        <div className="text-sm opacity-75">Printable report format</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Export Filters */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                  <div className="flex items-center mb-6">
+                    <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">2</div>
+                    <h3 className="text-xl font-bold text-gray-800">Export Filters</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Department
+                      </label>
+                      <select
+                        value={exportFilters.department}
+                        onChange={(e) => setExportFilters({...exportFilters, department: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="all">All Departments</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id.toString()}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Designation
+                      </label>
+                      <select
+                        value={exportFilters.designation}
+                        onChange={(e) => setExportFilters({...exportFilters, designation: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="all">All Designations</option>
+                        <option value="President">President</option>
+                        <option value="Admin_Officer">Admin Officer</option>
+                        <option value="Vice_President">Vice President</option>
+                        <option value="Registrar">Registrar</option>
+                        <option value="Faculty">Faculty</option>
+                        <option value="Principal">Principal</option>
+                        <option value="Cashier">Cashier</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Employment Status
+                      </label>
+                      <select
+                        value={exportFilters.status}
+                        onChange={(e) => setExportFilters({...exportFilters, status: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Probationary">Probationary</option>
+                        <option value="Resigned">Resigned</option>
+                        <option value="Hired">Hired</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Search Term
+                      </label>
+                      <input
+                        type="text"
+                        value={exportFilters.search}
+                        onChange={(e) => setExportFilters({...exportFilters, search: e.target.value})}
+                        placeholder="Search by name or email..."
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column Selection */}
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-xl p-6 mt-8">
+                  <div className="flex items-center mb-6">
+                    <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">3</div>
+                    <h3 className="text-xl font-bold text-gray-800">Select Columns</h3>
+                  </div>
+                  <div className="space-y-6">
+                    {exportColumnSections.map(section => (
+                      <div key={section.title}>
+                        <div className="font-semibold text-gray-700 mb-2">{section.title}</div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+                          {section.keys.map(key => {
+                            const col = allExportColumns.find(c => c.key === key);
+                            if (!col) return null;
+                            return (
+                              <label key={col.key} className="flex items-center space-x-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedExportColumns.includes(col.key)}
+                                  onChange={e => {
+                                    if (e.target.checked) {
+                                      setSelectedExportColumns(prev => [...prev, col.key]);
+                                    } else {
+                                      setSelectedExportColumns(prev => prev.filter(k => k !== col.key));
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                                />
+                                <span>{col.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-2 text-xs text-blue-600 underline"
+                    onClick={() => setSelectedExportColumns(allExportColumns.map(col => col.key))}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-2 ml-4 text-xs text-blue-600 underline"
+                    onClick={() => setSelectedExportColumns([])}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+
+                {/* PDF Paper Size Selection */}
+                {exportFormat === 'pdf' && (
+                  <div className="bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-200 rounded-xl p-6 mt-8">
+                    <div className="flex items-center mb-6">
+                      <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">4</div>
+                      <h3 className="text-xl font-bold text-gray-800">PDF Options</h3>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Paper Size</label>
+                      <select
+                        value={pdfPaperSize}
+                        onChange={e => setPdfPaperSize(e.target.value as any)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-pink-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="a4">A4 (210 x 297 mm)</option>
+                        <option value="letter">Short (Letter, 8.5 x 11 in)</option>
+                        <option value="legal">Long (Legal, 8.5 x 14 in)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Page Orientation</label>
+                      <select
+                        value={pdfOrientation}
+                        onChange={e => setPdfOrientation(e.target.value as any)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-pink-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="portrait">Portrait</option>
+                        <option value="landscape">Landscape</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Export Summary */}
+                <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-yellow-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">3</div>
+                    <h3 className="text-xl font-bold text-gray-800">Export Summary</h3>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <p><strong>Format:</strong> {exportFormat.toUpperCase()}</p>
+                    <p><strong>Department:</strong> {exportFilters.department === 'all' ? 'All Departments' : departments.find(d => d.id.toString() === exportFilters.department)?.name}</p>
+                    <p><strong>Designation:</strong> {exportFilters.designation === 'all' ? 'All Designations' : exportFilters.designation.replace(/_/g, ' ')}</p>
+                    <p><strong>Status:</strong> {exportFilters.status === 'all' ? 'All Statuses' : exportFilters.status}</p>
+                    {exportFilters.search && <p><strong>Search:</strong> "{exportFilters.search}"</p>}
+                    <p className="text-yellow-700 font-medium mt-3">
+                      💡 The export will include all employee data matching your selected filters.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Order By */}
+                <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-6 mt-8">
+                  <div className="flex items-center mb-6">
+                    <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">3</div>
+                    <h3 className="text-xl font-bold text-gray-800">Order By</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Order By</label>
+                      <select
+                        value={exportOrderBy}
+                        onChange={e => setExportOrderBy(e.target.value as any)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="LastName">Last Name (A-Z)</option>
+                        <option value="FirstName">First Name (A-Z)</option>
+                        <option value="EmployeeID">Employee ID</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Direction</label>
+                      <select
+                        value={exportOrderDir}
+                        onChange={e => setExportOrderDir(e.target.value as any)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-0 transition-colors bg-white"
+                      >
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hire Date Range */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700">Hire Date Range</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={hireDateFrom}
+                      onChange={e => setHireDateFrom(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                      placeholder="From"
+                    />
+                    <span className="self-center">to</span>
+                    <input
+                      type="date"
+                      value={hireDateTo}
+                      onChange={e => setHireDateTo(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
+                      placeholder="To"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-8 py-6 border-t border-gray-200 flex-shrink-0">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  Export will include all matching employee records
+                </p>
+                <div className="flex space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsExportModalOpen(false)}
+                    className="px-6 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleExportEmployees}
+                    disabled={isExporting}
+                    className="px-8 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                  >
+                    {isExporting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <FaDownload /> Export {exportFormat.toUpperCase()}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Error Notification Modal */}
+      {errorMessage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setErrorMessage('')}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl border border-red-400 transform transition-all"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h3 className="text-lg leading-6 font-medium text-red-900 mb-2">Error</h3>
+              <p className="text-sm text-gray-500 mb-4">{errorMessage}</p>
+              <button
+                onClick={() => setErrorMessage('')}
+                className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm"
               >
                 Close
               </button>

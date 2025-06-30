@@ -195,7 +195,10 @@ export async function PATCH(
     };
 
     // Only include fields that are provided in the request
-    if (data.UserID !== undefined) updateFields.UserID = data.UserID;
+    if (data.UserID !== undefined) {
+      // Ensure UserID is either a valid string or null, never an empty string
+      updateFields.UserID = data.UserID && data.UserID.trim() !== '' ? data.UserID.trim() : null;
+    }
     if (data.LastName !== undefined) updateFields.LastName = data.LastName;
     if (data.FirstName !== undefined) updateFields.FirstName = data.FirstName;
     if (data.MiddleName !== undefined) updateFields.MiddleName = data.MiddleName || null;
@@ -220,6 +223,21 @@ export async function PATCH(
 
     if (employeeError) {
       console.error('Error updating employee:', employeeError);
+      
+      // Handle specific database errors
+      if (employeeError.code === '23505') {
+        if (employeeError.message.includes('UserID')) {
+          return NextResponse.json(
+            { error: 'UserID already exists. Please use a different UserID or leave it empty.' },
+            { status: 400 }
+          );
+        }
+        return NextResponse.json(
+          { error: 'A record with this information already exists.' },
+          { status: 400 }
+        );
+      }
+      
       throw employeeError;
     }
 

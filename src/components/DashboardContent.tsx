@@ -45,11 +45,14 @@ interface Employee {
   LastName: string;
   MiddleName?: string;
   ExtensionName?: string;
-  EmploymentStatus: string;
+  EmploymentStatus?: string; // Keep for backward compatibility
   DepartmentID?: number;
   isDeleted?: boolean;
   UserID?: string;
   Department?: Department;
+  employmentDetails?: {
+    EmploymentStatus: string;
+  }[];
 }
 
 export default function DashboardContent() {
@@ -59,9 +62,11 @@ export default function DashboardContent() {
   const [facultyStats, setFacultyStats] = useState({
     total: 0,
     regular: 0,
-    probationary: 0,
+    partTime: 0,
     resigned: 0,
-    underProbation: 0,
+    retired: 0,
+    probationary: 0,
+    hired: 0,
   });
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [activeUsers, setActiveUsers] = useState({
@@ -147,6 +152,9 @@ export default function DashboardContent() {
             Department:DepartmentID (
               DepartmentID,
               DepartmentName
+            ),
+            employmentDetails:EmploymentDetail (
+              EmploymentStatus
             )
           `) as { data: Employee[] | null, error: any };
 
@@ -158,33 +166,82 @@ export default function DashboardContent() {
         console.log('Raw employee data from dashboard:', employeesData); // Debug log
         setEmployees(employeesData || []);
 
+        // Debug log to show employment details structure
+        console.log('Employment details sample:', employeesData?.slice(0, 3).map(emp => ({
+          employeeId: emp.EmployeeID,
+          employmentDetails: emp.employmentDetails,
+          oldEmploymentStatus: emp.EmploymentStatus
+        })));
+
+        // Debug: Check how many employees have employment details
+        const employeesWithDetails = employeesData?.filter(emp => emp.employmentDetails && emp.employmentDetails.length > 0) || [];
+        const employeesWithoutDetails = employeesData?.filter(emp => !emp.employmentDetails || emp.employmentDetails.length === 0) || [];
+        console.log('Employees with employment details:', employeesWithDetails.length);
+        console.log('Employees without employment details:', employeesWithoutDetails.length);
+        console.log('Sample employees without details:', employeesWithoutDetails.slice(0, 3));
+
         // Filter out deleted employees
         const allNonDeletedEmployees = employeesData?.filter(e => !e.isDeleted) || [];
         console.log('All non-deleted employee data:', allNonDeletedEmployees); // Debug log
 
-        // Calculate stats based on EmploymentStatus
-        const activeEmployees = allNonDeletedEmployees.filter((e) => e.EmploymentStatus !== "Resigned");
-        const regularCount = activeEmployees.filter((e) => e.EmploymentStatus === "Regular").length;
-        const probationaryCount = activeEmployees.filter((e) => e.EmploymentStatus === "Probationary").length;
-        const hiredCount = activeEmployees.filter((e) => e.EmploymentStatus === "Hired").length;
-        const resignedCount = allNonDeletedEmployees.filter((e) => e.EmploymentStatus === "Resigned").length;
+        // Calculate stats based on EmploymentStatus from EmploymentDetail with fallback
+        const regularCount = allNonDeletedEmployees.filter((e) => {
+          const status = e.employmentDetails?.[0]?.EmploymentStatus || e.EmploymentStatus;
+          return status === "Regular";
+        }).length;
+        const partTimeCount = allNonDeletedEmployees.filter((e) => {
+          const status = e.employmentDetails?.[0]?.EmploymentStatus || e.EmploymentStatus;
+          return status === "Part_Time" || status === "Part Time";
+        }).length;
+        const resignedCount = allNonDeletedEmployees.filter((e) => {
+          const status = e.employmentDetails?.[0]?.EmploymentStatus || e.EmploymentStatus;
+          return status === "Resigned";
+        }).length;
+        const retiredCount = allNonDeletedEmployees.filter((e) => {
+          const status = e.employmentDetails?.[0]?.EmploymentStatus || e.EmploymentStatus;
+          return status === "Retired";
+        }).length;
+        const probationaryCount = allNonDeletedEmployees.filter((e) => {
+          const status = e.employmentDetails?.[0]?.EmploymentStatus || e.EmploymentStatus;
+          return status === "Probationary";
+        }).length;
+        const hiredCount = allNonDeletedEmployees.filter((e) => {
+          const status = e.employmentDetails?.[0]?.EmploymentStatus || e.EmploymentStatus;
+          return status === "Hired";
+        }).length;
         
-        const totalActiveEmployees = activeEmployees.length;
+        const totalEmployees = allNonDeletedEmployees.length;
 
         console.log('Stats calculation from EmploymentStatus:', {
-          total: totalActiveEmployees,
+          total: totalEmployees,
           regular: regularCount,
+          partTime: partTimeCount,
+          resigned: resignedCount,
+          retired: retiredCount,
           probationary: probationaryCount,
           hired: hiredCount,
-          resigned: resignedCount,
         }); // Debug log
 
+        // Debug: Show all unique employment statuses found
+        const allStatuses = allNonDeletedEmployees.map(emp => {
+          const status = emp.employmentDetails?.[0]?.EmploymentStatus || emp.EmploymentStatus;
+          return status;
+        }).filter(Boolean);
+        const uniqueStatuses = [...new Set(allStatuses)];
+        console.log('All unique employment statuses found:', uniqueStatuses);
+        console.log('Status count breakdown:', uniqueStatuses.reduce((acc, status) => {
+          acc[status as string] = allStatuses.filter(s => s === status).length;
+          return acc;
+        }, {} as Record<string, number>));
+
         setFacultyStats({
-          total: totalActiveEmployees,
+          total: totalEmployees,
           regular: regularCount,
-          probationary: probationaryCount,
+          partTime: partTimeCount,
           resigned: resignedCount,
-          underProbation: probationaryCount,
+          retired: retiredCount,
+          probationary: probationaryCount,
+          hired: hiredCount,
         });
 
         // Fetch department names first
@@ -200,9 +257,9 @@ export default function DashboardContent() {
           deptStats[dept.DepartmentName] = 0;
         });
 
-        // Count active employees per department
+        // Count employees per department (including all statuses)
         allNonDeletedEmployees.forEach((emp) => {
-          if (!emp.isDeleted && emp.EmploymentStatus !== "Resigned" && emp.DepartmentID) {
+          if (!emp.isDeleted && emp.DepartmentID) {
             const dept = departments?.find(d => d.DepartmentID === emp.DepartmentID);
             if (dept) {
               deptStats[dept.DepartmentName] = (deptStats[dept.DepartmentName] || 0) + 1;
@@ -469,8 +526,12 @@ export default function DashboardContent() {
   const absentPerDay: number[] = Array(daysCount).fill(0);
   const latePerDay: number[] = Array(daysCount).fill(0);
   
-  // Get all active employees (not resigned or deleted)
-  const activeEmployees = employees.filter((emp: Employee) => !emp.isDeleted && emp.EmploymentStatus !== "Resigned");
+  // Get all active employees (Regular and Part Time only for attendance)
+  const activeEmployees = employees.filter((emp: Employee) => {
+    if (emp.isDeleted) return false;
+    const status = emp.employmentDetails?.[0]?.EmploymentStatus || emp.EmploymentStatus;
+    return status === "Regular" || status === "Part_Time" || status === "Part Time";
+  });
   const totalActiveEmployees = activeEmployees.length;
   
   // Calculate attendance for each day
@@ -500,7 +561,7 @@ export default function DashboardContent() {
     attendanceRecords: attendanceRecords.length,
     activeEmployees: activeEmployees.map(emp => ({
       id: emp.EmployeeID,
-      status: emp.EmploymentStatus
+      status: emp.employmentDetails?.[0]?.EmploymentStatus || emp.EmploymentStatus
     }))
   });
 
@@ -937,17 +998,29 @@ export default function DashboardContent() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.regular}</p>
-              <p className="text-gray-600 font-medium">Regular Employee</p>
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.regular}</p>
+              <p className="text-gray-600 font-medium text-center">Regular</p>
             </div>
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.underProbation}</p>
-              <p className="text-gray-600 font-medium">Part time</p>
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.partTime}</p>
+              <p className="text-gray-600 font-medium text-center">Part Time</p>
             </div>
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.probationary}</p>
+              <p className="text-gray-600 font-medium text-sm">Probationary</p>
+            </div> */}
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.hired}</p>
+              <p className="text-gray-600 font-medium text-sm">Hired</p>
+            </div> */}
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-2">{facultyStats.resigned}</p>
-              <p className="text-gray-600 font-medium">Resigned</p>
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.resigned}</p>
+              <p className="text-gray-600 font-medium text-center">Resigned</p>
             </div>
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.retired}</p>
+              <p className="text-gray-600 font-medium text-sm">Retired</p>
+            </div> */}
           </div>
           <div className="mt-6 h-[200px]">
             <Bar data={departmentData} options={{
