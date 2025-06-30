@@ -945,7 +945,7 @@ export default function SignInPage() {
             await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, retryCount)));
             retryCount++;
           } else {
-            // Sign out of Clerk since we couldn't verify the user in our database
+            // Sign out of Clerk since we couldn't verify the user
             if (clerk) {
               await clerk.signOut();
             }
@@ -1100,11 +1100,28 @@ export default function SignInPage() {
   return (
     <>
       <div className="min-h-screen flex">
-        {/* Left side - Background */}
-        <div className="flex-1 bg-[url('/portalBG.png')] bg-cover bg-center" />
+        {/* Left side - Maroon background with logo and school info */}
+        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-[#800000] text-white p-8 relative">
+          <div className="flex flex-col items-center">
+            <Image
+              alt="SJSFI Logo"
+              src="/sjsfilogo.png"
+              width={220}
+              height={220}
+              className="mb-8"
+              priority
+            />
+            <h1 className="text-5xl font-extrabold text-center mb-4 drop-shadow-lg">
+              Saint Joseph School of Fairview Inc.
+            </h1>
+            <p className="text-2xl text-center font-light mb-2">
+              Human Resource Faculty Management System
+            </p>
+          </div>
+        </div>
 
         {/* Right side - Login panel */}
-        <div className="absolute right-0 w-full md:w-1/3 min-h-screen min-w-[360px] pt-[10vh] overflow-hidden bg-white/70 backdrop-blur-[20px] backdrop-saturate-[168%] shadow-md m-0 rounded-none flex flex-col bg-clip-border border border-transparent break-words mb-4">
+        <div className="flex flex-col justify-center items-center w-full md:w-1/2 min-h-screen bg-[#f7f8fa] relative">
           {/* Back button */}
           <button
             onClick={handleBack}
@@ -1114,7 +1131,7 @@ export default function SignInPage() {
             Back
           </button>
 
-          <div className="flex flex-col items-center h-full w-full">
+          <div className="w-full max-w-md px-6 flex flex-col items-center">
             <div className="flex flex-col items-center justify-center w-full mb-4">
               <Image
                 alt="SJSFI Logo"
@@ -1125,7 +1142,7 @@ export default function SignInPage() {
                 priority
               />
               <h1 className="text-3xl text-center w-full mb-2 mx-1">
-                <span className="font-bold text-[#800000]">SJSFI-HRMS</span>
+                <span className="font-bold text-[#800000]">HR-FMS</span>
                 {portal ? (
                   <span className="ml-1">
                     {portal === 'admin' ? 'Admin Portal' : 
@@ -1147,7 +1164,7 @@ export default function SignInPage() {
               <p className="text-center text-black text-sm mb-4">
                 Sign in to start your session
               </p>
-              <form onSubmit={handleSubmit} className="w-full px-4" autoComplete="off">
+              <form onSubmit={handleSubmit} className="w-full" autoComplete="off">
                 <div className="mb-4 w-full">
                   <div className="relative w-full">
                     <input
@@ -1161,7 +1178,6 @@ export default function SignInPage() {
                       value={email}
                       onChange={handleInputChange}
                       onPaste={(e) => {
-                        // Allow paste to happen, then validate after a brief delay
                         setTimeout(() => {
                           const target = e.target as HTMLInputElement;
                           handleInputChange({
@@ -1189,7 +1205,6 @@ export default function SignInPage() {
                       value={password}
                       onChange={handleInputChange}
                       onPaste={(e) => {
-                        // Allow paste to happen, then validate after a brief delay
                         setTimeout(() => {
                           const target = e.target as HTMLInputElement;
                           handleInputChange({

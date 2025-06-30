@@ -515,21 +515,21 @@ export default function EmployeeDashboard() {
               <ul className="space-y-2">
                 <li
                   className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I request a change in my teaching schedule?")}
+                  onClick={() => handleSendMessage("How do I update my personal information?")}
                 >
-                  How do I request a change in my teaching schedule?
+                  How do I update my personal information?
                 </li>
                 <li
                   className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I add a new faculty profile?")}
+                  onClick={() => handleSendMessage("How do I submit required documents?")}
                 >
-                  How do I add a new faculty profile?
+                  How do I submit required documents?
                 </li>
                 <li
                   className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("Where is the campus located?")}
+                  onClick={() => handleSendMessage("How do I upload my profile photo?")}
                 >
-                  Where is the campus located?
+                  How do I upload my profile photo?
                 </li>
               </ul>
             </div>

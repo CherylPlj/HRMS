@@ -270,12 +270,12 @@ export default function AdminDashboard() {
         return <FacultyContent />;
       case 'employees':
         return <EmployeeContentNew />;
-      case 'recruitment':
-        return <RecruitmentContent />;
-      case 'attendance':
-        return <AttendanceContent />;
-      case 'leave':
-        return <LeaveContent />;
+      // case 'recruitment':
+      //   return <RecruitmentContent />;
+      // case 'attendance':
+      //   return <AttendanceContent />;
+      // case 'leave':
+      //   return <LeaveContent />;
       case 'user-management':
         return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
       case 'session-management':
@@ -330,13 +330,13 @@ export default function AdminDashboard() {
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
-              { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
-              { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
-              { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
+              // { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
+              // { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
+              // { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
                 { name: 'User Management', icon: 'fa-user-shield', key: 'user-management' },
-                { name: 'Session Management', icon: 'fa-clock', key: 'session-management' }
+                // { name: 'Session Management', icon: 'fa-clock', key: 'session-management' }
               ] : [])
             ].map((item) => (
               <a
@@ -396,10 +396,10 @@ export default function AdminDashboard() {
                   {activeButton === 'dashboard' && 'DASHBOARD'}
                   {activeButton === 'document' && 'DOCUMENTS'}
                   {activeButton === 'employees' && 'EMPLOYEES'}
-                  {activeButton === 'attendance' && 'ATTENDANCE'}
-                  {activeButton === 'leave' && 'LEAVE'}
+                  {/* {activeButton === 'attendance' && 'ATTENDANCE'}
+                  {activeButton === 'leave' && 'LEAVE'} */}
                   {activeButton === 'user-management' && 'USER MANAGEMENT'}
-                  {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
+                  {/* {activeButton === 'session-msanagement' && 'SESSION MANAGEMENT'} */}
                 </h1>
               </div>
 
@@ -542,11 +542,11 @@ export default function AdminDashboard() {
         position={chatbotPosition}
         onPositionChange={setChatbotPosition}
         suggestedPrompts={[
-          "How do I manage faculty schedules?",
+          "How do I add a new employee?",
           "How do I add a new faculty member?",
-          "How do I approve leave requests?",
-          "How do I view attendance reports?",
-          "How do I manage employee documents?"
+          "How do I check and approve documents?",
+          "How do I create a user account for an employee?",
+          "How do I reject a document submission?"
         ]}
         title="SJSFI Admin Assistant"
         userRole="admin"

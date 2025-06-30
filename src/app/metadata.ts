@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SJSFI - HRMS",
+  title: "SJSFI - HR FMS",
   icons: { icon: "/sjsfilogo.png" },
-  keywords: ["HRMS", "SJSFI", "Human Resource Management System", "faculty management", "document management"],
+  keywords: ["HR FMS", "SJSFI", "Human Resource Faculty Management System", "faculty management", "document management"],
   authors: [{
     name: "Saint Joseph School of Fairview, Inc.",
     url: "https://www.sjsfi.edu.ph"
   }],
   creator: "Saint Joseph School of Fairview, Inc.",
   publisher: "Saint Joseph School of Fairview, Inc.",
-  description: "Human Resource Management System",
+  description: "Human Resource Faculty Management System",
 }; 

@@ -327,7 +327,7 @@ export default function DashboardContent() {
           .lte("date", dateRange[1].toISOString());
 
         if (attendanceError) {
-          // console.error("Attendance fetch error:", attendanceError.message || attendanceError);
+          console.error("Attendance fetch error:", attendanceError.message || attendanceError);
           throw attendanceError;
         }
 
@@ -376,9 +376,9 @@ export default function DashboardContent() {
           // .gte("CreatedAt", dateRange[0].toISOString())
           // .lte("CreatedAt", dateRange[1].toISOString())
           // .eq("Status", "Pending");
-            // console.log(leaves);
+            console.log(leaves);
         if (leavesError) {
-          // console.error("Leave requests fetch error:", leavesError.message || leavesError);
+          console.error("Leave requests fetch error:", leavesError.message || leavesError);
           throw leavesError;
         }
 
@@ -387,7 +387,7 @@ export default function DashboardContent() {
           approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
           rejected: leaves?.filter((l) => l.Status === "Rejected").length || 0,
         });
-        // console.log("Statuses:", leaves.map((l) => l.Status));
+        console.log("Statuses:", leaves.map((l) => l.Status));
 
         // Fetch Documents Status
         const { data: documents, error: documentsError } = await supabase
@@ -635,69 +635,6 @@ export default function DashboardContent() {
     ],
   };
 
-  // Add new chart data for employee status breakdown
-  const employeeStatusData = {
-    labels: ["Regular", "Part Time", "Probationary", "Hired", "Resigned", "Retired"],
-    datasets: [
-      {
-        data: [
-          facultyStats.regular,
-          facultyStats.partTime,
-          facultyStats.probationary,
-          facultyStats.hired,
-          facultyStats.resigned,
-          facultyStats.retired
-        ],
-        backgroundColor: [
-          "#43a047", // Green for Regular
-          "#2196F3", // Blue for Part Time
-          "#FF9800", // Orange for Probationary
-          "#9C27B0", // Purple for Hired
-          "#e53935", // Red for Resigned
-          "#757575"  // Gray for Retired
-        ],
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  // Add document status breakdown
-  const documentStatusData = {
-    labels: ["Submitted", "Pending Review", "Approved", "Rejected"],
-    datasets: [
-      {
-        data: [
-          documentStats.submitted,
-          documentStats.submitted * 0.3, // Placeholder - you can fetch actual data
-          documentStats.submitted * 0.6, // Placeholder - you can fetch actual data
-          documentStats.submitted * 0.1  // Placeholder - you can fetch actual data
-        ],
-        backgroundColor: [
-          "#2196F3", // Blue for Submitted
-          "#FF9800", // Orange for Pending
-          "#43a047", // Green for Approved
-          "#e53935"  // Red for Rejected
-        ],
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  // Add faculty vs admin comparison
-  const userRoleData = {
-    labels: ["Faculty", "Admin"],
-    datasets: [
-      {
-        label: "Active Users",
-        data: [activeUsers.faculty, activeUsers.admin],
-        backgroundColor: ["#800000", "#9C27B0"],
-        borderRadius: 8,
-        barPercentage: 0.6,
-        categoryPercentage: 0.8,
-      },
-    ],
-  };
-
   // Helper function to format candidate name
   const formatCandidateName = (firstName: string, lastName: string, middleName?: string, extensionName?: string) => {
     let fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
@@ -722,12 +659,11 @@ export default function DashboardContent() {
   };
 
   return (
-    <div className="p-8 w-full flex flex-col bg-gray-50 min-h-screen">
-      {/* Header Section */}
+    <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-4">
           <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1 font-medium">Filter by Date Range</label>
+            <label className="text-sm text-gray-600 mb-1">Filter by Date Range</label>
             <DatePicker
               selected={dateRange[0]}
               onChange={handleDateChange}
@@ -736,7 +672,7 @@ export default function DashboardContent() {
               selectsRange
               dateFormat="yyyy-MM-dd"
               customInput={
-                <button className="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all duration-300 shadow-sm">
+                <button className="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all duration-300">
                   <FaCalendarAlt className="mr-2 text-[#800000]" />
                   {dateRange[0]
                     ? `${dateRange[0].toLocaleDateString()} - ${
@@ -757,7 +693,7 @@ export default function DashboardContent() {
                 const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
                 setDateRange([firstDayOfMonth, today]);
               }}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-[#800000] hover:bg-white rounded-lg transition-all duration-300 font-medium"
+              className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
             >
               This Month
             </button>
@@ -767,446 +703,440 @@ export default function DashboardContent() {
                 const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
                 setDateRange([firstDayOfYear, today]);
               }}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-[#800000] hover:bg-white rounded-lg transition-all duration-300 font-medium"
+              className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
             >
               This Year
             </button>
           </div>
         </div>
-        <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg shadow-sm">
+        <div className="text-sm text-gray-500">
           Showing data from {dateRange[0].toLocaleDateString()} to {dateRange[1].toLocaleDateString()}
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          // onClick={() => handleCardClick('faculty')}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Total Employees</p>
+              <p className="text-gray-500 text-sm">Total Employees</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{facultyStats.total}</h3>
-              <p className="text-xs text-gray-400 mt-1">Active workforce</p>
             </div>
-            <div className="bg-red-50 p-3 rounded-full">
-              <FaUsers className="text-3xl text-[#800000]" />
-            </div>
+            <FaUsers className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          // onClick={() => handleCardClick('recruitment')}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Active Faculty</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{activeUsers.faculty}</h3>
-              <p className="text-xs text-gray-400 mt-1">Currently active</p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-full">
-              <FaUserTie className="text-3xl text-[#800000]" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Total Applicants</p>
+              <p className="text-gray-500 text-sm">Total Applicants</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{recruitmentStats.totalCandidates}</h3>
-              <p className="text-xs text-gray-400 mt-1">In recruitment</p>
             </div>
-            <div className="bg-blue-50 p-3 rounded-full">
-              <FaUserPlus className="text-3xl text-[#800000]" />
-            </div>
+            <FaUserPlus className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          // onClick={() => handleCardClick('documents')}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Documents Pending</p>
+              <p className="text-gray-500 text-sm">Documents Requiring Approval</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{documentStats.submitted}</h3>
-              <p className="text-xs text-gray-400 mt-1">Require approval</p>
             </div>
-            <div className="bg-orange-50 p-3 rounded-full">
-              <FaFile className="text-3xl text-[#800000]" />
+            <FaFile className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+
+        <div 
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          // onClick={() => handleCardClick('leaves')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Pending Leaves</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveRequests.pending}</h3>
+            </div>
+            <FaClock className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+      </div>
+
+      {/* Recruitment Overview Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FaUserPlus className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Recruitment Overview</h2>
+          </div>
+          {/* <button 
+            // onClick={() => handleCardClick('recruitment')}
+            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
+          >
+            View All
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button> */}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Recruitment Funnel Chart */}
+          <div className="bg-gray-50 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Recruitment Funnel</h3>
+            <div className="h-[300px]">
+              <Bar
+                data={{
+                  labels: ['Total Candidates', 'Shortlisted', 'Interviewed', 'Hired'],
+                  datasets: [
+                    {
+                      label: 'Candidates',
+                      data: [
+                        recruitmentStats.totalCandidates,
+                        recruitmentStats.shortlisted,
+                        recruitmentStats.interviewed,
+                        recruitmentStats.hired
+                      ],
+                      backgroundColor: [
+                        '#800000',
+                        '#9C27B0',
+                        '#2196F3',
+                        '#43a047'
+                      ],
+                      borderRadius: 8,
+                    }
+                  ]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.1)'
+                      },
+                      ticks: {
+                        stepSize: 1,
+                        precision: 0
+                      }
+                    },
+                    x: {
+                      grid: {
+                        display: false
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Recruitment Progress Pie Chart */}
+          <div className="bg-gray-50 p-6 rounded-xl">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Application Status Distribution</h3>
+            <div className="h-[300px] flex items-center justify-center">
+              <Pie
+                data={{
+                  labels: ['Active Vacancies', 'In Process', 'Shortlisted', 'Interviewed', 'Hired'],
+                  datasets: [{
+                    data: [
+                      recruitmentStats.activeVacancies,
+                      recruitmentStats.totalCandidates - (recruitmentStats.shortlisted + recruitmentStats.interviewed + recruitmentStats.hired),
+                      recruitmentStats.shortlisted,
+                      recruitmentStats.interviewed,
+                      recruitmentStats.hired
+                    ],
+                    backgroundColor: [
+                      '#800000',
+                      '#9C27B0',
+                      '#2196F3',
+                      '#FF9800',
+                      '#43a047'
+                    ],
+                    borderWidth: 0,
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        usePointStyle: true
+                      }
+                    }
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Employee Status Distribution */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaUsers className="mr-2 text-[#800000]" />
-            Employee Status Distribution
-          </h3>
-          <div className="h-80">
-            <Pie 
-              data={employeeStatusData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                    labels: {
-                      padding: 20,
-                      usePointStyle: true,
-                    }
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                        const percentage = ((context.parsed / total) * 100).toFixed(1);
-                        return `${context.label}: ${context.parsed} (${percentage}%)`;
-                      }
-                    }
-                  }
-                }
-              }}
-            />
+        {/* Quick Stats Row */}
+        <div className="grid grid-cols-5 gap-4 mt-8">
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaBuilding className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.activeVacancies}</p>
+            <p className="text-sm text-gray-600">Active Vacancies</p>
           </div>
-        </div>
-
-        {/* Department Distribution */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaBuilding className="mr-2 text-[#800000]" />
-            Employees by Department
-          </h3>
-          <div className="h-80">
-            <Bar 
-              data={departmentData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: false
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.label}: ${context.parsed.y} employees`;
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      stepSize: 1
-                    }
-                  }
-                }
-              }}
-            />
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUsers className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.totalCandidates}</p>
+            <p className="text-sm text-gray-600">Total Candidates</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUserCheck className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.shortlisted}</p>
+            <p className="text-sm text-gray-600">Shortlisted</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUserClock className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.interviewed}</p>
+            <p className="text-sm text-gray-600">Interviewed</p>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <FaUserTie className="text-[#800000] text-xl mx-auto mb-2" />
+            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.hired}</p>
+            <p className="text-sm text-gray-600">Hired</p>
           </div>
         </div>
       </div>
 
-      {/* Second Row of Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Document Status */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaFile className="mr-2 text-[#800000]" />
-            Document Status Overview
-          </h3>
-          <div className="h-80">
-            <Pie 
-              data={documentStatusData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                    labels: {
-                      padding: 20,
-                      usePointStyle: true,
-                    }
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                        const percentage = ((context.parsed / total) * 100).toFixed(1);
-                        return `${context.label}: ${context.parsed} (${percentage}%)`;
-                      }
-                    }
-                  }
-                }
-              }}
-            />
+      {/* Upcoming Interviews Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
           </div>
+          {/* <button 
+            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
+            // onClick={() => handleCardClick('recruitment')}
+          >
+            View All
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button> */}
         </div>
 
-        {/* User Role Distribution */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaUserCheck className="mr-2 text-[#800000]" />
-            Active Users by Role
-          </h3>
-          <div className="h-80">
-            <Bar 
-              data={userRoleData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: false
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.label}: ${context.parsed.y} users`;
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      stepSize: 1
-                    }
-                  }
-                }
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Third Row - Attendance and Leave Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Attendance Overview */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaCalendarCheck className="mr-2 text-[#800000]" />
-            Daily Attendance Overview
-          </h3>
-          <div className="h-80">
-            <Bar 
-              data={attendanceOverviewData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'top',
-                    labels: {
-                      usePointStyle: true,
-                    }
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.dataset.label}: ${context.parsed.y} employees`;
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  x: {
-                    stacked: true,
-                  },
-                  y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    ticks: {
-                      stepSize: 1
-                    }
-                  }
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Leave Requests */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaClock className="mr-2 text-[#800000]" />
-            Leave Request Status
-          </h3>
-          <div className="h-80">
-            <Pie 
-              data={leavePieData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                    labels: {
-                      padding: 20,
-                      usePointStyle: true,
-                    }
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                        const percentage = ((context.parsed / total) * 100).toFixed(1);
-                        return `${context.label}: ${context.parsed} (${percentage}%)`;
-                      }
-                    }
-                  }
-                }
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly Attendance Trend */}
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 mb-8">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <FaHistory className="mr-2 text-[#800000]" />
-          Monthly Attendance Rate Trend
-        </h3>
-        <div className="h-80">
-          <Line 
-            data={monthlyAttendanceData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false
-                },
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      return `Attendance Rate: ${context.parsed.y}%`;
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  max: 100,
-                  ticks: {
-                    callback: function(value) {
-                      return value + '%';
-                    }
-                  }
-                }
-              }
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Recent Activity and Upcoming Interviews */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Recent Activity Logs */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaHistory className="mr-2 text-[#800000]" />
-            Recent Activity
-          </h3>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {logs.length > 0 ? (
-              logs.map((log, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-2 h-2 bg-[#800000] rounded-full mt-2 flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">
-                      {log.User?.FirstName} {log.User?.LastName}
-                    </p>
-                    <p className="text-xs text-gray-600">{log.ActionDetails}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formatDateTime(log.Timestamp)}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                <FaHistory className="text-4xl mx-auto mb-2 opacity-50" />
-                <p>No recent activity</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Upcoming Interviews */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FaGraduationCap className="mr-2 text-[#800000]" />
-            Upcoming Interviews
-          </h3>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {upcomingInterviews.length > 0 ? (
-              upcomingInterviews.map((interview, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-2 h-2 bg-[#800000] rounded-full mt-2 flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">
+        {upcomingInterviews.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Interview Schedule
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Candidate Name
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Position
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Contact
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {upcomingInterviews.map((interview) => (
+                  <tr key={interview.CandidateID} className="hover:bg-gray-50">
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatDateTime(interview.InterviewDate)}
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
                       {formatCandidateName(
                         interview.FirstName,
                         interview.LastName,
                         interview.MiddleName,
                         interview.ExtensionName
                       )}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {interview.Vacancy?.JobTitle || interview.Vacancy?.VacancyName}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formatDateTime(interview.InterviewDate)}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                <FaGraduationCap className="text-4xl mx-auto mb-2 opacity-50" />
-                <p>No upcoming interviews</p>
-              </div>
-            )}
+                    </td>
+                    <td className="py-4">
+                      <div className="text-sm text-gray-900">{interview.Vacancy.VacancyName}</div>
+                      <div className="text-sm text-gray-500">{interview.Vacancy.JobTitle}</div>
+                    </td>
+                    <td className="py-4">
+                      <div className="text-sm text-gray-900">{interview.Email}</div>
+                      <div className="text-sm text-gray-500">{interview.ContactNumber || 'No contact number'}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No upcoming interviews scheduled
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Employee Overview Section */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <FaGraduationCap className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.regular}</p>
+              <p className="text-gray-600 font-medium text-center">Regular</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.partTime}</p>
+              <p className="text-gray-600 font-medium text-center">Part Time</p>
+            </div>
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.probationary}</p>
+              <p className="text-gray-600 font-medium text-sm">Probationary</p>
+            </div> */}
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.hired}</p>
+              <p className="text-gray-600 font-medium text-sm">Hired</p>
+            </div> */}
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.resigned}</p>
+              <p className="text-gray-600 font-medium text-center">Resigned</p>
+            </div>
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.retired}</p>
+              <p className="text-gray-600 font-medium text-sm">Retired</p>
+            </div> */}
+          </div>
+          <div className="mt-6 h-[200px]">
+            <Bar data={departmentData} options={{
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    display: true
+                  },
+                  ticks: {
+                    stepSize: 1,
+                    precision: 0
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  }
+                }
+              }
+            }} />
+          </div>
+        </div>
+
+        {/* Leave Requests Section */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <FaBriefcase className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
+          </div>
+          <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.pending}</p>
+              <p className="text-gray-600 font-medium text-center">Pending</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.approved}</p>
+              <p className="text-gray-600 font-medium text-center">Approved</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.rejected}</p>
+              <p className="text-gray-600 font-medium text-center">Rejected</p>
+            </div>
+          </div>
+          <div className="h-[200px] flex items-center justify-center">
+            <Pie data={leavePieData} options={{ 
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { 
+                legend: { 
+                  display: true, 
+                  position: 'bottom',
+                  align: 'center',
+                  labels: {
+                    boxWidth: 20,
+                    padding: 15,
+                    usePointStyle: true
+                  }
+                } 
+              } 
+            }} />
           </div>
         </div>
       </div>
 
-      {/* Quick Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Active Vacancies</p>
-              <h3 className="text-2xl font-bold text-[#800000] mt-2">{recruitmentStats.activeVacancies}</h3>
-            </div>
-            <FaBriefcase className="text-2xl text-[#800000] opacity-50" />
-          </div>
+      {/* Attendance Overview Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+        <div className="flex items-center mb-6">
+          <FaUserClock className="text-[#800000] text-2xl mr-3" />
+          <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Shortlisted Candidates</p>
-              <h3 className="text-2xl font-bold text-[#800000] mt-2">{recruitmentStats.shortlisted}</h3>
-            </div>
-            <FaUserCheck className="text-2xl text-[#800000] opacity-50" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Pending Leaves</p>
-              <h3 className="text-2xl font-bold text-[#800000] mt-2">{leaveRequests.pending}</h3>
-            </div>
-            <FaClock className="text-2xl text-[#800000] opacity-50" />
-          </div>
+        <div className="h-[350px]">
+          <Bar data={attendanceOverviewData} options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+              legend: { 
+                display: true,
+                position: 'top',
+                align: 'center',
+                labels: {
+                  boxWidth: 12,
+                  padding: 15,
+                  usePointStyle: true
+                }
+              }
+            },
+            scales: {
+              y: { 
+                beginAtZero: true,
+                grid: {
+                  display: true,
+                  color: 'rgba(0, 0, 0, 0.1)'
+                },
+                ticks: {
+                  precision: 0
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }} />
         </div>
       </div>
     </div>

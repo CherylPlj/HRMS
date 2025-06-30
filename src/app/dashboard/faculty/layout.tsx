@@ -137,10 +137,10 @@ export default function FacultyDashboard() {
         return <PersonalData onBack={() => setActiveButton('dashboard')} />;
       case 'documents':
         return <DocumentsFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'attendance':
-        return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'leave':
-        return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
+      // case 'attendance':
+      //   return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
+      // case 'leave':
+      //   return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -189,8 +189,8 @@ export default function FacultyDashboard() {
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
-              { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
-              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' }
+              // { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
+              // { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' }
             ].map((item) => (
               <a
                 key={item.key}
@@ -249,8 +249,8 @@ export default function FacultyDashboard() {
                   {activeButton === 'dashboard' && 'DASHBOARD'}
                   {activeButton === 'personal-data' && 'PERSONAL DATA'}
                   {activeButton === 'documents' && 'DOCUMENTS'}
-                  {activeButton === 'attendance' && 'ATTENDANCE'}
-                  {activeButton === 'leave' && 'LEAVE REQUEST'}
+                  {/* {activeButton === 'attendance' && 'ATTENDANCE'}
+                  {activeButton === 'leave' && 'LEAVE REQUEST'} */}
                 </h1>
               </div>
 
@@ -412,11 +412,11 @@ export default function FacultyDashboard() {
         position={chatbotPosition}
         onPositionChange={setChatbotPosition}
         suggestedPrompts={[
-          "How do I request a change in my teaching schedule?",
-          "How do I submit a leave request?",
-          "How do I view my attendance records?",
-          "How do I upload documents?",
-          "Where is the campus located?"
+          "How do I update my personal information?",
+          "How do I submit required documents?",
+          "How do I upload my profile photo?",
+          "How do I update my contact details?",
+          "How do I submit my educational background?"
         ]}
         title="SJSFI Faculty Assistant"
         userRole="faculty"

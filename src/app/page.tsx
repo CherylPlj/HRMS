@@ -31,69 +31,74 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Background */}
-      <div className="flex-1 bg-[url('/portalBG.png')] bg-cover bg-center" />
+      {/* Left side - Maroon background with logo and school info */}
+      <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-[#800000] text-white p-8 relative">
+        <div className="flex flex-col items-center">
+          <Image
+            alt="SJSFI Logo"
+            src="/sjsfilogo.png"
+            width={220}
+            height={220}
+            className="mb-8"
+            priority
+          />
+          <h1 className="text-5xl font-extrabold text-center mb-4 drop-shadow-lg">
+            Saint Joseph School of Fairview Inc.
+          </h1>
+          <p className="text-2xl text-center font-light mb-2">
+            Human Resource Faculty Management System
+          </p>
+        </div>
+      </div>
 
       {/* Right side - Login panel */}
-      <div className="absolute right-0 w-full md:w-1/3 min-h-screen min-w-[360px] pt-[10vh] overflow-hidden bg-white/70 backdrop-blur-[20px] backdrop-saturate-[168%] shadow-md m-0 rounded-none flex flex-col bg-clip-border border border-transparent break-words mb-4">
-        <div className="flex flex-col items-center h-full w-full">
-          <div className="flex flex-col items-center justify-center w-full mb-4">
-            <Image
-              alt="SJSFI Logo"
-              src="/sjsfilogo.png"
-              width={90}
-              height={90}
-              className="mb-2"
-              priority
-            />
-            <h1 className="text-3xl text-center text-[#800000] w-full">
-              Welcome to <span className="font-bold">SJSFI-HRMS Portal</span>
-            </h1>
+      <div className="flex flex-col justify-center items-center w-full md:w-1/2 min-h-screen bg-[#f7f8fa] relative">
+        <div className="w-full max-w-xl px-6 flex flex-col items-center">
+          <h2 className="text-4xl font-extrabold text-[#22223b] text-center mb-2 mt-8 md:mt-0">Welcome Back</h2>
+          <p className="text-lg text-[#22223b]/80 text-center mb-8">Please select your role to continue</p>
+
+          {/* Portal Buttons */}
+          <div className="w-full flex flex-col gap-6 mb-8">
+            {/* Faculty Portal */}
+            <button
+              type="button"
+              onClick={navigateToFaculty}
+              className="flex items-center w-full bg-white rounded-xl shadow-md px-6 py-6 transition hover:shadow-lg focus:outline-none group"
+            >
+              <div className="flex items-center justify-center w-16 h-16 bg-[#800000]/10 rounded-lg mr-6">
+                <Image src="/class.png" alt="Faculty Icon" width={40} height={40} />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="text-2xl font-bold text-[#800000] mb-1">Faculty Portal</div>
+                <div className="text-base text-[#22223b]/80">Access your faculty dashboard</div>
+              </div>
+              <div className="ml-4">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#800000" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </div>
+            </button>
+
+            {/* Admin Portal */}
+            <button
+              type="button"
+              onClick={navigateToAdmin}
+              className="flex items-center w-full bg-white rounded-xl shadow-md px-6 py-6 transition hover:shadow-lg focus:outline-none group"
+            >
+              <div className="flex items-center justify-center w-16 h-16 bg-[#B8860B]/10 rounded-lg mr-6">
+                <Image src="/setting.png" alt="Admin Icon" width={40} height={40} />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="text-2xl font-bold text-[#B8860B] mb-1">Administrator Portal</div>
+                <div className="text-base text-[#22223b]/80">Access administrative controls</div>
+              </div>
+              <div className="ml-4">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#B8860B" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </div>
+            </button>
           </div>
-          <div className="flex flex-col items-center justify-center w-full">
-            <p className="text-center text-black text-sm mb-4">
-              Please click or tap your role to sign in
-            </p>
-            <div className="w-full px-4">
-              <div className="mb-4 w-full">
-                <button
-                  type="button"
-                  onClick={navigateToFaculty}
-                  className="relative bg-[#800000] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-50 hover:before:rounded-sm"
-                >
-                  <span className="relative z-10">Faculty</span>
-                </button>
-              </div>
-              <div className="mb-4 w-full">
-                <button
-                  type="button"
-                  onClick={navigateToAdmin}
-                  className="relative bg-[#B8860B] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-25 hover:before:rounded-sm"
-                >
-                  <span className="relative z-10">Admin</span>
-                </button>
-              </div>
-              <div className="flex items-center justify-center mb-4 w-full">
-                <p className="text-sm text-black text-center">
-                  By using this service, you understood and agree to the
-                  <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
-                  <a
-                    className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
-                    href="/terms-of-use"
-                  >
-                    Terms of Use
-                  </a>
-                  {' '}and{' '}
-                  <a
-                    className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
-                    href="/privacy-statement"
-                  >
-                    Privacy Statement
-                  </a>
-                  .
-                </p>
-              </div>
-            </div>
+
+          {/* Footer */}
+          <div className="w-full text-center mt-8 mb-4 text-[#22223b]/60 text-sm">
+            © 2025 Saint Joseph School of Fairview Inc.
           </div>
         </div>
       </div>
