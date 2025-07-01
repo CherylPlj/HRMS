@@ -82,11 +82,11 @@ export default clerkMiddleware(async (auth, req) => {
     response.headers.set(
         "Content-Security-Policy",
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://cdn.jsdelivr.net blob:; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://*.vercel.live blob:; " +
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
         "img-src 'self' data: https: blob:; " +
         "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-        "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co https://clerk-telemetry.com; " +
+        "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co https://clerk-telemetry.com https://*.vercel.live; " +
         "frame-src 'self' https://*.clerk.accounts.dev; " +
         "worker-src 'self' blob:; " +
         "child-src 'self' blob:;"

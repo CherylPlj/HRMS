@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaTimes } from 'react-icons/fa';
 import { useUser } from '@clerk/nextjs';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import jsPDF from 'jspdf';
 import EducationTab from './tabs/EducationTab';
 import FamilyTab from './tabs/FamilyTab';
@@ -17,10 +17,7 @@ import ContactInfoTab from './tabs/ContactInfoTab';
 import { fetchWithRetry } from '@/lib/apiUtils';
 
 // Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
 
 interface FacultyDetails {
   // Basic Employee Info

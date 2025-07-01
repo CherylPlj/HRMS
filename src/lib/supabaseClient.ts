@@ -9,19 +9,18 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create a singleton instance
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Create a singleton instance with proper configuration
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  db: {
+    schema: 'public'
+  }
+});
 
 export { supabase };
 export default supabase;
-
-// const supabaseClient = createClient(
-//     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-//     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-//     {
-//       // Session accessed from Clerk SDK, either as Clerk.session (vanilla
-//       // JavaScript) or useSession (React)
-//       accessToken: async () => session?.getToken() ?? null,
-//     }
-//   )
 
