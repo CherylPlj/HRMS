@@ -9,6 +9,7 @@ import LeaveDashFac from '@/components/LeaveDashFac';
 // import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import ChatbotFaculty from '@/components/ChatbotFaculty';
+import ChatbotFacultyThreads from '@/components/ChatbotFacultyThreads';
 import Chatbot from '@/components/Chatbot';
 import { useRouter } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
