@@ -1,8 +1,10 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
-// Initialize Gemini AI
+// Initialize Gemini AI and Prisma
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
+const prisma = new PrismaClient();
 
 // Helper function to wait between retries
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -24,6 +26,94 @@ const formatResponse = (text: string): string => {
     .replace(/([A-Z][a-z]+:)\s*/g, '\n$1 ') // Add newline before sections
     .trim(); // Remove extra whitespace
 };
+
+// Function to fetch custom queries and training documents from database
+async function fetchCustomKnowledge() {
+  try {
+    // Fetch all active queries from AIChat table
+    let queries = await prisma.aIChat.findMany({
+      where: {
+        Status: 'Active' // Using the Status field from AIChat model
+      },
+      include: {
+        User: {
+          select: {
+            FirstName: true,
+            LastName: true,
+          },
+        },
+      },
+      orderBy: {
+        dateSubmitted: 'desc'
+      }
+    });
+
+    // If no active queries found, fetch all queries as fallback
+    if (queries.length === 0) {
+      queries = await prisma.aIChat.findMany({
+        include: {
+          User: {
+            select: {
+              FirstName: true,
+              LastName: true,
+            },
+          },
+        },
+        orderBy: {
+          dateSubmitted: 'desc'
+        }
+      });
+    }
+
+    // Fetch all active training documents
+    const trainingDocs = await prisma.trainingDocument.findMany({
+      where: {
+        status: 'Active'
+      },
+      orderBy: {
+        uploadedAt: 'desc'
+      }
+    });
+
+    return { queries, trainingDocs };
+  } catch (error) {
+    console.error('Error fetching custom knowledge:', error);
+    return { queries: [], trainingDocs: [] };
+  }
+}
+
+// Function to find the most relevant query for a user question
+function findRelevantQuery(userQuestion: string, queries: any[]): any | null {
+  const lowerQuestion = userQuestion.toLowerCase();
+  
+  // Simple keyword matching - can be improved with more sophisticated NLP
+  for (const query of queries) {
+    const lowerQueryQuestion = query.Question.toLowerCase();
+    const lowerQueryAnswer = query.Answer.toLowerCase();
+    
+    // Check if user question contains keywords from the query question
+    const questionWords = lowerQueryQuestion.split(/\s+/);
+    const matchingWords = questionWords.filter((word: string) => 
+      word.length > 3 && lowerQuestion.includes(word)
+    );
+    
+    if (matchingWords.length >= 2) {
+      return query;
+    }
+    
+    // Check if user question contains keywords from the query answer
+    const answerWords = lowerQueryAnswer.split(/\s+/);
+    const matchingAnswerWords = answerWords.filter((word: string) => 
+      word.length > 3 && lowerQuestion.includes(word)
+    );
+    
+    if (matchingAnswerWords.length >= 2) {
+      return query;
+    }
+  }
+  
+  return null;
+}
 
 // Constants for retry logic
 const MAX_RETRIES = 3;
@@ -111,11 +201,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch custom knowledge from database
+    const { queries, trainingDocs } = await fetchCustomKnowledge();
+    
     // Check if we have a direct answer in our training data
     const directAnswer = TRAINING_DATA[message.toLowerCase() as keyof typeof TRAINING_DATA];
     
     if (directAnswer) {
       return NextResponse.json({ response: formatResponse(directAnswer) });
+    }
+
+    // Check if we have a relevant custom query
+    const relevantQuery = findRelevantQuery(message, queries);
+    if (relevantQuery) {
+      return NextResponse.json({ 
+        response: formatResponse(relevantQuery.Answer),
+        source: 'Custom Knowledge Base'
+      });
+    }
+
+    // Build enhanced system prompt with custom knowledge
+    let enhancedPrompt = SYSTEM_PROMPT;
+    
+    // Add custom queries to the context if available
+    if (queries.length > 0) {
+      enhancedPrompt += `\n\nCUSTOM KNOWLEDGE BASE - Use these Q&A pairs when relevant:\n`;
+      queries.slice(0, 10).forEach((query, index) => {
+        enhancedPrompt += `\nQ${index + 1}: ${query.Question}\nA${index + 1}: ${query.Answer}\n`;
+      });
+    }
+
+    // Add training document summaries if available
+    if (trainingDocs.length > 0) {
+      enhancedPrompt += `\n\nTRAINING DOCUMENTS - Reference these documents when relevant:\n`;
+      trainingDocs.slice(0, 5).forEach((doc: any, index: number) => {
+        enhancedPrompt += `\nDocument ${index + 1}: ${doc.title}\nContent: ${doc.content.substring(0, 200)}...\n`;
+      });
     }
 
     // Try different models in order of preference
@@ -131,11 +252,11 @@ export async function POST(request: NextRequest) {
           const model = genAI.getGenerativeModel({ model: modelName });
           
           // Create the full prompt with context
-          const fullPrompt = `${SYSTEM_PROMPT}
+          const fullPrompt = `${enhancedPrompt}
 
 User Question: ${message}
 
-Please provide a helpful, accurate response based on the HRMS system features and guidelines above. If you're not sure about specific system details, suggest contacting the appropriate support team.
+Please provide a helpful, accurate response based on the HRMS system features, guidelines, and custom knowledge base above. If you find a relevant answer in the custom knowledge base, use that information. If you're not sure about specific system details, suggest contacting the appropriate support team.
 
 Response:`;
 
@@ -173,7 +294,8 @@ Response:`;
           console.log(`Successfully used model: ${modelName}`);
           return NextResponse.json({ 
             response: formatResponse(text),
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            source: 'AI Generated with Custom Knowledge'
           });
           
         } catch (modelError) {
@@ -200,7 +322,7 @@ Response:`;
         }
       }
       
-      // If we've tried all models and still failed, increment retry count
+      // If we've tried all models and still have retries left, wait and try again
       retryCount++;
       if (retryCount < MAX_RETRIES) {
         const delay = BASE_DELAY * Math.pow(2, retryCount - 1);
@@ -208,42 +330,21 @@ Response:`;
       }
     }
 
-    // If we've exhausted all retries, return a user-friendly error
-    return NextResponse.json(
-      { 
-        error: 'Service is currently busy. Please try again in a few moments.',
-        details: lastError?.message 
-      },
-      { status: 503 }
-    );
+    // If all retries failed, return a fallback response
+    console.error('All AI models failed:', lastError);
+    return NextResponse.json({
+      response: "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment, or contact the HR department directly for immediate assistance.",
+      timestamp: new Date().toISOString(),
+      source: 'Fallback Response'
+    });
 
   } catch (error) {
-    console.error('Chatbot API error:', error);
-    
-    // Provide more specific error messages
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        return NextResponse.json(
-          { error: 'Invalid or missing API key' },
-          { status: 500 }
-        );
-      }
-      if (error.message.includes('quota')) {
-        return NextResponse.json(
-          { error: 'API quota exceeded' },
-          { status: 429 }
-        );
-      }
-      if (error.message.includes('404') || error.message.includes('not found')) {
-        return NextResponse.json(
-          { error: 'AI model temporarily unavailable. Please try again later.' },
-          { status: 503 }
-        );
-      }
-    }
-    
+    console.error('Error in chatbotLeave route:', error);
     return NextResponse.json(
-      { error: 'Failed to process message. Please try again.' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

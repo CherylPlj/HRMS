@@ -140,7 +140,7 @@ export default function LeaveDashFac() {
     }
   };
 
-  return (
+    return (
     <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-4">
@@ -169,7 +169,7 @@ export default function LeaveDashFac() {
             />
           </div>
           <div className="flex space-x-2">
-            <button 
+          <button
               onClick={() => {
                 const today = new Date();
                 const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -178,8 +178,8 @@ export default function LeaveDashFac() {
               className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
             >
               This Month
-            </button>
-            <button 
+          </button>
+          <button
               onClick={() => {
                 const today = new Date();
                 const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
@@ -188,7 +188,7 @@ export default function LeaveDashFac() {
               className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
             >
               This Year
-            </button>
+          </button>
           </div>
         </div>
         <div className="text-sm text-gray-500">
@@ -203,9 +203,9 @@ export default function LeaveDashFac() {
             <div>
               <p className="text-gray-500 text-sm">Total Requests</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveStats.totalRequests}</h3>
-            </div>
+        </div>
             <FaFile className="text-4xl text-[#800000] opacity-50" />
-          </div>
+      </div>
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
@@ -215,8 +215,8 @@ export default function LeaveDashFac() {
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveStats.pendingRequests}</h3>
             </div>
             <FaClock className="text-4xl text-[#800000] opacity-50" />
-          </div>
-        </div>
+              </div>
+              </div>
 
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
@@ -226,7 +226,7 @@ export default function LeaveDashFac() {
             </div>
             <FaUser className="text-4xl text-[#800000] opacity-50" />
           </div>
-        </div>
+              </div>
 
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
@@ -237,7 +237,7 @@ export default function LeaveDashFac() {
             <FaUserCheck className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
-      </div>
+              </div>
 
       {/* Charts and Table Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -246,7 +246,7 @@ export default function LeaveDashFac() {
           <div className="flex items-center mb-6">
             <FaFile className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">My Leave Status Distribution</h2>
-          </div>
+                </div>
           <div className="h-[300px] flex items-center justify-center">
             <Pie 
               data={leaveStatusData} 
@@ -265,15 +265,15 @@ export default function LeaveDashFac() {
                 }
               }} 
             />
-          </div>
-        </div>
+                </div>
+                </div>
 
         {/* Leave Balance Overview */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaUser className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Leave Balance Overview</h2>
-          </div>
+                </div>
           <div className="space-y-6">
             <div>
               <div className="flex justify-between items-center mb-2">
@@ -287,7 +287,7 @@ export default function LeaveDashFac() {
                 ></div>
               </div>
             </div>
-            
+
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">Used Leaves</span>
@@ -298,8 +298,8 @@ export default function LeaveDashFac() {
                   className="bg-blue-500 h-3 rounded-full transition-all duration-300"
                   style={{ width: `${(leaveStats.usedLeaves / (leaveStats.availableLeaves + leaveStats.usedLeaves)) * 100}%` }}
                 ></div>
-              </div>
             </div>
+          </div>
 
             <div className="grid grid-cols-3 gap-4 pt-4">
               <div className="text-center">
@@ -315,9 +315,9 @@ export default function LeaveDashFac() {
                 <div className="text-sm text-gray-600">Rejected</div>
               </div>
             </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
       {/* My Pending Leave Requests Table */}
       <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
@@ -329,12 +329,12 @@ export default function LeaveDashFac() {
           <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
             {pendingRequests.length} Pending
           </span>
-        </div>
+            </div>
 
         {pendingRequests.length > 0 ? (
-          <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead>
+                <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                     Leave Type
@@ -344,18 +344,18 @@ export default function LeaveDashFac() {
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                     Days
-                  </th>
+                    </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                     Status
-                  </th>
+                    </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                     Submitted Date
-                  </th>
+                    </th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                     Reason
-                  </th>
-                </tr>
-              </thead>
+                    </th>
+                  </tr>
+                </thead>
               <tbody className="divide-y divide-gray-100">
                 {pendingRequests.map((request) => (
                   <tr key={request.id} className="hover:bg-gray-50">
@@ -364,31 +364,31 @@ export default function LeaveDashFac() {
                         {getLeaveTypeIcon(request.leaveType)}
                         <span className="ml-2 text-sm text-gray-900">{request.leaveType}</span>
                       </div>
-                    </td>
+                      </td>
                     <td className="py-4 text-sm text-gray-900">
                       {formatDate(request.startDate)} - {formatDate(request.endDate)}
-                    </td>
+                      </td>
                     <td className="py-4 text-sm text-gray-900">
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                         {request.daysRequested} days
                       </span>
-                    </td>
+                      </td>
                     <td className="py-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
                         {request.status}
-                      </span>
-                    </td>
+                        </span>
+                      </td>
                     <td className="py-4 text-sm text-gray-900">
                       {formatDate(request.submittedDate)}
                     </td>
                     <td className="py-4 text-sm text-gray-600 max-w-xs truncate">
                       {request.reason}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
             <FaClock className="text-4xl text-gray-300 mx-auto mb-4" />

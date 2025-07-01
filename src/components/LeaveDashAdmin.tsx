@@ -959,47 +959,47 @@ export default function LeaveDashAdmin() {
             />
           </div>
         </div>
-
+        
         {/* Leave Type Distribution */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
             <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Leave Type Distribution</h2>
           </div>
-          <div className="h-[300px]">
-            <Bar 
+            <div className="h-[300px]">
+              <Bar
               data={leaveTypeData} 
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: false
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: {
-                      display: true,
-                      color: 'rgba(0, 0, 0, 0.1)'
-                    },
-                    ticks: {
-                      stepSize: 5,
-                      precision: 0
-                    }
-                  },
-                  x: {
-                    grid: {
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
                       display: false
                     }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.1)'
+                      },
+                      ticks: {
+                      stepSize: 5,
+                        precision: 0
+                      }
+                    },
+                    x: {
+                      grid: {
+                        display: false
+                      }
+                    }
                   }
-                }
-              }} 
-            />
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Pending Leave Requests Table */}
       <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
@@ -1013,20 +1013,20 @@ export default function LeaveDashAdmin() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                   Faculty Name
-                </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                   Leave Type
-                </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                   Date Range
-                </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                   Days
                 </th>
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
@@ -1034,10 +1034,10 @@ export default function LeaveDashAdmin() {
                 </th>
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
                   Reason
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
               {pendingRequests.map((request) => (
                 <tr key={request.id} className="hover:bg-gray-50">
                   <td className="py-4 text-sm text-gray-900 font-medium">
@@ -1049,30 +1049,30 @@ export default function LeaveDashAdmin() {
                       <span className="ml-2 text-sm text-gray-900">{request.leaveType}</span>
                     </div>
                   </td>
-                  <td className="py-4 text-sm text-gray-900">
+                    <td className="py-4 text-sm text-gray-900">
                     {formatDate(request.startDate)} - {formatDate(request.endDate)}
-                  </td>
-                  <td className="py-4 text-sm text-gray-900">
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                       {request.daysRequested} days
                     </span>
-                  </td>
+                    </td>
                   <td className="py-4 text-sm text-gray-900">
                     {request.department}
-                  </td>
+                    </td>
                                      <td className="py-4 text-sm text-gray-600 max-w-xs truncate">
                      {request.reason}
-                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
       </div>
 
       {/* Chatbot Interactions Line Graph */}
-      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-        <div className="flex items-center mb-6">
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
           <FaComments className="text-[#800000] text-2xl mr-3" />
           <h2 className="text-2xl font-bold text-gray-800">Faculty Chatbot Interactions</h2>
         </div>
@@ -1080,35 +1080,35 @@ export default function LeaveDashAdmin() {
           <Line 
             data={chatbotLineData} 
             options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+              legend: { 
+                  display: false
+              }
+            },
+            scales: {
+              y: { 
+                beginAtZero: true,
+                grid: {
+                  display: true,
+                  color: 'rgba(0, 0, 0, 0.1)'
+                },
+                ticks: {
+                    stepSize: 10,
+                  precision: 0
+                }
+              },
+              x: {
+                grid: {
                   display: false
                 }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  grid: {
-                    display: true,
-                    color: 'rgba(0, 0, 0, 0.1)'
-                  },
-                  ticks: {
-                    stepSize: 10,
-                    precision: 0
-                  }
-                },
-                x: {
-                  grid: {
-                    display: false
-                  }
-                }
-              },
-              interaction: {
-                intersect: false,
-                mode: 'index'
               }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
             }} 
           />
         </div>
