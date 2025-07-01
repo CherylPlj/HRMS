@@ -40,6 +40,7 @@ model User {
   Report       Report[]
   Employee     Employee?      @relation(fields: [EmployeeID], references: [EmployeeID])
   Role         UserRole[]
+  trainingDocs  TrainingDocument[]
 
   @@index([invitationId], map: "user_invitation_id_idx")
 }
@@ -285,6 +286,20 @@ model AIChat {
   Question String
   Answer   String
   Status   String
+  dateSubmitted DateTime @default(now())
+  User     User   @relation(fields: [UserID], references: [UserID])
+}
+
+model TrainingDocument {
+  id         String   @id @default(cuid())
+  UserID   String
+  title      String
+  content    String
+  fileUrl    String?
+  fileType   String
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+  status     Status   @default(Active)
   User     User   @relation(fields: [UserID], references: [UserID])
 }
 
