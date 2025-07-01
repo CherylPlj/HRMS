@@ -290,6 +290,24 @@ model AIChat {
   User     User   @relation(fields: [UserID], references: [UserID])
 }
 
+model ChatTopic {
+  id        String      @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  topicId   String
+  sender    String   // 'user' or 'bot'
+  text      String
+  timestamp DateTime @default(now())
+  ChatTopic ChatTopic @relation(fields: [topicId], references: [id])
+}
+
 model TrainingDocument {
   id         String   @id @default(cuid())
   UserID   String

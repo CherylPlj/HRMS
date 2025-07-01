@@ -26,6 +26,8 @@ const publicRoutes = [
     "/api/candidates/public",
     "/api/generate-employee-id",
     "/api/generate-user-id",
+    "/api/chatbotLeave",
+    "/api/chatbot/(.*)",
     "/terms-of-use",
     "/privacy-statement"
 ];
@@ -54,6 +56,8 @@ const ignoredRoutes = [
     "/api/candidates/public",
     "/api/generate-employee-id",
     "/api/generate-user-id",
+    "/api/chatbotLeave",
+    "/api/chatbot/(.*)",
     "/terms-of-use",
     "/privacy-statement"
 ];
