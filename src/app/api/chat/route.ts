@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 // Initialize the Gemini AI client
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
@@ -186,6 +189,45 @@ Guidelines:
 - If asked about unrelated topics, politely redirect to HRMS features`
 };
 
+// Function to fetch training documents from database
+async function getTrainingDocuments(): Promise<string> {
+  try {
+    const documents = await prisma.trainingDocument.findMany({
+      where: {
+        status: 'Active'
+      },
+      select: {
+        title: true,
+        content: true,
+        fileUrl: true
+      },
+      orderBy: {
+        uploadedAt: 'desc'
+      }
+    });
+
+    if (documents.length === 0) {
+      return '';
+    }
+
+    let trainingContent = '\n\nUPLOADED TRAINING DOCUMENTS:\n';
+    trainingContent += 'The following documents have been uploaded to provide additional context for answering questions:\n\n';
+
+    documents.forEach((doc, index) => {
+      trainingContent += `--- DOCUMENT ${index + 1} ---\n`;
+      trainingContent += `Title: ${doc.title}\n`;
+      trainingContent += `Content:\n${doc.content}\n`;
+      trainingContent += `Source: ${doc.fileUrl}\n`;
+      trainingContent += `--- END DOCUMENT ${index + 1} ---\n\n`;
+    });
+
+    return trainingContent;
+  } catch (error) {
+    console.error('Error fetching training documents:', error);
+    return '';
+  }
+}
+
 // Training data with common questions and answers
 const TRAINING_DATA = {
   admin: {
@@ -262,12 +304,21 @@ export async function POST(request: Request) {
     // Prepare the system prompt
     const systemPrompt = SYSTEM_PROMPTS[userRole as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS.faculty;
 
+    // Fetch training documents
+    const trainingDocuments = await getTrainingDocuments();
+    
+    // Debug logging
+    console.log('Training documents found:', trainingDocuments ? 'Yes' : 'No');
+    if (trainingDocuments) {
+      console.log('Training documents length:', trainingDocuments.length);
+    }
+
     // Create the full prompt with context
-    const fullPrompt = `${systemPrompt}
+    const fullPrompt = `${systemPrompt}${trainingDocuments}
 
 User Question: ${message}
 
-Please provide a helpful, accurate response based on the HRMS system features and guidelines above. If you're not sure about specific system details, suggest contacting the appropriate support team.
+Please provide a helpful, accurate response based on the HRMS system features, guidelines, and uploaded training documents above. If the question relates to content in the uploaded documents, use that information to provide a comprehensive answer. If you're not sure about specific system details, suggest contacting the appropriate support team.
 
 Response:`;
 

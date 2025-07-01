@@ -310,15 +310,17 @@ model ChatMessage {
 
 model TrainingDocument {
   id         String   @id @default(cuid())
-  UserID   String
+  UserID     String
   title      String
   content    String
+  keywords   String[] // Extracted keywords for better search
+  sections   Json?    // Structured content sections for better retrieval
   fileUrl    String?
   fileType   String
   uploadedBy String
   uploadedAt DateTime @default(now())
   status     Status   @default(Active)
-  User     User   @relation(fields: [UserID], references: [UserID])
+  User       User     @relation(fields: [UserID], references: [UserID])
 }
 
 model Report {

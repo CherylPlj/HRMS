@@ -115,6 +115,55 @@ function findRelevantQuery(userQuestion: string, queries: any[]): any | null {
   return null;
 }
 
+// Function to find relevant training document content
+function findRelevantTrainingDoc(userQuestion: string, trainingDocs: any[]): any | null {
+  const lowerQuestion = userQuestion.toLowerCase();
+  
+  // Define important keywords for leave-related questions
+  const leaveKeywords = ['leave', 'vacation', 'sick', 'maternity', 'paternity', 'bereavement', 'time off', 'absence'];
+  const policyKeywords = ['policy', 'rule', 'regulation', 'procedure', 'requirement'];
+  const applicationKeywords = ['apply', 'submit', 'request', 'application', 'form'];
+  
+  for (const doc of trainingDocs) {
+    const lowerContent = doc.content.toLowerCase();
+    const lowerTitle = doc.title.toLowerCase();
+    
+    // Check if user question contains keywords from the document content
+    const contentWords = lowerContent.split(/\s+/);
+    const matchingContentWords = contentWords.filter((word: string) => 
+      word.length > 3 && lowerQuestion.includes(word)
+    );
+    
+    // Check if user question contains keywords from the document title
+    const titleWords = lowerTitle.split(/\s+/);
+    const matchingTitleWords = titleWords.filter((word: string) => 
+      word.length > 3 && lowerQuestion.includes(word)
+    );
+    
+    // Check for specific keyword matches
+    const hasLeaveKeywords = leaveKeywords.some(keyword => lowerQuestion.includes(keyword));
+    const hasPolicyKeywords = policyKeywords.some(keyword => lowerQuestion.includes(keyword));
+    const hasApplicationKeywords = applicationKeywords.some(keyword => lowerQuestion.includes(keyword));
+    
+    // If we find significant matches, return the document
+    if (matchingContentWords.length >= 2 || 
+        matchingTitleWords.length >= 1 || 
+        (hasLeaveKeywords && (hasPolicyKeywords || hasApplicationKeywords))) {
+      console.log('Found matching training document:', {
+        title: doc.title,
+        matchingContentWords: matchingContentWords.length,
+        matchingTitleWords: matchingTitleWords.length,
+        hasLeaveKeywords,
+        hasPolicyKeywords,
+        hasApplicationKeywords
+      });
+      return doc;
+    }
+  }
+  
+  return null;
+}
+
 // Constants for retry logic
 const MAX_RETRIES = 3;
 const BASE_DELAY = 1000; // 1 second
@@ -204,11 +253,32 @@ export async function POST(request: NextRequest) {
     // Fetch custom knowledge from database
     const { queries, trainingDocs } = await fetchCustomKnowledge();
     
+    // Debug logging
+    console.log('Fetched training documents:', trainingDocs.length);
+    trainingDocs.forEach((doc, index) => {
+      console.log(`Training Doc ${index + 1}:`, {
+        title: doc.title,
+        contentLength: doc.content?.length || 0,
+        status: doc.status
+      });
+    });
+    
     // Check if we have a direct answer in our training data
     const directAnswer = TRAINING_DATA[message.toLowerCase() as keyof typeof TRAINING_DATA];
     
     if (directAnswer) {
       return NextResponse.json({ response: formatResponse(directAnswer) });
+    }
+
+    // Check if we have a relevant training document
+    const relevantTrainingDoc = findRelevantTrainingDoc(message, trainingDocs);
+    if (relevantTrainingDoc) {
+      console.log('Found relevant training document:', relevantTrainingDoc.title);
+      return NextResponse.json({ 
+        response: formatResponse(relevantTrainingDoc.content),
+        source: 'Training Document',
+        documentTitle: relevantTrainingDoc.title
+      });
     }
 
     // Check if we have a relevant custom query
@@ -233,9 +303,13 @@ export async function POST(request: NextRequest) {
 
     // Add training document summaries if available
     if (trainingDocs.length > 0) {
-      enhancedPrompt += `\n\nTRAINING DOCUMENTS - Reference these documents when relevant:\n`;
+      enhancedPrompt += `\n\nUPLOADED TRAINING DOCUMENTS - PRIORITY KNOWLEDGE BASE:\n`;
+      enhancedPrompt += `The following documents contain specific information that should be used to answer questions. If a question relates to any of these documents, use the information from these documents as your primary source:\n`;
       trainingDocs.slice(0, 5).forEach((doc: any, index: number) => {
-        enhancedPrompt += `\nDocument ${index + 1}: ${doc.title}\nContent: ${doc.content.substring(0, 200)}...\n`;
+        enhancedPrompt += `\n--- DOCUMENT ${index + 1} ---\n`;
+        enhancedPrompt += `Title: ${doc.title}\n`;
+        enhancedPrompt += `Full Content:\n${doc.content}\n`;
+        enhancedPrompt += `--- END DOCUMENT ${index + 1} ---\n`;
       });
     }
 
@@ -256,7 +330,12 @@ export async function POST(request: NextRequest) {
 
 User Question: ${message}
 
-Please provide a helpful, accurate response based on the HRMS system features, guidelines, and custom knowledge base above. If you find a relevant answer in the custom knowledge base, use that information. If you're not sure about specific system details, suggest contacting the appropriate support team.
+IMPORTANT INSTRUCTIONS:
+1. FIRST, check if the user's question relates to any information in the UPLOADED TRAINING DOCUMENTS above
+2. If you find relevant information in the training documents, use that as your primary source and provide the specific answer from the document
+3. If no relevant training document information exists, then use the custom knowledge base or general HRMS guidelines
+4. Always prioritize specific information from uploaded training documents over general guidelines
+5. If you're not sure about specific system details, suggest contacting the appropriate support team
 
 Response:`;
 

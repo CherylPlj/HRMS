@@ -13,7 +13,9 @@
     "seed:vacancies": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-vacancies.ts",
     "seed:users": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-users.ts",
     "seed:academic": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-academic.ts",
-    "sync:clerk": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/sync-clerk-ids.ts"
+    "sync:clerk": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/sync-clerk-ids.ts",
+    "setup:trainingdocs": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/setup-trainingdocs-bucket.ts",
+    "check:trainingdocs": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/check-training-docs.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed.ts"

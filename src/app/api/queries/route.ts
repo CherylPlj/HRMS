@@ -20,17 +20,32 @@ export async function GET() {
       },
     });
 
-    const formattedQueries = queries.map(query => ({
-      id: query.ChatID,
-      createdBy: `${query.User.FirstName} ${query.User.LastName}`,
-      question: query.Question,
-      answer: query.Answer,
-      date: query.dateSubmitted.toLocaleDateString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric',
-      }),
-      trainingDoc: null, // We'll handle this separately
+    // Fetch training documents for each query
+    const formattedQueries = await Promise.all(queries.map(async (query) => {
+      // Find associated training document
+      const trainingDoc = await prisma.trainingDocument.findFirst({
+        where: {
+          UserID: query.UserID,
+          status: 'Active'
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
+      });
+
+      return {
+        id: query.ChatID,
+        createdBy: `${query.User.FirstName} ${query.User.LastName}`,
+        question: query.Question,
+        answer: query.Answer,
+        date: query.dateSubmitted.toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric',
+        }),
+        trainingDoc: trainingDoc?.fileUrl || null,
+        trainingDocTitle: trainingDoc?.title || null,
+      };
     }));
 
     return NextResponse.json(formattedQueries);

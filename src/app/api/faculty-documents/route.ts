@@ -25,8 +25,21 @@ interface Document {
   DocumentTypeID: number;
   UploadDate: string;
   SubmissionStatus: string;
-  Faculty: Faculty;
-  DocumentType: DocumentType;
+  FilePath?: string;
+  FileUrl?: string;
+  DownloadUrl?: string;
+  Faculty: {
+    FacultyID: number;
+    User: {
+      FirstName: string;
+      LastName: string;
+      Email: string;
+    };
+  };
+  DocumentType: {
+    DocumentTypeID: number;
+    DocumentTypeName: string;
+  };
 }
 
 export async function GET(request: Request) {
@@ -112,11 +125,11 @@ export async function GET(request: Request) {
     }
 
     // Map the data to include facultyName and documentTypeName directly, similar to FacultyContent's structure
-    const mappedDocuments = documents.map((doc: Document) => ({
+    const mappedDocuments = documents?.map((doc: any) => ({
       ...doc,
-      facultyName: `${doc.Faculty.User.FirstName} ${doc.Faculty.User.LastName}`,
-      documentTypeName: doc.DocumentType.DocumentTypeName,
-    }));
+      facultyName: doc.Faculty?.User ? `${doc.Faculty.User.FirstName} ${doc.Faculty.User.LastName}` : 'Unknown Faculty',
+      documentTypeName: doc.DocumentType?.DocumentTypeName || 'Unknown Type',
+    })) || [];
 
     console.log('Successfully fetched documents:', mappedDocuments);
     return NextResponse.json(mappedDocuments || []);

@@ -14,7 +14,7 @@ interface UserWithRole {
   UserRole: {
     role: {
       name: string;
-    };
+    }[];
   }[];
 }
 
@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     }
     
     console.log('\n📋 All users in database:');
-    const userList = (users as UserWithRole[]).map((user: UserWithRole) => {
-      const role = user.UserRole?.[0]?.role?.name || 'No role';
+    const userList = (users as unknown as UserWithRole[]).map((user: UserWithRole) => {
+      const role = user.UserRole?.[0]?.role?.[0]?.name || 'No role';
       return {
         email: user.Email,
         name: `${user.FirstName} ${user.LastName}`,
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     
     if (specificUser) {
       console.log(`\n✅ Found ${targetEmail} in database:`);
-      const role = specificUser.UserRole?.[0]?.role?.name || 'No role';
+      const role = specificUser.UserRole?.[0]?.role?.[0]?.name || 'No role';
       
       // Test the password hash
       const testPassword = '5450LS7JF<wg"=£.%Fx3fog5Wp|&^#';

@@ -28,6 +28,8 @@ const publicRoutes = [
     "/api/generate-user-id",
     "/api/chatbotLeave",
     "/api/chatbot/(.*)",
+    "/api/queries",
+    "/api/training-documents",
     "/terms-of-use",
     "/privacy-statement"
 ];
@@ -58,6 +60,8 @@ const ignoredRoutes = [
     "/api/generate-user-id",
     "/api/chatbotLeave",
     "/api/chatbot/(.*)",
+    "/api/queries",
+    "/api/training-documents",
     "/terms-of-use",
     "/privacy-statement"
 ];

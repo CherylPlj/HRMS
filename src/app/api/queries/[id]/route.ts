@@ -6,12 +6,13 @@ const prisma = new PrismaClient();
 // PUT - Update query
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
     const { question, answer } = body;
-    const queryId = parseInt(params.id);
+    const { id } = await params;
+    const queryId = parseInt(id);
 
     if (!question || !answer) {
       return NextResponse.json(
@@ -62,10 +63,11 @@ export async function PUT(
 // DELETE - Delete query
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const queryId = parseInt(params.id);
+    const { id } = await params;
+    const queryId = parseInt(id);
 
     await prisma.aIChat.delete({
       where: { ChatID: queryId },

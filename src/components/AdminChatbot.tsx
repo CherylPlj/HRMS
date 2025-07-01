@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheck, FaPen, FaTrash } from 'react-icons/fa';
+import { FaCheck, FaPen, FaTrash, FaEye, FaSearch, FaTimes, FaFileCsv } from 'react-icons/fa';
 import { useUser } from '@clerk/nextjs';
 
 interface ChatbotResponse {
@@ -9,6 +9,7 @@ interface ChatbotResponse {
   answer: string;
   date: string;
   trainingDoc: string | null;
+  trainingDocTitle: string | null;
 }
 
 const AdminChatbot = () => {
@@ -28,6 +29,14 @@ const AdminChatbot = () => {
   const [deletingResponse, setDeletingResponse] = useState<ChatbotResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvUploading, setCsvUploading] = useState(false);
+  const [csvUploadResult, setCsvUploadResult] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Helper function to extract filename from full path
   const getFilenameFromPath = (filePath: string): string => {
@@ -41,6 +50,29 @@ const AdminChatbot = () => {
   useEffect(() => {
     fetchResponses();
   }, []);
+
+  // Add keyboard shortcuts for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K to focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      }
+      
+      // Escape to clear search
+      if (e.key === 'Escape' && search) {
+        setSearch('');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [search]);
 
   const fetchResponses = async () => {
     try {
@@ -221,12 +253,115 @@ const AdminChatbot = () => {
     }
   };
 
-  // Filter responses based on search
-  const filteredResponses = responses.filter(response =>
-    response.question.toLowerCase().includes(search.toLowerCase()) ||
-    response.answer.toLowerCase().includes(search.toLowerCase()) ||
-    response.createdBy.toLowerCase().includes(search.toLowerCase())
-  );
+  // Handle CSV file upload
+  const handleCsvUpload = async () => {
+    if (!csvFile || !user?.id) return;
+    
+    setCsvUploading(true);
+    setCsvUploadResult(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', csvFile);
+      formData.append('userId', user.id);
+      
+      const response = await fetch('/api/import-qa-csv', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      setCsvUploadResult(result);
+      
+      if (result.success) {
+        // Refresh the responses list
+        await fetchResponses();
+        // Close modal after a delay
+        setTimeout(() => {
+          setShowCsvModal(false);
+          setCsvFile(null);
+          setCsvUploadResult(null);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      setCsvUploadResult({
+        success: false,
+        error: 'Failed to upload CSV file'
+      });
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  // Enhanced search functionality
+  const filteredResponses = responses.filter(response => {
+    const searchTerm = search.toLowerCase().trim();
+    
+    if (!searchTerm) return true; // Show all if no search term
+    
+    // Search in multiple fields
+    const matchesQuestion = response.question.toLowerCase().includes(searchTerm);
+    const matchesAnswer = response.answer.toLowerCase().includes(searchTerm);
+    const matchesCreatedBy = response.createdBy.toLowerCase().includes(searchTerm);
+    const matchesTrainingDoc = response.trainingDocTitle?.toLowerCase().includes(searchTerm) || false;
+    
+    // Also search in training document filename if no title
+    const matchesTrainingDocFile = response.trainingDoc ? 
+      getFilenameFromPath(response.trainingDoc).toLowerCase().includes(searchTerm) : false;
+    
+    return matchesQuestion || matchesAnswer || matchesCreatedBy || matchesTrainingDoc || matchesTrainingDocFile;
+  });
+
+  // Function to highlight search terms in text
+  const highlightSearchTerm = (text: string, searchTerm: string) => {
+    if (!searchTerm.trim()) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <mark key={index} style={{ 
+          backgroundColor: '#fff3cd', 
+          color: '#856404', 
+          padding: '1px 2px', 
+          borderRadius: '2px',
+          fontWeight: 'bold'
+        }}>
+          {part}
+        </mark>
+      ) : part
+    );
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedResponses = filteredResponses.slice(startIndex, endIndex);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  // Pagination functions
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   if (loading) {
     return (
@@ -262,25 +397,117 @@ const AdminChatbot = () => {
         boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', padding: 16, borderBottom: '1px solid #eee' }}>
-          <input
-            type="text"
-            placeholder="Search queries..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #ccc', marginRight: 16 }}
-          />
-          <input
+          <div style={{ flex: 1, marginRight: 16, position: 'relative' }}>
+            <div style={{ position: 'relative' }}>
+              <FaSearch 
+                style={{ 
+                  position: 'absolute', 
+                  left: 12, 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  color: '#666', 
+                  fontSize: 14 
+                }} 
+              />
+              <input
+                type="text"
+                placeholder="Search questions, answers, creators, or training documents... (Ctrl+K)"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 16px 12px 36px', 
+                  borderRadius: 8, 
+                  border: '1px solid #ccc', 
+                  fontSize: 14,
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = '#8B0000';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 0, 0, 0.1)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = '#ccc';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#666',
+                    cursor: 'pointer',
+                    padding: 4,
+                    borderRadius: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+                  onMouseOut={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  title="Clear search"
+                >
+                  <FaTimes style={{ fontSize: 12 }} />
+                </button>
+              )}
+            </div>
+            {search && (
+              <div style={{ 
+                marginTop: 4, 
+                fontSize: 12, 
+                color: '#666',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>
+                  {filteredResponses.length} of {responses.length} results
+                  {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
+                </span>
+                <button
+                  onClick={() => setSearch('')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#8B0000',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+          </div>
+          {/* <input
             type="text"
             value={dateRange}
             readOnly
             style={{ width: 220, padding: 10, borderRadius: 8, border: '1px solid #ccc', marginRight: 16, background: '#111', color: '#fff', textAlign: 'center', fontWeight: 500 }}
-          />
-          <button
-            style={{ background: '#8B0000', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 600, fontSize: 16, display: 'flex', alignItems: 'center' }}
-            onClick={() => setShowModal(true)}
-          >
-            <span style={{ fontSize: 22, marginRight: 8 }}>+</span> Add Query
-          </button>
+          /> */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              style={{ background: '#fff', color: '#8B0000', border: '2px solid #8B0000', borderRadius: 8, padding: '10px 24px', fontWeight: 600, fontSize: 16, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => setShowCsvModal(true)}
+            >
+              <FaFileCsv style={{ marginRight: 8, fontSize: 16 }} />
+              Import CSV
+            </button>
+            <button
+              style={{ background: '#8B0000', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 600, fontSize: 16, display: 'flex', alignItems: 'center' }}
+              onClick={() => setShowModal(true)}
+            >
+              <span style={{ fontSize: 22, marginRight: 8 }}>+</span> Add Query
+            </button>
+          </div>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 0 }}>
           <thead>
@@ -295,21 +522,74 @@ const AdminChatbot = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredResponses.length === 0 ? (
+            {paginatedResponses.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#666' }}>
                   {search ? 'No responses found matching your search.' : 'No responses available.'}
                 </td>
               </tr>
             ) : (
-              filteredResponses.map((r, idx) => (
+              paginatedResponses.map((r, idx) => (
                 <tr key={r.id} style={{ borderBottom: '1px solid #eee', background: '#fff' }}>
                   <td style={{ textAlign: 'center', padding: 10 }}>{idx + 1}</td>
-                  <td style={{ textAlign: 'center', padding: 10 }}>{r.createdBy}</td>
-                  <td style={{ padding: 10 }}>{r.question}</td>
-                  <td style={{ padding: 10 }}>{r.answer}</td>
                   <td style={{ textAlign: 'center', padding: 10 }}>
-                    {getFilenameFromPath(r.trainingDoc || '')}
+                    {highlightSearchTerm(r.createdBy, search)}
+                  </td>
+                  <td style={{ padding: 10 }}>
+                    {highlightSearchTerm(r.question, search)}
+                  </td>
+                  <td style={{ padding: 10 }}>
+                    {highlightSearchTerm(r.answer, search)}
+                  </td>
+                  <td style={{ textAlign: 'center', padding: 10 }}>
+                    {r.trainingDoc ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        <span style={{ color: '#8B0000', fontSize: 14 }}>
+                          {r.trainingDocTitle || getFilenameFromPath(r.trainingDoc)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setPreviewUrl(r.trainingDoc);
+                            setShowPreviewModal(true);
+                          }}
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            cursor: 'pointer', 
+                            color: '#8B0000', 
+                            fontSize: 16,
+                            padding: 4,
+                            borderRadius: 4,
+                            transition: 'background-color 0.2s'
+                          }}
+                          title="View document"
+                          onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+                          onMouseOut={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <FaEye />
+                        </button>
+                        <a
+                          href={r.trainingDoc}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ 
+                            color: '#8B0000', 
+                            fontSize: 16,
+                            padding: 4,
+                            borderRadius: 4,
+                            textDecoration: 'none',
+                            transition: 'background-color 0.2s'
+                          }}
+                          title="Open in new tab"
+                          onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+                          onMouseOut={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          ↗
+                        </a>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#666', fontSize: 14 }}>No document</span>
+                    )}
                   </td>
                   <td style={{ textAlign: 'center', padding: 10 }}>{r.date}</td>
                   <td style={{ textAlign: 'center', padding: 10 }}>
@@ -333,6 +613,144 @@ const AdminChatbot = () => {
             )}
           </tbody>
         </table>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            padding: '16px 24px', 
+            borderTop: '1px solid #eee',
+            background: '#f9fafb'
+          }}>
+            {/* Page Info */}
+            <div style={{ fontSize: 14, color: '#666' }}>
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredResponses.length)} of {filteredResponses.length} results
+            </div>
+            
+            {/* Pagination Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Previous Button */}
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                style={{
+                  background: currentPage === 1 ? '#f3f4f6' : '#fff',
+                  color: currentPage === 1 ? '#9ca3af' : '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => {
+                  if (currentPage !== 1) {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#9ca3af';
+                  }
+                }}
+                onMouseOut={e => {
+                  if (currentPage !== 1) {
+                    e.currentTarget.style.background = '#fff';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }
+                }}
+              >
+                Previous
+              </button>
+              
+              {/* Page Numbers */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show first page, last page, current page, and pages around current
+                  const shouldShow = 
+                    page === 1 || 
+                    page === totalPages || 
+                    (page >= currentPage - 1 && page <= currentPage + 1);
+                  
+                  if (!shouldShow) {
+                    // Show ellipsis if there's a gap
+                    if (page === currentPage - 2 || page === currentPage + 2) {
+                      return (
+                        <span key={`ellipsis-${page}`} style={{ padding: '8px 12px', color: '#9ca3af' }}>
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+                  
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      style={{
+                        background: page === currentPage ? '#8B0000' : '#fff',
+                        color: page === currentPage ? '#fff' : '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 6,
+                        padding: '8px 12px',
+                        fontSize: 14,
+                        fontWeight: page === currentPage ? 600 : 500,
+                        cursor: 'pointer',
+                        minWidth: 40,
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={e => {
+                        if (page !== currentPage) {
+                          e.currentTarget.style.background = '#f9fafb';
+                          e.currentTarget.style.borderColor = '#9ca3af';
+                        }
+                      }}
+                      onMouseOut={e => {
+                        if (page !== currentPage) {
+                          e.currentTarget.style.background = '#fff';
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                        }
+                      }}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Next Button */}
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                style={{
+                  background: currentPage === totalPages ? '#f3f4f6' : '#fff',
+                  color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => {
+                  if (currentPage !== totalPages) {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#9ca3af';
+                  }
+                }}
+                onMouseOut={e => {
+                  if (currentPage !== totalPages) {
+                    e.currentTarget.style.background = '#fff';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal Pop-up for Add Query */}
@@ -684,6 +1102,260 @@ const AdminChatbot = () => {
               >
                 Delete Response
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {showPreviewModal && previewUrl && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90vw', height: '90vh', maxWidth: '1200px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ fontWeight: 700, fontSize: 18, color: '#374151' }}>
+                Document Preview: {getFilenameFromPath(previewUrl)}
+              </div>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    background: '#8B0000', 
+                    color: '#fff', 
+                    border: 'none', 
+                    borderRadius: 8, 
+                    padding: '8px 16px', 
+                    fontWeight: 600, 
+                    fontSize: 14,
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = '#6B0000')}
+                  onMouseOut={e => (e.currentTarget.style.background = '#8B0000')}
+                >
+                  Open in New Tab
+                </a>
+                <button
+                  onClick={() => {
+                    setShowPreviewModal(false);
+                    setPreviewUrl(null);
+                  }}
+                  aria-label="Close"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    background: '#fff',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '50%',
+                    fontSize: 20,
+                    color: '#666',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = '#f3f4f6')}
+                  onMouseOut={e => (e.currentTarget.style.background = '#fff')}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            {/* Document Content */}
+            <div style={{ flex: 1, padding: '0 24px 24px 24px', overflow: 'hidden' }}>
+              <iframe
+                src={previewUrl}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  backgroundColor: '#f9fafb'
+                }}
+                title="Document Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Import Modal */}
+      {showCsvModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 500, maxWidth: '95vw', maxHeight: '80vh', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', padding: 0, overflowY: 'auto', position: 'relative' }}>
+            {/* X Icon at top right */}
+            <button
+              onClick={() => {
+                setShowCsvModal(false);
+                setCsvFile(null);
+                setCsvUploadResult(null);
+              }}
+              aria-label="Close"
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                width: 40,
+                height: 40,
+                background: '#fff',
+                border: 'none',
+                borderRadius: '50%',
+                fontSize: 28,
+                color: '#b91c1c',
+                fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+                cursor: 'pointer',
+                zIndex: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 0.2s',
+              }}
+              onMouseOver={e => (e.currentTarget.style.background = '#f3f4f6')}
+              onMouseOut={e => (e.currentTarget.style.background = '#fff')}
+            >
+              ×
+            </button>
+
+            {/* Header */}
+            <div style={{ background: '#f3f4f6', borderRadius: 16, margin: '48px 24px 0 24px', padding: 20, marginBottom: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Import Q&A from CSV</div>
+              <div style={{ color: '#666', fontSize: 14 }}>Upload a CSV file with questions and answers to bulk import training data</div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px' }}>
+              {/* Instructions */}
+              <div style={{ background: '#f0f9ff', borderRadius: 8, padding: 16, marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8, color: '#0369a1' }}>CSV Format Requirements:</div>
+                <ul style={{ color: '#0c4a6e', fontSize: 14, margin: 0, paddingLeft: 20 }}>
+                  <li>First row must contain headers: <code>question,answer</code></li>
+                  <li>Each subsequent row should contain one Q&A pair</li>
+                  <li>Questions and answers should be in quotes if they contain commas</li>
+                  <li>Maximum file size: 5MB</li>
+                </ul>
+              </div>
+
+              {/* File Upload */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>Select CSV File</div>
+                <label style={{ display: 'inline-block', background: '#8B0000', color: '#fff', borderRadius: 8, padding: '8px 18px', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
+                  Choose CSV File
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    style={{ display: 'none' }}
+                    onChange={e => setCsvFile(e.target.files?.[0] || null)}
+                  />
+                </label>
+                {csvFile && (
+                  <span style={{ marginLeft: 12, color: '#333', fontSize: 14 }}>{csvFile.name}</span>
+                )}
+              </div>
+
+              {/* Download Template */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>Need a Template?</div>
+                <a
+                  href="/templates/qa_import_template.csv"
+                  download
+                  style={{ 
+                    display: 'inline-block',
+                    background: '#10b981', 
+                    color: '#fff', 
+                    borderRadius: 8, 
+                    padding: '8px 18px', 
+                    fontWeight: 600, 
+                    fontSize: 15, 
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📥 Download Template
+                </a>
+              </div>
+
+              {/* Upload Result */}
+              {csvUploadResult && (
+                <div style={{ 
+                  background: csvUploadResult.success ? '#f0fdf4' : '#fef2f2', 
+                  border: `1px solid ${csvUploadResult.success ? '#bbf7d0' : '#fecaca'}`, 
+                  color: csvUploadResult.success ? '#166534' : '#dc2626', 
+                  padding: 12, 
+                  borderRadius: 8, 
+                  marginBottom: 20 
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {csvUploadResult.success ? '✅ Import Successful' : '❌ Import Failed'}
+                  </div>
+                  <div style={{ fontSize: 14 }}>
+                    {csvUploadResult.message || csvUploadResult.error}
+                  </div>
+                  {csvUploadResult.results && (
+                    <div style={{ marginTop: 8, fontSize: 12 }}>
+                      Total: {csvUploadResult.results.total} | 
+                      Successful: {csvUploadResult.results.successful} | 
+                      Failed: {csvUploadResult.results.failed}
+                    </div>
+                  )}
+                  {csvUploadResult.results?.errors?.length > 0 && (
+                    <div style={{ marginTop: 8, fontSize: 12 }}>
+                      <div style={{ fontWeight: 600 }}>Errors:</div>
+                      {csvUploadResult.results.errors.slice(0, 3).map((error: string, index: number) => (
+                        <div key={index}>• {error}</div>
+                      ))}
+                      {csvUploadResult.results.errors.length > 3 && (
+                        <div>... and {csvUploadResult.results.errors.length - 3} more errors</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button
+                  onClick={() => {
+                    setShowCsvModal(false);
+                    setCsvFile(null);
+                    setCsvUploadResult(null);
+                  }}
+                  style={{ 
+                    background: '#f3f4f6', 
+                    color: '#374151', 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: 8, 
+                    padding: '10px 20px', 
+                    fontWeight: 600, 
+                    fontSize: 14,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCsvUpload}
+                  disabled={!csvFile || csvUploading}
+                  style={{ 
+                    background: !csvFile || csvUploading ? '#e5e7eb' : '#8B0000', 
+                    color: '#fff', 
+                    border: 'none', 
+                    borderRadius: 8, 
+                    padding: '10px 20px', 
+                    fontWeight: 600, 
+                    fontSize: 14,
+                    cursor: !csvFile || csvUploading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {csvUploading ? 'Uploading...' : 'Import CSV'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

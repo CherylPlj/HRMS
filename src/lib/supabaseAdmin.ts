@@ -28,18 +28,8 @@ function validateEnv() {
 // Create a single supabase client for interacting with your database with admin privileges
 export const supabaseAdmin = (() => {
   try {
-    // Only create the client on the server side
-    if (typeof window === 'undefined') {
-      const { supabaseUrl, supabaseServiceRoleKey } = validateEnv();
-      return createClient(supabaseUrl, supabaseServiceRoleKey);
-    } else {
-      // On the client side, return a dummy client that will throw an error if used
-      return {
-        from: () => {
-          throw new Error('supabaseAdmin client cannot be used on the client side');
-        }
-      } as any;
-    }
+    const { supabaseUrl, supabaseServiceRoleKey } = validateEnv();
+    return createClient(supabaseUrl, supabaseServiceRoleKey);
   } catch (error) {
     console.error('Failed to initialize Supabase admin client:', error);
     throw error;

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
 // Dynamic import to avoid build-time issues with pdf-parse
 let pdfParse: any = null;
@@ -59,31 +57,41 @@ export async function POST(request: NextRequest) {
     const originalName = (file as any).name || 'uploaded.pdf';
     const fileName = `training-doc-${userId}-${timestamp}.pdf`;
     
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'training-docs');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-    
-    // For now, we'll store the file path
-    const filePath = `/uploads/training-docs/${fileName}`;
-    
-    // Convert file to buffer and save
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     console.log('Buffer length:', buffer.length);
     
-    // Save file to public/uploads/training-docs directory
-    const fullPath = join(process.cwd(), 'public', 'uploads', 'training-docs', fileName);
-    console.log('Saving file to:', fullPath);
-    await writeFile(fullPath, buffer);
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from('trainingdocs')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Error uploading to Supabase:', uploadError);
+      return NextResponse.json(
+        { error: 'Failed to upload file to storage', details: uploadError.message },
+        { status: 500 }
+      );
+    }
+
+    // Get the public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from('trainingdocs')
+      .getPublicUrl(fileName);
+
+    const fileUrl = urlData.publicUrl;
 
     // Extract text from PDF using pdf-parse
     let extractedText = '';
     try {
       // Dynamically import pdf-parse to avoid build-time issues
       if (!pdfParse) {
-        pdfParse = (await import('pdf-parse')).default;
+        const pdfParseModule = await import('pdf-parse');
+        pdfParse = pdfParseModule.default || pdfParseModule;
       }
       const pdfData = await pdfParse(buffer);
       extractedText = pdfData.text;
@@ -94,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      fileUrl: filePath,
+      fileUrl: fileUrl,
       fileName: fileName,
       fileSize: file.size,
       fileType: file.type,
