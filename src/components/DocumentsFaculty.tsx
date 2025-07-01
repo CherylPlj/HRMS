@@ -141,7 +141,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     setError(null);
     try {
       console.log('Fetching documents for faculty:', facultyId);
-      const data = await fetchFacultyDocuments(facultyId);
+      const data = await fetchFacultyDocuments(facultyId.toString());
       console.log('Received documents:', data);
       
       if (!Array.isArray(data)) {
