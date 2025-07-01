@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // GET all queries
 export async function GET() {
   try {
+    // Fetch all queries with user information
     const queries = await prisma.aIChat.findMany({
       include: {
         User: {
@@ -20,18 +19,33 @@ export async function GET() {
       },
     });
 
-    // Fetch training documents for each query
-    const formattedQueries = await Promise.all(queries.map(async (query) => {
-      // Find associated training document
-      const trainingDoc = await prisma.trainingDocument.findFirst({
-        where: {
-          UserID: query.UserID,
-          status: 'Active'
+    // Get all unique UserIDs from queries
+    const userIds = [...new Set(queries.map(query => query.UserID))];
+
+    // Fetch all training documents for these users in a single query
+    const trainingDocs = await prisma.trainingDocument.findMany({
+      where: {
+        UserID: {
+          in: userIds
         },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
+        status: 'Active'
+      },
+      orderBy: {
+        uploadedAt: 'desc'
+      }
+    });
+
+    // Create a map of UserID to their latest training document
+    const trainingDocMap = new Map();
+    trainingDocs.forEach(doc => {
+      if (!trainingDocMap.has(doc.UserID)) {
+        trainingDocMap.set(doc.UserID, doc);
+      }
+    });
+
+    // Format the queries with training document information
+    const formattedQueries = queries.map((query) => {
+      const trainingDoc = trainingDocMap.get(query.UserID);
 
       return {
         id: query.ChatID,
@@ -46,7 +60,7 @@ export async function GET() {
         trainingDoc: trainingDoc?.fileUrl || null,
         trainingDocTitle: trainingDoc?.title || null,
       };
-    }));
+    });
 
     return NextResponse.json(formattedQueries);
   } catch (error) {

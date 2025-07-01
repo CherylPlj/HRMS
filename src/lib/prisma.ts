@@ -1,22 +1,18 @@
 // lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
 
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === 'production') {
-  // In production (Vercel): create a new client per function execution
-  prisma = new PrismaClient();
-} else {
-  // In dev: prevent multiple instances during hot reload
-  const globalWithPrisma = globalThis as typeof globalThis & {
-    prisma?: PrismaClient;
-  };
-
-  if (!globalWithPrisma.prisma) {
-    globalWithPrisma.prisma = new PrismaClient();
-  }
-
-  prisma = globalWithPrisma.prisma;
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
 }
 
-export { prisma };
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  // Add connection pooling configuration
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

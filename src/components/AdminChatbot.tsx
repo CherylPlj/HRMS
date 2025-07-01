@@ -77,15 +77,41 @@ const AdminChatbot = () => {
   const fetchResponses = async () => {
     try {
       setLoading(true);
+      setError(null); // Clear any previous errors
+      
       const response = await fetch('/api/queries');
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch responses');
+        // Log the actual error response
+        const errorData = await response.text();
+        console.error('API Error Response:', errorData);
+        
+        // Set a more specific error message
+        if (response.status === 500) {
+          setError('Database connection issue. Please try again later or contact support.');
+        } else {
+          setError(`Failed to load responses (${response.status})`);
+        }
+        
+        // Set empty responses to prevent further errors
+        setResponses([]);
+        return;
       }
+      
       const data = await response.json();
       setResponses(data);
     } catch (error) {
-      setError('Failed to load responses');
       console.error('Error fetching responses:', error);
+      
+      // Provide a more user-friendly error message
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError('Failed to load responses. Please try again later.');
+      }
+      
+      // Set empty responses to prevent further errors
+      setResponses([]);
     } finally {
       setLoading(false);
     }
@@ -375,6 +401,12 @@ const AdminChatbot = () => {
 
   return (
     <div style={{ padding: 24, background: '#fff', minHeight: '100vh' }}>
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
       <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 16 }}>Query List</div>
       
       {error && (
@@ -384,9 +416,28 @@ const AdminChatbot = () => {
           color: '#dc2626', 
           padding: 12, 
           borderRadius: 8, 
-          marginBottom: 16 
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          {error}
+          <span>{error}</span>
+          <button
+            onClick={fetchResponses}
+            disabled={loading}
+            style={{
+              background: '#dc2626',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              padding: '6px 12px',
+              fontSize: 12,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            {loading ? 'Retrying...' : 'Retry'}
+          </button>
         </div>
       )}
       
@@ -522,7 +573,16 @@ const AdminChatbot = () => {
             </tr>
           </thead>
           <tbody>
-            {paginatedResponses.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <div style={{ width: 16, height: 16, border: '2px solid #f3f3f3', borderTop: '2px solid #8B0000', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                    Loading responses...
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedResponses.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#666' }}>
                   {search ? 'No responses found matching your search.' : 'No responses available.'}
