@@ -3,14 +3,16 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardContent from '@/components/DashboardContent';
-import FacultyContent from '@/components/FacultyContent';
-import AttendanceContent from '@/components/AttendanceContent';
+import LeaveDashAdmin from '@/components/LeaveDashAdmin';
+// import FacultyContent from '@/components/FacultyContent';
+// import AttendanceContent from '@/components/AttendanceContent';
 import LeaveContent from '@/components/LeaveContent';
-import EmployeeContentNew from '@/components/EmployeeContentNew';
-import RecruitmentContent from '@/components/RecruitmentContent';
-import UserManagementContent from '@/components/UserManagementContent';
-import SessionManagementContent from '@/components/SessionManagementContent';
-import Chatbot from '@/components/Chatbot';
+import AdminChatbot from '@/components/AdminChatbot';
+// import EmployeeContentNew from '@/components/EmployeeContentNew';
+// import RecruitmentContent from '@/components/RecruitmentContent';
+// import UserManagementContent from '@/components/UserManagementContent';
+// import SessionManagementContent from '@/components/SessionManagementContent';
+// import Chatbot from '@/components/Chatbot';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '@clerk/nextjs'; // Add this import
@@ -266,20 +268,22 @@ export default function AdminDashboard() {
     switch (activeButton) {
       case 'dashboard':
         return <DashboardContent />;
-      case 'document':
-        return <FacultyContent />;
-      case 'employees':
-        return <EmployeeContentNew />;
-      case 'recruitment':
-        return <RecruitmentContent />;
-      case 'attendance':
-        return <AttendanceContent />;
+      // case 'document':
+      //   return <FacultyContent />;
+      // case 'employees':
+      //   return <EmployeeContentNew />;
+      // case 'recruitment':
+      //   return <RecruitmentContent />;
+      // case 'attendance':
+      //   return <AttendanceContent />;
       case 'leave':
         return <LeaveContent />;
-      case 'user-management':
-        return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
-      case 'session-management':
-        return userRole === 'super admin' ? <SessionManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
+      case 'chatbot':
+        return <AdminChatbot />;
+      // case 'user-management':
+      //   return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
+      // case 'session-management':
+      //   return userRole === 'super admin' ? <SessionManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -328,16 +332,17 @@ export default function AdminDashboard() {
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
                         {[
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
-              { name: 'Employees', icon: 'fa-users', key: 'employees' },
-              { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
-              { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
+              // { name: 'Employees', icon: 'fa-users', key: 'employees' },
+              // { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
+              // { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
-              { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
+              { name: 'Chatbot', icon: 'fa-robot', key: 'chatbot' },
+              // { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
               // Super Admin exclusive items
-              ...(userRole === 'super admin' ? [
-                { name: 'User Management', icon: 'fa-user-shield', key: 'user-management' },
-                { name: 'Session Management', icon: 'fa-clock', key: 'session-management' }
-              ] : [])
+              // ...(userRole === 'super admin' ? [
+              //   { name: 'User Management', icon: 'fa-user-shield', key: 'user-management' },
+              //   { name: 'Session Management', icon: 'fa-clock', key: 'session-management' }
+              // ] : [])
             ].map((item) => (
               <a
                 key={item.key}
@@ -394,19 +399,20 @@ export default function AdminDashboard() {
               <div className="flex items-center">
                 <h1 className="text-xl font-bold text-red-700">
                   {activeButton === 'dashboard' && 'DASHBOARD'}
-                  {activeButton === 'document' && 'DOCUMENTS'}
-                  {activeButton === 'employees' && 'EMPLOYEES'}
-                  {activeButton === 'attendance' && 'ATTENDANCE'}
+                  {/* {activeButton === 'document' && 'DOCUMENTS'} */}
+                  {/* {activeButton === 'employees' && 'EMPLOYEES'} */}
+                  {/* {activeButton === 'attendance' && 'ATTENDANCE'} */}
                   {activeButton === 'leave' && 'LEAVE'}
-                  {activeButton === 'user-management' && 'USER MANAGEMENT'}
-                  {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
+                  {activeButton === 'chatbot' && 'CHATBOT'}
+                  {/* {activeButton === 'user-management' && 'USER MANAGEMENT'}
+                  {activeButton === 'session-management' && 'SESSION MANAGEMENT'} */}
                 </h1>
               </div>
 
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
                 {/* Chat Icon */}
-                <a
+                {/* <a
                   ref={chatButtonRef}
                   href="#"
                   className="p-2 rounded-full hover:bg-gray-200 transition"
@@ -414,7 +420,7 @@ export default function AdminDashboard() {
                   onClick={() => setChatbotVisible(!isChatbotVisible)}
                 >
                   <i className="fas fa-comments text-black text-lg"></i>
-                </a>
+                </a> */}
 
                 {/* Profile Section */}
                 <div className="flex items-center space-x-3">
@@ -536,7 +542,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Chatbot Popup */}
-      <Chatbot
+      {/* <Chatbot
         isVisible={isChatbotVisible}
         onClose={() => setChatbotVisible(false)}
         position={chatbotPosition}
@@ -550,7 +556,7 @@ export default function AdminDashboard() {
         ]}
         title="SJSFI Admin Assistant"
         userRole="admin"
-      />
+      /> */}
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalVisible && (

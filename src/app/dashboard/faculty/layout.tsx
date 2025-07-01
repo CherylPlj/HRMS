@@ -3,10 +3,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import { UserProfile } from '@clerk/nextjs'; // Add this import
 import DashboardFaculty from '@/components/DashboardFaculty';
-import PersonalData from '@/components/PersonalData';
-import DocumentsFaculty from '@/components/DocumentsFaculty';
-import AttendanceFaculty from '@/components/AttendanceFaculty';
+// import PersonalData from '@/components/PersonalData';
+// import DocumentsFaculty from '@/components/DocumentsFaculty';
+// import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
+import ChatbotFaculty from '@/components/ChatbotFaculty';
 import Chatbot from '@/components/Chatbot';
 import { useRouter } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
@@ -133,14 +134,16 @@ export default function FacultyDashboard() {
     switch (activeButton) {
       case 'dashboard':
         return <DashboardFaculty />;
-      case 'personal-data':
-        return <PersonalData onBack={() => setActiveButton('dashboard')} />;
-      case 'documents':
-        return <DocumentsFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'attendance':
-        return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
+      // case 'personal-data':
+      //   return <PersonalData onBack={() => setActiveButton('dashboard')} />;
+      // case 'documents':
+      //   return <DocumentsFaculty onBack={() => setActiveButton('dashboard')} />;
+      // case 'attendance':
+      //   return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
       case 'leave':
         return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
+      case 'chatbot':
+        return <ChatbotFaculty/>;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -187,10 +190,11 @@ export default function FacultyDashboard() {
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
             {[
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
-              { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
-              { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
-              { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
-              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' }
+              // { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
+              // { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
+              // { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
+              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
+              { name: 'Chatbot', icon: 'fa-robot', key: 'chatbot' }
             ].map((item) => (
               <a
                 key={item.key}
@@ -247,17 +251,18 @@ export default function FacultyDashboard() {
               <div className="flex items-center">
                 <h1 className="text-xl font-bold text-red-700">
                   {activeButton === 'dashboard' && 'DASHBOARD'}
-                  {activeButton === 'personal-data' && 'PERSONAL DATA'}
-                  {activeButton === 'documents' && 'DOCUMENTS'}
-                  {activeButton === 'attendance' && 'ATTENDANCE'}
+                  {/* {activeButton === 'personal-data' && 'PERSONAL DATA'} */}
+                  {/* {activeButton === 'documents' && 'DOCUMENTS'} */}
+                  {/* {activeButton === 'attendance' && 'ATTENDANCE'} */}
                   {activeButton === 'leave' && 'LEAVE REQUEST'}
+                  {activeButton === 'chatbot' && 'CHATBOT'}
                 </h1>
               </div>
 
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
                 {/* Chat Icon */}
-                <a
+                {/* <a
                   ref={chatButtonRef}
                   href="#"
                   className="p-2 rounded-full hover:bg-gray-200 transition"
@@ -265,7 +270,7 @@ export default function FacultyDashboard() {
                   onClick={() => setChatbotVisible(!isChatbotVisible)}
                 >
                   <i className="fas fa-comments text-black text-lg"></i>
-                </a>
+                </a> */}
 
                 {/* Profile Section */}
                 <div className="flex items-center space-x-3">
