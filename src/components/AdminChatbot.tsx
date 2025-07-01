@@ -26,7 +26,12 @@ const AdminChatbot = () => {
   return (
     <div style={{ padding: 24, background: '#fff', minHeight: '100vh' }}>
       <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 16 }}>Response List</div>
-      <div style={{ border: '2px solid #8B0000', borderRadius: 10, padding: 0, background: '#fff' }}>
+      <div style={{ 
+        borderRadius: 10, 
+        padding: 0, 
+        background: '#fff', 
+        boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', padding: 16, borderBottom: '1px solid #eee' }}>
           <input
             type="text"

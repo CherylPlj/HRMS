@@ -47,7 +47,7 @@ export default function Home() {
               priority
             />
             <h1 className="text-3xl text-center text-[#800000] w-full">
-              Welcome to <span className="font-bold">SJSFI-HRMS Portal</span>
+              Welcome to <span className="font-bold">SJSFI-FLS Portal</span>
             </h1>
           </div>
           <div className="flex flex-col items-center justify-center w-full">
