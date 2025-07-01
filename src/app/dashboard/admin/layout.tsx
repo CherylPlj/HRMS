@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
-import DashboardContent from '@/components/DashboardContent';
+// import DashboardContent from '@/components/DashboardContent';
 import LeaveDashAdmin from '@/components/LeaveDashAdmin';
 // import FacultyContent from '@/components/FacultyContent';
 // import AttendanceContent from '@/components/AttendanceContent';
@@ -267,7 +267,7 @@ export default function AdminDashboard() {
   const renderContent = () => {
     switch (activeButton) {
       case 'dashboard':
-        return <DashboardContent />;
+        return <LeaveDashAdmin />;
       // case 'document':
       //   return <FacultyContent />;
       // case 'employees':

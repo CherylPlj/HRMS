@@ -1,798 +1,402 @@
 import React, { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation'; // For Next.js 13+
-import AttendanceFaculty from '@/components/AttendanceFaculty';
-import PersonalData from '@/components/PersonalData';
-import DocumentsFaculty from '@/components/DocumentsFaculty';
-import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
-import { Line, Bar } from "react-chartjs-2";
+import { Pie } from "react-chartjs-2";
 import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import Head from 'next/head';
-import { useAttendance } from '../contexts/AttendanceContext';
-import { attendanceService } from '../services/attendanceService';
+import { 
+  FaCalendarAlt, 
+  FaFile,
+  FaClock,
+  FaUserCheck,
+  FaTimes,
+  FaBed,
+  FaUmbrellaBeach,
+  FaExclamationTriangle,
+  FaBaby,
+  FaMale,
+  FaUser
+} from "react-icons/fa";
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
-import { DateTime } from 'luxon';
 
-// Add interfaces for component props
-interface ComponentWithBackButton {
-  onBack: () => void;
-}
-
-interface Schedule {
-  id: number;
-  facultyId: number;
-  subjectId: number;
-  classSectionId: number;
-  day: string;
-  time: string;
-  duration: number;
-  subject: {
-    name: string;
-  };
-  classSection: {
-    name: string;
-  };
-}
-
-interface RawSchedule {
-  id: number;
-  facultyId: number;
-  subjectId: number;
-  classSectionId: number;
-  day: string;
-  time: string;
-  duration: number;
-  subject: {
-    name: string;
-  };
-  classSection: {
-    name: string;
-  };
-}
-
-interface Department {
-  DepartmentName: string;
-}
-
-interface FacultyData {
-  FacultyID: number;
-  Position: string;
-  EmploymentStatus: string;
-  HireDate: string;
-  Department: Department;
+interface FacultyLeaveRequest {
+  id: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  daysRequested: number;
+  status: string;
+  submittedDate: string;
 }
 
 export default function LeaveDashFac() {
   const { user } = useUser();
-  const router = useRouter();
-  const { currentRecord, setCurrentRecord, currentTime, currentDate, summary } = useAttendance();
-  const [dateRange, setDateRange] = useState<[Date, Date]>([
-    new Date(new Date().getFullYear(), new Date().getMonth() - 1, new Date().getDate()),
-    new Date()
-  ]);
-  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
-  const [facultyId, setFacultyId] = useState<number | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'attendance' | 'personal' | 'documents' | 'leave'>('dashboard');
-  const [scheduleForWeek, setScheduleForWeek] = useState<Schedule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<[Date, Date]>([new Date(), new Date()]);
 
-  type AttendanceRecord = {
-    id?: string;
-    facultyId?: number;
-    date: string;
-    timeIn?: string;
-    timeOut?: string;
-    status?: string;
-    createdAt?: string;
-    updatedAt?: string;
-  };
-
-  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-
-  // Placeholder data for new sections
-  const [personalData, setPersonalData] = useState({
-    Position: "",
-    DepartmentName: "",
-    EmploymentStatus: "",
-    HireDate: ""
+  // Mock data for faculty leave statistics
+  const [leaveStats] = useState({
+    totalRequests: 12,
+    pendingRequests: 3,
+    approvedRequests: 7,
+    rejectedRequests: 2,
+    availableLeaves: 15,
+    usedLeaves: 8
   });
 
-  const [documentRequirements, setDocumentRequirements] = useState({
-    pending: 0,
-    submitted: 0,
-    approved: 0,
-    rejected: 0,
-    total: 0
-  });
-
-  const [leaveData, setLeaveData] = useState({
-    available: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0
-  });
-
-  // Fetch Supabase UserID and FacultyID when Clerk user is available
-  useEffect(() => {
-    const fetchUserAndFacultyId = async () => {
-      if (!user?.emailAddresses?.[0]?.emailAddress) {
-        setLoading(false);
-        setError('No user email available');
-        return;
-      }
-
-      try {
-        const { data: userData, error: userError } = await supabase
-          .from('User')
-          .select('UserID')
-          .eq('Email', user.emailAddresses[0].emailAddress)
-          .single();
-
-        if (userError) {
-          setError('Failed to fetch user data');
-          return;
-        }
-
-        if (userData) {
-          setSupabaseUserId(userData.UserID);
-
-          const { data: facultyData, error: facultyError } = await supabase
-            .from('Faculty')
-            .select('FacultyID')
-            .eq('UserID', userData.UserID)
-            .single();
-
-          if (facultyError) {
-            setError('Failed to fetch faculty data');
-            return;
-          }
-
-          if (facultyData) {
-            setFacultyId(facultyData.FacultyID);
-            setError(null);
-          } else {
-            setError('Faculty record not found');
-          }
-        } else {
-          setError('User not found in database');
-        }
-      } catch (error) {
-        setError('An unexpected error occurred');
-      }
-    };
-
-    fetchUserAndFacultyId();
-  }, [user]);
-
-  // Fetch schedule data when faculty ID is available
-  useEffect(() => {
-    const fetchSchedule = async () => {
-      if (!facultyId) return;
-
-      try {
-        interface SupabaseSchedule {
-          id: number;
-          facultyId: number;
-          subjectId: number;
-          classSectionId: number;
-          day: string;
-          time: string;
-          duration: number;
-          subject: {
-            name: string;
-          };
-          classSection: {
-            name: string;
-          };
-        }
-
-        const { data, error } = await supabase
-          .from('Schedules')
-          .select(`
-            id,
-            facultyId,
-            subjectId,
-            classSectionId,
-            day,
-            time,
-            duration,
-            subject:Subject!inner (
-              name
-            ),
-            classSection:ClassSection!inner (
-              name
-            )
-          `)
-          .eq('facultyId', facultyId)
-          .returns<SupabaseSchedule[]>();
-
-        if (error) {
-          console.error('Error fetching schedules:', error);
-          return;
-        }
-
-        // The data is already correctly typed, so we can use it directly
-        setScheduleForWeek(data || []);
-      } catch (error) {
-        console.error('Error in schedule fetch:', error);
-      }
-    };
-
-    const safeFetchAttendanceData = async () => {
-      try {
-        await fetchAttendanceData();
-      } catch (error) {
-        console.error('Error fetching attendance data:', error);
-      }
-    };
-
-    const safeFetchOtherData = async () => {
-      try {
-        await fetchOtherData();
-      } catch (error) {
-        console.error('Error fetching other dashboard data:', error);
-      }
-    };
-
-    if (facultyId) {
-      fetchSchedule();
-      safeFetchAttendanceData();
-      safeFetchOtherData();
-    }
-  }, [facultyId]);
-
-  // Fetch attendance data when faculty ID is available
-  useEffect(() => {
-    if (facultyId) {
-      fetchAttendanceData();
-      fetchOtherData();
-    }
-  }, [dateRange, facultyId]);
-
-  const fetchAttendanceData = async () => {
-    if (!facultyId || !user?.emailAddresses?.[0]?.emailAddress) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const data = await attendanceService.getAttendanceHistory(
-        facultyId.toString(),
-        dateRange[0].toISOString(),
-        dateRange[1].toISOString(),
-        user.emailAddresses[0].emailAddress
-      );
-
-      if (!data || !Array.isArray(data)) {
-        setAttendanceData([]);
-        return;
-      }
-
-      const mappedData = data.map((record: any) => ({
-        id: record.id,
-        facultyId: record.facultyId,
-        date: record.date || new Date().toISOString().split('T')[0],
-        timeIn: record.timeIn || undefined,
-        timeOut: record.timeOut || undefined,
-        status: record.status || 'NOT_RECORDED',
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt
-      }));
-
-      setAttendanceData(mappedData);
-
-      const today = new Date();
-      const todayRecord = mappedData.find((rec) => {
-        const recDate = new Date(rec.date);
-        return (
-          recDate.getFullYear() === today.getFullYear() &&
-          recDate.getMonth() === today.getMonth() &&
-          recDate.getDate() === today.getDate()
-        );
-      });
-
-      if (todayRecord) {
-        setCurrentRecord(todayRecord);
-      } else {
-        setCurrentRecord(null);
-      }
-    } catch (error) {
-      setAttendanceData([]);
-      setCurrentRecord(null);
-      setError('Failed to fetch attendance data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch other data for dashboard sections
-  const fetchOtherData = async () => {
-    try {
-      if (!user?.emailAddresses?.[0]?.emailAddress) return;
-
-      // Fetch user data
-      const { data: userData } = await supabase
-        .from('User')
-        .select('UserID')
-        .eq('Email', user.emailAddresses[0].emailAddress)
-        .single();
-
-      if (!userData) return;
-
-      // Fetch faculty data
-      const { data: facultyData } = await supabase
-        .from('Faculty')
-        .select(`
-          FacultyID,
-          Position,
-          EmploymentStatus,
-          HireDate,
-          Department:Department (
-            DepartmentName
-          )
-        `)
-        .eq('UserID', userData.UserID)
-        .single() as { data: FacultyData | null };
-
-      if (facultyData) {
-        setPersonalData({
-          Position: facultyData.Position,
-          DepartmentName: facultyData.Department?.DepartmentName || '',
-          EmploymentStatus: facultyData.EmploymentStatus,
-          HireDate: new Date(facultyData.HireDate).toLocaleDateString()
-        });
-
-        // Fetch document types and documents
-        const { data: documentTypes } = await supabase
-          .from('DocumentType')
-          .select('DocumentTypeID');
-
-        const totalRequired = documentTypes?.length || 0;
-
-        const { data: documents } = await supabase
-          .from('Document')
-          .select('DocumentID, DocumentTypeID, SubmissionStatus')
-          .eq('FacultyID', facultyData.FacultyID);
-
-        // Count submitted, approved, and rejected documents
-        const submitted = documents?.filter(doc => doc.SubmissionStatus === 'Submitted').length || 0;
-        const approved = documents?.filter(doc => doc.SubmissionStatus === 'Approved').length || 0;
-        const rejected = documents?.filter(doc => doc.SubmissionStatus === 'Rejected').length || 0;
-
-        // Calculate pending as total required minus documents that exist
-        const existingDocumentTypes = new Set(documents?.map(doc => doc.DocumentTypeID) || []);
-        const pending = (documentTypes?.filter(dt => !existingDocumentTypes.has(dt.DocumentTypeID)).length || 0) +
-                       (documents?.filter(doc => doc.SubmissionStatus === 'Pending').length || 0);
-
-        setDocumentRequirements({
-          pending,
-          submitted,
-          approved,
-          rejected,
-          total: totalRequired
-        });
-
-        // Fetch leave data
-        const { data: leaves } = await supabase
-          .from('Leave')
-          .select('LeaveID, Status')
-          .eq('FacultyID', facultyData.FacultyID);
-
-        const availableLeaves = 10; // This should be fetched from a configuration or calculated based on policy
-        const pendingLeaves = leaves?.filter(leave => leave.Status === 'Pending').length || 0;
-        const approvedLeaves = leaves?.filter(leave => leave.Status === 'Approved').length || 0;
-        const rejectedLeaves = leaves?.filter(leave => leave.Status === 'Rejected').length || 0;
-
-        setLeaveData({
-          available: availableLeaves - approvedLeaves,
-          pending: pendingLeaves,
-          approved: approvedLeaves,
-          rejected: rejectedLeaves
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching other dashboard data:', error);
-    }
-  };
-
-  const handleRefresh = () => {
-    setError(null);
-    fetchAttendanceData();
-    fetchOtherData();
-  };
-
-  const handleDateChange = (dates: [Date | null, Date | null]) => {
-    if (dates[0] && dates[1]) {
-      setDateRange([dates[0], dates[1]]);
-    }
-  };
-
-  function parseTimeString(timeStr: string | undefined) {
-    if (!timeStr) return null;
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours + (minutes / 60);
-  }
-
-  function formatTimeWithAmPm(timeStr: string | null | undefined) {
-    if (!timeStr) return '-';
-    return DateTime.fromFormat(timeStr, 'HH:mm:ss', { zone: 'Asia/Manila' })
-      .toFormat('hh:mm a');
-  }
-
-  // Data for Attendance Record Bar Chart (Present/Absent)
-  // Compute present and absent counts per weekday from attendanceData
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const presentCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
-  const absentCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
-
-  attendanceData.forEach(record => {
-    const date = new Date(record.date);
-    const day = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    if (record.status === 'PRESENT') {
-      presentCounts[day]++;
-    } else if (record.status === 'ABSENT') {
-      absentCounts[day]++;
-    }
-  });
-
-  const barData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+  // Mock data for leave status distribution
+  const leaveStatusData = {
+    labels: ["Approved", "Rejected", "Pending"],
     datasets: [
       {
-        label: 'Present',
-        data: [presentCounts[1], presentCounts[2], presentCounts[3], presentCounts[4], presentCounts[5]],
-        backgroundColor: '#4CAF50',
-      },
-      {
-        label: 'Absent',
-        data: [absentCounts[1], absentCounts[2], absentCounts[3], absentCounts[4], absentCounts[5]],
-        backgroundColor: '#f44336',
+        data: [leaveStats.approvedRequests, leaveStats.rejectedRequests, leaveStats.pendingRequests],
+        backgroundColor: ["#43a047", "#e53935", "#ffb300"],
+        hoverOffset: 4,
+        borderWidth: 0,
       },
     ],
   };
 
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        stacked: true,
-      },
-      y: {
-        stacked: true,
-        beginAtZero: true,
-        ticks: {
-          stepSize: 1,
-        },
-      },
+  // Mock data for faculty's own pending leave requests
+  const [pendingRequests] = useState<FacultyLeaveRequest[]>([
+    {
+      id: "1",
+      leaveType: "Sick Leave",
+      startDate: "2024-01-15",
+      endDate: "2024-01-17",
+      reason: "Medical appointment and recovery",
+      daysRequested: 3,
+      status: "Pending",
+      submittedDate: "2024-01-10"
     },
+    {
+      id: "2", 
+      leaveType: "Vacation",
+      startDate: "2024-02-01",
+      endDate: "2024-02-05",
+      reason: "Family vacation",
+      daysRequested: 5,
+      status: "Pending",
+      submittedDate: "2024-01-15"
+    },
+    {
+      id: "3",
+      leaveType: "Emergency",
+      startDate: "2024-01-20",
+      endDate: "2024-01-20",
+      reason: "Family emergency",
+      daysRequested: 1,
+      status: "Pending",
+      submittedDate: "2024-01-18"
+    }
+  ]);
+
+  const handleDateChange = (dates: [Date | null, Date | null]) => {
+    const [start, end] = dates;
+    if (start && end) {
+      setDateRange([start, end]);
+    }
   };
 
-  // Add component view conditionals
-  if (currentView === 'attendance') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            Back to Dashboard
-          </button>
-          <AttendanceFaculty onBack={() => setCurrentView('dashboard')} />
-        </div>
-      </div>
-    );
-  }
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
-  if (currentView === 'personal') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            Back to Dashboard
-          </button>
-          <PersonalData onBack={() => setCurrentView('dashboard')} />
-        </div>
-      </div>
-    );
-  }
+  // Helper function to get leave type icon
+  const getLeaveTypeIcon = (leaveType: string) => {
+    switch (leaveType) {
+      case "Sick Leave":
+        return <FaBed className="text-red-500" />;
+      case "Vacation":
+        return <FaUmbrellaBeach className="text-blue-500" />;
+      case "Emergency":
+        return <FaExclamationTriangle className="text-orange-500" />;
+      case "Maternity":
+        return <FaBaby className="text-pink-500" />;
+      case "Paternity":
+        return <FaMale className="text-blue-600" />;
+      default:
+        return <FaCalendarAlt className="text-gray-500" />;
+    }
+  };
 
-  if (currentView === 'documents') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            Back to Dashboard
-          </button>
-          <DocumentsFaculty onBack={() => setCurrentView('dashboard')} />
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === 'leave') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            Back to Dashboard
-          </button>
-          <LeaveRequestFaculty onBack={() => setCurrentView('dashboard')} />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600">{error}</p>
-          <button
-            onClick={handleRefresh}
-            className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#600000] transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Helper function to get status badge styling
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "Approved":
+        return "bg-green-100 text-green-800";
+      case "Rejected":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
-    <>
-      <Head>
-        <title>Faculty Dashboard</title>
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-        />
-      </Head>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Top Row: Personal Data, Employment Status, Date & Time */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* Personal Data */}
-            <div 
-              onClick={() => setCurrentView('personal')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-user-circle mr-2 text-[#800000]"></i>
-                  Personal Data
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
-              </div>
-              <p><span className="font-medium"><i className="fas fa-briefcase mr-2 text-gray-500"></i>Position:</span> {personalData.Position}</p>
-              <p><span className="font-medium"><i className="fas fa-building mr-2 text-gray-500"></i>Department:</span> {personalData.DepartmentName}</p>
-            </div>
-
-            {/* Employment Status */}
-            <div 
-              onClick={() => setCurrentView('personal')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-id-badge mr-2 text-[#800000]"></i>
-                  Employment Status
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
-              </div>
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-check-circle text-green-500"></i>
-                <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-semibold">{personalData.EmploymentStatus}</span>
-              </div>
-              <p><span className="font-medium"><i className="fas fa-calendar-alt mr-2 text-gray-500"></i>Hire Date:</span> {personalData.HireDate}</p>
-            </div>
-
-            {/* Date & Time */}
-            <div 
-              onClick={() => setCurrentView('attendance')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-clock mr-2 text-[#800000]"></i>
-                  Date & Time
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
-              </div>
-              <p className="text-gray-700"><i className="fas fa-calendar mr-2"></i>{currentDate}</p>
-              <p className="text-gray-700"><i className="fas fa-clock mr-2"></i>{currentTime}</p>
-            </div>
+    <div className="p-8 w-full flex flex-col">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 mb-1">Filter by Date Range</label>
+            <DatePicker
+              selected={dateRange[0]}
+              onChange={handleDateChange}
+              startDate={dateRange[0]}
+              endDate={dateRange[1]}
+              selectsRange
+              dateFormat="yyyy-MM-dd"
+              customInput={
+                <button className="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all duration-300">
+                  <FaCalendarAlt className="mr-2 text-[#800000]" />
+                  {dateRange[0]
+                    ? `${dateRange[0].toLocaleDateString()} - ${
+                        dateRange[1]?.toLocaleDateString() || ""
+                      }`
+                    : "Select Date Range"}
+                </button>
+              }
+              className="w-full"
+              maxDate={new Date()}
+              placeholderText="Select date range"
+            />
           </div>
-
-          {/* Second Row: Document Requirements, Leave */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Document Requirements Card */}
-            <div 
-              onClick={() => setCurrentView('documents')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          <div className="flex space-x-2">
+            <button 
+              onClick={() => {
+                const today = new Date();
+                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                setDateRange([firstDayOfMonth, today]);
+              }}
+              className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-file-alt mr-2 text-[#800000]"></i>
-                  Total Document Requirements
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="bg-yellow-100 rounded-lg p-4">
-                  <i className="fas fa-hourglass-half text-yellow-700 mb-2"></i>
-                  <p className="text-2xl font-bold">{documentRequirements.pending}</p>
-                  <p className="text-sm text-yellow-700">Pending</p>
-                </div>
-                <div className="bg-blue-100 rounded-lg p-4">
-                  <i className="fas fa-paper-plane text-blue-700 mb-2"></i>
-                  <p className="text-2xl font-bold">{documentRequirements.submitted}</p>
-                  <p className="text-sm text-blue-700">Submitted</p>
-                </div>
-                <div className="bg-green-100 rounded-lg p-4">
-                  <i className="fas fa-check-circle text-green-700 mb-2"></i>
-                  <p className="text-2xl font-bold">{documentRequirements.approved}</p>
-                  <p className="text-sm text-green-700">Approved</p>
-                </div>
-                <div className="bg-red-100 rounded-lg p-4">
-                  <i className="fas fa-times-circle text-red-700 mb-2"></i>
-                  <p className="text-2xl font-bold">{documentRequirements.rejected}</p>
-                  <p className="text-sm text-red-700">Rejected</p>
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-600 text-center">
-                <i className="fas fa-file-alt mr-2"></i>
-                Total Required: {documentRequirements.total}
-              </div>
+              This Month
+            </button>
+            <button 
+              onClick={() => {
+                const today = new Date();
+                const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+                setDateRange([firstDayOfYear, today]);
+              }}
+              className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
+            >
+              This Year
+            </button>
+          </div>
+        </div>
+        <div className="text-sm text-gray-500">
+          Faculty Leave Dashboard
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Total Requests</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveStats.totalRequests}</h3>
             </div>
+            <FaFile className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
 
-            {/* Total Leave */}
-            <div 
-              onClick={() => setCurrentView('leave')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-calendar-minus mr-2 text-[#800000]"></i>
-                  Total Leave
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Pending Requests</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveStats.pendingRequests}</h3>
+            </div>
+            <FaClock className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Available Leaves</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveStats.availableLeaves}</h3>
+            </div>
+            <FaUser className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Used Leaves</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveStats.usedLeaves}</h3>
+            </div>
+            <FaUserCheck className="text-4xl text-[#800000] opacity-50" />
+          </div>
+        </div>
+      </div>
+
+      {/* Charts and Table Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Leave Status Distribution */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <FaFile className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">My Leave Status Distribution</h2>
+          </div>
+          <div className="h-[300px] flex items-center justify-center">
+            <Pie 
+              data={leaveStatusData} 
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: {
+                      boxWidth: 12,
+                      padding: 15,
+                      usePointStyle: true
+                    }
+                  }
+                }
+              }} 
+            />
+          </div>
+        </div>
+
+        {/* Leave Balance Overview */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <FaUser className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Leave Balance Overview</h2>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Available Leaves</span>
+                <span className="text-sm font-medium text-gray-700">{leaveStats.availableLeaves} days</span>
               </div>
-              <p className="mb-2">
-                <i className="fas fa-calendar-check mr-2"></i>
-                Available Leave: {leaveData.available} days
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-                <div
-                  className="bg-blue-500 h-4 rounded-full"
-                  style={{ width: `${(leaveData.approved / leaveData.available) * 100}%` }}
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${(leaveStats.availableLeaves / (leaveStats.availableLeaves + leaveStats.usedLeaves)) * 100}%` }}
                 ></div>
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-yellow-100 rounded-lg p-4">
-                  <i className="fas fa-hourglass-half text-yellow-700 mb-2"></i>
-                  <p className="text-xl font-bold">{leaveData.pending}</p>
-                  <p className="text-sm text-yellow-700">Pending</p>
-                </div>
-                <div className="bg-green-100 rounded-lg p-4">
-                  <i className="fas fa-check-circle text-green-700 mb-2"></i>
-                  <p className="text-xl font-bold">{leaveData.approved}</p>
-                  <p className="text-sm text-green-700">Approved</p>
-                </div>
-                <div className="bg-red-100 rounded-lg p-4">
-                  <i className="fas fa-times-circle text-red-700 mb-2"></i>
-                  <p className="text-xl font-bold">{leaveData.rejected}</p>
-                  <p className="text-sm text-red-700">Rejected</p>
-                </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Used Leaves</span>
+                <span className="text-sm font-medium text-gray-700">{leaveStats.usedLeaves} days</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${(leaveStats.usedLeaves / (leaveStats.availableLeaves + leaveStats.usedLeaves)) * 100}%` }}
+                ></div>
               </div>
             </div>
-          </div>
 
-          {/* Third Row: Attendance Record Bar Chart and Schedule */}
-          <div className="mb-6">
-            {/* Attendance Record Bar Chart */}
-            <div 
-              onClick={() => setCurrentView('attendance')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  <i className="fas fa-chart-bar mr-2 text-[#800000]"></i>
-                  Attendance Record
-                </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
+            <div className="grid grid-cols-3 gap-4 pt-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{leaveStats.approvedRequests}</div>
+                <div className="text-sm text-gray-600">Approved</div>
               </div>
-              <div className="h-64">
-                <Bar data={barData} options={barOptions} />
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">{leaveStats.pendingRequests}</div>
+                <div className="text-sm text-gray-600">Pending</div>
               </div>
-              <div className="mt-2 text-sm text-gray-600">
-                <i className="fas fa-info-circle mr-2"></i>
-                Present and Absent counts per day
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{leaveStats.rejectedRequests}</div>
+                <div className="text-sm text-gray-600">Rejected</div>
               </div>
-            </div>
-          </div>
-
-          {/* Fourth Row: Recent Attendance Records */}
-          <div 
-            onClick={() => setCurrentView('attendance')}
-            className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
-                <i className="fas fa-history mr-2 text-[#800000]"></i>
-                Recent Attendance Records
-              </h3>
-              <i className="fas fa-chevron-right text-gray-400"></i>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <i className="fas fa-calendar-day mr-2"></i>Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <i className="fas fa-sign-in-alt mr-2"></i>Time In
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <i className="fas fa-sign-out-alt mr-2"></i>Time Out
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <i className="fas fa-info-circle mr-2"></i>Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {attendanceData.slice(0, 5).map((record, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(record.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {record.timeIn ? formatTimeWithAmPm(record.timeIn) : '-'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {record.timeOut ? formatTimeWithAmPm(record.timeOut) : '-'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          record.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
-                          record.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
-                          record.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {record.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
       </div>
-    </>
+
+      {/* My Pending Leave Requests Table */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FaClock className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">My Pending Leave Requests</h2>
+          </div>
+          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+            {pendingRequests.length} Pending
+          </span>
+        </div>
+
+        {pendingRequests.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Leave Type
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Date Range
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Days
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Status
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Submitted Date
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Reason
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {pendingRequests.map((request) => (
+                  <tr key={request.id} className="hover:bg-gray-50">
+                    <td className="py-4">
+                      <div className="flex items-center">
+                        {getLeaveTypeIcon(request.leaveType)}
+                        <span className="ml-2 text-sm text-gray-900">{request.leaveType}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                        {request.daysRequested} days
+                      </span>
+                    </td>
+                    <td className="py-4 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatDate(request.submittedDate)}
+                    </td>
+                    <td className="py-4 text-sm text-gray-600 max-w-xs truncate">
+                      {request.reason}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <FaClock className="text-4xl text-gray-300 mx-auto mb-4" />
+            <p className="text-lg">No pending leave requests</p>
+            <p className="text-sm">All your leave requests have been processed</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

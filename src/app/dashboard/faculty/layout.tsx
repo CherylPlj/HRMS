@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import { UserProfile } from '@clerk/nextjs'; // Add this import
-import DashboardFaculty from '@/components/DashboardFaculty';
+// import DashboardFaculty from '@/components/DashboardFaculty';
+import LeaveDashFac from '@/components/LeaveDashFac';
 // import PersonalData from '@/components/PersonalData';
 // import DocumentsFaculty from '@/components/DocumentsFaculty';
 // import AttendanceFaculty from '@/components/AttendanceFaculty';
@@ -133,7 +134,7 @@ export default function FacultyDashboard() {
   const renderContent = () => {
     switch (activeButton) {
       case 'dashboard':
-        return <DashboardFaculty />;
+        return <LeaveDashFac />;
       // case 'personal-data':
       //   return <PersonalData onBack={() => setActiveButton('dashboard')} />;
       // case 'documents':

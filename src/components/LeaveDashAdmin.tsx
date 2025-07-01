@@ -16,7 +16,13 @@ import {
   FaBriefcase,
   FaUserPlus,
   FaBuilding,
-  FaCalendarCheck
+  FaCalendarCheck,
+  FaComments,
+  FaBed,
+  FaUmbrellaBeach,
+  FaExclamationTriangle,
+  FaBaby,
+  FaMale
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
@@ -53,6 +59,22 @@ interface Employee {
   employmentDetails?: {
     EmploymentStatus: string;
   }[];
+}
+
+interface PendingLeaveRequest {
+  id: string;
+  facultyName: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  department: string;
+  daysRequested: number;
+}
+
+interface ChatbotInteraction {
+  date: string;
+  interactions: number;
 }
 
 export default function LeaveDashAdmin() {
@@ -128,6 +150,130 @@ export default function LeaveDashAdmin() {
       JobTitle: string;
     };
   }>>([]);
+
+  // Mock data for leave status distribution
+  const leaveStatusData = {
+    labels: ["Approved", "Rejected", "Pending"],
+    datasets: [
+      {
+        data: [45, 15, 25],
+        backgroundColor: ["#43a047", "#e53935", "#ffb300"],
+        hoverOffset: 4,
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  // Mock data for leave type distribution
+  const leaveTypeData = {
+    labels: ["Sick Leave", "Vacation", "Emergency", "Maternity", "Paternity"],
+    datasets: [
+      {
+        label: "Number of Requests",
+        data: [30, 25, 10, 8, 5],
+        backgroundColor: [
+          "#800000",
+          "#9C27B0", 
+          "#2196F3",
+          "#FF9800",
+          "#43a047"
+        ],
+        borderRadius: 8,
+        barPercentage: 0.7,
+        categoryPercentage: 0.8,
+      },
+    ],
+  };
+
+  // Mock data for pending leave requests
+  const [pendingRequests] = useState<PendingLeaveRequest[]>([
+    {
+      id: "1",
+      facultyName: "Dr. Maria Santos",
+      leaveType: "Sick Leave",
+      startDate: "2024-01-15",
+      endDate: "2024-01-17",
+      reason: "Medical appointment and recovery",
+      department: "Computer Science",
+      daysRequested: 3
+    },
+    {
+      id: "2", 
+      facultyName: "Prof. Juan Dela Cruz",
+      leaveType: "Vacation",
+      startDate: "2024-02-01",
+      endDate: "2024-02-05",
+      reason: "Family vacation",
+      department: "Mathematics",
+      daysRequested: 5
+    },
+    {
+      id: "3",
+      facultyName: "Ms. Ana Rodriguez",
+      leaveType: "Emergency",
+      startDate: "2024-01-20",
+      endDate: "2024-01-20",
+      reason: "Family emergency",
+      department: "English",
+      daysRequested: 1
+    },
+    {
+      id: "4",
+      facultyName: "Dr. Carlos Mendoza",
+      leaveType: "Maternity",
+      startDate: "2024-03-01",
+      endDate: "2024-05-01",
+      reason: "Maternity leave",
+      department: "Psychology",
+      daysRequested: 60
+    },
+    {
+      id: "5",
+      facultyName: "Mr. Pedro Martinez",
+      leaveType: "Paternity",
+      startDate: "2024-02-15",
+      endDate: "2024-02-22",
+      reason: "Paternity leave",
+      department: "Engineering",
+      daysRequested: 7
+    }
+  ]);
+
+  // Mock data for chatbot interactions
+  const [chatbotData] = useState<ChatbotInteraction[]>([
+    { date: "Jan 1", interactions: 12 },
+    { date: "Jan 2", interactions: 18 },
+    { date: "Jan 3", interactions: 15 },
+    { date: "Jan 4", interactions: 22 },
+    { date: "Jan 5", interactions: 19 },
+    { date: "Jan 6", interactions: 25 },
+    { date: "Jan 7", interactions: 30 },
+    { date: "Jan 8", interactions: 28 },
+    { date: "Jan 9", interactions: 35 },
+    { date: "Jan 10", interactions: 32 },
+    { date: "Jan 11", interactions: 40 },
+    { date: "Jan 12", interactions: 38 },
+    { date: "Jan 13", interactions: 45 },
+    { date: "Jan 14", interactions: 42 }
+  ]);
+
+  const chatbotLineData = {
+    labels: chatbotData.map(item => item.date),
+    datasets: [
+      {
+        label: "Chatbot Interactions",
+        data: chatbotData.map(item => item.interactions),
+        borderColor: "#800000",
+        backgroundColor: "rgba(128, 0, 0, 0.1)",
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: "#800000",
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
+        pointRadius: 4,
+      },
+    ],
+  };
 
   const handleDateChange = (dates: [Date | null, Date | null]) => {
     const [start, end] = dates;
@@ -658,6 +804,34 @@ export default function LeaveDashAdmin() {
     });
   };
 
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Helper function to get leave type icon
+  const getLeaveTypeIcon = (leaveType: string) => {
+    switch (leaveType) {
+      case "Sick Leave":
+        return <FaBed className="text-red-500" />;
+      case "Vacation":
+        return <FaUmbrellaBeach className="text-blue-500" />;
+      case "Emergency":
+        return <FaExclamationTriangle className="text-orange-500" />;
+      case "Maternity":
+        return <FaBaby className="text-pink-500" />;
+      case "Paternity":
+        return <FaMale className="text-blue-600" />;
+      default:
+        return <FaCalendarAlt className="text-gray-500" />;
+    }
+  };
+
   return (
     <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
@@ -710,322 +884,204 @@ export default function LeaveDashAdmin() {
           </div>
         </div>
         <div className="text-sm text-gray-500">
-          Showing data from {dateRange[0].toLocaleDateString()} to {dateRange[1].toLocaleDateString()}
+          Faculty Leave Management Dashboard
         </div>
       </div>
 
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          // onClick={() => handleCardClick('faculty')}
-        >
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm">Total Employees</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{facultyStats.total}</h3>
-            </div>
-            <FaUsers className="text-4xl text-[#800000] opacity-50" />
-          </div>
-        </div>
-
-        <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          // onClick={() => handleCardClick('recruitment')}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Total Applicants</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{recruitmentStats.totalCandidates}</h3>
-            </div>
-            <FaUserPlus className="text-4xl text-[#800000] opacity-50" />
-          </div>
-        </div>
-
-        <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          // onClick={() => handleCardClick('documents')}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Documents Requiring Approval</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{documentStats.submitted}</h3>
+              <p className="text-gray-500 text-sm">Total Leave Requests</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">85</h3>
             </div>
             <FaFile className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
-        <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
-          // onClick={() => handleCardClick('leaves')}
-        >
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm">Pending Leaves</p>
-              <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveRequests.pending}</h3>
+              <p className="text-gray-500 text-sm">Pending Requests</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">25</h3>
             </div>
             <FaClock className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
-      </div>
 
-      {/* Recruitment Overview Section */}
-      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <FaUserPlus className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Recruitment Overview</h2>
-          </div>
-          {/* <button 
-            // onClick={() => handleCardClick('recruitment')}
-            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
-          >
-            View All
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button> */}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Recruitment Funnel Chart */}
-          <div className="bg-gray-50 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Recruitment Funnel</h3>
-            <div className="h-[300px]">
-              <Bar
-                data={{
-                  labels: ['Total Candidates', 'Shortlisted', 'Interviewed', 'Hired'],
-                  datasets: [
-                    {
-                      label: 'Candidates',
-                      data: [
-                        recruitmentStats.totalCandidates,
-                        recruitmentStats.shortlisted,
-                        recruitmentStats.interviewed,
-                        recruitmentStats.hired
-                      ],
-                      backgroundColor: [
-                        '#800000',
-                        '#9C27B0',
-                        '#2196F3',
-                        '#43a047'
-                      ],
-                      borderRadius: 8,
-                    }
-                  ]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      grid: {
-                        display: true,
-                        color: 'rgba(0, 0, 0, 0.1)'
-                      },
-                      ticks: {
-                        stepSize: 1,
-                        precision: 0
-                      }
-                    },
-                    x: {
-                      grid: {
-                        display: false
-                      }
-                    }
-                  }
-                }}
-              />
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Approved Requests</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">45</h3>
             </div>
+            <FaUserCheck className="text-4xl text-[#800000] opacity-50" />
           </div>
+        </div>
 
-          {/* Recruitment Progress Pie Chart */}
-          <div className="bg-gray-50 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Application Status Distribution</h3>
-            <div className="h-[300px] flex items-center justify-center">
-              <Pie
-                data={{
-                  labels: ['Active Vacancies', 'In Process', 'Shortlisted', 'Interviewed', 'Hired'],
-                  datasets: [{
-                    data: [
-                      recruitmentStats.activeVacancies,
-                      recruitmentStats.totalCandidates - (recruitmentStats.shortlisted + recruitmentStats.interviewed + recruitmentStats.hired),
-                      recruitmentStats.shortlisted,
-                      recruitmentStats.interviewed,
-                      recruitmentStats.hired
-                    ],
-                    backgroundColor: [
-                      '#800000',
-                      '#9C27B0',
-                      '#2196F3',
-                      '#FF9800',
-                      '#43a047'
-                    ],
-                    borderWidth: 0,
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        boxWidth: 12,
-                        padding: 15,
-                        usePointStyle: true
-                      }
-                    }
-                  }
-                }}
-              />
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Chatbot Interactions</p>
+              <h3 className="text-3xl font-bold text-[#800000] mt-2">425</h3>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Stats Row */}
-        <div className="grid grid-cols-5 gap-4 mt-8">
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaBuilding className="text-[#800000] text-xl mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.activeVacancies}</p>
-            <p className="text-sm text-gray-600">Active Vacancies</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUsers className="text-[#800000] text-xl mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.totalCandidates}</p>
-            <p className="text-sm text-gray-600">Total Candidates</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUserCheck className="text-[#800000] text-xl mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.shortlisted}</p>
-            <p className="text-sm text-gray-600">Shortlisted</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUserClock className="text-[#800000] text-xl mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.interviewed}</p>
-            <p className="text-sm text-gray-600">Interviewed</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUserTie className="text-[#800000] text-xl mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.hired}</p>
-            <p className="text-sm text-gray-600">Hired</p>
+            <FaComments className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
       </div>
 
-      {/* Upcoming Interviews Section */}
-      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
-          </div>
-          {/* <button 
-            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
-            // onClick={() => handleCardClick('recruitment')}
-          >
-            View All
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button> */}
-        </div>
-
-        {upcomingInterviews.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Interview Schedule
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Candidate Name
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Position
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Contact
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {upcomingInterviews.map((interview) => (
-                  <tr key={interview.CandidateID} className="hover:bg-gray-50">
-                    <td className="py-4 text-sm text-gray-900">
-                      {formatDateTime(interview.InterviewDate)}
-                    </td>
-                    <td className="py-4 text-sm text-gray-900">
-                      {formatCandidateName(
-                        interview.FirstName,
-                        interview.LastName,
-                        interview.MiddleName,
-                        interview.ExtensionName
-                      )}
-                    </td>
-                    <td className="py-4">
-                      <div className="text-sm text-gray-900">{interview.Vacancy.VacancyName}</div>
-                      <div className="text-sm text-gray-500">{interview.Vacancy.JobTitle}</div>
-                    </td>
-                    <td className="py-4">
-                      <div className="text-sm text-gray-900">{interview.Email}</div>
-                      <div className="text-sm text-gray-500">{interview.ContactNumber || 'No contact number'}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            No upcoming interviews scheduled
-          </div>
-        )}
-      </div>
-
+      {/* Charts Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Employee Overview Section */}
+        {/* Leave Status Distribution */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
-            <FaGraduationCap className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
+            <FaBriefcase className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Leave Status Distribution</h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.regular}</p>
-              <p className="text-gray-600 font-medium text-center">Regular</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.partTime}</p>
-              <p className="text-gray-600 font-medium text-center">Part Time</p>
-            </div>
-            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.probationary}</p>
-              <p className="text-gray-600 font-medium text-sm">Probationary</p>
-            </div> */}
-            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.hired}</p>
-              <p className="text-gray-600 font-medium text-sm">Hired</p>
-            </div> */}
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.resigned}</p>
-              <p className="text-gray-600 font-medium text-center">Resigned</p>
-            </div>
-            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.retired}</p>
-              <p className="text-gray-600 font-medium text-sm">Retired</p>
-            </div> */}
+          <div className="h-[300px] flex items-center justify-center">
+            <Pie 
+              data={leaveStatusData} 
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: {
+                      boxWidth: 12,
+                      padding: 15,
+                      usePointStyle: true
+                    }
+                  }
+                }
+              }} 
+            />
           </div>
-          <div className="mt-6 h-[200px]">
-            <Bar data={departmentData} options={{
+        </div>
+
+        {/* Leave Type Distribution */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Leave Type Distribution</h2>
+          </div>
+          <div className="h-[300px]">
+            <Bar 
+              data={leaveTypeData} 
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: false
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    grid: {
+                      display: true,
+                      color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                      stepSize: 5,
+                      precision: 0
+                    }
+                  },
+                  x: {
+                    grid: {
+                      display: false
+                    }
+                  }
+                }
+              }} 
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Pending Leave Requests Table */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <FaClock className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Pending Leave Requests</h2>
+          </div>
+          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+            {pendingRequests.length} Pending
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  Faculty Name
+                </th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  Leave Type
+                </th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  Date Range
+                </th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  Days
+                </th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  Department
+                </th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                  Reason
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {pendingRequests.map((request) => (
+                <tr key={request.id} className="hover:bg-gray-50">
+                  <td className="py-4 text-sm text-gray-900 font-medium">
+                    {request.facultyName}
+                  </td>
+                  <td className="py-4">
+                    <div className="flex items-center">
+                      {getLeaveTypeIcon(request.leaveType)}
+                      <span className="ml-2 text-sm text-gray-900">{request.leaveType}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 text-sm text-gray-900">
+                    {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                  </td>
+                  <td className="py-4 text-sm text-gray-900">
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {request.daysRequested} days
+                    </span>
+                  </td>
+                  <td className="py-4 text-sm text-gray-900">
+                    {request.department}
+                  </td>
+                                     <td className="py-4 text-sm text-gray-600 max-w-xs truncate">
+                     {request.reason}
+                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Chatbot Interactions Line Graph */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+        <div className="flex items-center mb-6">
+          <FaComments className="text-[#800000] text-2xl mr-3" />
+          <h2 className="text-2xl font-bold text-gray-800">Faculty Chatbot Interactions</h2>
+        </div>
+        <div className="h-[350px]">
+          <Line 
+            data={chatbotLineData} 
+            options={{
               responsive: true,
-              maintainAspectRatio: true,
+              maintainAspectRatio: false,
               plugins: {
                 legend: {
                   display: false
@@ -1035,10 +1091,11 @@ export default function LeaveDashAdmin() {
                 y: {
                   beginAtZero: true,
                   grid: {
-                    display: true
+                    display: true,
+                    color: 'rgba(0, 0, 0, 0.1)'
                   },
                   ticks: {
-                    stepSize: 1,
+                    stepSize: 10,
                     precision: 0
                   }
                 },
@@ -1047,96 +1104,13 @@ export default function LeaveDashAdmin() {
                     display: false
                   }
                 }
-              }
-            }} />
-          </div>
-        </div>
-
-        {/* Leave Requests Section */}
-        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-          <div className="flex items-center mb-6">
-            <FaBriefcase className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
-          </div>
-          <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.pending}</p>
-              <p className="text-gray-600 font-medium text-center">Pending</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.approved}</p>
-              <p className="text-gray-600 font-medium text-center">Approved</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.rejected}</p>
-              <p className="text-gray-600 font-medium text-center">Rejected</p>
-            </div>
-          </div>
-          <div className="h-[200px] flex items-center justify-center">
-            <Pie data={leavePieData} options={{ 
-              responsive: true,
-              maintainAspectRatio: true,
-              plugins: { 
-                legend: { 
-                  display: true, 
-                  position: 'bottom',
-                  align: 'center',
-                  labels: {
-                    boxWidth: 20,
-                    padding: 15,
-                    usePointStyle: true
-                  }
-                } 
-              } 
-            }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Attendance Overview Section */}
-      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-        <div className="flex items-center mb-6">
-          <FaUserClock className="text-[#800000] text-2xl mr-3" />
-          <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
-        </div>
-        <div className="h-[350px]">
-          <Bar data={attendanceOverviewData} options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-              legend: { 
-                display: true,
-                position: 'top',
-                align: 'center',
-                labels: {
-                  boxWidth: 12,
-                  padding: 15,
-                  usePointStyle: true
-                }
-              }
-            },
-            scales: {
-              y: { 
-                beginAtZero: true,
-                grid: {
-                  display: true,
-                  color: 'rgba(0, 0, 0, 0.1)'
-                },
-                ticks: {
-                  precision: 0
-                }
               },
-              x: {
-                grid: {
-                  display: false
-                }
+              interaction: {
+                intersect: false,
+                mode: 'index'
               }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            }
-          }} />
+            }} 
+          />
         </div>
       </div>
     </div>
