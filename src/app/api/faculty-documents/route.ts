@@ -14,18 +14,22 @@ interface DocumentType {
   DocumentTypeName: string;
 }
 
-interface Faculty {
-  FacultyID: number;
-  User: User;
+interface Employee {
+  EmployeeID: string;
+  FirstName: string;
+  LastName: string;
+  ContactInfo?: {
+    Email: string | null;
+  }[];
 }
 
 interface Document {
   DocumentID: number;
-  FacultyID: number;
+  EmployeeID: string;
   DocumentTypeID: number;
   UploadDate: string;
   SubmissionStatus: string;
-  Faculty: Faculty;
+  Employee: Employee;
   DocumentType: DocumentType;
 }
 
@@ -42,48 +46,48 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get facultyId from query parameters
+    // Get employeeId from query parameters
     const { searchParams } = new URL(request.url);
-    const facultyId = searchParams.get('facultyId');
+    const employeeId = searchParams.get('employeeId');
     const documentTypeId = searchParams.get('documentTypeId');
 
-    console.log('Fetching documents for faculty:', facultyId);
+    console.log('Fetching documents for employee:', employeeId);
 
-    // If facultyId is provided, verify the faculty exists
-    if (facultyId && facultyId !== 'all') { // Added 'all' check to allow fetching all documents
-      const { data: facultyData, error: facultyError } = await supabaseAdmin
-        .from('Faculty')
-        .select('FacultyID')
-        .eq('FacultyID', facultyId)
+    // If employeeId is provided, verify the employee exists
+    if (employeeId && employeeId !== 'all') {
+      const { data: employeeData, error: employeeError } = await supabaseAdmin
+        .from('Employee')
+        .select('EmployeeID')
+        .eq('EmployeeID', employeeId)
         .single();
 
-      if (facultyError) {
-        console.error('Error verifying faculty:', facultyError);
-        return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
+      if (employeeError) {
+        console.error('Error verifying employee:', employeeError);
+        return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
       }
 
-      console.log('Verified faculty exists:', facultyData);
+      console.log('Verified employee exists:', employeeData);
     } else {
-      console.log('Fetching all documents (facultyId not provided or is "all")');
+      console.log('Fetching all documents (employeeId not provided or is "all")');
     }
 
-    // Fetch documents from Supabase
+    // Fetch documents from Supabase - using Employee table instead of Faculty
     let query = supabaseAdmin
       .from('Document')
       .select(`
         DocumentID,
-        FacultyID,
+        EmployeeID,
         DocumentTypeID,
         UploadDate,
         SubmissionStatus,
         FilePath,
         FileUrl,
         DownloadUrl,
-        Faculty (
-          FacultyID,
-          User (
-            FirstName,
-            LastName,
+        Employee (
+          EmployeeID,
+          FirstName,
+          LastName,
+          ContactInfo (
             Email
           )
         ),
@@ -93,8 +97,8 @@ export async function GET(request: Request) {
         )
       `);
 
-    if (facultyId && facultyId !== 'all') {
-      query = query.eq('FacultyID', facultyId);
+    if (employeeId && employeeId !== 'all') {
+      query = query.eq('EmployeeID', employeeId);
     }
     
     if (documentTypeId) {
@@ -111,17 +115,17 @@ export async function GET(request: Request) {
       );
     }
 
-    // Map the data to include facultyName and documentTypeName directly, similar to FacultyContent's structure
+    // Map the data to include employeeName and documentTypeName directly
     const mappedDocuments = documents.map((doc: Document) => ({
       ...doc,
-      facultyName: `${doc.Faculty.User.FirstName} ${doc.Faculty.User.LastName}`,
+      employeeName: `${doc.Employee.FirstName} ${doc.Employee.LastName}`,
       documentTypeName: doc.DocumentType.DocumentTypeName,
     }));
 
     console.log('Successfully fetched documents:', mappedDocuments);
     return NextResponse.json(mappedDocuments || []);
   } catch (error) {
-    console.error('Error in faculty-documents GET:', error);
+    console.error('Error in employee-documents GET:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -160,24 +164,24 @@ export async function POST(request: Request) {
 
     console.log('Found user in Supabase:', userData);
 
-    // Then find the faculty record
-    const { data: facultyData, error: facultyError } = await supabaseAdmin
-      .from('Faculty')
-      .select('FacultyID, UserID')
+    // Then find the employee record
+    const { data: employeeData, error: employeeError } = await supabaseAdmin
+      .from('Employee')
+      .select('EmployeeID, UserID')
       .eq('UserID', userData.UserID)
       .single();
 
-    if (facultyError) {
-      console.error('Error finding faculty record:', facultyError);
-      return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
+    if (employeeError) {
+      console.error('Error finding employee record:', employeeError);
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    if (!facultyData) {
-      console.log('No faculty record found for user:', userData.UserID);
-      return NextResponse.json({ error: 'Faculty record not found' }, { status: 404 });
+    if (!employeeData) {
+      console.log('No employee record found for user:', userData.UserID);
+      return NextResponse.json({ error: 'Employee record not found' }, { status: 404 });
     }
 
-    console.log('Found faculty record:', facultyData);
+    console.log('Found employee record:', employeeData);
 
     const formData = await request.formData();
     const DocumentTypeID = formData.get('DocumentTypeID');
@@ -218,7 +222,7 @@ export async function POST(request: Request) {
     const { data: existingDoc, error: checkError } = await supabaseAdmin
       .from('Document')
       .select('DocumentID, FilePath')
-      .eq('FacultyID', facultyData.FacultyID)
+      .eq('EmployeeID', employeeData.EmployeeID)
       .eq('DocumentTypeID', parseInt(DocumentTypeID as string))
       .single();
 
@@ -246,7 +250,7 @@ export async function POST(request: Request) {
       .from('Document')
       .upsert([{
         ...(existingDoc?.DocumentID ? { DocumentID: existingDoc.DocumentID } : {}), // Only include DocumentID if it exists
-        FacultyID: facultyData.FacultyID,
+        EmployeeID: employeeData.EmployeeID,
         DocumentTypeID: parseInt(DocumentTypeID as string),
         UploadDate: new Date().toISOString(),
         SubmissionStatus: 'Submitted',
@@ -258,22 +262,31 @@ export async function POST(request: Request) {
       .single();
 
     if (documentError) {
-      console.error('Error updating document record:', documentError);
-      // If document record update fails, delete the uploaded file
-      await facultyDocumentService.deleteFile(uploadResult.fileId, uploadResult.fileId.includes('supabase') ? 'supabase' : 'google-drive');
+      console.error('Error saving document record:', documentError);
       return NextResponse.json(
-        { error: 'Failed to update document record: ' + documentError.message },
+        { error: 'Failed to save document record: ' + documentError.message },
         { status: 500 }
       );
     }
 
-    console.log('Document record updated successfully:', document);
-    return NextResponse.json(document);
+    console.log('Document record saved successfully:', document);
+
+    return NextResponse.json({
+      success: true,
+      document: {
+        DocumentID: document.DocumentID,
+        EmployeeID: document.EmployeeID,
+        DocumentTypeID: document.DocumentTypeID,
+        UploadDate: document.UploadDate,
+        SubmissionStatus: document.SubmissionStatus,
+        FileUrl: document.FileUrl,
+        DownloadUrl: document.DownloadUrl
+      }
+    });
   } catch (error) {
-    console.error('Error in faculty-documents POST:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    console.error('Error in employee-documents POST:', error);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

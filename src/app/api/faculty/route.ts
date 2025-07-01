@@ -8,7 +8,7 @@ interface User {
   FirstName: string;
   LastName: string;
   Email: string;
-  Photo: string;
+  Photo: string | null;
   Status: string;
   isDeleted: boolean;
 }
@@ -31,31 +31,18 @@ interface Faculty {
   Department: Department;
 }
 
-interface EmployeeWithFacultyDesignation {
-  EmployeeID: string;
+interface FacultyMember {
+  FacultyID: number;
   UserID: string;
-  FirstName: string;
-  LastName: string;
-  MiddleName: string | null;
-  ExtensionName: string | null;
-  Email: string | null;
-  Photo: string | null;
-  DepartmentID: number | null;
-  Position: string | null;
+  Position: string;
+  DepartmentID: number;
+  EmploymentStatus: string;
+  ResignationDate: string | null;
+  Phone: string | null;
+  Address: string | null;
   DateOfBirth: string;
   HireDate: string;
-  employmentDetail: {
-    EmploymentStatus: string;
-    Designation: string;
-    Position: string | null;
-    HireDate: string | null;
-    ResignationDate: string | null;
-  } | null;
-  contactInfo: {
-    Email: string | null;
-    Phone: string | null;
-    PresentAddress: string | null;
-  } | null;
+  EmergencyContact: string | null;
   Department: {
     DepartmentID: number;
     DepartmentName: string;
@@ -65,6 +52,7 @@ interface EmployeeWithFacultyDesignation {
     FirstName: string;
     LastName: string;
     Email: string;
+    Photo: string | null;
     Status: string;
     isDeleted: boolean;
   } | null;
@@ -72,34 +60,21 @@ interface EmployeeWithFacultyDesignation {
 
 export async function GET() {
   try {
-    // Fetch all employees with Faculty designation
-    const { data: employees, error } = await supabaseAdmin
-      .from('Employee')
+    // Fetch all faculty members directly from the Faculty table
+    const { data: facultyMembers, error } = await supabaseAdmin
+      .from('Faculty')
       .select(`
-        EmployeeID,
+        FacultyID,
         UserID,
-        FirstName,
-        LastName,
-        MiddleName,
-        ExtensionName,
-        Email,
-        Photo,
-        DepartmentID,
         Position,
+        DepartmentID,
+        EmploymentStatus,
+        ResignationDate,
+        Phone,
+        Address,
         DateOfBirth,
         HireDate,
-        employmentDetail:EmploymentDetail (
-          EmploymentStatus,
-          Designation,
-          Position,
-          HireDate,
-          ResignationDate
-        ),
-        contactInfo:ContactInfo (
-          Email,
-          Phone,
-          PresentAddress
-        ),
+        EmergencyContact,
         Department:DepartmentID (
           DepartmentID,
           DepartmentName
@@ -113,48 +88,50 @@ export async function GET() {
           isDeleted
         )
       `)
-      .eq('employmentDetail.Designation', 'Faculty')
-      .order('EmployeeID', { ascending: true });
+      .order('FacultyID', { ascending: true });
 
     if (error) {
-      console.error('Error fetching employees with Faculty designation:', error);
+      console.error('Error fetching faculty members:', error);
       return NextResponse.json(
         { error: 'Failed to fetch faculty data' },
         { status: 500 }
       );
     }
 
-    // Filter out employees with deleted users
-    const activeEmployees = (employees as EmployeeWithFacultyDesignation[] || []).filter(emp => !emp.User?.isDeleted);
+    // Filter out faculty with deleted users
+    const activeFaculty = (facultyMembers as FacultyMember[] || []).filter((faculty: FacultyMember) => !faculty.User?.isDeleted);
 
     // Transform the data to match the expected Faculty interface structure
-    const transformedFaculty = activeEmployees.map((emp, index) => ({
-      FacultyID: parseInt(emp.EmployeeID.replace(/\D/g, '')) || index + 1, // Extract numeric part from EmployeeID or use index
-      UserID: emp.UserID || '',
-      Position: emp.employmentDetail?.Position || emp.Position || '',
-      DepartmentID: emp.DepartmentID || 0,
-      EmploymentStatus: emp.employmentDetail?.EmploymentStatus || 'Regular',
-      Resignation_Date: emp.employmentDetail?.ResignationDate || null,
-      Phone: emp.contactInfo?.Phone || null,
-      Address: emp.contactInfo?.PresentAddress || null,
+    const transformedFaculty = activeFaculty.map((faculty: FacultyMember) => ({
+      FacultyID: faculty.FacultyID,
+      UserID: faculty.UserID || '',
+      Position: faculty.Position || '',
+      DepartmentID: faculty.DepartmentID || 0,
+      EmploymentStatus: faculty.EmploymentStatus || 'Regular',
+      Resignation_Date: faculty.ResignationDate || null,
+      Phone: faculty.Phone || null,
+      Address: faculty.Address || null,
+      DateOfBirth: faculty.DateOfBirth,
+      HireDate: faculty.HireDate,
+      EmergencyContact: faculty.EmergencyContact || null,
       User: {
-        UserID: emp.UserID || '',
-        FirstName: emp.User?.FirstName || emp.FirstName || '',
-        LastName: emp.User?.LastName || emp.LastName || '',
-        Email: emp.User?.Email || emp.contactInfo?.Email || emp.Email || '',
-        Photo: emp.Photo || '',
-        Status: emp.User?.Status || 'Active',
-        isDeleted: emp.User?.isDeleted || false
+        UserID: faculty.UserID || '',
+        FirstName: faculty.User?.FirstName || '',
+        LastName: faculty.User?.LastName || '',
+        Email: faculty.User?.Email || '',
+        Photo: faculty.User?.Photo || '',
+        Status: faculty.User?.Status || 'Active',
+        isDeleted: faculty.User?.isDeleted || false
       },
       Department: {
-        DepartmentID: emp.Department?.DepartmentID || 0,
-        DepartmentName: emp.Department?.DepartmentName || 'Unknown Department'
+        DepartmentID: faculty.Department?.DepartmentID || 0,
+        DepartmentName: faculty.Department?.DepartmentName || 'Unknown Department'
       }
     }));
 
     // Fetch Clerk user data for all active employees
     try {
-      const userIds = transformedFaculty.map(f => f.UserID).filter(id => id);
+              const userIds = transformedFaculty.map((f: any) => f.UserID).filter((id: string) => id);
       if (userIds.length > 0) {
         const clerkUsers = await clerkClient.users.getUserList({
           userId: userIds,
@@ -163,7 +140,7 @@ export async function GET() {
         const clerkUsersMap = new Map(usersArray.map(u => [u.id, u]));
 
         // Map Clerk user data to faculty
-        const facultyWithClerk = transformedFaculty.map(faculty => ({
+        const facultyWithClerk = transformedFaculty.map((faculty: any) => ({
           ...faculty,
           ClerkUser: clerkUsersMap.get(faculty.UserID) || null,
         }));

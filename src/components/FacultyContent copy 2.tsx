@@ -8,49 +8,37 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useUser } from '@clerk/nextjs';
 
-interface Employee {
-  EmployeeID: string;
-  UserID: string | null;
-  FirstName: string;
-  LastName: string;
-  MiddleName: string | null;
-  ExtensionName: string | null;
-  Sex: string | null;
+interface Faculty {
+  FacultyID: number;
+  UserID: string;  // Change to string since Clerk uses string IDs
+  Position: string;
+  DepartmentID: number;
+  EmploymentStatus: string;
+  ResignationDate: string | null;
+  Phone: string | null;
+  Address: string | null;
+  HireDate: string | null;
   DateOfBirth: string | null;
-  PlaceOfBirth: string | null;
-  CivilStatus: string | null;
+  Gender: 'Male' | 'Female' | 'Other' | null;
+  MaritalStatus: string | null;
   Nationality: string | null;
-  Religion: string | null;
-  BloodType: string | null;
-  DepartmentID: number | null;
-  ContractID: string | null;
-  Photo: string | null;
-  EmployeeType: string | null;
-  createdAt: string;
-  updatedAt: string;
-  EmploymentDetail?: {
-    EmploymentStatus: string;
-    HireDate: string | null;
-    ResignationDate: string | null;
-    Designation: string | null;
-    Position: string | null;
-    SalaryGrade: string | null;
-  }[];
-  ContactInfo?: {
-    Email: string | null;
-    Phone: string | null;
-    PresentAddress: string | null;
-    PermanentAddress: string | null;
-    EmergencyContactName: string | null;
-    EmergencyContactNumber: string | null;
-  }[];
-  Department?: {
+  EmergencyContact: string | null;
+  User: {
+    UserID: string;  // Change to string since Clerk uses string IDs
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    Status: string;
+    Photo: string;
+    isDeleted: string;
+  };
+  Department: {
     DepartmentID: number;
     DepartmentName: string;
   };
 }
 
-interface NewEmployee {
+interface NewFaculty {
   FirstName: string;
   LastName: string;
   Email: string;
@@ -69,24 +57,24 @@ interface Notification {
   message: string;
 }
 
-interface DocumentEmployeeRow {
+interface DocumentFacultyRow {
   DocumentID: number;
-  EmployeeID: string;
+  FacultyID: number;
   DocumentTypeID: number;
   UploadDate: string;
   SubmissionStatus: string;
   file?: string;
-  employeeName: string;
+  facultyName: string;
   documentTypeName: string;
   FilePath?: string;
   FileUrl?: string;
   DownloadUrl?: string;
-  Employee: {
-    FirstName: string;
-    LastName: string;
-    ContactInfo?: {
-      Email: string | null;
-    }[];
+  Faculty: {
+    User: {
+      FirstName: string;
+      LastName: string;
+      Email: string;
+    };
   };
   DocumentType: {
     DocumentTypeID: number;
@@ -332,8 +320,8 @@ const FacultyContent = () => {
   const [loading, setLoading] = useState(true);
 
   // Faculty list and filters
-  const [facultyList, setFacultyList] = useState<Employee[]>([]);
-  const [filteredFacultyList, setFilteredFacultyList] = useState<Employee[]>([]);
+  const [facultyList, setFacultyList] = useState<Faculty[]>([]);
+  const [filteredFacultyList, setFilteredFacultyList] = useState<Faculty[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<number | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<string | 'all'>('all');
@@ -341,21 +329,21 @@ const FacultyContent = () => {
 
   // Faculty modals and selection
   const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
-  const [selectedFaculty, setSelectedFaculty] = useState<Employee | null>(null);
-  const [editFaculty, setEditFaculty] = useState<Partial<Employee>>({});
+  const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
+  const [editFaculty, setEditFaculty] = useState<Partial<Faculty>>({});
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
-  const [selectedFacultyDetails, setSelectedFacultyDetails] = useState<Employee | null>(null);
+  const [selectedFacultyDetails, setSelectedFacultyDetails] = useState<Faculty | null>(null);
   const [selectAll, setSelectAll] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isDeleteConfirmed, setIsDeleteConfirmed] = useState(false);
 
   // Document management
-  const [documents, setDocuments] = useState<DocumentEmployeeRow[]>([]);
+  const [documents, setDocuments] = useState<DocumentFacultyRow[]>([]);
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<DocumentEmployeeRow | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentFacultyRow | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -365,7 +353,7 @@ const FacultyContent = () => {
   const [selectedDocumentType, setSelectedDocumentType] = useState<number | 'all'>('all');
   const [selectedDocumentStatus, setSelectedDocumentStatus] = useState<string>('all');
   const [showDocTypeListModal, setShowDocTypeListModal] = useState(false);
-  const [expandedFacultyId, setExpandedFacultyId] = useState<string | null>(null);
+  const [expandedFacultyId, setExpandedFacultyId] = useState<number | null>(null);
 
   // Document status management
   const [isStatusUpdateModalOpen, setIsStatusUpdateModalOpen] = useState(false);
@@ -375,7 +363,7 @@ const FacultyContent = () => {
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{
     docId: number;
     newStatus: string;
-    employeeName: string;
+    facultyName: string;
     documentType: string;
   } | null>(null);
 
@@ -403,7 +391,7 @@ const FacultyContent = () => {
 
   // Add Faculty modal and form
   const [isAddFacultyModalOpen, setIsAddFacultyModalOpen] = useState(false);
-  const [newFaculty, setNewFaculty] = useState<NewEmployee>({
+  const [newFaculty, setNewFaculty] = useState<NewFaculty>({
     FirstName: '',
     LastName: '',
     Email: '',
@@ -437,49 +425,49 @@ const FacultyContent = () => {
     return null;
   };
 
-  // Fetch employee data from the API endpoint
-  const fetchEmployeeData = async () => {
+  // Fetch faculty data from the API endpoint
+  const fetchFacultyData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching employee data...'); // Debug log
-      const response = await fetch('/api/employees?all=true');
+      console.log('Fetching faculty data...'); // Debug log
+      const response = await fetch('/api/faculty');
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to load employee data');
+        throw new Error(error.message || 'Failed to load faculty data');
       }
       const data = await response.json();
-      console.log('Raw employee data from API:', data); // Debug log
+      console.log('Raw faculty data from API:', data); // Debug log
       
-      // Filter out employees with deleted users
-      const activeEmployees = data.employees.filter((employee: Employee) => {
-        console.log('Checking employee:', {
-          id: employee.EmployeeID,
-          isDeleted: employee.Photo,
-          status: employee.EmploymentDetail?.some(ed => ed.EmploymentStatus === 'Resigned')
-        }); // Debug log for each employee member
-        return !employee.Photo;
+      // Filter out faculty with deleted users
+      const activeFaculty = data.filter((faculty: Faculty) => {
+        console.log('Checking faculty:', {
+          id: faculty.FacultyID,
+          isDeleted: faculty.User?.isDeleted,
+          status: faculty.User?.Status
+        }); // Debug log for each faculty member
+        return !faculty.User?.isDeleted;
       });
       
-      console.log('Active employees after filtering:', activeEmployees); // Debug log
-      setFacultyList(activeEmployees);
+      console.log('Active faculty after filtering:', activeFaculty); // Debug log
+      setFacultyList(activeFaculty);
       setNotification(null);
     } catch (error: unknown) {
-      console.error('Error fetching employees:', error);
+      console.error('Error fetching faculty:', error);
       setNotification({
         type: 'error',
         message: (error && typeof error === 'object' && 'message' in error)
-          ? (error as { message?: string }).message || 'Failed to load employee data'
-          : 'Failed to load employee data'
+          ? (error as { message?: string }).message || 'Failed to load faculty data'
+          : 'Failed to load faculty data'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Load employee data on component mount
+  // Load faculty data on component mount
   useEffect(() => {
     console.log('FacultyContent mounted, fetching data...'); // Debug log
-    fetchEmployeeData();
+    fetchFacultyData();
     fetchDocumentTypes();
     fetchDocuments('all'); // Fetch all documents on initial mount for both views
   }, []);
@@ -519,25 +507,25 @@ const FacultyContent = () => {
     // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(employee => 
-        employee.FirstName?.toLowerCase().includes(searchLower) ||
-        employee.LastName?.toLowerCase().includes(searchLower) ||
-        employee.ContactInfo?.[0]?.Email?.toLowerCase().includes(searchLower) ||
-        employee.EmploymentDetail?.[0]?.Position?.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(faculty => 
+        faculty.User?.FirstName?.toLowerCase().includes(searchLower) ||
+        faculty.User?.LastName?.toLowerCase().includes(searchLower) ||
+        faculty.User?.Email?.toLowerCase().includes(searchLower) ||
+        faculty.Position?.toLowerCase().includes(searchLower)
       );
     }
 
     // Apply department filter
     if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(employee => 
-        employee.DepartmentID === selectedDepartment
+      filtered = filtered.filter(faculty => 
+        faculty.DepartmentID === selectedDepartment
       );
     }
 
     // Apply status filter
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(employee => 
-        employee.EmploymentDetail?.some(ed => ed.EmploymentStatus === selectedStatus)
+      filtered = filtered.filter(faculty => 
+        faculty.EmploymentStatus === selectedStatus
       );
     }
 
@@ -591,7 +579,7 @@ const FacultyContent = () => {
       });
       setIsFacultyModalOpen(false);
 
-      await fetchEmployeeData();
+      await fetchFacultyData();
 
       setNotification({
         type: 'success',
@@ -615,14 +603,10 @@ const FacultyContent = () => {
   };
 
   // Document management: fetch documents
-  const fetchDocuments = async (employeeId: number | string | 'all' = 'all') => {
+  const fetchDocuments = async (facultyId: number | 'all' = 'all') => {
     setDocLoading(true);
     try {
-      let idParam: string | 'all' = 'all';
-      if (employeeId !== 'all') {
-        idParam = typeof employeeId === 'string' ? employeeId : employeeId.toString();
-      }
-      const data = await fetchFacultyDocuments(idParam);
+      const data = await fetchFacultyDocuments(facultyId);
       console.log('Received documents data:', data);
       setDocuments(data);
     } catch (err) {
@@ -640,7 +624,7 @@ const FacultyContent = () => {
     setPendingStatusUpdate({
       docId: docId,
       newStatus: newStatus,
-      employeeName: doc.employeeName || 'Unknown Employee',
+      facultyName: doc.facultyName || 'Unknown Faculty',
       documentType: doc.documentTypeName || 'Unknown Type'
     });
     setSelectedDocumentId(docId);
@@ -702,7 +686,7 @@ const FacultyContent = () => {
     if (activeView === 'facultyManagement') {
       // Add title for faculty list
       doc.setFontSize(16);
-      doc.text('Employee List', 14, 15);
+      doc.text('Faculty List', 14, 15);
       
       // Add date
       doc.setFontSize(10);
@@ -714,13 +698,13 @@ const FacultyContent = () => {
 
       // Prepare faculty table data with more details
       const tableData = facultyList.map(faculty => [
-        `${faculty.FirstName || 'Unknown'} ${faculty.LastName || 'User'}`,
-        faculty.ContactInfo?.[0]?.Email || 'No email',
-        faculty.EmploymentDetail?.[0]?.Position || '',
-        faculty.Department?.DepartmentName || '',
-        faculty.EmploymentDetail?.some(ed => ed.EmploymentStatus === 'Resigned') ? 'Resigned' : 'Hired',
-        faculty.ContactInfo?.[0]?.Phone || 'N/A',
-        faculty.ContactInfo?.[0]?.PresentAddress || 'N/A'
+        `${faculty.User?.FirstName || 'Unknown'} ${faculty.User?.LastName || 'User'}`,
+        faculty.User?.Email || 'No email',
+        faculty.Position,
+        faculty.Department.DepartmentName,
+        faculty.EmploymentStatus,
+        faculty.Phone || 'N/A',
+        faculty.Address || 'N/A'
       ]);
 
       // Add faculty table with more columns
@@ -744,10 +728,10 @@ const FacultyContent = () => {
       // Add footer with total count
       const finalY = (doc as any).lastAutoTable.finalY || 35;
       doc.setFontSize(10);
-      doc.text(`Total Employee: ${facultyList.length}`, 14, finalY + 10);
+      doc.text(`Total Faculty: ${facultyList.length}`, 14, finalY + 10);
 
       // Save the PDF
-      doc.save('employee-list.pdf');
+      doc.save('faculty-list.pdf');
     } else {
       // Add title for documents list
       doc.setFontSize(16);
@@ -759,7 +743,7 @@ const FacultyContent = () => {
 
       // Prepare documents table data
       const tableData = documents.map(doc => [
-        doc.employeeName,
+        doc.facultyName,
         doc.documentTypeName,
         new Date(doc.UploadDate).toLocaleDateString(),
         doc.SubmissionStatus
@@ -803,20 +787,20 @@ const FacultyContent = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/faculty/${selectedFaculty.EmployeeID}`, {
+      const response = await fetch(`/api/faculty/${selectedFaculty.FacultyID}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          Position: editFaculty.EmploymentDetail?.[0]?.Position,
+          Position: editFaculty.Position,
           DepartmentID: editFaculty.DepartmentID,
-          EmploymentStatus: editFaculty.EmploymentDetail?.[0]?.EmploymentStatus,
-          HireDate: editFaculty.EmploymentDetail?.[0]?.HireDate,
+          EmploymentStatus: editFaculty.EmploymentStatus,
+          HireDate: editFaculty.HireDate,
           DateOfBirth: editFaculty.DateOfBirth,
-          Phone: editFaculty.ContactInfo?.[0]?.Phone,
-          Address: editFaculty.ContactInfo?.[0]?.PresentAddress,
-          ResignationDate: editFaculty.EmploymentDetail?.[0]?.EmploymentStatus === 'Resigned' ? editFaculty.EmploymentDetail?.[0]?.ResignationDate : null
+          Phone: editFaculty.Phone,
+          Address: editFaculty.Address,
+          ResignationDate: editFaculty.EmploymentStatus === 'Resigned' ? editFaculty.ResignationDate : null
         }),
       });
 
@@ -825,7 +809,7 @@ const FacultyContent = () => {
       }
 
       const updatedData = await response.json();
-      await fetchEmployeeData();  // Refresh the employee list
+      await fetchFacultyData();  // Refresh the faculty list
       setIsEditModalOpen(false);
       setSelectedFaculty(null);
       setEditFaculty({});  // Reset the edit form
@@ -855,7 +839,7 @@ const FacultyContent = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/faculty/${selectedFaculty.EmployeeID}`, {
+      const response = await fetch(`/api/faculty/${selectedFaculty.FacultyID}`, {
         method: 'DELETE',
       });
 
@@ -875,17 +859,17 @@ const FacultyContent = () => {
   };
 
   // Add function to handle opening view details modal
-  const openViewDetailsModal = async (faculty: Employee) => {
+  const openViewDetailsModal = async (faculty: Faculty) => {
     try {
-      const response = await fetch(`/api/faculty/${faculty.EmployeeID}`);
+      const response = await fetch(`/api/faculty/${faculty.FacultyID}`);
       if (!response.ok) {
         throw new Error('Failed to fetch faculty details');
       }
       const details = await response.json();
       
       // If the current user is viewing their own profile, use their Clerk photo
-      if (user && user.id === details.UserID) {
-        details.Photo = user.imageUrl;
+      if (user && user.id === details.User.UserID) {
+        details.User.Photo = user.imageUrl;
       }
       
       setSelectedFacultyDetails(details);
@@ -926,10 +910,10 @@ const FacultyContent = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to import employee data');
+        throw new Error(result.error || 'Failed to import faculty data');
       }
 
-      await fetchEmployeeData(); // Refresh faculty list
+      await fetchFacultyData(); // Refresh faculty list
       setNotification({
         type: 'success',
         message: result.message
@@ -973,69 +957,7 @@ const FacultyContent = () => {
   };
 
   const handleDownloadSelected = () => {
-    if (selectedRows.length === 0) {
-      setNotification({
-        type: 'error',
-        message: 'Please select at least one employee to download'
-      });
-      return;
-    }
-
-    const doc = new jsPDF();
-    
-    // Add title for selected employees
-    doc.setFontSize(16);
-    doc.text('Selected Employees', 14, 15);
-    
-    // Add date
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
-
-    // Add selection info
-    doc.setFontSize(10);
-    doc.text(`Selected: ${selectedRows.length} employees`, 14, 29);
-
-    // Get selected employees
-    const selectedEmployees = facultyList.filter(employee => 
-      selectedRows.includes(employee.EmployeeID)
-    );
-
-    // Prepare selected employees table data
-    const tableData = selectedEmployees.map(employee => [
-      `${employee.FirstName || 'Unknown'} ${employee.LastName || 'User'}`,
-      employee.ContactInfo?.[0]?.Email || 'No email',
-      employee.EmploymentDetail?.[0]?.Position || '',
-      employee.Department?.DepartmentName || '',
-      employee.EmploymentDetail?.[0]?.EmploymentStatus || '',
-      employee.ContactInfo?.[0]?.Phone || 'N/A',
-      employee.ContactInfo?.[0]?.PresentAddress || 'N/A'
-    ]);
-
-    // Add selected employees table
-    autoTable(doc, {
-      head: [['Name', 'Email', 'Position', 'Department', 'Status', 'Phone', 'Address']],
-      body: tableData,
-      startY: 35,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [128, 0, 0] }, // Maroon color
-      columnStyles: {
-        0: { cellWidth: 30 }, // Name
-        1: { cellWidth: 35 }, // Email
-        2: { cellWidth: 25 }, // Position
-        3: { cellWidth: 25 }, // Department
-        4: { cellWidth: 20 }, // Status
-        5: { cellWidth: 25 }, // Phone
-        6: { cellWidth: 35 }  // Address
-      }
-    });
-
-    // Add footer with total count
-    const finalY = (doc as any).lastAutoTable.finalY || 35;
-    doc.setFontSize(10);
-    doc.text(`Total Selected: ${selectedEmployees.length}`, 14, finalY + 10);
-
-    // Save the PDF
-    doc.save('selected-employees.pdf');
+    // Implementation for downloading selected documents
   };
 
   const openAddDocTypeModal = () => {
@@ -1048,13 +970,13 @@ const FacultyContent = () => {
     const checked = e.target.checked;
     setSelectAll(checked);
     if (checked) {
-      setSelectedRows(filteredFacultyList.map(faculty => faculty.EmployeeID));
+      setSelectedRows(filteredFacultyList.map(faculty => faculty.FacultyID));
     } else {
       setSelectedRows([]);
     }
   };
 
-  const handleRowSelect = (facultyId: string) => {
+  const handleRowSelect = (facultyId: number) => {
     setSelectedRows(prev => {
       if (prev.includes(facultyId)) {
         return prev.filter(id => id !== facultyId);
@@ -1064,37 +986,27 @@ const FacultyContent = () => {
     });
   };
 
-  const openEditModal = (faculty: Employee) => {
+  const openEditModal = (faculty: Faculty) => {
     setSelectedFaculty(faculty);
     setEditFaculty({
-      EmploymentDetail: [{
-        Position: faculty.EmploymentDetail?.[0]?.Position || '',
-        EmploymentStatus: faculty.EmploymentDetail?.[0]?.EmploymentStatus || '',
-        HireDate: faculty.EmploymentDetail?.[0]?.HireDate || '',
-        ResignationDate: faculty.EmploymentDetail?.[0]?.ResignationDate || '',
-        Designation: faculty.EmploymentDetail?.[0]?.Designation || '',
-        SalaryGrade: faculty.EmploymentDetail?.[0]?.SalaryGrade || '',
-      }],
+      Position: faculty.Position,
       DepartmentID: faculty.DepartmentID,
+      EmploymentStatus: faculty.EmploymentStatus,
+      HireDate: faculty.HireDate || '',
       DateOfBirth: faculty.DateOfBirth || '',
-      ContactInfo: [{
-        Phone: faculty.ContactInfo?.[0]?.Phone || '',
-        PresentAddress: faculty.ContactInfo?.[0]?.PresentAddress || '',
-        Email: faculty.ContactInfo?.[0]?.Email || '',
-        PermanentAddress: faculty.ContactInfo?.[0]?.PermanentAddress || '',
-        EmergencyContactName: faculty.ContactInfo?.[0]?.EmergencyContactName || '',
-        EmergencyContactNumber: faculty.ContactInfo?.[0]?.EmergencyContactNumber || '',
-      }],
+      Phone: faculty.Phone || '',
+      Address: faculty.Address || '',
+      ResignationDate: faculty.ResignationDate || ''
     });
     setIsEditModalOpen(true);
   };
 
-  const openDeleteModal = (faculty: Employee) => {
+  const openDeleteModal = (faculty: Faculty) => {
     setSelectedFaculty(faculty);
     setIsDeleteModalOpen(true);
   };
 
-  const handleViewDocument = async (document: DocumentEmployeeRow) => {
+  const handleViewDocument = async (document: DocumentFacultyRow) => {
     setSelectedDocument(document);
     setIsViewerOpen(true);
     setDocLoading(true);
@@ -1240,7 +1152,7 @@ const FacultyContent = () => {
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
-            Employee List
+            Faculty List
           </button>
           <button
             onClick={() => setActiveView('documentManagement')}
@@ -1262,17 +1174,17 @@ const FacultyContent = () => {
             >
               <FaPlus /> Add Faculty
             </button> */}
-            {/* <button
+            <button
               onClick={() => setIsImportModalOpen(true)}
               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
             >
               <FaFile /> Import CSV
-            </button> */}
+            </button>
           <button
             onClick={handleDownloadPDF}
             className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
           >
-            <FaDownload /> Download {activeView === 'facultyManagement' ? 'Employee List' : 'Documents List'}
+            <FaDownload /> Download {activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'}
           </button>
           </div>
         </div>
@@ -1296,7 +1208,7 @@ const FacultyContent = () => {
           <div className="flex items-center gap-4 flex-grow">
             <div className="w-64">
                 <select
-                  value={selectedDepartment === null ? '' : selectedDepartment}
+                  value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
                   title="Select Department"
@@ -1434,14 +1346,16 @@ const FacultyContent = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Submission Status
                   </th>
-
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredFacultyList.map((employee) => {
-                  const documentsForEmployee = documents.filter(doc => doc.EmployeeID === employee.EmployeeID);
+                {filteredFacultyList.map((faculty) => {
+                  const documentsForFaculty = documents.filter(doc => doc.FacultyID === faculty.FacultyID);
                   const submittedCount = documentTypes.filter(dt =>
-                    documentsForEmployee.some(doc =>
+                    documentsForFaculty.some(doc =>
                       doc.DocumentTypeID === dt.DocumentTypeID &&
                       (doc.SubmissionStatus === 'Submitted' || doc.SubmissionStatus === 'Approved')
                     )
@@ -1458,7 +1372,7 @@ const FacultyContent = () => {
                     }
                   };
 
-                  const sortedDocuments = [...documentsForEmployee].sort((a, b) => {
+                  const sortedDocuments = [...documentsForFaculty].sort((a, b) => {
                     const statusOrderA = getStatusOrder(a.SubmissionStatus);
                     const statusOrderB = getStatusOrder(b.SubmissionStatus);
                     
@@ -1482,15 +1396,15 @@ const FacultyContent = () => {
                   }
 
                   return (
-                    <React.Fragment key={employee.EmployeeID}>
-                      <tr className={`hover:bg-gray-50 ${selectedRows.includes(employee.EmployeeID) ? 'bg-gray-100' : ''}`}>
+                    <React.Fragment key={faculty.FacultyID}>
+                      <tr className={`hover:bg-gray-50 ${selectedRows.includes(faculty.FacultyID) ? 'bg-gray-100' : ''}`}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="checkbox"
-                            checked={selectedRows.includes(employee.EmployeeID)}
-                            onChange={() => handleRowSelect(employee.EmployeeID)}
+                            checked={selectedRows.includes(faculty.FacultyID)}
+                            onChange={() => handleRowSelect(faculty.FacultyID)}
                             className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                            title={`Select ${employee.FirstName} ${employee.LastName}`}
+                            title={`Select ${faculty.User?.FirstName} ${faculty.User?.LastName}`}
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1498,26 +1412,26 @@ const FacultyContent = () => {
                             <div className="h-10 w-10 flex-shrink-0">
                               <img
                                 className="h-10 w-10 rounded-full object-cover"
-                                src={getProfilePhoto(employee.UserID || '')}
-                                alt={`${employee.FirstName || ''} ${employee.LastName || ''}`}
+                                src={getProfilePhoto(faculty.User?.UserID)}
+                                alt={`${faculty.User?.FirstName || ''} ${faculty.User?.LastName || ''}`}
                               />
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                {employee.FirstName || 'Unknown'} {employee.LastName || 'User'}
+                                {faculty.User?.FirstName || 'Unknown'} {faculty.User?.LastName || 'User'}
                               </div>
-                              <div className="text-sm text-gray-500">{employee.ContactInfo?.[0]?.Email || 'No email'}</div>
+                              <div className="text-sm text-gray-500">{faculty.User?.Email || 'No email'}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {employee.EmploymentDetail?.[0]?.Position || ''}
+                          {faculty.Position}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {employee.Department?.DepartmentName}
+                          {faculty.Department.DepartmentName}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {employee.EmploymentDetail?.[0]?.EmploymentStatus}
+                          {faculty.EmploymentStatus}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center space-x-2">
@@ -1526,12 +1440,12 @@ const FacultyContent = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setExpandedFacultyId(expandedFacultyId === employee.EmployeeID ? null : employee.EmployeeID);
+                                  setExpandedFacultyId(expandedFacultyId === faculty.FacultyID ? null : faculty.FacultyID);
                                 }}
                                 className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                                title={expandedFacultyId === employee.EmployeeID ? 'Collapse documents' : 'Expand documents'}
+                                title={expandedFacultyId === faculty.FacultyID ? 'Collapse documents' : 'Expand documents'}
                               >
-                                {expandedFacultyId === employee.EmployeeID ? '▲' : '▼'}
+                                {expandedFacultyId === faculty.FacultyID ? '▲' : '▼'}
                               </button>
                             )}
                           </div>
@@ -1549,15 +1463,39 @@ const FacultyContent = () => {
                             {facultySubmissionStatus}
                           </span>
                         </td>
-
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => openViewDetailsModal(faculty)}
+                              title="View Details" 
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <FaEye />
+                            </button>
+                            <button 
+                              onClick={() => openEditModal(faculty)}
+                              title="Edit" 
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              <FaPen />
+                            </button>
+                            <button 
+                              onClick={() => openDeleteModal(faculty)}
+                              title="Delete" 
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                      {expandedFacultyId === employee.EmployeeID && (
+                      {expandedFacultyId === faculty.FacultyID && (
                         <tr>
-                          <td colSpan={7} className="px-0 py-0 bg-gray-50">
+                          <td colSpan={8} className="px-0 py-0 bg-gray-50">
                             <div className="m-4 rounded-xl shadow-lg bg-white border border-gray-200 p-6">
                               <h4 className="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2">
                                 <span className="inline-block w-2 h-2 bg-[#800000] rounded-full"></span>
-                                Documents for {employee.FirstName} {employee.LastName}
+                                Documents for {faculty.User?.FirstName} {faculty.User?.LastName}
                               </h4>
                               <div className="overflow-x-auto">
                                 <table className="min-w-full text-sm">
@@ -1572,7 +1510,7 @@ const FacultyContent = () => {
                                   <tbody>
                                     {documentTypes.length > 0 ? (
                                       documentTypes.map((dt) => {
-                                        const doc = documentsForEmployee.find((d: DocumentEmployeeRow) => d.DocumentTypeID === dt.DocumentTypeID);
+                                        const doc = documentsForFaculty.find(d => d.DocumentTypeID === dt.DocumentTypeID);
                                         return (
                                           <tr key={dt.DocumentTypeID} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
                                             <td className="p-3 font-medium text-gray-900">{dt.DocumentTypeName}</td>
@@ -1693,7 +1631,7 @@ const FacultyContent = () => {
                     (selectedDocumentStatus === 'all' || doc.SubmissionStatus === selectedDocumentStatus) &&
                     (selectedDocumentType === 'all' || doc.DocumentTypeID === selectedDocumentType) &&
                     (documentSearchTerm === '' || 
-                     doc.employeeName.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                     doc.facultyName.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
                      doc.documentTypeName.toLowerCase().includes(documentSearchTerm.toLowerCase()))
                   )
                   .sort((a, b) => {
@@ -1722,7 +1660,7 @@ const FacultyContent = () => {
                       >
                         {/* Removed document selection checkbox */}
                         <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{doc.employeeName || 'Unknown Employee'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{doc.facultyName || 'Unknown Faculty'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
                         <td className="px-6 py-4">
@@ -1817,15 +1755,15 @@ const FacultyContent = () => {
               <div className="h-16 w-16 flex-shrink-0">
                 <img
                   className="h-16 w-16 rounded-full object-cover border-2 border-[#800000]"
-                  src={selectedFaculty.Photo || '/default-avatar.png'}
-                  alt={`${selectedFaculty.FirstName || ''} ${selectedFaculty.LastName || ''}`}
+                  src={selectedFaculty.User?.Photo || '/default-avatar.png'}
+                  alt={`${selectedFaculty.User?.FirstName || ''} ${selectedFaculty.User?.LastName || ''}`}
                 />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {selectedFaculty.FirstName || 'Unknown'} {selectedFaculty.LastName || 'User'}
+                  {selectedFaculty.User?.FirstName || 'Unknown'} {selectedFaculty.User?.LastName || 'User'}
                 </h3>
-                <p className="text-sm text-gray-500">{selectedFaculty.ContactInfo?.[0]?.Email || 'No email'}</p>
+                <p className="text-sm text-gray-500">{selectedFaculty.User?.Email || 'No email'}</p>
               </div>
             </div>
 
@@ -1838,18 +1776,8 @@ const FacultyContent = () => {
                   <input
                     id="Position"
                     type="text"
-                    value={editFaculty.EmploymentDetail?.[0]?.Position || ''}
-                    onChange={(e) => setEditFaculty({
-                      ...editFaculty, 
-                      EmploymentDetail: [{
-                        EmploymentStatus: editFaculty.EmploymentDetail?.[0]?.EmploymentStatus || '',
-                        HireDate: editFaculty.EmploymentDetail?.[0]?.HireDate || null,
-                        ResignationDate: editFaculty.EmploymentDetail?.[0]?.ResignationDate || null,
-                        Designation: editFaculty.EmploymentDetail?.[0]?.Designation || null,
-                        Position: e.target.value,
-                        SalaryGrade: editFaculty.EmploymentDetail?.[0]?.SalaryGrade || null,
-                      }]
-                    })}
+                    value={editFaculty.Position || ''}
+                    onChange={(e) => setEditFaculty({...editFaculty, Position: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                     required
                   />
@@ -1881,18 +1809,8 @@ const FacultyContent = () => {
                   </label>
                   <select
                     id="EmploymentStatus"
-                    value={editFaculty.EmploymentDetail?.[0]?.EmploymentStatus || ''}
-                    onChange={(e) => setEditFaculty({
-                      ...editFaculty,
-                      EmploymentDetail: [{
-                        EmploymentStatus: e.target.value,
-                        HireDate: editFaculty.EmploymentDetail?.[0]?.HireDate || null,
-                        ResignationDate: editFaculty.EmploymentDetail?.[0]?.ResignationDate || null,
-                        Designation: editFaculty.EmploymentDetail?.[0]?.Designation || null,
-                        Position: editFaculty.EmploymentDetail?.[0]?.Position || null,
-                        SalaryGrade: editFaculty.EmploymentDetail?.[0]?.SalaryGrade || null,
-                      }]
-                    })}
+                    value={editFaculty.EmploymentStatus || ''}
+                    onChange={(e) => setEditFaculty({...editFaculty, EmploymentStatus: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                     required
                   >
@@ -1901,7 +1819,7 @@ const FacultyContent = () => {
                   </select>
                 </div>
 
-                {editFaculty.EmploymentDetail?.[0]?.EmploymentStatus === 'Resigned' && (
+                {editFaculty.EmploymentStatus === 'Resigned' && (
                   <div className="transition-all duration-300 ease-in-out">
                     <label htmlFor="ResignationDate" className="block text-sm font-medium text-gray-700 mb-1">
                       Resignation Date
@@ -1909,18 +1827,8 @@ const FacultyContent = () => {
                     <input
                       id="ResignationDate"
                       type="date"
-                      value={editFaculty.EmploymentDetail?.[0]?.ResignationDate || ''}
-                                              onChange={(e) => setEditFaculty({
-                          ...editFaculty,
-                          EmploymentDetail: [{
-                            EmploymentStatus: editFaculty.EmploymentDetail?.[0]?.EmploymentStatus || '',
-                            HireDate: editFaculty.EmploymentDetail?.[0]?.HireDate || null,
-                            ResignationDate: e.target.value,
-                            Designation: editFaculty.EmploymentDetail?.[0]?.Designation || null,
-                            Position: editFaculty.EmploymentDetail?.[0]?.Position || null,
-                            SalaryGrade: editFaculty.EmploymentDetail?.[0]?.SalaryGrade || null,
-                          }]
-                        })}
+                      value={editFaculty.ResignationDate || ''}
+                      onChange={(e) => setEditFaculty({...editFaculty, ResignationDate: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                       required
                     />
@@ -1990,15 +1898,15 @@ const FacultyContent = () => {
                 <div className="h-12 w-12 flex-shrink-0">
                   <img
                     className="h-12 w-12 rounded-full object-cover border-2 border-red-500"
-                    src={selectedFaculty.Photo || '/default-avatar.png'}
-                    alt={`${selectedFaculty.FirstName || ''} ${selectedFaculty.LastName || ''}`}
+                    src={selectedFaculty.User?.Photo || '/default-avatar.png'}
+                    alt={`${selectedFaculty.User?.FirstName || ''} ${selectedFaculty.User?.LastName || ''}`}
                   />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {selectedFaculty.FirstName} {selectedFaculty.LastName}
+                    {selectedFaculty.User?.FirstName} {selectedFaculty.User?.LastName}
                   </h3>
-                  <p className="text-sm text-gray-500">{selectedFaculty.ContactInfo?.[0]?.Email || 'No email'}</p>
+                  <p className="text-sm text-gray-500">{selectedFaculty.User?.Email}</p>
                 </div>
               </div>
 
@@ -2007,7 +1915,7 @@ const FacultyContent = () => {
                   This action cannot be undone. This will permanently delete the faculty member's account and remove their data from our servers.
                 </p>
                 <p className="text-sm text-red-700">
-                  Please type <span className="font-semibold">{selectedFaculty.FirstName} {selectedFaculty.LastName}</span> to confirm.
+                  Please type <span className="font-semibold">{selectedFaculty.User?.FirstName} {selectedFaculty.User?.LastName}</span> to confirm.
                 </p>
               </div>
 
@@ -2078,7 +1986,7 @@ const FacultyContent = () => {
             
             <div className="mb-6">
               <p className="text-gray-600 mb-2">
-                Are you sure you want to update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.employeeName}</span>?
+                Are you sure you want to update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.facultyName}</span>?
               </p>
               <div className="bg-gray-50 p-4 rounded-md">
                 <p className="text-sm text-gray-600">
@@ -2134,7 +2042,7 @@ const FacultyContent = () => {
                   {selectedDocument.documentTypeName}
                 </h2>
                 <p className="text-sm text-gray-500">
-                  {selectedDocument.employeeName} - {new Date(selectedDocument.UploadDate).toLocaleDateString()}
+                  {selectedDocument.facultyName} - {new Date(selectedDocument.UploadDate).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex items-center space-x-4">
@@ -2470,15 +2378,15 @@ const FacultyContent = () => {
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <img
-                      src={selectedFacultyDetails.Photo || '/default-avatar.png'}
-                      alt={`${selectedFacultyDetails.FirstName} ${selectedFacultyDetails.LastName}`}
+                      src={selectedFacultyDetails.User?.Photo || '/default-avatar.png'}
+                      alt={`${selectedFacultyDetails.User?.FirstName} ${selectedFacultyDetails.User?.LastName}`}
                       className="w-20 h-20 rounded-full object-cover border-2 border-[#800000]"
                     />
                     <div className="ml-4">
                       <h4 className="text-xl font-semibold">
-                        {selectedFacultyDetails.FirstName} {selectedFacultyDetails.LastName}
+                        {selectedFacultyDetails.User?.FirstName} {selectedFacultyDetails.User?.LastName}
                       </h4>
-                      <p className="text-gray-600">{selectedFacultyDetails.ContactInfo?.[0]?.Email || 'No email'}</p>
+                      <p className="text-gray-600">{selectedFacultyDetails.User?.Email}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
@@ -2488,11 +2396,11 @@ const FacultyContent = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Gender</p>
-                      <p className="font-medium">{selectedFacultyDetails.Sex || 'Not specified'}</p>
+                      <p className="font-medium">{selectedFacultyDetails.Gender || 'Not specified'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Marital Status</p>
-                      <p className="font-medium">{selectedFacultyDetails.CivilStatus || 'Not specified'}</p>
+                      <p className="font-medium">{selectedFacultyDetails.MaritalStatus || 'Not specified'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Nationality</p>
@@ -2508,15 +2416,15 @@ const FacultyContent = () => {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-medium">{selectedFacultyDetails.ContactInfo?.[0]?.Phone || 'Not specified'}</p>
+                    <p className="font-medium">{selectedFacultyDetails.Phone || 'Not specified'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Address</p>
-                    <p className="font-medium">{selectedFacultyDetails.ContactInfo?.[0]?.PresentAddress || 'Not specified'}</p>
+                    <p className="font-medium">{selectedFacultyDetails.Address || 'Not specified'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Emergency Contact</p>
-                    <p className="font-medium">{selectedFacultyDetails.ContactInfo?.find(info => info.EmergencyContactNumber)?.EmergencyContactName || 'Not specified'}</p>
+                    <p className="font-medium">{selectedFacultyDetails.EmergencyContact || 'Not specified'}</p>
                   </div>
                 </div>
               </div>
@@ -2527,7 +2435,7 @@ const FacultyContent = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Position</p>
-                    <p className="font-medium">{selectedFacultyDetails.EmploymentDetail?.[0]?.Position || ''}</p>
+                    <p className="font-medium">{selectedFacultyDetails.Position}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Department</p>
@@ -2535,24 +2443,24 @@ const FacultyContent = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Employment Status</p>
-                    <p className="font-medium">{selectedFacultyDetails.EmploymentDetail?.[0]?.EmploymentStatus}</p>
+                    <p className="font-medium">{selectedFacultyDetails.EmploymentStatus}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Hire Date</p>
-                    <p className="font-medium">{selectedFacultyDetails.EmploymentDetail?.[0]?.HireDate || 'Not specified'}</p>
+                    <p className="font-medium">{selectedFacultyDetails.HireDate || 'Not specified'}</p>
                   </div>
-                  {selectedFacultyDetails.EmploymentDetail?.[0]?.EmploymentStatus === 'Resigned' && (
+                  {selectedFacultyDetails.EmploymentStatus === 'Resigned' && (
                     <div>
                       <p className="text-sm text-gray-600">Resignation Date</p>
-                      <p className="font-medium">{selectedFacultyDetails.EmploymentDetail?.[0]?.ResignationDate || 'Not specified'}</p>
+                      <p className="font-medium">{selectedFacultyDetails.ResignationDate || 'Not specified'}</p>
                     </div>
                   )}
                   <div>
                     <p className="text-sm text-gray-600">Years of Service</p>
                     <p className="font-medium">
-                      {selectedFacultyDetails.EmploymentDetail?.[0]?.HireDate
+                      {selectedFacultyDetails.HireDate
                         ? `${Math.floor(
-                            (new Date().getTime() - new Date(selectedFacultyDetails.EmploymentDetail?.[0]?.HireDate || '').getTime()) /
+                            (new Date().getTime() - new Date(selectedFacultyDetails.HireDate).getTime()) /
                               (1000 * 60 * 60 * 24 * 365)
                           )} years`
                         : 'Not available'}

@@ -25,10 +25,10 @@ export async function uploadFacultyDocument(formData: FormData) {
   }
 }
 
-export async function fetchFacultyDocuments(facultyId: number | 'all') {
+export async function fetchFacultyDocuments(employeeId: string | 'all') {
   try {
-    console.log('Sending request to fetch documents for faculty:', facultyId);
-    const response = await fetch(`/api/faculty-documents?facultyId=${facultyId}`);
+    console.log('Sending request to fetch documents for employee:', employeeId);
+    const response = await fetch(`/api/faculty-documents?employeeId=${employeeId}`);
     console.log('Response status:', response.status);
     
     if (!response.ok) {
