@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useRef, useEffect } from 'react';
 
 const BOT_AVATAR = '/sjsfilogo.png'; // Adjust path if needed
