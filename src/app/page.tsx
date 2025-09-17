@@ -61,7 +61,7 @@ export default function Home() {
                   onClick={navigateToFaculty}
                   className="relative bg-[#800000] text-white text-base font-medium rounded-sm px-4 py-3 w-full transition duration-200 ease-in-out hover:before:absolute hover:before:inset-0 hover:before:bg-black hover:before:opacity-50 hover:before:rounded-sm"
                 >
-                  <span className="relative z-10">Faculty</span>
+                  <span className="relative z-10">Employee</span> {/* Faculty to Employee */}
                 </button>
               </div>
               <div className="mb-4 w-full">
@@ -77,20 +77,27 @@ export default function Home() {
                 <p className="text-sm text-black text-center">
                   By using this service, you understood and agree to the
                   <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
-                  <a
-                    className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
-                    href="/terms-of-use"
-                  >
-                    Terms of Use
-                  </a>
-                  {' '}and{' '}
-                  <a
-                    className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
-                    href="/privacy-statement"
-                  >
-                    Privacy Statement
-                  </a>
-                  .
+<a
+                      className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      href="https://sjsfi.vercel.app/privacy-policy"
+                    >
+                      Privacy Policy,
+                    </a>
+                    {' '}
+                    <a
+                      className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      href="https://sjsfi.vercel.app/terms-of-service"
+                    >
+                      Terms of Use,
+                    </a>
+                    {' '}and{' '}
+                    <a
+                      className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      href="https://sjsfi.vercel.app/data-privacy"
+                    >
+                      Data Privacy Notice
+                    </a>
+                    .
                 </p>
               </div>
             </div>

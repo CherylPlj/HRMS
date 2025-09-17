@@ -1129,7 +1129,7 @@ export default function SignInPage() {
                 {portal ? (
                   <span className="ml-1">
                     {portal === 'admin' ? 'Admin Portal' : 
-                     portal === 'faculty' ? 'Faculty Portal' : 
+                     portal === 'faculty' ? 'Employee Portal' : 
                      'Portal'}
                   </span>
                 ) : redirectUrl ? (
@@ -1240,16 +1240,23 @@ export default function SignInPage() {
                     <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
-                      href="/terms-of-use"
+                      href="https://sjsfi.vercel.app/privacy-policy"
                     >
-                      Terms of Use
+                      Privacy Policy,
+                    </a>
+                    {' '}
+                    <a
+                      className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      href="https://sjsfi.vercel.app/terms-of-service"
+                    >
+                      Terms of Use,
                     </a>
                     {' '}and{' '}
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
-                      href="/privacy-statement"
+                      href="https://sjsfi.vercel.app/data-privacy"
                     >
-                      Privacy Statement
+                      Data Privacy Notice
                     </a>
                     .
                   </p>
