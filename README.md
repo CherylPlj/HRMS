@@ -37,6 +37,10 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 # HRMS System
 
+## Repository Structure
+
+For an overview of directories and key modules, see `docs/file-structure.md`.
+
 ## Email Configuration
 
 To enable email sending for account invitations and notifications, you need to configure the following environment variables:
@@ -96,6 +100,3 @@ To test if email is working:
 
 If emails aren't being sent, check the server console for error messages related to email configuration.
 
-## Installation and Setup
-
-// ... existing README content ...
