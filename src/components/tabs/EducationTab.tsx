@@ -25,6 +25,144 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [formErrors, setFormErrors] = useState<{ schoolName?: string; yearGraduated?: string }>(
+    {}
+  );
+
+  const courseSuggestions: string[] = [
+    'Bachelor of Arts in Communication',  
+    'Bachelor of Arts in English',  
+    'Bachelor of Arts in Political Science',  
+    'Bachelor of Science in Accountancy',  
+    'Bachelor of Science in Business Administration',  
+    'Bachelor of Science in Information Technology',  
+    'Bachelor of Science in Computer Science',  
+    'Bachelor of Science in Engineering (various disciplines)',  
+    'Bachelor of Science in Nursing',  
+    'Bachelor of Science in Hospitality Management',  
+    'Bachelor of Science in Tourism Management',  
+    'Bachelor of Science in Education (various specializations)',  
+    'Bachelor of Fine Arts',  
+    'Bachelor of Science in Architecture',  
+    'Bachelor of Science in Agriculture',  
+    'Bachelor of Science in Pharmacy',  
+    'Bachelor of Science in Biology',  
+    'Bachelor of Science in Chemistry',  
+    'Bachelor of Science in Mathematics',  
+    'Bachelor of Science in Psychology',  
+    'Bachelor of Science in Criminology',  
+    'Bachelor of Science in Environmental Science',  
+    'Bachelor of Science in Marine Biology',  
+    'Master in Business Administration',  
+    'Master of Arts in Education',  
+    'Master of Arts in Psychology',  
+    'Master of Science in Information Technology',  
+    'Doctor of Philosophy in Education',  
+    'Doctor of Philosophy in Psychology',  
+    'Doctor of Medicine',  
+    'Juris Doctor',  
+    'Certificate in Teaching',  
+    'Diploma in Professional Education',  
+    'Bachelor of Science in Civil Engineering',  
+    'Bachelor of Science in Electrical Engineering',  
+    'Bachelor of Science in Mechanical Engineering',  
+    'Bachelor of Science in Electronics Engineering',  
+    'Bachelor of Science in Chemical Engineering',  
+    'Bachelor of Science in Geology',  
+    'Bachelor of Science in Environmental Engineering',  
+    'Bachelor of Science in Information Systems',  
+    'Bachelor of Science in Data Science',  
+    'Bachelor of Arts in Sociology',  
+    'Bachelor of Arts in History',  
+    'Bachelor of Arts in Philosophy',  
+    'Bachelor of Arts in Psychology',  
+    'Bachelor of Arts in Fine Arts',  
+    'Bachelor of Arts in Music',  
+    'Bachelor of Arts in Dance',  
+    'Bachelor of Arts in Theater Arts',  
+    'Bachelor of Science in Agricultural Engineering',  
+    'Bachelor of Science in Fisheries',  
+    'Bachelor of Science in Forestry',  
+    'Bachelor of Science in Food Technology',  
+    'Bachelor of Science in Nutrition and Dietetics',  
+    'Bachelor of Science in Sports Science',  
+    'Master of Arts in Sociology',  
+    'Master of Arts in History',  
+    'Master of Arts in Political Science',  
+    'Master of Arts in Communication',  
+    'Master of Science in Nursing',  
+    'Master of Science in Engineering',  
+    'Master of Science in Data Science',  
+    'Doctor of Philosophy in Business Administration',  
+    'Doctor of Philosophy in Environmental Science',  
+    'Doctor of Philosophy in Engineering',  
+    'Doctor of Education',  
+    'Doctor of Public Administration',  
+    'Master of Public Administration',  
+    'Master of Public Health',  
+    'Master of Science in Occupational Therapy',  
+    'Master of Science in Physical Therapy',  
+    'Bachelor of Science in Occupational Therapy',  
+    'Bachelor of Science in Physical Therapy',  
+    'Certificate in Business Administration',  
+    'Diploma in Business Management',  
+    'Diploma in Hotel and Restaurant Management',  
+    'Diploma in Culinary Arts',  
+    'Diploma in Graphic Design',  
+    'Diploma in Web Development',  
+    'Diploma in Digital Marketing',  
+    'Diploma in Event Management',  
+    'Diploma in Fashion Design',  
+    'Diploma in Interior Design',  
+    'Diploma in Animation',  
+    'Diploma in Photography',  
+    'Diploma in Social Work',  
+    'Bachelor of Science in Social Work',  
+    'Master of Social Work',  
+    'Bachelor of Arts in Early Childhood Education',  
+    'Bachelor of Arts in Special Education',  
+    'Certificate in Early Childhood Education',  
+    'Certificate in Special Education',  
+    'Associate Degree in Information Technology',  
+    'Associate Degree in Business Administration',  
+    'Associate Degree in Hospitality Management',  
+    'Associate Degree in Culinary Arts',  
+    'Bachelor of Science in Automotive Engineering',  
+    'Bachelor of Science in Marine Engineering',  
+    'Bachelor of Science in Aeronautical Engineering',  
+    'Bachelor of Science in Mining Engineering',  
+    'Bachelor of Science in Petroleum Engineering',  
+    'Bachelor of Science in Industrial Engineering',  
+    'Master of Arts in Educational Leadership',  
+    'Master of Arts in Curriculum and Instruction',  
+    'Master of Science in Health Administration',  
+    'Doctor of Philosophy in Health Science',  
+    'Master of Arts in Creative Writing',  
+    'Master of Arts in Literature',  
+    'Bachelor of Arts in Journalism',  
+    'Master of Arts in Journalism',  
+    'Bachelor of Science in Statistics',  
+    'Bachelor of Science in Actuarial Science',  
+    'Bachelor of Science in Information Management',  
+    'Bachelor of Science in Library and Information Science',  
+    'Bachelor of Science in Public Administration',  
+    'Master of Arts in Public Administration',  
+    'Master of Science in Public Health',  
+    'Doctor of Public Health',  
+    'Certificate in Project Management',  
+    'Diploma in Project Management',  
+    'Diploma in Supply Chain Management',  
+    'Bachelor of Science in Supply Chain Management',  
+    'Master of Science in Supply Chain Management',  
+    'Bachelor of Arts in Media Studies',  
+    'Master of Arts in Media Studies',  
+    'Bachelor of Arts in Visual Arts',  
+    'Master of Arts in Visual Arts',  
+    'Bachelor of Science in Fashion Merchandising',  
+    'Bachelor of Science in Retail Management',
+  ];
+
+  const courseLevels = ['College', 'Graduate', 'Post Graduate'];
 
   useEffect(() => {
     fetchEducationRecords();
@@ -56,6 +194,27 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentRecord) return;
+
+    // Validate fields
+    const errors: { schoolName?: string; yearGraduated?: string } = {};
+    const school = (currentRecord.schoolName || '').trim();
+    if (/\d/.test(school)) {
+      errors.schoolName = 'School name must not contain numbers';
+    }
+    if (currentRecord.yearGraduated) {
+      const minYear = 1950;
+      const maxYear = new Date().getFullYear();
+      const year = currentRecord.yearGraduated;
+      if (year < minYear || year > maxYear) {
+        errors.yearGraduated = `Year must be between ${minYear} and ${maxYear}`;
+      }
+    }
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setNotification({ type: 'error', message: 'Please fix the highlighted errors.' });
+      return;
+    }
 
     setLoading(true);
     setNotification(null);
@@ -182,6 +341,8 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
               yearGraduated: null,
               honors: null,
             });
+            setFormErrors({});
+            setNotification(null);
             setShowForm(true);
           }}
           className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
@@ -208,6 +369,8 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                 <button
                   onClick={() => {
                     setCurrentRecord(record);
+                    setFormErrors({});
+                    setNotification(null);
                     setShowForm(true);
                   }}
                   className="text-blue-600 hover:text-blue-800"
@@ -239,6 +402,8 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                 onClick={() => {
                   setShowForm(false);
                   setCurrentRecord(null);
+                    setFormErrors({});
+                    setNotification(null);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -253,9 +418,15 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                   <label className="block text-sm font-medium text-gray-700">Level <span className="text-red-500">*</span></label>
                   <select
                     value={currentRecord.level}
-                    onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, level: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const newLevel = e.target.value;
+                      const shouldHaveCourse = courseLevels.includes(newLevel);
+                      setCurrentRecord({
+                        ...currentRecord,
+                        level: newLevel,
+                        course: shouldHaveCourse ? currentRecord.course : null,
+                      });
+                    }}
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
                   >
@@ -273,27 +444,43 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                     type="text"
                     value={currentRecord.schoolName}
                     onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, schoolName: e.target.value })
+                      { setCurrentRecord({ ...currentRecord, schoolName: e.target.value }); if (formErrors.schoolName) setFormErrors({ ...formErrors, schoolName: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
                   />
+                  {formErrors.schoolName && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.schoolName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Course</label>
                   <input
                     type="text"
-                    value={currentRecord.course || ''}
-                    onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, course: e.target.value })
-                    }
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    list="courseSuggestions"
+                    placeholder={courseLevels.includes(currentRecord.level) ? 'Start typing to see suggestions...' : 'Not Applicable'}
+                    value={courseLevels.includes(currentRecord.level) ? (currentRecord.course || '') : 'Not Applicable'}
+                    onChange={(e) => {
+                      if (courseLevels.includes(currentRecord.level)) {
+                        setCurrentRecord({ ...currentRecord, course: e.target.value });
+                      }
+                    }}
+                    className={`mt-1 w-full p-2 rounded border border-gray-300 ${courseLevels.includes(currentRecord.level) ? 'bg-gray-50 text-black' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
+                    disabled={!courseLevels.includes(currentRecord.level)}
+                    readOnly={!courseLevels.includes(currentRecord.level)}
                   />
+                  <datalist id="courseSuggestions">
+                    {courseSuggestions.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Year Graduated</label>
                   <input
                     type="number"
+                    min={1950}
+                    max={new Date().getFullYear()}
                     value={currentRecord.yearGraduated || ''}
                     onChange={(e) =>
                       setCurrentRecord({
@@ -303,6 +490,9 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                   />
+                  {formErrors.yearGraduated && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.yearGraduated}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Honors</label>

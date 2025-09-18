@@ -28,6 +28,7 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [formErrors, setFormErrors] = useState<{ name?: string; contactNumber?: string; type?: string }>({});
 
   useEffect(() => {
     fetchFamilyRecords();
@@ -59,6 +60,42 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentRecord) return;
+
+    // Validate inputs
+    const errors: { name?: string; contactNumber?: string; type?: string } = {};
+    const name = currentRecord.name?.trim() || '';
+    // Allow letters with common name punctuation and spaces; no digits or other specials
+    const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ .-]+$/;
+    if (!name || !nameRegex.test(name)) {
+      errors.name = 'Name must contain letters only (no numbers or special characters)';
+    }
+
+    {
+      const digits = (currentRecord.contactNumber || '').replace(/\D/g, '');
+      if (digits.length > 0 && !/^09\d{9}$/.test(digits)) {
+        errors.contactNumber = 'Enter a valid PH mobile number (11 digits, starts with 09)';
+      }
+    }
+
+    // Business rules: only one Spouse; only up to two Parents
+    if (currentRecord.type === 'Spouse') {
+      const spouseCount = familyRecords.filter(r => r.type === 'Spouse' && r.id !== currentRecord.id).length;
+      if (spouseCount >= 1) {
+        errors.type = 'Spouse can only be added once.';
+      }
+    }
+    if (currentRecord.type === 'Parent') {
+      const parentCount = familyRecords.filter(r => r.type === 'Parent' && r.id !== currentRecord.id).length;
+      if (parentCount >= 2) {
+        errors.type = 'Only two parents can be added.';
+      }
+    }
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setNotification({ type: 'error', message: 'Please fix the highlighted errors.' });
+      return;
+    }
 
     setLoading(true);
     setNotification(null);
@@ -188,6 +225,8 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
               contactNumber: null,
               address: null,
             });
+            setFormErrors({});
+            setNotification(null);
             setShowForm(true);
           }}
           className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
@@ -231,6 +270,8 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                 <button
                   onClick={() => {
                     setCurrentRecord(record);
+                    setFormErrors({});
+                    setNotification(null);
                     setShowForm(true);
                   }}
                   className="text-blue-600 hover:text-blue-800"
@@ -262,6 +303,8 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                 onClick={() => {
                   setShowForm(false);
                   setCurrentRecord(null);
+                  setFormErrors({});
+                  setNotification(null);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -276,9 +319,10 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                   <label className="block text-sm font-medium text-gray-700">Type <span className="text-red-500">*</span></label>
                   <select
                     value={currentRecord.type}
-                    onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, type: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setCurrentRecord({ ...currentRecord, type: e.target.value });
+                      if (formErrors.type) setFormErrors({ ...formErrors, type: undefined });
+                    }}
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
                   >
@@ -289,6 +333,9 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                     <option value="Sibling">Sibling</option>
                     <option value="Other">Other</option>
                   </select>
+                  {formErrors.type && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.type}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Name <span className="text-red-500">*</span></label>
@@ -296,22 +343,14 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                     type="text"
                     value={currentRecord.name}
                     onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, name: e.target.value })
+                      { setCurrentRecord({ ...currentRecord, name: e.target.value }); if (formErrors.name) setFormErrors({ ...formErrors, name: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Relationship</label>
-                  <input
-                    type="text"
-                    value={currentRecord.relationship || ''}
-                    onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, relationship: e.target.value })
-                    }
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  />
+                  {formErrors.name && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
@@ -342,12 +381,24 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                   <label className="block text-sm font-medium text-gray-700">Contact Number</label>
                   <input
                     type="tel"
+                    inputMode="numeric"
+                    pattern="09[0-9]{9}"
+                    title="Enter an 11-digit PH mobile number starting with 09"
+                    maxLength={11}
+                    placeholder="09XXXXXXXXX"
                     value={currentRecord.contactNumber || ''}
-                    onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, contactNumber: e.target.value })
-                    }
+                    onChange={(e) => {
+                      // accept digits only and limit to 11
+                      const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setCurrentRecord({ ...currentRecord, contactNumber: digitsOnly });
+                      if (formErrors.contactNumber) setFormErrors({ ...formErrors, contactNumber: undefined });
+                    }}
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    
                   />
+                  {formErrors.contactNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.contactNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Address</label>

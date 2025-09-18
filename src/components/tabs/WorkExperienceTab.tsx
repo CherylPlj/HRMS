@@ -20,6 +20,12 @@ interface Notification {
   message: string;
 }
 
+interface FormErrors {
+  schoolName?: string;
+  position?: string;
+  dateRange?: string;
+}
+
 const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => {
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +33,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     fetchWorkExperiences();
@@ -63,9 +70,35 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
     }
   };
 
+  const validateRecord = (record: WorkExperience): boolean => {
+    const errors: FormErrors = {};
+
+    if (!record.schoolName || record.schoolName.trim().length === 0) {
+      errors.schoolName = 'Company/Institution name is required';
+    }
+    if (!record.position || record.position.trim().length === 0) {
+      errors.position = 'Position is required';
+    }
+
+    const start = record.startDate ? new Date(record.startDate) : null;
+    const end = record.endDate ? new Date(record.endDate) : null;
+    if (start && end && end.getTime() < start.getTime()) {
+      errors.dateRange = 'End date cannot be earlier than start date';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentRecord) return;
+
+    // Validate before submit
+    if (!validateRecord(currentRecord)) {
+      setNotification({ type: 'error', message: 'Please fix the validation errors.' });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -249,11 +282,14 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                     type="text"
                     value={currentRecord.schoolName}
                     onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, schoolName: e.target.value })
+                      { setCurrentRecord({ ...currentRecord, schoolName: e.target.value }); if (formErrors.schoolName) setFormErrors({ ...formErrors, schoolName: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
                   />
+                  {formErrors.schoolName && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.schoolName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Position <span className="text-red-500">*</span></label>
@@ -261,11 +297,14 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                     type="text"
                     value={currentRecord.position}
                     onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, position: e.target.value })
+                      { setCurrentRecord({ ...currentRecord, position: e.target.value }); if (formErrors.position) setFormErrors({ ...formErrors, position: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
                   />
+                  {formErrors.position && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.position}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Start Date <span className="text-red-500">*</span></label>
@@ -273,10 +312,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                     type="date"
                     value={currentRecord.startDate ? new Date(currentRecord.startDate).toISOString().split('T')[0] : ''}
                     onChange={(e) =>
-                      setCurrentRecord({
-                        ...currentRecord,
-                        startDate: e.target.value ? new Date(e.target.value) : new Date()
-                      })
+                      { const updated = { ...currentRecord, startDate: e.target.value ? new Date(e.target.value) : new Date() } as WorkExperience; setCurrentRecord(updated); if (formErrors.dateRange) setFormErrors({ ...formErrors, dateRange: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
@@ -287,14 +323,15 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                   <input
                     type="date"
                     value={currentRecord.endDate ? new Date(currentRecord.endDate).toISOString().split('T')[0] : ''}
+                    min={currentRecord.startDate ? new Date(currentRecord.startDate).toISOString().split('T')[0] : undefined}
                     onChange={(e) =>
-                      setCurrentRecord({
-                        ...currentRecord,
-                        endDate: e.target.value ? new Date(e.target.value) : null
-                      })
+                      { const updated = { ...currentRecord, endDate: e.target.value ? new Date(e.target.value) : null } as WorkExperience; setCurrentRecord(updated); if (formErrors.dateRange) setFormErrors({ ...formErrors, dateRange: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                   />
+                  {formErrors.dateRange && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.dateRange}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Reason for Leaving</label>
