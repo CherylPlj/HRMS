@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaTimes, FaEye, FaPaperclip, FaFilter, FaTrash, FaUpload, FaCheck } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaEye, FaPaperclip, FaFilter, FaTrash, FaUpload, FaCheck, FaDownload } from 'react-icons/fa';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
@@ -52,9 +52,9 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   const [uploadingStates, setUploadingStates] = useState<{ [key: number]: boolean }>({});
   const [uploadSuccessStates, setUploadSuccessStates] = useState<{ [key: number]: boolean }>({});
 
-  // Add status count calculations - Fixed pending calculation
+  // Add status count calculations - Fixed pending calculation and deleted document handling
   const statusCounts = {
-    pending: documentTypes.length - documents.length + documents.filter(doc => doc.SubmissionStatus === 'Pending').length,
+    pending: documentTypes.length - documents.filter(doc => doc.SubmissionStatus !== 'Pending').length,
     submitted: documents.filter(doc => doc.SubmissionStatus === 'Submitted').length,
     approved: documents.filter(doc => doc.SubmissionStatus === 'Approved').length,
     rejected: documents.filter(doc => doc.SubmissionStatus === 'Rejected').length
@@ -513,7 +513,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 rel="noopener noreferrer"
                 className="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#a83232] transition-colors flex items-center gap-2"
               >
-                <FaUpload />
+                <FaDownload />
                 Download File
               </a>
             </div>
@@ -732,7 +732,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             title="Download file"
                             aria-label="Download file"
                           >
-                            <FaUpload />
+                            <FaDownload />
                           </a>
                         </React.Fragment>
                       ) : (
@@ -754,8 +754,9 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                       `}>
                         {doc && doc.SubmissionStatus === 'Approved' ? 'Approved' :
                           doc && doc.SubmissionStatus === 'Rejected' ? 'Rejected' :
-                            doc && doc.FileUrl ? 'Submitted' :
-                              'Pending'}
+                            doc && doc.SubmissionStatus === 'Submitted' ? 'Submitted' :
+                              doc && doc.FileUrl ? 'Submitted' :
+                                'Pending'}
                       </span>
                     </td>
                     <td className="p-3">{doc ? new Date(doc.UploadDate).toLocaleDateString() : '-'}</td>
@@ -834,8 +835,9 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             >
                               {isApproved ? 'Approved' :
                                 existingDoc?.SubmissionStatus === 'Rejected' ? 'Rejected' :
-                                  existingDoc?.FileUrl ? 'Submitted' :
-                                    'Pending'}
+                                  existingDoc?.SubmissionStatus === 'Submitted' ? 'Submitted' :
+                                    existingDoc?.FileUrl ? 'Submitted' :
+                                      'Pending'}
                             </span>
                           </td>
                           <td className="p-3">
@@ -863,7 +865,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                   className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
                                   title="Download file"
                                 >
-                                  <FaUpload />
+                                  <FaDownload />
                                 </a>
                               </div>
                             ) : (
