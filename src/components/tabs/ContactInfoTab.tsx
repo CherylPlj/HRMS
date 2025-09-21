@@ -43,6 +43,49 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
 }) => {
   const [notification, setNotification] = useState<Notification | null>(null);
 
+  // Validation functions
+  const validateEmail = (email: string) => {
+    return /^[\w-.]+@[\w-]+\.[a-zA-Z]{2,}$/.test(email);
+  };
+
+  const validatePhoneNumber = (number: string) => {
+    return /^09\d{9}$/.test(number);
+  };
+
+  const validateAddress = (address: string) => {
+    // Trim input and allow . , - # / anywhere
+    return /^[a-zA-Z0-9 .,#\-/]+$/.test(address.trim());
+  };
+
+  const validateContactName = (name: string) => {
+    // Only letters and spaces, at least 3 characters
+    return /^[a-zA-Z ]{3,}$/.test(name.trim());
+  };
+
+  // Hide error message when input becomes valid
+  useEffect(() => {
+    if (isEditing) {
+      if (contactInfo?.Email && validateEmail(contactInfo.Email)) {
+        if (validationErrors.Email) validationErrors.Email = undefined;
+      }
+      if (contactInfo?.Phone && validatePhoneNumber(contactInfo.Phone)) {
+        if (validationErrors.Phone) validationErrors.Phone = undefined;
+      }
+      if (contactInfo?.PresentAddress && validateAddress(contactInfo.PresentAddress)) {
+        if (validationErrors.PresentAddress) validationErrors.PresentAddress = undefined;
+      }
+      if (contactInfo?.PermanentAddress && validateAddress(contactInfo.PermanentAddress)) {
+        if (validationErrors.PermanentAddress) validationErrors.PermanentAddress = undefined;
+      }
+      if (contactInfo?.EmergencyContactName && validateContactName(contactInfo.EmergencyContactName)) {
+        if (validationErrors.EmergencyContactName) validationErrors.EmergencyContactName = undefined;
+      }
+      if (contactInfo?.EmergencyContactNumber && validatePhoneNumber(contactInfo.EmergencyContactNumber)) {
+        if (validationErrors.EmergencyContactNumber) validationErrors.EmergencyContactNumber = undefined;
+      }
+    }
+  }, [contactInfo, isEditing, validationErrors]);
+
   // Auto-hide notification after 5 seconds
   useEffect(() => {
     if (notification) {
@@ -89,12 +132,18 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
             <input
               type="email"
               value={contactInfo?.Email || ''}
-              onChange={(e) => onInputChange('Email', e.target.value)}
-              className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+              onChange={(e) => {
+                const value = e.target.value;
+                onInputChange('Email', value);
+              }}
+              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.Email && !validateEmail(contactInfo.Email) ? 'border-red-500' : ''}`}
               placeholder="Enter email address"
             />
           ) : (
             <p className="mt-1 text-sm text-gray-900">{contactInfo?.Email || 'N/A'}</p>
+          )}
+          {contactInfo?.Email && !validateEmail(contactInfo.Email) && (
+            <p className="mt-1 text-sm text-red-600">Invalid email format</p>
           )}
           {validationErrors.Email && (
             <p className="mt-1 text-sm text-red-600">{validationErrors.Email}</p>
@@ -107,12 +156,19 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
             <input
               type="tel"
               value={contactInfo?.Phone || ''}
-              onChange={(e) => onInputChange('Phone', e.target.value)}
-              className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter phone number"
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, ''); // Only numbers
+                onInputChange('Phone', value);
+              }}
+              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.Phone && !validatePhoneNumber(contactInfo.Phone) ? 'border-red-500' : ''}`}
+              placeholder="09XXXXXXXXX"
+              maxLength={11}
             />
           ) : (
             <p className="mt-1 text-sm text-gray-900">{contactInfo?.Phone || 'N/A'}</p>
+          )}
+          {contactInfo?.Phone && !validatePhoneNumber(contactInfo.Phone) && (
+            <p className="mt-1 text-sm text-red-600">Phone number must be 11 digits, start with 09</p>
           )}
           {validationErrors.Phone && (
             <p className="mt-1 text-sm text-red-600">{validationErrors.Phone}</p>
@@ -124,13 +180,19 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
           {isEditing ? (
             <textarea
               value={contactInfo?.PresentAddress || ''}
-              onChange={(e) => onInputChange('PresentAddress', e.target.value)}
-              className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+              onChange={(e) => {
+                const value = e.target.value;
+                onInputChange('PresentAddress', value);
+              }}
+              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.PresentAddress && !validateAddress(contactInfo.PresentAddress) ? 'border-red-500' : ''}`}
               placeholder="Enter present address"
               rows={3}
             />
           ) : (
             <p className="mt-1 text-sm text-gray-900">{contactInfo?.PresentAddress || 'N/A'}</p>
+          )}
+          {contactInfo?.PresentAddress && !validateAddress(contactInfo.PresentAddress) && (
+            <p className="mt-1 text-sm text-red-600">Address can only contain letters, numbers, spaces, and . , - # /</p>
           )}
           {validationErrors.PresentAddress && (
             <p className="mt-1 text-sm text-red-600">{validationErrors.PresentAddress}</p>
@@ -156,14 +218,20 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
           {isEditing ? (
             <textarea
               value={contactInfo?.PermanentAddress || ''}
-              onChange={(e) => onInputChange('PermanentAddress', e.target.value)}
-              className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+              onChange={(e) => {
+                const value = e.target.value;
+                onInputChange('PermanentAddress', value);
+              }}
+              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.PermanentAddress && !validateAddress(contactInfo.PermanentAddress) ? 'border-red-500' : ''}`}
               placeholder="Enter permanent address"
               rows={3}
               disabled={sameAsPresentAddress}
             />
           ) : (
             <p className="mt-1 text-sm text-gray-900">{contactInfo?.PermanentAddress || 'N/A'}</p>
+          )}
+          {contactInfo?.PermanentAddress && !validateAddress(contactInfo.PermanentAddress) && (
+            <p className="mt-1 text-sm text-red-600">Address can only contain letters, numbers, spaces, and . , - # /</p>
           )}
           {validationErrors.PermanentAddress && (
             <p className="mt-1 text-sm text-red-600">{validationErrors.PermanentAddress}</p>
@@ -181,12 +249,18 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
               <input
                 type="text"
                 value={contactInfo?.EmergencyContactName || ''}
-                onChange={(e) => onInputChange('EmergencyContactName', e.target.value)}
-                className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^a-zA-Z ]/g, ''); // Only letters and spaces
+                  onInputChange('EmergencyContactName', value);
+                }}
+                className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.EmergencyContactName && !validateContactName(contactInfo.EmergencyContactName) ? 'border-red-500' : ''}`}
                 placeholder="Enter emergency contact name"
               />
             ) : (
               <p className="mt-1 text-sm text-gray-900">{contactInfo?.EmergencyContactName || 'N/A'}</p>
+            )}
+            {contactInfo?.EmergencyContactName && !validateContactName(contactInfo.EmergencyContactName) && (
+              <p className="mt-1 text-sm text-red-600">Name must be at least 3 letters and can only contain letters and spaces</p>
             )}
             {validationErrors.EmergencyContactName && (
               <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContactName}</p>
@@ -199,12 +273,19 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
               <input
                 type="tel"
                 value={contactInfo?.EmergencyContactNumber || ''}
-                onChange={(e) => onInputChange('EmergencyContactNumber', e.target.value)}
-                className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                placeholder="Enter emergency contact number"
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, ''); // Only numbers
+                  onInputChange('EmergencyContactNumber', value);
+                }}
+                className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.EmergencyContactNumber && !validatePhoneNumber(contactInfo.EmergencyContactNumber) ? 'border-red-500' : ''}`}
+                placeholder="09XXXXXXXXX"
+                maxLength={11}
               />
             ) : (
               <p className="mt-1 text-sm text-gray-900">{contactInfo?.EmergencyContactNumber || 'N/A'}</p>
+            )}
+            {contactInfo?.EmergencyContactNumber && !validatePhoneNumber(contactInfo.EmergencyContactNumber) && (
+              <p className="mt-1 text-sm text-red-600">Contact number must be 11 digits, start with 09</p>
             )}
             {validationErrors.EmergencyContactNumber && (
               <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContactNumber}</p>

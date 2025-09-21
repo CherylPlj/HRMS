@@ -64,9 +64,16 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
     // Validate inputs
     const errors: { name?: string; contactNumber?: string; type?: string } = {};
     const name = currentRecord.name?.trim() || '';
+    const type = currentRecord.type?.trim() || '';
+    // Block submission if name or type is empty
+    if (!type) {
+      errors.type = 'Type is required.';
+    }
     // Allow letters with common name punctuation and spaces; no digits or other specials
     const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ .-]+$/;
-    if (!name || !nameRegex.test(name)) {
+    if (!name) {
+      errors.name = 'Name is required.';
+    } else if (!nameRegex.test(name)) {
       errors.name = 'Name must contain letters only (no numbers or special characters)';
     }
 
@@ -435,9 +442,9 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !currentRecord.name?.trim() || !currentRecord.type?.trim()}
                     className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
-                      loading 
+                      loading || !currentRecord.name?.trim() || !currentRecord.type?.trim()
                         ? 'bg-gray-400 cursor-not-allowed' 
                         : 'bg-[#800000] hover:bg-red-800'
                     }`}

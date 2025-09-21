@@ -109,6 +109,12 @@ interface ValidationErrors {
   EmergencyContactName?: string;
   EmergencyContactNumber?: string;
   Email?: string;
+  LastName?: string;
+  FirstName?: string;
+  MiddleName?: string;
+  ExtensionName?: string;
+  PlaceOfBirth?: string;
+  DateOfBirth?: string;
 }
 
 type EmergencyContact = {
@@ -841,6 +847,43 @@ const handleDownload = () => {
   };
 
   // Tab-specific validation
+// Name and Place of Birth validation
+const validateNameOrPlace = (value: string, fieldLabel: string): string | undefined => {
+  if (!value) return undefined;
+  // Only allow letters, spaces, and hyphens
+  const regex = /^[A-Za-z\s-]+$/;
+  if (!regex.test(value)) {
+    return `${fieldLabel} must only contain letters, spaces, or hyphens`;
+  }
+  if (value.length < 2) {
+    return `${fieldLabel} must be at least 2 characters long`;
+  }
+  if (value.length > 100) {
+    return `${fieldLabel} must not exceed 100 characters`;
+  }
+  return undefined;
+};
+
+// Date of Birth validation
+const validateDateOfBirth = (dob: string): string | undefined => {
+  if (!dob) return 'Date of Birth is required';
+  const date = new Date(dob);
+  if (isNaN(date.getTime())) return 'Invalid date format';
+  const year = date.getFullYear();
+  if (year >= 1920 && year <= 1930) return 'Year of birth cannot be between 1920 and 1930';
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  // Adjust for month/day
+  if (
+    now.getMonth() < date.getMonth() ||
+    (now.getMonth() === date.getMonth() && now.getDate() < date.getDate())
+  ) {
+    age--;
+  }
+  if (age < 18) return 'You must be at least 18 years old';
+  if (age > 100) return 'Date of Birth is not realistic';
+  return undefined;
+};
   const validateTabForm = (tabName: keyof typeof editingTabs): boolean => {
     const errors: ValidationErrors = {};
     
@@ -848,19 +891,27 @@ const handleDownload = () => {
 
     switch (tabName) {
       case 'personal':
-        // Basic validation for personal info
+        errors.LastName = validateNameOrPlace(editedDetails.LastName || '', 'Last Name');
+        errors.FirstName = validateNameOrPlace(editedDetails.FirstName || '', 'First Name');
+        if (editedDetails.MiddleName)
+          errors.MiddleName = validateNameOrPlace(editedDetails.MiddleName, 'Middle Name');
+        if (editedDetails.ExtensionName)
+          errors.ExtensionName = validateNameOrPlace(editedDetails.ExtensionName, 'Extension Name');
+        if (editedDetails.PlaceOfBirth)
+          errors.PlaceOfBirth = validateNameOrPlace(editedDetails.PlaceOfBirth, 'Place of Birth');
+        errors.DateOfBirth = validateDateOfBirth(editedDetails.DateOfBirth);
         break;
       case 'contact':
         errors.Phone = validatePhone(editedDetails.Phone || '');
         errors.PresentAddress = validateAddress(editedDetails.PresentAddress || '');
         errors.PermanentAddress = validateAddress(editedDetails.PermanentAddress || '');
         errors.Email = validateEmail(editedDetails.Email || '');
-        
+
         const emergencyContactErrors = validateEmergencyContact(
           editedDetails.EmergencyContactName || '',
           editedDetails.EmergencyContactNumber || ''
         );
-        
+
         if (emergencyContactErrors.name) {
           errors.EmergencyContactName = emergencyContactErrors.name;
         }
@@ -992,36 +1043,34 @@ const handleDownload = () => {
 
     setEditedDetails((prev) => {
       if (!prev) return null;
-      
       let processedValue: any = value;
-
-      // Handle special case for dates
       if (field === 'DateOfBirth' || field === 'HireDate' || field === 'ResignationDate' || 
           field === 'PRCValidity' || field === 'LastMedicalCheckup') {
         processedValue = value || null;
       }
-
-      // Handle special case for numbers
       if (field === 'DepartmentID' || field === 'ContractID') {
         processedValue = value ? parseInt(value, 10) : null;
       }
-
       const updatedDetails = {
         ...prev,
         [field]: processedValue
       };
-
-      console.log('Updated details:', updatedDetails);
       return updatedDetails;
     });
 
-    // Clear validation errors for the field if it exists
-    if (validationErrors[field as keyof ValidationErrors]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [field]: undefined
-      }));
+    // Real-time validation for name and place fields
+    let error: string | undefined;
+    if (["LastName", "FirstName", "MiddleName", "ExtensionName", "PlaceOfBirth"].includes(field)) {
+      error = validateNameOrPlace(value, field.replace(/([A-Z])/g, ' $1').trim());
+    } else if (field === "DateOfBirth") {
+      error = validateDateOfBirth(value);
+    } else {
+      error = undefined;
     }
+    setValidationErrors((prev) => ({
+      ...prev,
+      [field]: error
+    }));
   };
 
   const handleSameAsPresentAddress = (checked: boolean) => {
@@ -1333,12 +1382,17 @@ const handleDownload = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Last Name</label>
               {editingTabs.personal ? (
-                <input
-                  type="text"
-                  value={editedDetails?.LastName || ''}
-                  onChange={(e) => handleInputChange('LastName', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
+                <>
+                  <input
+                    type="text"
+                    value={editedDetails?.LastName || ''}
+                    onChange={(e) => handleInputChange('LastName', e.target.value)}
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                  {validationErrors.LastName && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.LastName}</p>
+                  )}
+                </>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.LastName}</p>
               )}
@@ -1346,12 +1400,17 @@ const handleDownload = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">First Name</label>
               {editingTabs.personal ? (
-                <input
-                  type="text"
-                  value={editedDetails?.FirstName || ''}
-                  onChange={(e) => handleInputChange('FirstName', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
+                <>
+                  <input
+                    type="text"
+                    value={editedDetails?.FirstName || ''}
+                    onChange={(e) => handleInputChange('FirstName', e.target.value)}
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                  {validationErrors.FirstName && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.FirstName}</p>
+                  )}
+                </>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.FirstName}</p>
               )}
@@ -1359,12 +1418,17 @@ const handleDownload = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Middle Name</label>
               {editingTabs.personal ? (
-                <input
-                  type="text"
-                  value={editedDetails?.MiddleName || ''}
-                  onChange={(e) => handleInputChange('MiddleName', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
+                <>
+                  <input
+                    type="text"
+                    value={editedDetails?.MiddleName || ''}
+                    onChange={(e) => handleInputChange('MiddleName', e.target.value)}
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                  {validationErrors.MiddleName && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.MiddleName}</p>
+                  )}
+                </>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.MiddleName || 'N/A'}</p>
               )}
@@ -1372,12 +1436,17 @@ const handleDownload = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Extension Name</label>
               {editingTabs.personal ? (
-                <input
-                  type="text"
-                  value={editedDetails?.ExtensionName || ''}
-                  onChange={(e) => handleInputChange('ExtensionName', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
+                <>
+                  <input
+                    type="text"
+                    value={editedDetails?.ExtensionName || ''}
+                    onChange={(e) => handleInputChange('ExtensionName', e.target.value)}
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                  {validationErrors.ExtensionName && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.ExtensionName}</p>
+                  )}
+                </>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.ExtensionName || 'N/A'}</p>
               )}
@@ -1406,6 +1475,14 @@ const handleDownload = () => {
                   value={editedDetails?.DateOfBirth || ''}
                   onChange={(e) => handleInputChange('DateOfBirth', e.target.value)}
                   className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  min="1940-01-01"
+                  max={(() => {
+                    const today = new Date();
+                    const year = today.getFullYear() - 18;
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  })()}
                 />
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.DateOfBirth}</p>
@@ -1414,12 +1491,17 @@ const handleDownload = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Place of Birth</label>
               {editingTabs.personal ? (
-                <input
-                  type="text"
-                  value={editedDetails?.PlaceOfBirth || ''}
-                  onChange={(e) => handleInputChange('PlaceOfBirth', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                />
+                <>
+                  <input
+                    type="text"
+                    value={editedDetails?.PlaceOfBirth || ''}
+                    onChange={(e) => handleInputChange('PlaceOfBirth', e.target.value)}
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  />
+                  {validationErrors.PlaceOfBirth && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.PlaceOfBirth}</p>
+                  )}
+                </>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PlaceOfBirth || 'N/A'}</p>
               )}

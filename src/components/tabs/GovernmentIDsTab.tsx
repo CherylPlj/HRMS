@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
-
 interface GovernmentIDs {
   SSSNumber?: string | null;
   TINNumber?: string | null;
@@ -29,6 +28,69 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
   isEditing, 
   onInputChange 
 }) => {
+  // Helper to allow only numbers and dashes, and enforce specific formats
+  const formatPatterns: Record<keyof GovernmentIDs, RegExp> = {
+    SSSNumber: /^\d{2}-\d{7}-\d{1}$/,
+    TINNumber: /^\d{3}-\d{3}-\d{3}$/,
+    PhilHealthNumber: /^\d{2}-\d{9}-\d{1}$/,
+    PagIbigNumber: /^\d{4}-\d{4}-\d{4}$/,
+    GSISNumber: /^\d{11}$/,
+    PRCLicenseNumber: /^\d{7}$/,
+    PRCValidity: /.*/,
+  };
+
+  const placeholders: Record<keyof GovernmentIDs, string> = {
+    SSSNumber: 'XX-XXXXXXX-X',
+    TINNumber: 'XXX-XXX-XXX',
+    PhilHealthNumber: 'XX-XXXXXXXXX-X',
+    PagIbigNumber: 'XXXX-XXXX-XXXX',
+    GSISNumber: 'XXXXXXXXXXX',
+    PRCLicenseNumber: 'XXXXXXX',
+    PRCValidity: '',
+  };
+
+  const formatIDWithDashes = (field: keyof GovernmentIDs, value: string) => {
+    // Remove all non-numeric characters
+    let digits = value.replace(/\D/g, '');
+    switch (field) {
+      case 'SSSNumber':
+        // Format: 12-3456789-0
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 9) return digits.slice(0,2) + '-' + digits.slice(2);
+        if (digits.length <= 11) return digits.slice(0,2) + '-' + digits.slice(2,9) + '-' + digits.slice(9);
+        return digits.slice(0,2) + '-' + digits.slice(2,9) + '-' + digits.slice(9,10);
+      case 'TINNumber':
+        // Format: 123-456-789
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return digits.slice(0,3) + '-' + digits.slice(3);
+        return digits.slice(0,3) + '-' + digits.slice(3,6) + '-' + digits.slice(6,9);
+      case 'PhilHealthNumber':
+        // Format: 12-345678901-2
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 11) return digits.slice(0,2) + '-' + digits.slice(2);
+        if (digits.length <= 12) return digits.slice(0,2) + '-' + digits.slice(2,11) + '-' + digits.slice(11);
+        return digits.slice(0,2) + '-' + digits.slice(2,11) + '-' + digits.slice(11,12);
+      case 'PagIbigNumber':
+        // Format: 1234-5678-9012
+        if (digits.length <= 4) return digits;
+        if (digits.length <= 8) return digits.slice(0,4) + '-' + digits.slice(4);
+        if (digits.length <= 12) return digits.slice(0,4) + '-' + digits.slice(4,8) + '-' + digits.slice(8,12);
+        return digits.slice(0,4) + '-' + digits.slice(4,8) + '-' + digits.slice(8,12);
+      case 'GSISNumber':
+        // Format: 12345678901 (no dashes)
+        return digits.slice(0,11);
+      case 'PRCLicenseNumber':
+        // Format: 1234567 (no dashes)
+        return digits.slice(0,7);
+      default:
+        return value;
+    }
+  };
+
+  const handleIDInput = (field: keyof GovernmentIDs, value: string) => {
+    const formatted = formatIDWithDashes(field, value);
+    onInputChange(field, formatted);
+  };
   const [notification, setNotification] = useState<Notification | null>(null);
 
   // Auto-hide notification after 5 seconds
@@ -99,12 +161,15 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             <input
               type="text"
               value={governmentIDs?.SSSNumber || ''}
-              onChange={(e) => onInputChange('SSSNumber', e.target.value)}
+              onChange={(e) => handleIDInput('SSSNumber', e.target.value)}
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter SSS Number"
+              placeholder={placeholders.SSSNumber}
+              inputMode="numeric"
+              pattern="\d{2}-\d{7}-\d{1}"
+              maxLength={12}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.SSSNumber || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.SSSNumber || 'No ID number has been entered yet.'}</p>
           )}
         </div>
 
@@ -114,12 +179,15 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             <input
               type="text"
               value={governmentIDs?.TINNumber || ''}
-              onChange={(e) => onInputChange('TINNumber', e.target.value)}
+              onChange={(e) => handleIDInput('TINNumber', e.target.value)}
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter TIN Number"
+              placeholder={placeholders.TINNumber}
+              inputMode="numeric"
+              pattern="\d{3}-\d{3}-\d{3}"
+              maxLength={11}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.TINNumber || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.TINNumber || 'No ID number has been entered yet.'}</p>
           )}
         </div>
 
@@ -129,12 +197,15 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             <input
               type="text"
               value={governmentIDs?.PhilHealthNumber || ''}
-              onChange={(e) => onInputChange('PhilHealthNumber', e.target.value)}
+              onChange={(e) => handleIDInput('PhilHealthNumber', e.target.value)}
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter PhilHealth Number"
+              placeholder={placeholders.PhilHealthNumber}
+              inputMode="numeric"
+              pattern="\d{2}-\d{9}-\d{1}"
+              maxLength={13}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PhilHealthNumber || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PhilHealthNumber || 'No ID number has been entered yet.'}</p>
           )}
         </div>
 
@@ -144,12 +215,15 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             <input
               type="text"
               value={governmentIDs?.PagIbigNumber || ''}
-              onChange={(e) => onInputChange('PagIbigNumber', e.target.value)}
+              onChange={(e) => handleIDInput('PagIbigNumber', e.target.value)}
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter Pag-IBIG Number"
+              placeholder={placeholders.PagIbigNumber}
+              inputMode="numeric"
+              pattern="\d{4}-\d{4}-\d{4}"
+              maxLength={14}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PagIbigNumber || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PagIbigNumber || 'No ID number has been entered yet.'}</p>
           )}
         </div>
 
@@ -159,12 +233,15 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             <input
               type="text"
               value={governmentIDs?.GSISNumber || ''}
-              onChange={(e) => onInputChange('GSISNumber', e.target.value)}
+              onChange={(e) => handleIDInput('GSISNumber', e.target.value)}
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter GSIS Number"
+              placeholder={placeholders.GSISNumber}
+              inputMode="numeric"
+              pattern="\d{11}"
+              maxLength={11}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.GSISNumber || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.GSISNumber || 'No ID number has been entered yet.'}</p>
           )}
         </div>
 
@@ -174,12 +251,15 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             <input
               type="text"
               value={governmentIDs?.PRCLicenseNumber || ''}
-              onChange={(e) => onInputChange('PRCLicenseNumber', e.target.value)}
+              onChange={(e) => handleIDInput('PRCLicenseNumber', e.target.value)}
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-              placeholder="Enter PRC License Number"
+              placeholder={placeholders.PRCLicenseNumber}
+              inputMode="numeric"
+              pattern="\d{7}"
+              maxLength={7}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PRCLicenseNumber || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PRCLicenseNumber || 'No ID number has been entered yet.'}</p>
           )}
         </div>
 
@@ -193,7 +273,7 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PRCValidity || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PRCValidity || 'No ID number has been entered yet.'}</p>
           )}
         </div>
       </div>

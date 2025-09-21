@@ -316,6 +316,7 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                     required
+                    max={new Date().toISOString().split('T')[0]}
                   />
                 </div>
                 <div>
