@@ -201,11 +201,14 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
     if (/\d/.test(school)) {
       errors.schoolName = 'School name must not contain numbers';
     }
-    if (currentRecord.yearGraduated) {
-      const minYear = 1950;
+    if (currentRecord.yearGraduated !== null && currentRecord.yearGraduated !== undefined) {
+      const yearStr = String(currentRecord.yearGraduated);
+      const minYear = 1940;
       const maxYear = new Date().getFullYear();
-      const year = currentRecord.yearGraduated;
-      if (year < minYear || year > maxYear) {
+      // Only accept 4-digit year, numbers only
+      if (!/^\d{4}$/.test(yearStr)) {
+        errors.yearGraduated = 'Year must be a 4-digit number (e.g. 2020)';
+      } else if (parseInt(yearStr) < minYear || parseInt(yearStr) > maxYear) {
         errors.yearGraduated = `Year must be between ${minYear} and ${maxYear}`;
       }
     }
@@ -478,17 +481,26 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Year Graduated</label>
                   <input
-                    type="number"
-                    min={1950}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{4}"
+                    maxLength={4}
+                    min="1940"
                     max={new Date().getFullYear()}
-                    value={currentRecord.yearGraduated || ''}
-                    onChange={(e) =>
-                      setCurrentRecord({
-                        ...currentRecord,
-                        yearGraduated: parseInt(e.target.value) || null,
-                      })
-                    }
+                    value={currentRecord.yearGraduated !== null && currentRecord.yearGraduated !== undefined ? String(currentRecord.yearGraduated) : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Only allow numbers, max 4 digits
+                      if (/^\d{0,4}$/.test(val)) {
+                        setCurrentRecord({
+                          ...currentRecord,
+                          yearGraduated: val ? parseInt(val) : null,
+                        });
+                        if (formErrors.yearGraduated) setFormErrors({ ...formErrors, yearGraduated: undefined });
+                      }
+                    }}
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    placeholder="e.g. 2020"
                   />
                   {formErrors.yearGraduated && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.yearGraduated}</p>
