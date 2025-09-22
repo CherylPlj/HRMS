@@ -203,7 +203,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
       
       if (err.message) {
         if (err.message.includes('not found') || err.message.includes('invalid')) {
-          errorMessage = 'Email address not found. Please check your email and try again.';
+          // errorMessage = 'Email address not found. Please check your email and try again.';
+          errorMessage = 'Reset code will be sent if the email is correct.';
         } else if (err.message.includes('too many') || err.message.includes('rate')) {
           errorMessage = 'Too many attempts. Please wait a few minutes before trying again.';
         } else {
