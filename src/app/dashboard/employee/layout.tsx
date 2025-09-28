@@ -7,6 +7,10 @@ import PersonalData from '@/components/PersonalData';
 import DocumentsFaculty from '@/components/DocumentsFaculty';
 import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
+import Directory from '@/components/Directory';
+import Buzz from '@/components/Buzz';
+import PerformanceFaculty from '@/components/PerformanceFaculty';
+import ClaimsFaculty from '@/components/ClaimsFaculty';
 import { useRouter } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
 import { createClient } from '@supabase/supabase-js';
@@ -205,6 +209,14 @@ export default function EmployeeDashboard() {
         return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
       case 'leave':
         return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
+      case 'performance':
+        return <PerformanceFaculty />;
+      case 'claims':
+        return <ClaimsFaculty />;
+      case 'directory':
+        return <Directory />;
+      case 'buzz':
+        return <Buzz />;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -254,7 +266,11 @@ export default function EmployeeDashboard() {
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
               { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
-              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' }
+              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
+              { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
+              { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
+              { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
+              { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' }
             ].map((item) => (
               <a
                 key={item.key}
@@ -315,6 +331,10 @@ export default function EmployeeDashboard() {
                   {activeButton === 'documents' && 'DOCUMENTS'}
                   {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE REQUEST'}
+                  {activeButton === 'performance' && 'PERFORMANCE'}
+                  {activeButton === 'claims' && 'CLAIMS'}
+                  {activeButton === 'directory' && 'DIRECTORY'}
+                  {activeButton === 'buzz' && 'SPHERE'}
                 </h1>
               </div>
 

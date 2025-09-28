@@ -7,6 +7,10 @@ import PersonalData from '@/components/PersonalData';
 import DocumentsFaculty from '@/components/DocumentsFaculty';
 import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
+import PerformanceFaculty from '@/components/PerformanceFaculty';
+import ClaimsFaculty from '@/components/ClaimsFaculty';
+import Directory from '@/components/Directory';
+import Buzz from '@/components/Buzz';
 import Chatbot from '@/components/Chatbot';
 import { useRouter } from 'next/navigation'; // <-- Add this
 import { AttendanceProvider } from '@/contexts/AttendanceContext';
@@ -141,6 +145,14 @@ export default function FacultyDashboard() {
         return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
       case 'leave':
         return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
+      case 'performance':
+        return <PerformanceFaculty />;
+      case 'claims':
+        return <ClaimsFaculty />;
+      case 'directory':
+        return <Directory />;
+      case 'buzz':
+        return <Buzz />;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
@@ -189,8 +201,12 @@ export default function FacultyDashboard() {
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
-              { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
-              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' }
+              // { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
+              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
+              { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
+              { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
+              { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
+              { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' }
             ].map((item) => (
               <a
                 key={item.key}
@@ -251,6 +267,10 @@ export default function FacultyDashboard() {
                   {activeButton === 'documents' && 'DOCUMENTS'}
                   {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE REQUEST'}
+                  {activeButton === 'performance' && 'PERFORMANCE'}
+                  {activeButton === 'claims' && 'CLAIMS'}
+                  {activeButton === 'directory' && 'DIRECTORY'}
+                  {activeButton === 'buzz' && 'SPHERE'}
                 </h1>
               </div>
 

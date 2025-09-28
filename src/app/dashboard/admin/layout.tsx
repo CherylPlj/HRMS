@@ -11,6 +11,10 @@ import RecruitmentContent from '@/components/RecruitmentContent';
 import UserManagementContent from '@/components/UserManagementContent';
 import SessionManagementContent from '@/components/SessionManagementContent';
 import Chatbot from '@/components/Chatbot';
+import ClaimsContent from '@/components/ClaimsContent';
+import PerformanceContent from '@/components/PerformanceContent';
+import Directory from '@/components/Directory';
+import Buzz from '@/components/Buzz';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '@clerk/nextjs'; // Add this import
@@ -276,6 +280,14 @@ export default function AdminDashboard() {
         return <AttendanceContent />;
       case 'leave':
         return <LeaveContent />;
+      case 'claims':
+        return <ClaimsContent />;
+      case 'performance':
+        return <PerformanceContent />;
+      case 'directory':
+        return <Directory />;
+      case 'buzz':
+        return <Buzz />;
       case 'user-management':
         return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
       case 'session-management':
@@ -330,13 +342,17 @@ export default function AdminDashboard() {
               { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
-              { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
+              // { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
+              { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
+              { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
+              { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
+              { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
-                { name: 'User Management', icon: 'fa-user-shield', key: 'user-management' },
-                { name: 'Session Management', icon: 'fa-clock', key: 'session-management' }
+                { name: 'Users', icon: 'fa-user-shield', key: 'user-management' },
+                { name: 'Sessions', icon: 'fa-clock', key: 'session-management' }
               ] : [])
             ].map((item) => (
               <a
@@ -398,6 +414,11 @@ export default function AdminDashboard() {
                   {activeButton === 'employees' && 'EMPLOYEES'}
                   {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE'}
+                  {activeButton === 'recruitment' && 'RECRUITMENT'}
+                  {activeButton === 'claims' && 'CLAIMS'}
+                  {activeButton === 'performance' && 'PERFORMANCE'}
+                  {activeButton === 'directory' && 'DIRECTORY'}
+                  {activeButton === 'buzz' && 'SPHERE'}
                   {activeButton === 'user-management' && 'USER MANAGEMENT'}
                   {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
                 </h1>
