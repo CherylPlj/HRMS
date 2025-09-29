@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation'; // For Next.js 13+
-import AttendanceFaculty from '@/components/AttendanceFaculty';
+// import AttendanceFaculty from '@/components/AttendanceFaculty';
 import PersonalData from '@/components/PersonalData';
 import DocumentsFaculty from '@/components/DocumentsFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
@@ -74,7 +74,7 @@ export default function DashboardFaculty() {
   ]);
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'attendance' | 'personal' | 'documents' | 'leave'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'personal' | 'documents' | 'leave'>('dashboard');
   const [scheduleForWeek, setScheduleForWeek] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -475,22 +475,22 @@ export default function DashboardFaculty() {
   };
 
   // Add component view conditionals
-  if (currentView === 'attendance') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            Back to Dashboard
-          </button>
-          <AttendanceFaculty onBack={() => setCurrentView('dashboard')} />
-        </div>
-      </div>
-    );
-  }
+  // if (currentView === 'attendance') {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50">
+  //       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  //         <button
+  //           onClick={() => setCurrentView('dashboard')}
+  //           className="mb-6 flex items-center text-[#800000] hover:text-[#600000] transition-colors"
+  //         >
+  //           <i className="fas fa-arrow-left mr-2"></i>
+  //           Back to Dashboard
+  //         </button>
+  //         <AttendanceFaculty onBack={() => setCurrentView('dashboard')} />
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (currentView === 'personal') {
     return (
@@ -610,8 +610,7 @@ export default function DashboardFaculty() {
 
             {/* Date & Time */}
             <div 
-              onClick={() => setCurrentView('attendance')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm"
             >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">
@@ -710,12 +709,11 @@ export default function DashboardFaculty() {
           </div>
 
           {/* Third Row: Attendance Record Bar Chart and Schedule */}
-          <div className="mb-6">
+          {/* <div className="mb-6"> */}
             {/* Attendance Record Bar Chart */}
-            <div 
-              onClick={() => setCurrentView('attendance')}
-              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
+            {/* <div 
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm"
+          >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">
                   <i className="fas fa-chart-bar mr-2 text-[#800000]"></i>
@@ -731,10 +729,10 @@ export default function DashboardFaculty() {
                 Present and Absent counts per day
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Fourth Row: Recent Attendance Records */}
-          <div 
+          {/* <div 
             onClick={() => setCurrentView('attendance')}
             className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
           >
@@ -790,7 +788,7 @@ export default function DashboardFaculty() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </>

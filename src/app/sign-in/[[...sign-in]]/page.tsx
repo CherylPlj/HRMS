@@ -1241,6 +1241,7 @@ export default function SignInPage() {
                     <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
+                      target="_blank"
                       href="https://sjsfi.vercel.app/privacy-policy"
                     >
                       Privacy Policy,
@@ -1249,6 +1250,7 @@ export default function SignInPage() {
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
                       href="https://sjsfi.vercel.app/terms-of-service"
+                      target="_blank"
                     >
                       Terms of Use,
                     </a>
@@ -1256,6 +1258,7 @@ export default function SignInPage() {
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
                       href="https://sjsfi.vercel.app/data-privacy"
+                      target="_blank"
                     >
                       Data Privacy Notice
                     </a>

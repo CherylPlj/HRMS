@@ -1094,7 +1094,7 @@ export default function DashboardContent() {
       </div>
 
       {/* Attendance Overview Section */}
-      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+      {/* <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
         <div className="flex items-center mb-6">
           <FaUserClock className="text-[#800000] text-2xl mr-3" />
           <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
@@ -1138,7 +1138,7 @@ export default function DashboardContent() {
             }
           }} />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

@@ -17,7 +17,8 @@ import Directory from '@/components/Directory';
 import Buzz from '@/components/Buzz';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile } from '@clerk/nextjs'; // Add this import
+import { UserProfile, UserButton } from '@clerk/nextjs'; // Add this import
+import { LayoutDashboard } from 'lucide-react';
 
 interface Role {
   name: string;
@@ -339,7 +340,7 @@ export default function AdminDashboard() {
           <nav className={`flex-1 flex flex-col overflow-y-auto
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
                         {[
-              { name: 'Dashboard', icon: 'fa-tachometer-alt', key: 'dashboard' },
+              { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
               // { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
@@ -368,7 +369,14 @@ export default function AdminDashboard() {
                 onClick={() => handleButtonClick(item.key)}
               >
                 <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
-                  <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+                  {typeof item.icon === 'string' ? (
+                    <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+                  ) : (
+                    (() => {
+                      const Icon = item.icon as React.ComponentType<{ className?: string }>;
+                      return <Icon className={isSidebarOpen ? 'w-6 h-6' : 'w-5 h-5'} />;
+                    })()
+                  )}
                 </div>
                 <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
                   {item.name}
@@ -377,27 +385,7 @@ export default function AdminDashboard() {
             ))}
           </nav>
 
-          {/* Logout Button */}
-          <div className={`${isSidebarOpen ? 'p-3' : 'p-2'}`}>
-            <a
-              href="#"
-              className={`flex items-center rounded-md cursor-pointer transition-colors
-                ${isSidebarOpen 
-                  ? 'space-x-3 px-3 py-2' 
-                  : 'flex-col justify-center py-2 space-y-1'
-                }
-                ${activeButton === 'logout' ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
-              title="Log Out"
-              onClick={() => setLogoutModalVisible(true)}
-            >
-              <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
-                <i className={`fas fa-sign-out-alt ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
-              </div>
-              <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
-                Log Out
-              </span>
-            </a>
-          </div>
+          {/* Logout Button removed; handled via user menu in header */}
         </div>
 
         {/* Main Content Area - Adjusted margin for sidebar */}
@@ -437,37 +425,19 @@ export default function AdminDashboard() {
                   <i className="fas fa-comments text-black text-lg"></i>
                 </a>
 
-                {/* Profile Section */}
-                <div className="flex items-center space-x-3">
-                  <a
-                    href="#"
-                    className="p-1 rounded-full hover:bg-gray-200 transition"
-                    title="Profile"
-                    onClick={toggleProfile}
-                  >
-                    {user?.imageUrl ? (
-                      <img
-                        src={user.imageUrl}
-                        alt={`${user.firstName}'s profile`}
-                        className="w-8 sm:w-10 h-8 sm:h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <i className="fas fa-user-circle text-black text-xl sm:text-2xl"></i>
-                    )}
-                  </a>
-
-                  {/* User Info - Responsive */}
-                  {isLoaded && isSignedIn && user && (
-                    <a
-                      href="#"
-                      onClick={toggleProfile}
-                      className="flex flex-col text-black hover:text-red-700 transition"
-                      title="User Profile"
-                    >
-                      <div className="font-semibold text-sm sm:text-base">{user.firstName} {user.lastName}</div>
-                      <div className="text-xs text-gray-600 hidden sm:block">{user.emailAddresses[0]?.emailAddress}</div>
-                    </a>
-                  )}
+                {/* Profile Section using Clerk's UserButton */}
+                <div className="flex items-center">
+                  <UserButton
+                    afterSignOutUrl="/"
+                    userProfileMode="modal"
+                    appearance={{
+                      elements: {
+                        userButtonPopoverCard: 'rounded-lg shadow-xl border border-gray-200',
+                        userButtonPopoverActionButton: 'hover:bg-gray-100',
+                        userButtonAvatarBox: 'w-8 h-8 sm:w-10 sm:h-10'
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>

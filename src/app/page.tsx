@@ -31,9 +31,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Background */}
-      <div className="flex-1 bg-[url('/portalBG.png')] bg-cover bg-center" />
-
+      {/* Left side - Background */} 
+      {/* TO Change */}
+      <div className="flex-1 bg-[url('/portalBG.png')] bg-cover bg-center" /> 
       {/* Right side - Login panel */}
       <div className="absolute right-0 w-full md:w-1/3 min-h-screen min-w-[360px] pt-[10vh] overflow-hidden bg-white/70 backdrop-blur-[20px] backdrop-saturate-[168%] shadow-md m-0 rounded-none flex flex-col bg-clip-border border border-transparent break-words mb-4">
         <div className="flex flex-col items-center h-full w-full">
@@ -77,9 +77,10 @@ export default function Home() {
                 <p className="text-sm text-black text-center">
                   By using this service, you understood and agree to the
                   <span className="font-medium text-[#DAA520]"> SJSFI Online Services </span>
-<a
+                  <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
                       href="https://sjsfi.vercel.app/privacy-policy"
+                      target="_blank"
                     >
                       Privacy Policy,
                     </a>
@@ -87,6 +88,7 @@ export default function Home() {
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
                       href="https://sjsfi.vercel.app/terms-of-service"
+                      target="_blank"
                     >
                       Terms of Use,
                     </a>
@@ -94,6 +96,7 @@ export default function Home() {
                     <a
                       className="text-[#800000] hover:text-[#800000]/80 transition duration-200 ease-in-out underline"
                       href="https://sjsfi.vercel.app/data-privacy"
+                      target="_blank"
                     >
                       Data Privacy Notice
                     </a>
