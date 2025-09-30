@@ -3,7 +3,7 @@ export interface MedicalInfo {
   lastCheckup?: Date;
   vaccination?: string;
   allergies?: string;
-  
+
   // Disability Information
   hasDisability: boolean;
   disabilityType?: string;
@@ -60,11 +60,11 @@ export interface Employee {
   Nationality?: string;
   Religion?: string;
   BloodType?: string;
-  
+
   // Relations
   governmentIds?: GovernmentIDs;
   medicalInfo?: MedicalInfo;
-  
+
   // Other fields as needed
   createdAt: Date;
   updatedAt?: Date;
