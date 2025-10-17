@@ -25,7 +25,7 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [formErrors, setFormErrors] = useState<{ schoolName?: string; yearGraduated?: string }>(
+  const [formErrors, setFormErrors] = useState<{ schoolName?: string; yearGraduated?: string; course?: string }>(
     {}
   );
 
@@ -196,10 +196,17 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
     if (!currentRecord) return;
 
     // Validate fields
-    const errors: { schoolName?: string; yearGraduated?: string } = {};
+    const errors: { schoolName?: string; yearGraduated?: string; course?: string } = {};
     const school = (currentRecord.schoolName || '').trim();
     if (/\d/.test(school)) {
       errors.schoolName = 'School name must not contain numbers';
+    }
+    const requiresCourse = courseLevels.includes(currentRecord.level);
+    if (requiresCourse) {
+      const courseVal = (currentRecord.course || '').toString().trim();
+      if (!courseVal) {
+        errors.course = 'Course is required for the selected level.';
+      }
     }
     if (currentRecord.yearGraduated !== null && currentRecord.yearGraduated !== undefined) {
       const yearStr = String(currentRecord.yearGraduated);
@@ -457,7 +464,7 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Course</label>
+                  <label className="block text-sm font-medium text-gray-700">Course {courseLevels.includes(currentRecord.level) ? <span className="text-red-500">*</span> : null}</label>
                   <input
                     type="text"
                     list="courseSuggestions"
@@ -466,17 +473,22 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                     onChange={(e) => {
                       if (courseLevels.includes(currentRecord.level)) {
                         setCurrentRecord({ ...currentRecord, course: e.target.value });
+                        if (formErrors.course) setFormErrors({ ...formErrors, course: undefined });
                       }
                     }}
                     className={`mt-1 w-full p-2 rounded border border-gray-300 ${courseLevels.includes(currentRecord.level) ? 'bg-gray-50 text-black' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
                     disabled={!courseLevels.includes(currentRecord.level)}
                     readOnly={!courseLevels.includes(currentRecord.level)}
+                    required={courseLevels.includes(currentRecord.level)}
                   />
                   <datalist id="courseSuggestions">
                     {courseSuggestions.map((c) => (
                       <option key={c} value={c} />
                     ))}
                   </datalist>
+                  {formErrors.course && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.course}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Year Graduated</label>

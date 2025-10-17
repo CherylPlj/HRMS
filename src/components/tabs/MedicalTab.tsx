@@ -50,13 +50,39 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
   const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<MedicalInfo | null>(null);
+  const [bpSystolic, setBpSystolic] = useState<string>('');
+  const [bpDiastolic, setBpDiastolic] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    medicalNotes?: string;
+    bloodPressure?: string;
+    allergies?: string;
+    vaccination?: string;
+    primaryPhysician?: string;
+    physicianContact?: string;
+    healthInsuranceProvider?: string;
+    healthInsuranceNumber?: string;
+    emergencyProcedures?: string;
+  }>({});
 
   useEffect(() => {
     fetchMedicalInfo();
   }, [employeeId]);
+
+  // Keep bpSystolic and bpDiastolic in sync when editing a record
+  useEffect(() => {
+    if (!currentRecord) {
+      setBpSystolic('');
+      setBpDiastolic('');
+      return;
+    }
+    const bp = currentRecord.bloodPressure || '';
+    const parts = bp.split('/');
+    setBpSystolic(parts[0] || '');
+    setBpDiastolic(parts[1] || '');
+  }, [currentRecord]);
 
   // Auto-hide notifications after 5 seconds
   useEffect(() => {
@@ -94,6 +120,93 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentRecord) return;
+    // Build a record copy where bloodPressure is the combined systolic/diastolic
+    const record: typeof currentRecord = {
+      ...currentRecord,
+      bloodPressure: (bpSystolic || bpDiastolic) ? `${bpSystolic}/${bpDiastolic}` : '',
+      emergencyProcedures: currentRecord.emergencyProcedures ? currentRecord.emergencyProcedures.trim() : ''
+    };
+
+    // Validate fields
+    const errors: typeof formErrors = {};
+
+    // Medical notes: limit length to 2000 chars
+    if (record.medicalNotes && record.medicalNotes.length > 2000) {
+      errors.medicalNotes = 'Medical notes must be less than 2000 characters.';
+    }
+
+    // Medical notes: allow only letters, numbers and spaces
+    if (record.medicalNotes && !/^[A-Za-z0-9\s]*$/.test(record.medicalNotes)) {
+      errors.medicalNotes = 'Medical notes may only contain letters, numbers and spaces.';
+    }
+
+    // Blood pressure: accept formats like '120/80' where each side is 1-3 digits
+    if (record.bloodPressure) {
+      if (!/^\d{1,3}\/\d{1,3}$/.test(record.bloodPressure.trim())) {
+        errors.bloodPressure = 'e.g. 120/80';
+      }
+    }
+
+    // Allergies & vaccination: limit length
+    if (record.allergies && record.allergies.length > 1000) {
+      errors.allergies = 'Allergies text is too long.';
+    }
+    // Allergies: only letters and spaces
+    if (currentRecord.allergies && !/^[A-Za-z\s]*$/.test(currentRecord.allergies)) {
+      errors.allergies = 'Allergies may only contain letters and spaces.';
+    }
+    if (record.vaccination && record.vaccination.length > 1000) {
+      errors.vaccination = 'Vaccination information is too long.';
+    }
+    // Vaccination: allow letters, numbers and spaces
+    if (currentRecord.vaccination && !/^[A-Za-z0-9\s]*$/.test(currentRecord.vaccination)) {
+      errors.vaccination = 'Vaccination may only contain letters, numbers and spaces.';
+    }
+
+    // Primary physician: require letters and common punctuation, max length
+    if (record.primaryPhysician && record.primaryPhysician.length > 200) {
+      errors.primaryPhysician = 'Primary physician name is too long.';
+    }
+    // Primary physician: allow only letters, spaces and periods
+    if (record.primaryPhysician && !/^[A-Za-z.\s]*$/.test(record.primaryPhysician)) {
+      errors.primaryPhysician = 'Primary physician may only contain letters, spaces and periods.';
+    }
+
+    // Physician contact: digits only, 7-15 digits
+    if (record.physicianContact) {
+      const digits = (record.physicianContact || '').replace(/\D/g, '');
+      if (!/^\d{7,15}$/.test(digits)) {
+        errors.physicianContact = 'Enter a valid physician contact number (7-15 digits).';
+      }
+    }
+
+    // Health insurance provider and number: basic checks
+    if (record.healthInsuranceProvider && record.healthInsuranceProvider.length > 200) {
+      errors.healthInsuranceProvider = 'Provider name is too long.';
+    }
+    // Health insurance provider: only letters and spaces
+    if (record.healthInsuranceProvider && !/^[A-Za-z\s]*$/.test(record.healthInsuranceProvider)) {
+      errors.healthInsuranceProvider = 'Health insurance provider may only contain letters and spaces.';
+    }
+    if (record.healthInsuranceNumber) {
+      const val = String(record.healthInsuranceNumber);
+      if (val.length > 100) {
+        errors.healthInsuranceNumber = 'Insurance number is too long.';
+      } else if (!/^[A-Za-z0-9]+$/.test(val)) {
+        errors.healthInsuranceNumber = 'Insurance number must contain only letters and numbers.';
+      }
+    }
+
+    // Emergency procedures: limit length and allow printable characters only
+    if (record.emergencyProcedures && record.emergencyProcedures.length > 2000) {
+      errors.emergencyProcedures = 'Emergency procedures text is too long.';
+    }
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setNotification({ type: 'error', message: 'Please fix the highlighted errors.' });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -106,7 +219,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(currentRecord),
+        body: JSON.stringify(record),
       });
 
       if (response.ok) {
@@ -203,13 +316,11 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Last Checkup</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {medicalInfo.lastCheckup ? new Date(medicalInfo.lastCheckup).toLocaleDateString() : 'N/A'}
-                </p>
+                <p className="mt-1 text-sm text-gray-900">{medicalInfo.lastCheckup ? new Date(medicalInfo.lastCheckup).toLocaleDateString() : 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Blood Pressure</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.bloodPressure || 'N/A'}</p>
+                <p className="mt-1 text-sm text-gray-900">{medicalInfo.bloodPressure ? medicalInfo.bloodPressure : 'N/A / N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Height</label>
@@ -360,12 +471,19 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                       <label className="block text-sm font-medium text-gray-700">Medical Notes</label>
                       <textarea
                         value={currentRecord.medicalNotes || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, medicalNotes: e.target.value })
-                        }
+                        placeholder="Add medical notes here..."
+                        onChange={(e) => {
+                            // Allow letters, numbers and spaces only
+                            const cleaned = e.target.value.replace(/[^A-Za-z0-9\s]/g, '').slice(0, 2000);
+                            setCurrentRecord({ ...currentRecord, medicalNotes: cleaned });
+                            if (formErrors.medicalNotes) setFormErrors({ ...formErrors, medicalNotes: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                         rows={3}
                       />
+                        {formErrors.medicalNotes && (
+                          <p className="mt-1 text-sm text-red-600">{formErrors.medicalNotes}</p>
+                        )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Last Checkup</label>
@@ -383,23 +501,48 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Blood Pressure</label>
-                      <input
-                        type="text"
-                        value={currentRecord.bloodPressure || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, bloodPressure: e.target.value })
-                        }
-                        className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                      />
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="000"
+                          value={bpSystolic}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 3);
+                            setBpSystolic(digits);
+                            setCurrentRecord({ ...currentRecord, bloodPressure: (digits || bpDiastolic) ? `${digits}/${bpDiastolic}` : '' });
+                            if (formErrors.bloodPressure) setFormErrors({ ...formErrors, bloodPressure: undefined });
+                          }}
+                          className="w-16 bg-gray-50 text-black p-2 rounded border border-gray-300"
+                        />
+                        <div className="text-lg leading-none">/</div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="000"
+                          value={bpDiastolic}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 3);
+                            setBpDiastolic(digits);
+                            setCurrentRecord({ ...currentRecord, bloodPressure: (bpSystolic || digits) ? `${bpSystolic}/${digits}` : '' });
+                            if (formErrors.bloodPressure) setFormErrors({ ...formErrors, bloodPressure: undefined });
+                          }}
+                          className="w-16 bg-gray-50 text-black p-2 rounded border border-gray-300"
+                        />
+                      </div>
+                      {formErrors.bloodPressure && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.bloodPressure}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
                       <input
                         type="number"
-                        step="0.1"
-                        value={currentRecord.height || ''}
+                        step="1"
+                        value={currentRecord?.height ?? ''}
+                        placeholder="E.g. 170"
                         onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, height: parseFloat(e.target.value) || undefined })
+                          setCurrentRecord({ ...currentRecord, height: e.target.value ? parseInt(e.target.value, 10) : undefined })
                         }
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       />
@@ -408,10 +551,11 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                       <label className="block text-sm font-medium text-gray-700">Weight (kg)</label>
                       <input
                         type="number"
-                        step="0.1"
-                        value={currentRecord.weight || ''}
+                        step="1"
+                        value={currentRecord?.weight ?? ''}
+                        placeholder="E.g. 70"
                         onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, weight: parseFloat(e.target.value) || undefined })
+                          setCurrentRecord({ ...currentRecord, weight: e.target.value ? parseInt(e.target.value, 10) : undefined })
                         }
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       />
@@ -420,23 +564,37 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                       <label className="block text-sm font-medium text-gray-700">Allergies</label>
                       <textarea
                         value={currentRecord.allergies || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, allergies: e.target.value })
-                        }
+                        placeholder="N/A"
+                        onChange={(e) => {
+                          // Allow letters and spaces only
+                          const cleaned = e.target.value.replace(/[^A-Za-z\s]/g, '').slice(0, 1000);
+                          setCurrentRecord({ ...currentRecord, allergies: cleaned });
+                          if (formErrors.allergies) setFormErrors({ ...formErrors, allergies: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                         rows={3}
                       />
+                      {formErrors.allergies && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.allergies}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Vaccination</label>
                       <textarea
                         value={currentRecord.vaccination || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, vaccination: e.target.value })
-                        }
+                        placeholder="N/A"
+                        onChange={(e) => {
+                          // Allow letters, numbers and spaces only
+                          const cleaned = e.target.value.replace(/[^A-Za-z0-9\s]/g, '').slice(0, 1000);
+                          setCurrentRecord({ ...currentRecord, vaccination: cleaned });
+                          if (formErrors.vaccination) setFormErrors({ ...formErrors, vaccination: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                         rows={3}
                       />
+                      {formErrors.vaccination && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.vaccination}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -464,32 +622,35 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <label className="block text-sm font-medium text-gray-700">Disability Type</label>
                           <input
                             type="text"
-                            value={currentRecord.disabilityType || ''}
-                            onChange={(e) =>
-                              setCurrentRecord({ ...currentRecord, disabilityType: e.target.value })
-                            }
+                              value={currentRecord.disabilityType || ''}
+                              placeholder="N/A"
+                              onChange={(e) =>
+                                setCurrentRecord({ ...currentRecord, disabilityType: e.target.value })
+                              }
                             className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Disability Details</label>
-                          <textarea
-                            value={currentRecord.disabilityDetails || ''}
-                            onChange={(e) =>
-                              setCurrentRecord({ ...currentRecord, disabilityDetails: e.target.value })
-                            }
-                            className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                            rows={3}
-                          />
+                            <textarea
+                              value={currentRecord.disabilityDetails || ''}
+                              placeholder="N/A"
+                              onChange={(e) =>
+                                setCurrentRecord({ ...currentRecord, disabilityDetails: e.target.value })
+                              }
+                              className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                              rows={3}
+                            />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">PWD ID Number</label>
                           <input
                             type="text"
-                            value={currentRecord.pwdIdNumber || ''}
-                            onChange={(e) =>
-                              setCurrentRecord({ ...currentRecord, pwdIdNumber: e.target.value })
-                            }
+                              value={currentRecord.pwdIdNumber || ''}
+                              placeholder="N/A"
+                              onChange={(e) =>
+                                setCurrentRecord({ ...currentRecord, pwdIdNumber: e.target.value })
+                              }
                             className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                           />
                         </div>
@@ -512,6 +673,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <input
                             type="text"
                             value={currentRecord.disabilityCertification || ''}
+                            placeholder="N/A"
                             onChange={(e) =>
                               setCurrentRecord({ ...currentRecord, disabilityCertification: e.target.value })
                             }
@@ -536,6 +698,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <input
                             type="text"
                             value={currentRecord.assistiveTechnology || ''}
+                            placeholder="N/A"
                             onChange={(e) =>
                               setCurrentRecord({ ...currentRecord, assistiveTechnology: e.target.value })
                             }
@@ -547,6 +710,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <input
                             type="text"
                             value={currentRecord.mobilityAids || ''}
+                            placeholder="N/A"
                             onChange={(e) =>
                               setCurrentRecord({ ...currentRecord, mobilityAids: e.target.value })
                             }
@@ -558,6 +722,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <input
                             type="text"
                             value={currentRecord.communicationNeeds || ''}
+                            placeholder="N/A"
                             onChange={(e) =>
                               setCurrentRecord({ ...currentRecord, communicationNeeds: e.target.value })
                             }
@@ -568,6 +733,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <label className="block text-sm font-medium text-gray-700">Workplace Modifications</label>
                           <textarea
                             value={currentRecord.workplaceModifications || ''}
+                            placeholder="N/A"
                             onChange={(e) =>
                               setCurrentRecord({ ...currentRecord, workplaceModifications: e.target.value })
                             }
@@ -579,6 +745,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                           <label className="block text-sm font-medium text-gray-700">Emergency Protocol</label>
                           <textarea
                             value={currentRecord.emergencyProtocol || ''}
+                            placeholder=""
                             onChange={(e) =>
                               setCurrentRecord({ ...currentRecord, emergencyProtocol: e.target.value })
                             }
@@ -600,56 +767,77 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                       <input
                         type="text"
                         value={currentRecord.primaryPhysician || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, primaryPhysician: e.target.value })
-                        }
+                        onChange={(e) => {
+                          // Allow letters, spaces and periods
+                          const cleaned = e.target.value.replace(/[^A-Za-z.\s]/g, '').slice(0, 200);
+                          setCurrentRecord({ ...currentRecord, primaryPhysician: cleaned });
+                          if (formErrors.primaryPhysician) setFormErrors({ ...formErrors, primaryPhysician: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       />
+                      {formErrors.primaryPhysician && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.primaryPhysician}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Physician Contact</label>
                       <input
-                        type="text"
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="Add contact number"
                         value={currentRecord.physicianContact || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, physicianContact: e.target.value })
-                        }
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 15);
+                          setCurrentRecord({ ...currentRecord, physicianContact: digitsOnly });
+                          if (formErrors.physicianContact) setFormErrors({ ...formErrors, physicianContact: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       />
+                      {formErrors.physicianContact && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.physicianContact}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Health Insurance Provider</label>
                       <input
                         type="text"
                         value={currentRecord.healthInsuranceProvider || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({
-                            ...currentRecord,
-                            healthInsuranceProvider: e.target.value,
-                          })
-                        }
+                        onChange={(e) => {
+                          // Allow letters and spaces only
+                          const cleaned = e.target.value.replace(/[^A-Za-z\s]/g, '').slice(0, 200);
+                          setCurrentRecord({ ...currentRecord, healthInsuranceProvider: cleaned });
+                          if (formErrors.healthInsuranceProvider) setFormErrors({ ...formErrors, healthInsuranceProvider: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       />
+                      {formErrors.healthInsuranceProvider && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.healthInsuranceProvider}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Health Insurance Number</label>
                       <input
                         type="text"
-                        value={currentRecord.healthInsuranceNumber || ''}
-                        onChange={(e) =>
-                          setCurrentRecord({
-                            ...currentRecord,
-                            healthInsuranceNumber: e.target.value,
-                          })
-                        }
+                        inputMode="text"
+                        placeholder={currentRecord?.healthInsuranceNumber ? 'Add insurance number' : ''}
+                        value={currentRecord?.healthInsuranceNumber || ''}
+                        onChange={(e) => {
+                          const alnum = e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 100);
+                          setCurrentRecord({ ...currentRecord, healthInsuranceNumber: alnum });
+                          if (formErrors.healthInsuranceNumber) setFormErrors({ ...formErrors, healthInsuranceNumber: undefined });
+                        }}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                       />
+                      {formErrors.healthInsuranceNumber && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.healthInsuranceNumber}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Health Insurance Expiry Date</label>
                       <input
                         type="date"
-                        value={currentRecord.healthInsuranceExpiryDate ? new Date(currentRecord.healthInsuranceExpiryDate).toISOString().split('T')[0] : ''}
+                        value={currentRecord?.healthInsuranceExpiryDate ? new Date(currentRecord.healthInsuranceExpiryDate).toISOString().split('T')[0] : ''}
+                        placeholder="N/A"
                         onChange={(e) =>
                           setCurrentRecord({
                             ...currentRecord,
@@ -662,12 +850,18 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Emergency Procedures</label>
                       <textarea
-                        value={currentRecord.emergencyProcedures || ''}
+                        value={currentRecord?.emergencyProcedures || ''}
+                        placeholder="Add emergency procedures here..."
                         onChange={(e) =>
-                          setCurrentRecord({
-                            ...currentRecord,
-                            emergencyProcedures: e.target.value,
-                          })
+                          {
+                            // Allow printable characters only and trim to 2000 chars
+                            const cleaned = e.target.value.replace(/[^\x20-\x7E\n\r\t]/g, '').slice(0, 2000);
+                            setCurrentRecord({
+                              ...currentRecord,
+                              emergencyProcedures: cleaned,
+                            });
+                            if (formErrors.emergencyProcedures) setFormErrors({ ...formErrors, emergencyProcedures: undefined });
+                          }
                         }
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
                         rows={3}

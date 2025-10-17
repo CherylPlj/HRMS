@@ -23,6 +23,7 @@ interface Notification {
 interface FormErrors {
   schoolName?: string;
   position?: string;
+  endDate?: string;
   dateRange?: string;
 }
 
@@ -82,6 +83,10 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
 
     const start = record.startDate ? new Date(record.startDate) : null;
     const end = record.endDate ? new Date(record.endDate) : null;
+    // When adding a new record (no id), require endDate
+    if (!record.id && !record.endDate) {
+      errors.endDate = 'End date is required when adding a work experience.';
+    }
     if (start && end && end.getTime() < start.getTime()) {
       errors.dateRange = 'End date cannot be earlier than start date';
     }
@@ -320,16 +325,20 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">End Date</label>
+                  <label className="block text-sm font-medium text-gray-700">End Date {(!currentRecord || !currentRecord.id) ? <span className="text-red-500">*</span> : null}</label>
                   <input
                     type="date"
                     value={currentRecord.endDate ? new Date(currentRecord.endDate).toISOString().split('T')[0] : ''}
                     min={currentRecord.startDate ? new Date(currentRecord.startDate).toISOString().split('T')[0] : undefined}
                     onChange={(e) =>
-                      { const updated = { ...currentRecord, endDate: e.target.value ? new Date(e.target.value) : null } as WorkExperience; setCurrentRecord(updated); if (formErrors.dateRange) setFormErrors({ ...formErrors, dateRange: undefined }); }
+                      { const updated = { ...currentRecord, endDate: e.target.value ? new Date(e.target.value) : null } as WorkExperience; setCurrentRecord(updated); if (formErrors.dateRange || formErrors.endDate) setFormErrors({ ...formErrors, dateRange: undefined, endDate: undefined }); }
                     }
                     className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    required={!currentRecord?.id}
                   />
+                  {formErrors.endDate && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.endDate}</p>
+                  )}
                   {formErrors.dateRange && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.dateRange}</p>
                   )}
