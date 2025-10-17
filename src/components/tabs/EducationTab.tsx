@@ -28,7 +28,7 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
   const [formErrors, setFormErrors] = useState<{ schoolName?: string; yearGraduated?: string; course?: string }>(
     {}
   );
-
+// added fix by Aub
   const courseSuggestions: string[] = [
     'Bachelor of Arts in Communication',  
     'Bachelor of Arts in English',  
