@@ -76,14 +76,43 @@ export default function AdminDashboard() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Function to position chatbot below the chat icon
+  // Function to position chatbot on the right side of the chat icon
   const positionChatbot = () => {
     if (chatButtonRef.current) {
       const buttonRect = chatButtonRef.current.getBoundingClientRect();
-      setChatbotPosition({
-        x: buttonRect.left - 190, // Offset to center the chatbot (380px width / 2)
-        y: buttonRect.bottom + 10 // 10px gap below the button
-      });
+      const chatbotWidth = 380;
+      const chatbotHeight = 600;
+      const margin = 10;
+      
+      // Calculate position to the right of the button
+      let x = buttonRect.right + margin;
+      let y = buttonRect.bottom + margin;
+      
+      // Check viewport boundaries and adjust if necessary
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // If chatbot would go off the right edge, position it to the left of the button
+      if (x + chatbotWidth > viewportWidth) {
+        x = buttonRect.left - chatbotWidth - margin;
+      }
+      
+      // If chatbot would go off the bottom edge, position it above the button
+      if (y + chatbotHeight > viewportHeight) {
+        y = buttonRect.top - chatbotHeight - margin;
+      }
+      
+      // Ensure chatbot doesn't go off the left edge
+      if (x < margin) {
+        x = margin;
+      }
+      
+      // Ensure chatbot doesn't go off the top edge
+      if (y < margin) {
+        y = margin;
+      }
+      
+      setChatbotPosition({ x, y });
     }
   };
 
@@ -92,6 +121,18 @@ export default function AdminDashboard() {
     if (isChatbotVisible) {
       positionChatbot();
     }
+  }, [isChatbotVisible]);
+
+  // Reposition chatbot on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (isChatbotVisible) {
+        positionChatbot();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [isChatbotVisible]);
 
   // Check user's role and redirect if not admin
@@ -346,10 +387,10 @@ export default function AdminDashboard() {
               // { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
-              { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
-              { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
+              // { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
+              // { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' },
+              // { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
                 { name: 'Users', icon: 'fa-user-shield', key: 'user-management' },

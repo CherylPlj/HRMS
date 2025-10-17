@@ -102,14 +102,43 @@ export default function EmployeeDashboard() {
     checkUserRole();
   }, [isLoaded, isSignedIn, user, router]);
 
-  // Function to position chatbot below the chat icon
+  // Function to position chatbot on the right side of the chat icon
   const positionChatbot = () => {
     if (chatButtonRef.current) {
       const buttonRect = chatButtonRef.current.getBoundingClientRect();
-      setChatbotPosition({
-        x: buttonRect.left - 150, // Offset to center the chatbot
-        y: buttonRect.bottom + 10 // 10px gap below the button
-      });
+      const chatbotWidth = 350;
+      const chatbotHeight = 420;
+      const margin = 10;
+      
+      // Calculate position to the right of the button
+      let x = buttonRect.right + margin;
+      let y = buttonRect.bottom + margin;
+      
+      // Check viewport boundaries and adjust if necessary
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // If chatbot would go off the right edge, position it to the left of the button
+      if (x + chatbotWidth > viewportWidth) {
+        x = buttonRect.left - chatbotWidth - margin;
+      }
+      
+      // If chatbot would go off the bottom edge, position it above the button
+      if (y + chatbotHeight > viewportHeight) {
+        y = buttonRect.top - chatbotHeight - margin;
+      }
+      
+      // Ensure chatbot doesn't go off the left edge
+      if (x < margin) {
+        x = margin;
+      }
+      
+      // Ensure chatbot doesn't go off the top edge
+      if (y < margin) {
+        y = margin;
+      }
+      
+      setChatbotPosition({ x, y });
     }
   };
 
@@ -118,6 +147,18 @@ export default function EmployeeDashboard() {
     if (isChatbotVisible) {
       positionChatbot();
     }
+  }, [isChatbotVisible]);
+
+  // Reposition chatbot on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (isChatbotVisible) {
+        positionChatbot();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [isChatbotVisible]);
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -266,12 +307,12 @@ export default function EmployeeDashboard() {
               { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
-              { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
+              // { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
               { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
-              { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
-              { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
+              // { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
+              // { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' }
+              // { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' }
             ].map((item) => (
               <a
                 key={item.key}

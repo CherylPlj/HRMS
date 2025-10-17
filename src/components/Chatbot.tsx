@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ChatMessage {
   type: 'user' | 'ai';
@@ -30,6 +31,7 @@ export default function Chatbot({
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isQuickQuestionsExpanded, setIsQuickQuestionsExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatbotRef = useRef<HTMLDivElement>(null);
@@ -238,20 +240,32 @@ export default function Chatbot({
 
         {/* Suggested Prompts */}
         {messages.length <= 1 && (
-          <div className="p-4 bg-white border-t border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Quick questions:</h4>
-            <div className="space-y-2">
-              {suggestedPrompts.map((prompt, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSendMessage(prompt)}
-                  disabled={isLoading}
-                  className="w-full text-left text-sm text-gray-600 hover:text-[#800000] hover:bg-gray-50 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+          <div className="bg-white border-t border-gray-200">
+            <button
+              onClick={() => setIsQuickQuestionsExpanded(!isQuickQuestionsExpanded)}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <h4 className="text-sm font-semibold text-gray-700">Quick questions:</h4>
+              {isQuickQuestionsExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              )}
+            </button>
+            {isQuickQuestionsExpanded && (
+              <div className="px-4 pb-4 space-y-2">
+                {suggestedPrompts.map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSendMessage(prompt)}
+                    disabled={isLoading}
+                    className="w-full text-left text-sm text-gray-600 hover:text-[#800000] hover:bg-gray-50 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

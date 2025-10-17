@@ -40,6 +40,7 @@ model User {
   Report       Report[]
   Employee     Employee?      @relation(fields: [EmployeeID], references: [EmployeeID])
   Role         UserRole[]
+  trainingDocs  TrainingDocument[]
 
   @@index([invitationId], map: "user_invitation_id_idx")
 }
@@ -67,6 +68,7 @@ model Faculty {
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID])
   Leaves           Leave[]
   Schedules        Schedules[]
+  isDeleted    Boolean        @default(false)
 }
 
 model Employee {
@@ -113,6 +115,7 @@ model Employee {
   certificates      Certificate[]
   skills            Skill[]
   trainings         trainings[]
+  isDeleted    Boolean        @default(false)
 }
 
 model GovernmentID {
@@ -286,6 +289,40 @@ model AIChat {
   Answer   String
   Status   String
   User     User   @relation(fields: [UserID], references: [UserID])
+  dateSubmitted DateTime @default(now())
+}
+
+model ChatTopic {
+  id        String      @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  topicId   String
+  sender    String   // 'user' or 'bot'
+  text      String
+  timestamp DateTime @default(now())
+  ChatTopic ChatTopic @relation(fields: [topicId], references: [id])
+}
+
+model TrainingDocument {
+  id         String   @id @default(cuid())
+  UserID     String
+  title      String
+  content    String
+  keywords   String[] // Extracted keywords for better search
+  sections   Json?    // Structured content sections for better retrieval
+  fileUrl    String?
+  fileType   String
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+  status     Status   @default(Active)
+  User       User     @relation(fields: [UserID], references: [UserID])
 }
 
 model Report {
