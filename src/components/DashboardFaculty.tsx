@@ -591,7 +591,7 @@ export default function DashboardFaculty() {
 
             {/* Employment Status */}
             <div 
-              onClick={() => setCurrentView('personal')}
+              // onClick={() => setCurrentView('personal')}
               className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
             >
               <div className="flex justify-between items-center mb-4">
@@ -599,7 +599,7 @@ export default function DashboardFaculty() {
                   <i className="fas fa-id-badge mr-2 text-[#800000]"></i>
                   Employment Status
                 </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
+                {/* <i className="fas fa-chevron-right text-gray-400"></i> */}
               </div>
               <div className="flex items-center space-x-2 mb-2">
                 <i className="fas fa-check-circle text-green-500"></i>
@@ -617,7 +617,7 @@ export default function DashboardFaculty() {
                   <i className="fas fa-clock mr-2 text-[#800000]"></i>
                   Date & Time
                 </h3>
-                <i className="fas fa-chevron-right text-gray-400"></i>
+                {/* <i className="fas fa-chevron-right text-gray-400"></i> */}
               </div>
               <p className="text-gray-700"><i className="fas fa-calendar mr-2"></i>{currentDate}</p>
               <p className="text-gray-700"><i className="fas fa-clock mr-2"></i>{currentTime}</p>
