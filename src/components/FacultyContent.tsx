@@ -2519,6 +2519,7 @@ const FacultyContent = () => {
               </div>
 
               <input
+                title="file-input"
                 type="file"
                 ref={fileInputRef}
                 accept=".csv"

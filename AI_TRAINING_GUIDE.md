@@ -14,9 +14,9 @@ The AI uses role-specific system prompts that provide context about:
 
 ### 2. Training Data
 Pre-defined Q&A pairs for common questions:
-- **Admin questions**: Faculty management, document approval, attendance reports
-- **Faculty questions**: Personal data, leave requests, attendance recording
-- **Employee questions**: Information updates, leave requests, attendance viewing
+- **Admin questions**: Faculty management, document approval
+- **Faculty questions**: Personal data, leave requests
+- **Employee questions**: Information updates, leave requests
 
 ### 3. Context-Aware Responses
 The AI receives:
@@ -35,8 +35,6 @@ const TRAINING_DATA = {
   admin: {
     // Add more admin-specific questions
     "How do I reset a user's password?": "To reset a user's password:\n1. Go to User Management\n2. Find the user\n3. Click 'Reset Password'\n4. Send invitation email\n\nThe user will receive an email to set a new password.",
-    
-    "How do I generate attendance reports?": "To generate attendance reports:\n1. Go to Attendance section\n2. Click 'Reports'\n3. Select date range\n4. Choose report type\n5. Export as PDF/Excel",
     
     // Add more questions...
   },
@@ -122,10 +120,8 @@ Implement better intent recognition:
 ```javascript
 // Common intents for HRMS
 const INTENTS = {
-  'schedule_management': ['schedule', 'time', 'hours', 'work'],
   'leave_requests': ['leave', 'vacation', 'sick', 'time off'],
   'document_upload': ['upload', 'document', 'file', 'certificate'],
-  'attendance': ['attendance', 'time in', 'time out', 'clock'],
   'profile_update': ['profile', 'personal', 'contact', 'update']
 };
 ```

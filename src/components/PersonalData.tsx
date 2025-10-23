@@ -1252,6 +1252,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
           </svg>
           <span className="font-medium">{successMessage}</span>
           <button
+            title="notif"
             onClick={() => setShowSuccessToast(false)}
             className="ml-2 hover:bg-green-600 rounded-full p-1 transition-colors"
           >
@@ -1384,6 +1385,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               {editingTabs.personal ? (
                 <>
                   <input
+                    title="Last Name"
                     type="text"
                     value={editedDetails?.LastName || ''}
                     onChange={(e) => handleInputChange('LastName', e.target.value)}
@@ -1402,6 +1404,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               {editingTabs.personal ? (
                 <>
                   <input
+                    title="First Name"
                     type="text"
                     value={editedDetails?.FirstName || ''}
                     onChange={(e) => handleInputChange('FirstName', e.target.value)}
@@ -1420,6 +1423,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               {editingTabs.personal ? (
                 <>
                   <input
+                    title="Middle Name"
                     type="text"
                     value={editedDetails?.MiddleName || ''}
                     onChange={(e) => handleInputChange('MiddleName', e.target.value)}
@@ -1438,6 +1442,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               {editingTabs.personal ? (
                 <>
                   <input
+                    title="Extension Name"
                     type="text"
                     value={editedDetails?.ExtensionName || ''}
                     onChange={(e) => handleInputChange('ExtensionName', e.target.value)}
@@ -1455,6 +1460,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               <label className="block text-sm font-medium text-gray-700">Sex</label>
               {editingTabs.personal ? (
                 <select
+                  title="Sex"
                   value={editedDetails?.Sex || ''}
                   onChange={(e) => handleInputChange('Sex', e.target.value)}
                   className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
@@ -1462,6 +1468,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                   <option value="">Select Sex</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
+                  <option value="Intersex">Intersex</option>
                 </select>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.Sex}</p>
@@ -1471,6 +1478,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
               {editingTabs.personal ? (
                 <input
+                  title="Date of Birth"
                   type="date"
                   value={editedDetails?.DateOfBirth || ''}
                   onChange={(e) => handleInputChange('DateOfBirth', e.target.value)}
@@ -1493,6 +1501,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               {editingTabs.personal ? (
                 <>
                   <input
+                    title="Place of Birth"
                     type="text"
                     value={editedDetails?.PlaceOfBirth || ''}
                     onChange={(e) => handleInputChange('PlaceOfBirth', e.target.value)}
@@ -1510,6 +1519,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               <label className="block text-sm font-medium text-gray-700">Civil Status</label>
               {editingTabs.personal ? (
                 <select
+                  title="Civil Status"
                   value={editedDetails?.CivilStatus || ''}
                   onChange={(e) => handleInputChange('CivilStatus', e.target.value)}
                   className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
@@ -1529,6 +1539,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               <label className="block text-sm font-medium text-gray-700">Blood Type</label>
               {editingTabs.personal ? (
                 <select
+                  title="Blood Type"
                   value={editedDetails?.BloodType || ''}
                   onChange={(e) => handleInputChange('BloodType', e.target.value)}
                   className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
@@ -1685,6 +1696,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900">Update Profile Photo</h3>
               <button
+                title="show photo"
                 onClick={() => setShowPhotoModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >

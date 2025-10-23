@@ -2,18 +2,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import { LayoutDashboard } from 'lucide-react';
-import { UserProfile, UserButton } from '@clerk/nextjs'; // Add this import
+import { UserProfile, UserButton } from '@clerk/nextjs'; 
 import DashboardFaculty from '@/components/DashboardFaculty';
 import PersonalData from '@/components/PersonalData';
 import DocumentsFaculty from '@/components/DocumentsFaculty';
-import AttendanceFaculty from '@/components/AttendanceFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import Directory from '@/components/Directory';
-import Buzz from '@/components/Buzz';
-import PerformanceFaculty from '@/components/PerformanceFaculty';
-import ClaimsFaculty from '@/components/ClaimsFaculty';
-import { useRouter } from 'next/navigation'; // <-- Add this
-import { AttendanceProvider } from '@/contexts/AttendanceContext';
+import Reports from '@/components/Reports';
+import { useRouter } from 'next/navigation'; 
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
@@ -247,25 +243,19 @@ export default function EmployeeDashboard() {
         return <PersonalData onBack={() => setActiveButton('dashboard')} />;
       case 'documents':
         return <DocumentsFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'attendance':
-        return <AttendanceFaculty onBack={() => setActiveButton('dashboard')} />;
       case 'leave':
         return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'performance':
-        return <PerformanceFaculty />;
-      case 'claims':
-        return <ClaimsFaculty />;
       case 'directory':
         return <Directory />;
-      case 'buzz':
-        return <Buzz />;
+      case 'reports':
+        return <Reports />;
       default:
         return <div>Select a menu item to view its content.</div>;
     }
   };
 
   return (
-    <AttendanceProvider>
+    <>
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
         {/* Sidebar - collapsible on all screen sizes */}
         <div className={`bg-[#800000] text-white transition-all duration-300
@@ -275,6 +265,7 @@ export default function EmployeeDashboard() {
           {/* Toggle Button - Above logo */}
           <div className="flex justify-center py-2">
             <button
+              title="toggle-button"
               className="text-white p-2 hover:bg-[#660000] rounded transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
@@ -285,10 +276,10 @@ export default function EmployeeDashboard() {
           {/* Logo and Title - Made clickable */}
           <div className={`flex flex-col items-center cursor-pointer
             ${isSidebarOpen ? 'p-4' : 'p-2'}`}
-               onClick={() => {
-                 handleButtonClick('dashboard');
-                 router.push('/dashboard/faculty');
-               }}>
+                onClick={() => {
+                  handleButtonClick('dashboard');
+                  router.push('/dashboard/faculty');
+                }}>
             <img
               src="/sjsfilogo.png"
               alt="Logo"
@@ -307,12 +298,9 @@ export default function EmployeeDashboard() {
               { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
-              // { name: 'Attendance', icon: 'fa-calendar-check', key: 'attendance' },
               { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
-              // { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
-              // { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              // { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' }
+              { name: 'Reports', icon: 'fa-print', key: 'reports' },
             ].map((item) => (
               <a
                 key={item.key}
@@ -342,7 +330,6 @@ export default function EmployeeDashboard() {
               </a>
             ))}
           </nav>
-
           {/* Logout Button removed; handled via user menu in header */}
         </div>
 
@@ -358,28 +345,14 @@ export default function EmployeeDashboard() {
                   {activeButton === 'dashboard' && 'DASHBOARD'}
                   {activeButton === 'personal-data' && 'PERSONAL DATA'}
                   {activeButton === 'documents' && 'DOCUMENTS'}
-                  {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE REQUEST'}
-                  {activeButton === 'performance' && 'PERFORMANCE'}
-                  {activeButton === 'claims' && 'CLAIMS'}
                   {activeButton === 'directory' && 'DIRECTORY'}
-                  {activeButton === 'buzz' && 'SPHERE'}
+                  {activeButton === 'reports' && 'REPORTS'}
                 </h1>
               </div>
 
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
-                {/* Chat Icon */}
-                {/* <a
-                  ref={chatButtonRef}
-                  href="#"
-                  className="p-2 rounded-full hover:bg-gray-200 transition"
-                  title="Comments"
-                  onClick={() => setChatbotVisible(!isChatbotVisible)}
-                >
-                  <i className="fas fa-comments text-black text-lg"></i>
-                </a> */}
-
                 {/* Profile Section using Clerk's UserButton */}
                 <div className="flex items-center">
                   <UserButton
@@ -421,12 +394,14 @@ export default function EmployeeDashboard() {
             <p className="text-gray-700 text-center mb-6">Are you sure you want to logout?</p>
             <div className="flex justify-center space-x-10">
               <button
+                title="logout-modal"
                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
                 onClick={() => setLogoutModalVisible(false)}
               >
                 Cancel
               </button>
               <button
+                title="handle-logout"
                 className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
                 onClick={handleLogout}
               >
@@ -437,68 +412,6 @@ export default function EmployeeDashboard() {
         </div>
       )}
 
-      {isNotificationsVisible && (
-        <div className="absolute top-16 right-4 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200">
-          <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-            <button
-              title='Close'
-              className="text-gray-500 hover:text-gray-700"
-              onClick={() => setNotificationsVisible(false)}
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-          <div className="flex border-b">
-            <button
-              className={`flex-1 p-2 text-center ${activeTab === 'all' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('all')}
-            >
-              All
-            </button>
-            <button
-              className={`flex-1 p-2 text-center ${activeTab === 'unread' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('unread')}
-            >
-              Unread
-            </button>
-          </div>
-          <ul className="max-h-72 overflow-y-auto divide-y divide-gray-200">
-            {activeTab === 'all' && (
-              <>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Jane Smith just sent a request: <strong>&quot;URGENT!! - leave of absence due to family emergency&quot;.</strong>
-                  </p>
-                  <span className="text-xs text-gray-500">11h ago</span>
-                </li>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Doc Anne just sent a request: <strong>&quot;Request for change in class schedule&quot;.</strong>
-                  </p>
-                  <span className="text-xs text-gray-500">22h ago</span>
-                </li>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Zayne Ghaz has sent you a request to change their password.
-                  </p>
-                  <span className="text-xs text-gray-500">1d ago</span>
-                </li>
-              </>
-            )}
-            {activeTab === 'unread' && (
-              <>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Jane Smith just sent a request: <strong>&quot;URGENT!! - leave of absence due to family emergency&quot;.</strong>
-                  </p>
-                  <span className="text-xs text-gray-500">11h ago</span>
-                </li>
-              </>
-            )}
-          </ul>
-        </div>
-      )}
 
       {isChatbotVisible && (
         <div
@@ -546,15 +459,9 @@ export default function EmployeeDashboard() {
               <ul className="space-y-2">
                 <li
                   className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I request a change in my teaching schedule?")}
+                  onClick={() => handleSendMessage("How do I add a new employee profile?")}
                 >
-                  How do I request a change in my teaching schedule?
-                </li>
-                <li
-                  className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
-                  onClick={() => handleSendMessage("How do I add a new faculty profile?")}
-                >
-                  How do I add a new faculty profile?
+                  How do I add a new employee profile?
                 </li>
                 <li
                   className="text-sm text-gray-600 hover:text-red-700 cursor-pointer"
@@ -574,6 +481,7 @@ export default function EmployeeDashboard() {
                   className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
                 />
                 <button
+                  title="send-message"
                   className="px-3 py-2 bg-[#800000] text-white rounded hover:bg-red-700 text-sm whitespace-nowrap"
                   onClick={() => handleSendMessage(chatInput)}
                 >
@@ -591,6 +499,7 @@ export default function EmployeeDashboard() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">User Profile</h2>
               <button
+                title="profile-button"
                 onClick={() => setProfileVisible(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -603,6 +512,6 @@ export default function EmployeeDashboard() {
           </div>
         </div>
       )}
-    </AttendanceProvider>
+      </>
   );
 }

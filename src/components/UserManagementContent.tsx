@@ -1016,6 +1016,7 @@ const UserManagementContent: React.FC = () => {
           </div>
         </div>
         <select
+          title="status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
@@ -1027,6 +1028,7 @@ const UserManagementContent: React.FC = () => {
           <option value="Invited">Invited</option>
         </select>
         <select
+          title="role"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
@@ -1227,6 +1229,7 @@ const UserManagementContent: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4">Select Role for {[selectedUserForRole.FirstName, selectedUserForRole.LastName].filter(Boolean).join(' ')}</h3>
               <select
+                title="selected-role"
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded mb-4"

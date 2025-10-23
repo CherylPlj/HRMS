@@ -4,20 +4,17 @@ import { useState, useEffect, useRef } from 'react'; // Import useRef for drag a
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import DashboardContent from '@/components/DashboardContent';
 import FacultyContent from '@/components/FacultyContent';
-import AttendanceContent from '@/components/AttendanceContent';
 import LeaveContent from '@/components/LeaveContent';
 import EmployeeContentNew from '@/components/EmployeeContentNew';
 import RecruitmentContent from '@/components/RecruitmentContent';
 import UserManagementContent from '@/components/UserManagementContent';
 import SessionManagementContent from '@/components/SessionManagementContent';
 import Chatbot from '@/components/Chatbot';
-import ClaimsContent from '@/components/ClaimsContent';
-import PerformanceContent from '@/components/PerformanceContent';
 import Directory from '@/components/Directory';
-import Buzz from '@/components/Buzz';
+import Reports from '@/components/Reports';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, UserButton } from '@clerk/nextjs'; // Add this import
+import { UserProfile, UserButton } from '@clerk/nextjs';
 import { LayoutDashboard } from 'lucide-react';
 
 interface Role {
@@ -318,18 +315,12 @@ export default function AdminDashboard() {
         return <EmployeeContentNew />;
       case 'recruitment':
         return <RecruitmentContent />;
-      case 'attendance':
-        return <AttendanceContent />;
       case 'leave':
         return <LeaveContent />;
-      case 'claims':
-        return <ClaimsContent />;
-      case 'performance':
-        return <PerformanceContent />;
       case 'directory':
         return <Directory />;
-      case 'buzz':
-        return <Buzz />;
+      case 'reports':
+        return <Reports />;
       case 'user-management':
         return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
       case 'session-management':
@@ -350,6 +341,7 @@ export default function AdminDashboard() {
           {/* Toggle Button - Above logo */}
           <div className="flex justify-center py-2">
             <button
+              title="toggle"
               className="text-white p-2 hover:bg-[#660000] rounded transition-colors"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
@@ -360,10 +352,10 @@ export default function AdminDashboard() {
           {/* Logo and Title - Made clickable */}
           <div className={`flex flex-col items-center cursor-pointer
             ${isSidebarOpen ? 'p-4' : 'p-2'}`}
-               onClick={() => {
-                 handleButtonClick('dashboard');
-                 router.push('/dashboard/admin');
-               }}>
+                onClick={() => {
+                  handleButtonClick('dashboard');
+                  router.push('/dashboard/admin');
+                }}>
             <Image
               src="/sjsfilogo.png"
               alt="Logo"
@@ -384,13 +376,10 @@ export default function AdminDashboard() {
               { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
               { name: 'Employees', icon: 'fa-users', key: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
-              // { name: 'Attendance', icon: 'fa-calendar-alt', key: 'attendance' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
-              // { name: 'Claims', icon: 'fa-receipt', key: 'claims' },
-              // { name: 'Performance', icon: 'fa-chart-line', key: 'performance' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              // { name: 'Sphere', icon: 'fa-bullhorn', key: 'buzz' },
+              { name: 'Reports', icon: 'fa-print', key: 'reports' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
                 { name: 'Users', icon: 'fa-user-shield', key: 'user-management' },
@@ -425,7 +414,6 @@ export default function AdminDashboard() {
               </a>
             ))}
           </nav>
-
           {/* Logout Button removed; handled via user menu in header */}
         </div>
 
@@ -441,13 +429,10 @@ export default function AdminDashboard() {
                   {activeButton === 'dashboard' && 'DASHBOARD'}
                   {activeButton === 'document' && 'DOCUMENTS'}
                   {activeButton === 'employees' && 'EMPLOYEES'}
-                  {activeButton === 'attendance' && 'ATTENDANCE'}
                   {activeButton === 'leave' && 'LEAVE'}
                   {activeButton === 'recruitment' && 'RECRUITMENT'}
-                  {activeButton === 'claims' && 'CLAIMS'}
-                  {activeButton === 'performance' && 'PERFORMANCE'}
                   {activeButton === 'directory' && 'DIRECTORY'}
-                  {activeButton === 'buzz' && 'SPHERE'}
+                  {activeButton === 'reports' && 'REPORTS'}
                   {activeButton === 'user-management' && 'USER MANAGEMENT'}
                   {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
                 </h1>
@@ -460,7 +445,7 @@ export default function AdminDashboard() {
                   ref={chatButtonRef}
                   href="#"
                   className="p-2 rounded-full hover:bg-gray-200 transition"
-                  title="Comments"
+                  title="Chatbot"
                   onClick={() => setChatbotVisible(!isChatbotVisible)}
                 >
                   <i className="fas fa-comments text-black text-lg"></i>
@@ -492,80 +477,12 @@ export default function AdminDashboard() {
 
         {/* Overlay for when sidebar is open */}
         {isSidebarOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-20"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
         )}
       </div>
-
-      {/* Notifications Popup */}
-      {isNotificationsVisible && (
-        <div className="absolute top-16 right-4 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200">
-          <div className="p-4 bg-gray-100 border-b flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-            
-          </div>
-          <div className="flex border-b">
-            <button
-              className={`flex-1 p-2 text-center ${activeTab === 'all' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('all')}
-            >
-              All
-            </button>
-            <button
-              className={`flex-1 p-2 text-center ${activeTab === 'unread' ? 'text-red-700 font-bold border-b-2 border-red-700' : 'text-gray-500'}`}
-              onClick={() => setActiveTab('unread')}
-            >
-              Unread
-            </button>
-          </div>
-          <ul className="max-h-72 overflow-y-auto divide-y divide-gray-200">
-            {activeTab === 'all' && (
-              <>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
-                  </p>
-                  <span className="text-xs text-gray-500">11h ago</span>
-                </li>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Doc Anne just sent a request: <strong>&ldquo;Request for change in class schedule&rdquo;.</strong>
-                  </p>
-                  <span className="text-xs text-gray-500">22h ago</span>
-                </li>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Zayne Ghaz has sent you a request to change their password.
-                  </p>
-                  <span className="text-xs text-gray-500">1d ago</span>
-                </li>
-                {/* Add more notifications for "All" */}
-              </>
-            )}
-            {activeTab === 'unread' && (
-              <>
-                <li className="p-4 hover:bg-gray-50">
-                  <p className="text-sm text-gray-700">
-                    Jane Smith just sent a request: <strong>&ldquo;URGENT!! - leave of absence due to family emergency&rdquo;.</strong>
-                  </p>
-                  <span className="text-xs text-gray-500">11h ago</span>
-                </li>
-                {/* Add more notifications for "Unread" */}
-              </>
-            )}
-          </ul>
-          <div className="p-4 bg-gray-100 text-center">
-            <button
-              className="text-red-600 font-semibold hover:underline"
-              onClick={() => setNotificationsVisible(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Chatbot Popup */}
       <Chatbot
@@ -574,10 +491,8 @@ export default function AdminDashboard() {
         position={chatbotPosition}
         onPositionChange={setChatbotPosition}
         suggestedPrompts={[
-          "How do I manage faculty schedules?",
-          "How do I add a new faculty member?",
+          "How do I add a new employee member?",
           "How do I approve leave requests?",
-          "How do I view attendance reports?",
           "How do I manage employee documents?"
         ]}
         title="SJSFI Admin Assistant"
@@ -592,12 +507,14 @@ export default function AdminDashboard() {
             <p className="text-gray-700 text-center mb-6">Are you sure you want to logout?</p>
             <div className="flex justify-center space-x-10">
               <button
+                title="logout"
                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
                 onClick={() => setLogoutModalVisible(false)}
               >
                 Cancel
               </button>
               <button
+                title="handle-logout"
                 className="px-4 py-2 bg-red-700 text-white rounded hover:bg-[#800000]"
                 onClick={handleLogout}
               >
@@ -821,6 +738,7 @@ export default function AdminDashboard() {
                     Cancel
                   </button>
                   <button
+                    title="submit"
                     type="submit"
                     className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-red-800 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isLoading}

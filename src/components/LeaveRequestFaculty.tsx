@@ -968,6 +968,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Request Type</label>
                                 <select
+                                    title="Request Type"
                                     value={requestType}
                                     onChange={(e) => handleRequestTypeChange(e.target.value as RequestType)}
                                     className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
@@ -981,6 +982,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type</label>
                                     <select
+                                        title="Leave Type"
                                         value={leaveType}
                                         onChange={(e) => setLeaveType(e.target.value as LeaveType)}
                                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
@@ -1188,6 +1190,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                                         <input
+                                            title="Full Name"
                                             type="text"
                                             value={facultyDetails?.fullName || ''}
                                             disabled
@@ -1197,6 +1200,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
                                         <input
+                                            title="Department"
                                             type="text"
                                             value={facultyDetails?.department || ''}
                                             disabled
@@ -1209,6 +1213,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Employment Status</label>
                                     <input
+                                        title="Employment Status"
                                         type="text"
                                         value={facultyDetails?.employmentStatus || ''}
                                         disabled
@@ -1220,6 +1225,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Request Type</label>
                                     <select
+                                        title="select request type"
                                         value={requestType}
                                         onChange={(e) => handleRequestTypeChange(e.target.value as RequestType)}
                                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
@@ -1233,6 +1239,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type</label>
                                         <select
+                                            title="request leave type"
                                             value={leaveType}
                                             onChange={(e) => setLeaveType(e.target.value as LeaveType)}
                                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
@@ -1355,6 +1362,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         </label>
                                         <div className="mt-1 relative">
                                 <input
+                                    title="employee signature"
                                     type="file"
                                                 onChange={handleEmployeeSignatureChange}
                                                 className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -1371,6 +1379,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         </label>
                                         <div className="mt-1 relative">
                                             <input
+                                                title="department Head Signature"
                                                 type="file"
                                                 onChange={handleDeptHeadSignatureChange}
                                                 className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -1419,9 +1428,9 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     .filter(request => {
                                         const leaveDate = new Date(request.StartDate);
                                         return request.Status === 'Approved' && 
-                                               request.RequestType === 'Leave' &&
-                                               leaveDate.getMonth() === currentDate.getMonth() &&
-                                               leaveDate.getFullYear() === currentDate.getFullYear();
+                                            request.RequestType === 'Leave' &&
+                                            leaveDate.getMonth() === currentDate.getMonth() &&
+                                            leaveDate.getFullYear() === currentDate.getFullYear();
                                     })
                                     .reduce((total, leave) => {
                                         const start = new Date(leave.StartDate);

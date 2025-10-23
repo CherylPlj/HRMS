@@ -875,6 +875,7 @@ const RecruitmentContent: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
+                  title="candidate-status-filter"
                   value={candidateStatusFilter}
                   onChange={(e) => setCandidateStatusFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -890,6 +891,7 @@ const RecruitmentContent: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Vacancy</label>
                 <select
+                  title="select candidate vacancy"
                   value={candidateVacancyFilter}
                   onChange={(e) => setCandidateVacancyFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -907,6 +909,7 @@ const RecruitmentContent: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Interview Date</label>
                 <input
+                  title="Interview Date"
                   type="date"
                   value={candidateInterviewDateFilter}
                   onChange={(e) => setCandidateInterviewDateFilter(e.target.value)}
@@ -1055,7 +1058,8 @@ const RecruitmentContent: React.FC = () => {
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Vacancy" />
-                    <select 
+                    <select
+                      title="candidate-vacancy"
                       className="w-full border rounded px-3 py-2" 
                       value={candidateVacancy} 
                       onChange={e => setCandidateVacancy(e.target.value)}
@@ -1096,6 +1100,7 @@ const RecruitmentContent: React.FC = () => {
                     <div>
                       <label className="block mb-1 font-medium">Sex</label>
                       <select 
+                        title="candidate-sex"
                         className="w-full border rounded px-3 py-2" 
                         value={candidateSex} 
                         onChange={e => setCandidateSex(e.target.value)}
@@ -1107,21 +1112,23 @@ const RecruitmentContent: React.FC = () => {
                     </div>
                     <div>
                       <label className="block mb-1 font-medium">Date of Birth</label>
-                      <input 
-                        type="date" 
-                        className="w-full border rounded px-3 py-2" 
-                        value={candidateDateOfBirth} 
-                        onChange={e => setCandidateDateOfBirth(e.target.value)} 
+                      <input
+                        title="date"
+                        type="date"
+                        className="w-full border rounded px-3 py-2"
+                        value={candidateDateOfBirth}
+                        onChange={e => setCandidateDateOfBirth(e.target.value)}
                       />
                     </div>
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Interview Schedule (7 AM - 7 PM only)</label>
                     <p className="text-sm text-gray-600 mb-2">Setting an interview date will automatically update status to "Interview Scheduled"</p>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full border rounded px-3 py-2" 
-                      value={candidateInterview} 
+                    <input
+                      title="date-time"
+                      type="datetime-local"
+                      className="w-full border rounded px-3 py-2"
+                      value={candidateInterview}
                       onChange={e => {
                         const selectedDateTime = e.target.value;
                         if (selectedDateTime && !validateInterviewTime(selectedDateTime)) {
@@ -1136,14 +1143,15 @@ const RecruitmentContent: React.FC = () => {
                         if (selectedDateTime) {
                           setCandidateStatus('InterviewScheduled');
                         }
-                      }} 
+                      }}
                     />
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Status" />
-                    <select 
-                      className="w-full border rounded px-3 py-2" 
-                      value={candidateStatus} 
+                    <select
+                      title="status"
+                      className="w-full border rounded px-3 py-2"
+                      value={candidateStatus}
                       onChange={e => setCandidateStatus(e.target.value)}
                       required
                     >
@@ -1154,17 +1162,18 @@ const RecruitmentContent: React.FC = () => {
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Resume</label>
-                    <input 
-                      type="file" 
-                      accept=".doc,.docx,.odt,.pdf,.rtf,.txt" 
-                      onChange={handleResumeChange} 
+                    <input
+                      title="file"
+                      type="file"
+                      accept=".doc,.docx,.odt,.pdf,.rtf,.txt"
+                      onChange={handleResumeChange}
                     />
                     {candidateResume && <div className="mt-2 text-sm text-gray-600">Selected: {candidateResume.name}</div>}
                   </div>
                   <div className="flex justify-end space-x-2 mt-6">
-                    <button 
-                      type="button" 
-                      className="px-4 py-2 bg-gray-300 rounded" 
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-gray-300 rounded"
                       onClick={() => {
                         setShowAddCandidate(false);
                         resetCandidateForm();
@@ -1189,29 +1198,32 @@ const RecruitmentContent: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <RequiredLabel text="Last Name" />
-                      <input 
+                      <input
+                        title="Last Name"
                         type="text" 
                         className="w-full border rounded px-3 py-2" 
-                        value={editCandidateData.LastName} 
+                        value={editCandidateData.LastName}
                         onChange={e => setEditCandidateData({ ...editCandidateData, LastName: e.target.value })} 
                         required 
                       />
                     </div>
                     <div>
                       <RequiredLabel text="First Name" />
-                      <input 
+                      <input
+                        title="First Name"
                         type="text" 
-                        className="w-full border rounded px-3 py-2" 
-                        value={editCandidateData.FirstName} 
+                        className="w-full border rounded px-3 py-2"
+                        value={editCandidateData.FirstName}
                         onChange={e => setEditCandidateData({ ...editCandidateData, FirstName: e.target.value })} 
-                        required 
+                        required
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block mb-1 font-medium">Middle Name</label>
-                      <input 
+                      <input
+                        title="Middle Name"
                         type="text" 
                         className="w-full border rounded px-3 py-2" 
                         value={editCandidateData.MiddleName || ''} 
@@ -1220,7 +1232,8 @@ const RecruitmentContent: React.FC = () => {
                     </div>
                     <div>
                       <label className="block mb-1 font-medium">Extension Name</label>
-                      <input 
+                      <input
+                        title="Extension Name"
                         type="text" 
                         className="w-full border rounded px-3 py-2" 
                         value={editCandidateData.ExtensionName || ''} 
@@ -1231,14 +1244,15 @@ const RecruitmentContent: React.FC = () => {
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Email" />
-                    <input type="email" className="w-full border rounded px-3 py-2" value={editCandidateData.Email} onChange={e => setEditCandidateData({ ...editCandidateData, Email: e.target.value })} required />
+                    <input title="email" type="email" className="w-full border rounded px-3 py-2" value={editCandidateData.Email} onChange={e => setEditCandidateData({ ...editCandidateData, Email: e.target.value })} required />
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block mb-1 font-medium">Contact Number</label>
-                      <input 
-                        type="tel" 
-                        className="w-full border rounded px-3 py-2" 
+                      <input
+                        title="telephone"
+                        type="tel"
+                        className="w-full border rounded px-3 py-2"
                         value={editCandidateData.ContactNumber || ''} 
                         onChange={e => setEditCandidateData({ ...editCandidateData, ContactNumber: e.target.value })} 
                       />
@@ -1246,6 +1260,7 @@ const RecruitmentContent: React.FC = () => {
                     <div>
                       <RequiredLabel text="Sex" />
                       <select 
+                        title="sex"
                         className={`w-full border rounded px-3 py-2 ${!editCandidateData.Sex ? 'border-red-500' : ''}`}
                         value={editCandidateData.Sex || ''} 
                         onChange={e => setEditCandidateData({ ...editCandidateData, Sex: e.target.value })}
@@ -1263,6 +1278,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Date of Birth" />
                       <input 
+                        title="Date of Birth"
                         type="date" 
                       className={`w-full border rounded px-3 py-2 ${
                         !editCandidateData.DateOfBirth || !validateAge(editCandidateData.DateOfBirth).valid 
@@ -1301,6 +1317,7 @@ const RecruitmentContent: React.FC = () => {
                     <label className="block mb-1 font-medium">Interview Schedule (7 AM - 7 PM only)</label>
                     <p className="text-sm text-gray-600 mb-2">Setting an interview date will automatically update status to "Interview Scheduled"</p>
                     <input 
+                      title="date-time-local"
                       type="datetime-local" 
                       className={`w-full border rounded px-3 py-2 ${editCandidateData.InterviewDate && !validateInterviewTime(editCandidateData.InterviewDate) ? 'border-red-500' : ''}`}
                       value={editCandidateData.InterviewDate ? DateTime.fromISO(editCandidateData.InterviewDate).setZone('Asia/Manila').toFormat("yyyy-MM-dd'T'HH:mm") : ''} 
@@ -1333,6 +1350,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Status" />
                     <select 
+                      title="Edit Status"
                       className="w-full border rounded px-3 py-2" 
                       value={editCandidateData.Status} 
                       onChange={e => setEditCandidateData({ ...editCandidateData, Status: e.target.value })}
@@ -1345,7 +1363,7 @@ const RecruitmentContent: React.FC = () => {
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Resume</label>
-                    <input type="file" accept=".doc,.docx,.odt,.pdf,.rtf,.txt" onChange={handleEditResumeChange} />
+                    <input title="Resume File" type="file" accept=".doc,.docx,.odt,.pdf,.rtf,.txt" onChange={handleEditResumeChange} />
                     {editCandidateResume && <div className="mt-2 text-sm text-gray-600">Selected: {editCandidateResume.name}</div>}
                   </div>
                   <div className="flex justify-end space-x-2 mt-6">
@@ -1437,6 +1455,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Vacancy" />
                     <select 
+                      title="vacancy"
                       className="w-full border rounded px-3 py-2" 
                       value={importVacancy} 
                       onChange={e => setImportVacancy(e.target.value)}
@@ -1465,6 +1484,7 @@ const RecruitmentContent: React.FC = () => {
                       </a>
                     </div>
                     <input 
+                      title="file import"
                       type="file" 
                       accept=".xlsx,.xls,.csv" 
                       onChange={handleImportFileChange}
@@ -1555,6 +1575,7 @@ const RecruitmentContent: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
+                  title="vacancy status filter"
                   value={vacancyStatusFilter}
                   onChange={(e) => setVacancyStatusFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1571,6 +1592,7 @@ const RecruitmentContent: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
                 <select
+                  title="job title filter"
                   value={vacancyJobTitleFilter}
                   onChange={(e) => setVacancyJobTitleFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1650,6 +1672,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Job Title" />
                     <select 
+                      title="job title"
                       className="w-full border rounded px-3 py-2" 
                       value={vacancyJobTitle} 
                       onChange={e => setVacancyJobTitle(e.target.value as 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other')}
@@ -1684,6 +1707,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Number of Positions" />
                     <input 
+                      title="number of position"
                       type="number" 
                       className="w-full border rounded px-3 py-2" 
                       value={vacancyNumberOfPositions} 
@@ -1706,6 +1730,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Date Posted</label>
                     <input 
+                      title="Date posted"
                       type="date" 
                       className="w-full border rounded px-3 py-2" 
                       value={vacancyDatePosted} 
@@ -1715,6 +1740,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Status" />
                     <select 
+                      title="vacancy status"
                       className="w-full border rounded px-3 py-2" 
                       value={vacancyStatus} 
                       onChange={e => setVacancyStatus(e.target.value as 'Active' | 'Inactive' | 'Filled' | 'Cancelled')}
@@ -1744,7 +1770,7 @@ const RecruitmentContent: React.FC = () => {
                 <form onSubmit={handleEditVacancy}>
                   <div className="mb-4">
                     <RequiredLabel text="Job Title" />
-                    <select className="w-full border rounded px-3 py-2" value={editVacancyData.JobTitle} onChange={e => setEditVacancyData({ ...editVacancyData, JobTitle: e.target.value as 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other' })}>
+                    <select title="job title" className="w-full border rounded px-3 py-2" value={editVacancyData.JobTitle} onChange={e => setEditVacancyData({ ...editVacancyData, JobTitle: e.target.value as 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other' })}>
                       {jobTitles.map((title) => (
                         <option key={title} value={title}>{title}</option>
                       ))}
@@ -1752,7 +1778,7 @@ const RecruitmentContent: React.FC = () => {
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Vacancy Name" />
-                    <input type="text" className="w-full border rounded px-3 py-2" value={editVacancyData.VacancyName} onChange={e => setEditVacancyData({ ...editVacancyData, VacancyName: e.target.value })} required />
+                    <input title="vacancy name" type="text" className="w-full border rounded px-3 py-2" value={editVacancyData.VacancyName} onChange={e => setEditVacancyData({ ...editVacancyData, VacancyName: e.target.value })} required />
                   </div>
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Description</label>
@@ -1767,6 +1793,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Number of Positions" />
                     <input 
+                      title="number"
                       type="number" 
                       className="w-full border rounded px-3 py-2" 
                       value={editVacancyData.NumberOfPositions} 
@@ -1778,6 +1805,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <RequiredLabel text="Hiring Manager" />
                     <input 
+                      title="hiring manager"
                       type="text" 
                       className="w-full border rounded px-3 py-2" 
                       value={editVacancyData.HiringManager} 
@@ -1788,6 +1816,7 @@ const RecruitmentContent: React.FC = () => {
                   <div className="mb-4">
                     <label className="block mb-1 font-medium">Date Posted</label>
                     <input 
+                      title="post date"
                       type="date" 
                       className="w-full border rounded px-3 py-2" 
                       value={editVacancyData.DatePosted ? editVacancyData.DatePosted.split('T')[0] : ''} 
@@ -1796,7 +1825,7 @@ const RecruitmentContent: React.FC = () => {
                   </div>
                   <div className="mb-4">
                     <RequiredLabel text="Status" />
-                    <select className="w-full border rounded px-3 py-2" value={editVacancyData.Status} onChange={e => setEditVacancyData({ ...editVacancyData, Status: e.target.value as 'Active' | 'Inactive' | 'Filled' | 'Cancelled' })} required>
+                    <select title="vacancy status select" className="w-full border rounded px-3 py-2" value={editVacancyData.Status} onChange={e => setEditVacancyData({ ...editVacancyData, Status: e.target.value as 'Active' | 'Inactive' | 'Filled' | 'Cancelled' })} required>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                       <option value="Filled">Filled</option>
@@ -2005,6 +2034,7 @@ const RecruitmentContent: React.FC = () => {
                       </a>
                     </div>
                     <input 
+                      title="csv file import"
                       type="file" 
                       accept=".csv" 
                       onChange={handleImportFileChange}
