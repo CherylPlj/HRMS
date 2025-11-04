@@ -2,12 +2,60 @@
 
 'use client';
 import { useRouter } from 'next/navigation';
-import { useClerk } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import Image from 'next/image';
+import { useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function Home() {
   const router = useRouter();
   const { signOut } = useClerk();
+  const { isLoaded, isSignedIn, user } = useUser();
+
+  // Redirect authenticated users away from portal
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const redirectAuthenticatedUser = async () => {
+      if (isSignedIn && user) {
+        try {
+          // Get user's role to determine correct dashboard
+          const { data: userData } = await supabase
+            .from('User')
+            .select(`
+              UserRole!inner (
+                role:Role (name)
+              )
+            `)
+            .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
+            .single();
+
+          if (userData) {
+            const role = (userData as any).UserRole?.[0]?.role?.name?.toLowerCase() || '';
+            const redirectPath = role === 'admin' || role === 'super admin' 
+              ? '/dashboard/admin' 
+              : role === 'faculty' 
+              ? '/dashboard/faculty' 
+              : '/dashboard';
+            
+            // Use replace to remove portal from history
+            window.history.replaceState(null, '', redirectPath);
+            window.location.replace(redirectPath);
+          }
+        } catch (error) {
+          console.error('Error redirecting authenticated user:', error);
+        }
+      }
+    };
+
+    redirectAuthenticatedUser();
+  }, [isLoaded, isSignedIn, user]);
 
   const navigateToFaculty = async () => {
     // Clear any existing session before navigating to faculty sign-in

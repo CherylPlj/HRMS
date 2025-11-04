@@ -619,6 +619,79 @@ export default function SignInPage() {
     }
   }, [isLoaded]);
 
+  // Prevent back/forward navigation to portal or sign-in for authenticated users
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Replace portal entry in history if present
+    if (window.history.state) {
+      const currentPath = window.location.pathname;
+      window.history.replaceState({ url: currentPath, preventBack: true }, '', currentPath);
+    }
+
+    const handlePopState = () => {
+      // Use setTimeout to check after navigation has occurred
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        
+        // If user is authenticated and tries to navigate to portal or sign-in, redirect them
+        if (isLoaded && isSignedIn && user) {
+          // Prevent navigation to portal (/) or sign-in
+          if (currentPath === '/' || currentPath === '/sign-in' || currentPath.startsWith('/sign-in')) {
+            // Get user role and redirect appropriately
+            const checkAndRedirect = async () => {
+              try {
+                const { data: userData } = await supabase
+                  .from('User')
+                  .select(`
+                    UserRole!inner (
+                      role:Role (name)
+                    )
+                  `)
+                  .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
+                  .single();
+
+                if (userData) {
+                  const role = (userData as any).UserRole?.[0]?.role?.name?.toLowerCase() || '';
+                  const redirectPath = role === 'admin' || role === 'super admin' 
+                    ? '/dashboard/admin' 
+                    : role === 'faculty' 
+                    ? '/dashboard/faculty' 
+                    : '/dashboard';
+                  
+                  window.history.replaceState({ url: redirectPath, preventBack: true }, '', redirectPath);
+                  router.replace(redirectPath);
+                }
+              } catch (error) {
+                console.error('Error redirecting on navigation:', error);
+              }
+            };
+            checkAndRedirect();
+          }
+        }
+        
+        // Also prevent forward navigation to portal or sign-in for unauthenticated users
+        // (to prevent going forward from portal to sign-in and vice versa)
+        if (!isSignedIn && (currentPath === '/' || currentPath === '/sign-in' || currentPath.startsWith('/sign-in'))) {
+          // Allow navigation within sign-in flow, but prevent going to portal
+          if (currentPath === '/') {
+            // If trying to go forward to portal, stay on sign-in
+            const signInPath = window.location.pathname.startsWith('/sign-in') 
+              ? window.location.pathname 
+              : '/sign-in';
+            window.history.replaceState({ url: signInPath, preventBack: true }, '', signInPath);
+            router.replace(signInPath);
+          }
+        }
+      }, 0);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isLoaded, isSignedIn, user, router]);
+
   // Check if user is already signed in and redirect accordingly
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
@@ -701,13 +774,13 @@ export default function SignInPage() {
 
           console.log(`Redirecting authenticated ${role} user to dashboard...`);
 
-          // Use window.location.href for hard redirect to ensure clean state
+          // Use window.location.replace for hard redirect to prevent back navigation
           if (role === 'admin' || role === 'super admin') {
-            window.location.href = '/dashboard/admin';
+            window.location.replace('/dashboard/admin');
           } else if (role === 'faculty') {
-            window.location.href = '/dashboard/faculty';
+            window.location.replace('/dashboard/faculty');
           } else {
-            window.location.href = '/dashboard';
+            window.location.replace('/dashboard');
           }
         } catch (error) {
           console.error("Error during authentication verification:", error);
@@ -1009,18 +1082,20 @@ export default function SignInPage() {
       // Force a small delay to ensure session is fully established
       await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Handle redirect
-        if (redirectUrl) {
-        window.location.href = redirectUrl;
-        } else {
-        if (userRole === 'admin' || userRole === 'super admin') {
-          router.push('/dashboard/admin');
-        } else if (userRole === 'faculty') {
-          router.push('/dashboard/faculty');
-      } else {
-          router.push('/dashboard');
+        // Handle redirect - use replace to prevent going back to sign-in
+        // Remove sign-in page from history before redirecting
+        if (typeof window !== 'undefined') {
+          // Clear any history entries that might allow going back to sign-in
+          const redirectPath = redirectUrl || 
+            (userRole === 'admin' || userRole === 'super admin' ? '/dashboard/admin' :
+             userRole === 'faculty' ? '/dashboard/faculty' : '/dashboard');
+          
+          // Replace current history entry to remove sign-in page
+          window.history.replaceState(null, '', redirectPath);
+          
+          // Use replace to completely remove sign-in page from history
+          window.location.replace(redirectPath);
         }
-      }
     } catch (err: any) {
       setIsLoading(false);
       console.error('Login error:', err);

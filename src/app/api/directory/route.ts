@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       .from('Employee')
       .select(`
         *,
-        EmploymentDetail(EmploymentStatus, HireDate),
+        EmploymentDetail(EmploymentStatus, HireDate, ResignationDate, RetirementDate),
         ContactInfo(Phone, Email),
         Department(DepartmentName),
         User(Status)

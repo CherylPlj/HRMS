@@ -12,7 +12,7 @@ import SessionManagementContent from '@/components/SessionManagementContent';
 import Chatbot from '@/components/Chatbot';
 import Directory from '@/components/Directory';
 import Reports from '@/components/Reports';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, UserButton } from '@clerk/nextjs';
 import { LayoutDashboard } from 'lucide-react';
@@ -52,7 +52,11 @@ const supabase = createClient(
 );
 
 export default function AdminDashboard() {
-  const [activeButton, setActiveButton] = useState('dashboard');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const viewParam = searchParams?.get('view') || 'dashboard';
+  const [activeButton, setActiveButton] = useState(viewParam);
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isAdminInfoVisible, setAdminInfoVisible] = useState(false); // State for Admin Info Modal
   const [isEditProfileVisible, setEditProfileVisible] = useState(false); // State for Edit Profile Modal
@@ -65,7 +69,6 @@ export default function AdminDashboard() {
   const [userRole, setUserRole] = useState<string>(''); // Store user role to show Super Admin features
   const { user, isLoaded, isSignedIn } = useUser(); // Get user data from Clerk
   const { signOut } = useClerk(); // Access Clerk's signOut function
-  const router = useRouter();
 
   const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
   const [chatbotPosition, setChatbotPosition] = useState({ x: 0, y: 0 });
@@ -178,8 +181,57 @@ export default function AdminDashboard() {
     checkUserRole();
   }, [isLoaded, isSignedIn, user, router]);
 
+  // Prevent back/forward navigation to sign-in or portal when logged in
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isLoaded || !isSignedIn) return;
+
+    const dashboardPath = pathname || '/dashboard/admin';
+    
+    // Immediately replace current history entry to remove any sign-in/portal page
+    window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+    
+    // Push a new history state to ensure sign-in/portal page is not accessible via back button
+    window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+
+    // Function to check and redirect if on portal or sign-in
+    const checkAndRedirect = () => {
+      const currentPath = window.location.pathname;
+      
+      // If on portal or sign-in, immediately redirect back to dashboard
+      if (currentPath === '/' || currentPath === '/sign-in' || currentPath.startsWith('/sign-in')) {
+        window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+        router.replace(dashboardPath);
+        // Push again to ensure portal/sign-in is not in history
+        window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+      }
+    };
+
+    // Intercept back/forward button navigation
+    const handlePopState = () => {
+      checkAndRedirect();
+    };
+
+    // Also check periodically in case navigation happens outside popstate
+    const checkInterval = setInterval(checkAndRedirect, 100);
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      clearInterval(checkInterval);
+    };
+  }, [isLoaded, isSignedIn, pathname, router]);
+
+  // Sync activeButton with URL query parameter
+  useEffect(() => {
+    const view = searchParams?.get('view') || 'dashboard';
+    setActiveButton(view);
+  }, [searchParams]);
+
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
+    // Update URL with query parameter without causing a full page reload
+    router.push(`${pathname}?view=${buttonName}`, { scroll: false });
   };
 
   const handleLogout = async () => {
@@ -396,7 +448,10 @@ export default function AdminDashboard() {
                   }
                   ${activeButton === item.key ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
                 title={item.name}
-                onClick={() => handleButtonClick(item.key)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleButtonClick(item.key);
+                }}
               >
                 <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
                   {typeof item.icon === 'string' ? (

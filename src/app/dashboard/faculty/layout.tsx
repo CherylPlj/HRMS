@@ -10,7 +10,7 @@ import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import Directory from '@/components/Directory';
 import Reports from '@/components/Reports';
 import Chatbot from '@/components/Chatbot';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
@@ -32,7 +32,11 @@ interface UserRoleData {
 }
 
 export default function FacultyDashboard() {
-  const [activeButton, setActiveButton] = useState('dashboard');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const viewParam = searchParams?.get('view') || 'dashboard';
+  const [activeButton, setActiveButton] = useState(viewParam);
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
@@ -40,7 +44,6 @@ export default function FacultyDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, isLoaded, isSignedIn } = useUser();
   const { signOut } = useClerk();
-  const router = useRouter();
   const [isProfileVisible, setProfileVisible] = useState(false);
 
   const chatButtonRef = useRef<HTMLAnchorElement | null>(null);
@@ -150,8 +153,57 @@ export default function FacultyDashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, [isChatbotVisible]);
 
+  // Prevent back/forward navigation to sign-in or portal when logged in
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isLoaded || !isSignedIn) return;
+
+    const dashboardPath = pathname || '/dashboard/faculty';
+    
+    // Immediately replace current history entry to remove any sign-in/portal page
+    window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+    
+    // Push a new history state to ensure sign-in/portal page is not accessible via back button
+    window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+
+    // Function to check and redirect if on portal or sign-in
+    const checkAndRedirect = () => {
+      const currentPath = window.location.pathname;
+      
+      // If on portal or sign-in, immediately redirect back to dashboard
+      if (currentPath === '/' || currentPath === '/sign-in' || currentPath.startsWith('/sign-in')) {
+        window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+        router.replace(dashboardPath);
+        // Push again to ensure portal/sign-in is not in history
+        window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+      }
+    };
+
+    // Intercept back/forward button navigation
+    const handlePopState = () => {
+      checkAndRedirect();
+    };
+
+    // Also check periodically in case navigation happens outside popstate
+    const checkInterval = setInterval(checkAndRedirect, 100);
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      clearInterval(checkInterval);
+    };
+  }, [isLoaded, isSignedIn, pathname, router]);
+
+  // Sync activeButton with URL query parameter
+  useEffect(() => {
+    const view = searchParams?.get('view') || 'dashboard';
+    setActiveButton(view);
+  }, [searchParams]);
+
   const handleButtonClick = (buttonName: string) => {
     setActiveButton(buttonName);
+    // Update URL with query parameter without causing a full page reload
+    router.push(`${pathname}?view=${buttonName}`, { scroll: false });
   };
 
   const handleLogout = async () => {
@@ -214,7 +266,6 @@ export default function FacultyDashboard() {
             ${isSidebarOpen ? 'p-4' : 'p-2'}`}
                 onClick={() => {
                   handleButtonClick('dashboard');
-                  router.push('/dashboard/faculty');
                 }}>
             <img
               src="/sjsfilogo.png"
@@ -248,7 +299,10 @@ export default function FacultyDashboard() {
                   }
                   ${activeButton === item.key ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
                 title={item.name}
-                onClick={() => handleButtonClick(item.key)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleButtonClick(item.key);
+                }}
               >
                 <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
                   {typeof item.icon === 'string' ? (

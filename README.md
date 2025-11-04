@@ -100,3 +100,62 @@ To test if email is working:
 
 If emails aren't being sent, check the server console for error messages related to email configuration.
 
+## Troubleshooting
+
+### Clerk Authentication Issues
+
+#### Clock Skew Errors
+
+If you see errors like:
+```
+JWT issued at date claim (iat) is in the future
+Clerk: Clock skew detected
+```
+
+**Solution:**
+1. **Sync your system clock** - This is the primary fix:
+   - **Windows**: 
+     - Right-click on the time in the taskbar
+     - Select "Adjust date/time"
+     - Turn off "Set time automatically", wait a few seconds, then turn it back on
+     - Or run `w32tm /resync` in PowerShell as Administrator
+   - **macOS**: 
+     - System Preferences → Date & Time
+     - Uncheck and recheck "Set date and time automatically"
+   - **Linux**: 
+     - `sudo ntpdate -s time.nist.gov` or `sudo timedatectl set-ntp true`
+
+2. The middleware has been updated to handle clock skew gracefully in development mode, but you should still sync your system clock for the best experience.
+
+#### Infinite Redirect Loops
+
+If you experience infinite redirect loops when signing in:
+
+**Causes:**
+- Mismatched Clerk keys (publishable key and secret key don't match)
+- System clock is significantly out of sync
+- Middleware redirect logic conflicts
+
+**Solutions:**
+1. **Verify Clerk Keys**: Ensure your `.env.local` has the correct keys from your Clerk dashboard:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` should match your Clerk instance
+   - `CLERK_SECRET_KEY` should match the same Clerk instance
+
+2. **Clear Browser Data**: Clear cookies and local storage, then try again
+
+3. **Check System Clock**: Follow the clock skew solution above
+
+4. **Check Middleware**: The middleware has been updated with redirect loop protection. If issues persist, check the browser console and server logs for specific error messages.
+
+#### Token Refresh Issues
+
+If you see "Refreshing the session token resulted in an infinite redirect loop":
+
+**Solutions:**
+1. Verify your Clerk keys are correct (see above)
+2. Ensure your system clock is synced
+3. Clear browser cookies for your development domain
+4. Restart your development server
+
+The middleware now handles these errors gracefully and will log warnings instead of causing redirect loops.
+

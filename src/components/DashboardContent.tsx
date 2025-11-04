@@ -7,16 +7,16 @@ import {
   FaCalendarAlt, 
   FaUsers, 
   FaUserTie, 
-  FaUserClock, 
   FaHistory,
   FaUserCheck,
   FaFile,
-  FaClock,
   FaGraduationCap,
   FaBriefcase,
   FaUserPlus,
   FaBuilding,
-  FaCalendarCheck
+  FaCalendarCheck,
+  FaUserClock,
+  FaClock
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
@@ -58,7 +58,10 @@ interface Employee {
 export default function DashboardContent() {
   const router = useRouter();
   const { user } = useUser();
-  const [dateRange, setDateRange] = useState<[Date, Date]>([new Date(), new Date()]);
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const dateRange: [Date, Date] = [startDate, endDate];
+  const clickCountRef = React.useRef<number>(0);
   const [facultyStats, setFacultyStats] = useState({
     total: 0,
     regular: 0,
@@ -74,20 +77,13 @@ export default function DashboardContent() {
     admin: 0,
     total: 0,
   });
-  const [attendanceData, setAttendanceData] = useState({
-    present: 0,
-    absent: 0,
-    late: 0,
-  });
   const [departmentStats, setDepartmentStats] = useState<Record<string, number>>({});
-  const [monthlyAttendance, setMonthlyAttendance] = useState<number[]>([]);
   const [leaveRequests, setLeaveRequests] = useState({
     pending: 0,
     approved: 0,
     rejected: 0,
   });
   const [documentStats, setDocumentStats] = useState({ submitted: 0 });
-  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
 
   interface Log {
     LogID: number;
@@ -129,11 +125,53 @@ export default function DashboardContent() {
     };
   }>>([]);
 
-  const handleDateChange = (dates: [Date | null, Date | null]) => {
+  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
     const [start, end] = dates;
+    
+    // If both dates are provided, set both
     if (start && end) {
-      setDateRange([start, end]);
+      setStartDate(start);
+      setEndDate(end);
+      clickCountRef.current = 0;
+      return;
     }
+    
+    // If only start is provided
+    if (start) {
+      if (clickCountRef.current === 0) {
+        // First click - set start date
+        setStartDate(start);
+        clickCountRef.current = 1;
+      }
+    }
+  };
+  
+  const handleDateSelect = (date: Date | null) => {
+    if (!date) return;
+    
+    // onSelect fires on every date click, use it to manually handle range selection
+    if (clickCountRef.current === 0) {
+      // First click - set start date
+      setStartDate(date);
+      clickCountRef.current = 1;
+    } else if (clickCountRef.current === 1) {
+      // Second click - set end date
+      const currentStart = startDate;
+      if (date.getTime() >= currentStart.getTime()) {
+        setEndDate(date);
+      } else {
+        // End is before start - swap them
+        setEndDate(currentStart);
+        setStartDate(date);
+      }
+      clickCountRef.current = 0;
+    }
+  };
+
+  const handleClearDateRange = () => {
+    const today = new Date();
+    setStartDate(today);
+    setEndDate(today);
   };
 
   // Add navigation handlers
@@ -319,55 +357,7 @@ export default function DashboardContent() {
           total: activeFacultyUsers + adminUsers
         });
 
-        // Fetch Attendance Data
-        const { data: attendance, error: attendanceError } = await supabase
-          .from("Attendance")
-          .select("*")
-          .gte("date", dateRange[0].toISOString())
-          .lte("date", dateRange[1].toISOString());
 
-        if (attendanceError) {
-          console.error("Attendance fetch error:", attendanceError.message || attendanceError);
-          throw attendanceError;
-        }
-
-        setAttendanceRecords(attendance || []);
-        setAttendanceData({
-          present: attendance?.filter((a) => a.status === "PRESENT").length || 0,
-          absent: attendance?.filter((a) => a.status === "ABSENT").length || 0,
-          late: attendance?.filter((a) => a.status === "LATE").length || 0,
-        });
-
-        // Fetch Monthly Attendance Data
-        const last6Months = Array.from({ length: 6 }, (_, i) => {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          return date;
-        }).reverse();
-
-        const monthlyData = await Promise.all(
-          last6Months.map(async (month) => {
-            const startDate = new Date(month.getFullYear(), month.getMonth(), 1);
-            const endDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-
-            const { data: monthAttendance, error: monthError } = await supabase
-              .from("Attendance")
-              .select("*")
-              .gte("date", startDate.toISOString())
-              .lte("date", endDate.toISOString());
-
-            if (monthError) {
-              console.error("Monthly attendance fetch error:", monthError.message || monthError);
-              throw monthError;
-            }
-
-            const totalDays = monthAttendance?.length || 0;
-            const presentDays = monthAttendance?.filter((a) => a.status === "PRESENT").length || 0;
-            return totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
-          })
-        );
-
-        setMonthlyAttendance(monthlyData);
 
         // Fetch Leave Requests
         const { data: leaves, error: leavesError } = await supabase
@@ -482,7 +472,7 @@ export default function DashboardContent() {
     };
 
     fetchDashboardData();
-  }, [dateRange]);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -520,84 +510,8 @@ export default function DashboardContent() {
     }
   }, [user?.id]);
 
-  // Build per-day present/absent/late arrays for the graph
-  const daysCount = Math.floor((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const presentPerDay: number[] = Array(daysCount).fill(0);
-  const absentPerDay: number[] = Array(daysCount).fill(0);
-  const latePerDay: number[] = Array(daysCount).fill(0);
-  
-  // Get all active employees (Regular and Part Time only for attendance)
-  const activeEmployees = employees.filter((emp: Employee) => {
-    if (emp.isDeleted) return false;
-    const status = emp.employmentDetails?.[0]?.EmploymentStatus || emp.EmploymentStatus;
-    return status === "Regular" || status === "Part_Time" || status === "Part Time";
-  });
-  const totalActiveEmployees = activeEmployees.length;
-  
-  // Calculate attendance for each day
-  for (let i = 0; i < daysCount; i++) {
-    const day = new Date(dateRange[0]);
-    day.setDate(day.getDate() + i);
-    const dayStr = day.toISOString().split('T')[0];
-    
-    // Get all attendance records for this day
-    const dayAttendance = attendanceRecords.filter(rec => rec.date === dayStr);
-    
-    // Count present, absent, and late for this day
-    presentPerDay[i] = dayAttendance.filter(rec => rec.status === 'PRESENT').length;
-    latePerDay[i] = dayAttendance.filter(rec => rec.status === 'LATE').length;
-    
-    // Absent is total active employees minus present and late
-    absentPerDay[i] = totalActiveEmployees - (presentPerDay[i] + latePerDay[i]);
-  }
 
-  console.log('Attendance calculation debug:', {
-    totalActiveEmployees,
-    sampleDay: {
-      present: presentPerDay[0],
-      absent: absentPerDay[0],
-      late: latePerDay[0]
-    },
-    attendanceRecords: attendanceRecords.length,
-    activeEmployees: activeEmployees.map(emp => ({
-      id: emp.EmployeeID,
-      status: emp.employmentDetails?.[0]?.EmploymentStatus || emp.EmploymentStatus
-    }))
-  });
 
-  const attendanceOverviewData = {
-    labels: Array.from({ length: daysCount }, (_, i) => {
-      const d = new Date(dateRange[0]);
-      d.setDate(d.getDate() + i);
-      return `${d.getMonth() + 1}/${d.getDate()}`;
-    }),
-    datasets: [
-      {
-        label: "Present",
-        data: presentPerDay,
-        backgroundColor: "#43a047",
-        borderRadius: 4,
-        barPercentage: 0.7,
-        categoryPercentage: 0.8,
-      },
-      {
-        label: "Absent",
-        data: absentPerDay,
-        backgroundColor: "#e53935",
-        borderRadius: 4,
-        barPercentage: 0.7,
-        categoryPercentage: 0.8,
-      },
-      {
-        label: "Late",
-        data: latePerDay,
-        backgroundColor: "#ffb300",
-        borderRadius: 4,
-        barPercentage: 0.7,
-        categoryPercentage: 0.8,
-      },
-    ],
-  };
 
   const departmentColors = ["#800000", "#9C27B0", "#2196F3", "#FF9800", "#43a047", "#e53935", "#ffb300"];
   const departmentData = {
@@ -611,18 +525,7 @@ export default function DashboardContent() {
     ],
   };
 
-  const monthlyAttendanceData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        label: "Monthly Attendance Rate (%)",
-        data: monthlyAttendance,
-        borderColor: "#800000",
-        tension: 0.4,
-        fill: false,
-      },
-    ],
-  };
+
 
   const leavePieData = {
     labels: ["Pending", "Approved", "Rejected"],
@@ -661,39 +564,66 @@ export default function DashboardContent() {
   return (
     <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">Filter by Date Range</label>
-            <DatePicker
-              selected={dateRange[0]}
-              onChange={handleDateChange}
-              startDate={dateRange[0]}
-              endDate={dateRange[1]}
-              selectsRange
-              dateFormat="yyyy-MM-dd"
-              customInput={
-                <button className="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-all duration-300">
-                  <FaCalendarAlt className="mr-2 text-[#800000]" />
-                  {dateRange[0]
-                    ? `${dateRange[0].toLocaleDateString()} - ${
-                        dateRange[1]?.toLocaleDateString() || ""
-                      }`
-                    : "Select Date Range"}
-                </button>
-              }
-              className="w-full"
-              maxDate={new Date()}
-              placeholderText="Select date range"
-            />
+            <label className="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</label>
+            <div className="relative">
+              <DatePicker
+                selected={startDate}
+                onChange={handleDateRangeChange}
+                onSelect={handleDateSelect}
+                startDate={startDate}
+                endDate={endDate}
+                selectsRange
+                shouldCloseOnSelect={false}
+                dateFormat="MMM d, yyyy"
+                maxDate={new Date()}
+                placeholderText="Select Date Range"
+                customInput={
+                  <div className="relative">
+                    <button 
+                      type="button"
+                      className="flex items-center justify-between w-full min-w-[280px] bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:border-[#800000] hover:bg-gray-50 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
+                    >
+                      <div className="flex items-center">
+                        <FaCalendarAlt className="mr-2 text-[#800000]" />
+                        <span className="text-sm">
+                          {startDate && endDate
+                            ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                            : "Select Date Range"}
+                        </span>
+                      </div>
+                      {startDate && endDate && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleClearDateRange();
+                          }}
+                          className="ml-2 text-gray-400 hover:text-[#800000] transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+                          title="Clear date range"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </button>
+                  </div>
+                }
+                className="w-full"
+              />
+            </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-end gap-2 pt-6">
             <button 
               onClick={() => {
                 const today = new Date();
                 const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                setDateRange([firstDayOfMonth, today]);
+                setStartDate(firstDayOfMonth);
+                setEndDate(today);
               }}
-              className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
             >
               This Month
             </button>
@@ -701,16 +631,17 @@ export default function DashboardContent() {
               onClick={() => {
                 const today = new Date();
                 const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
-                setDateRange([firstDayOfYear, today]);
+                setStartDate(firstDayOfYear);
+                setEndDate(today);
               }}
-              className="px-3 py-2 text-sm text-gray-600 hover:text-[#800000] transition-colors duration-300"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
             >
               This Year
             </button>
           </div>
         </div>
-        <div className="text-sm text-gray-500">
-          Showing data from {dateRange[0].toLocaleDateString()} to {dateRange[1].toLocaleDateString()}
+        <div className="text-sm text-gray-500 hidden md:block">
+          Showing data from {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to {endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </div>
       </div>
 
@@ -1093,52 +1024,7 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      {/* Attendance Overview Section */}
-      {/* <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-        <div className="flex items-center mb-6">
-          <FaUserClock className="text-[#800000] text-2xl mr-3" />
-          <h2 className="text-2xl font-bold text-gray-800">Attendance Overview</h2>
-        </div>
-        <div className="h-[350px]">
-          <Bar data={attendanceOverviewData} options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-              legend: { 
-                display: true,
-                position: 'top',
-                align: 'center',
-                labels: {
-                  boxWidth: 12,
-                  padding: 15,
-                  usePointStyle: true
-                }
-              }
-            },
-            scales: {
-              y: { 
-                beginAtZero: true,
-                grid: {
-                  display: true,
-                  color: 'rgba(0, 0, 0, 0.1)'
-                },
-                ticks: {
-                  precision: 0
-                }
-              },
-              x: {
-                grid: {
-                  display: false
-                }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            }
-          }} />
-        </div>
-      </div> */}
+     
     </div>
   );
 }

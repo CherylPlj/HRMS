@@ -13,10 +13,12 @@ interface Employee {
   Department?: {
     DepartmentName: string;
   };
-  EmploymentDetail?: {
+  EmploymentDetail?: Array<{
     EmploymentStatus: string;
     HireDate: string;
-  };
+    ResignationDate?: string;
+    RetirementDate?: string;
+  }>;
   ContactInfo?: {
     Phone?: string;
     Email?: string;
@@ -57,7 +59,7 @@ interface DirectoryFilters {
   name: string;
   department: string;
   position: string;
-  status: string;
+  yearsOfService: string;
 }
 
 const Directory = () => {
@@ -73,7 +75,7 @@ const Directory = () => {
     name: '',
     department: '',
     position: '',
-    status: ''
+    yearsOfService: ''
   });
   const [departments, setDepartments] = useState<string[]>([]);
   const [positions, setPositions] = useState<string[]>([]);
@@ -122,7 +124,6 @@ const Directory = () => {
       if (filters.name) params.append('name', filters.name);
       if (filters.department) params.append('department', filters.department);
       if (filters.position) params.append('position', filters.position);
-      if (filters.status) params.append('status', filters.status);
       params.append('page', '1');
       params.append('limit', '1000'); // Get all records for now
 
@@ -174,8 +175,12 @@ const Directory = () => {
       name: '',
       department: '',
       position: '',
-      status: ''
+      yearsOfService: ''
     });
+  };
+
+  const getEmploymentDetail = (record: Employee): { EmploymentStatus: string; HireDate: string; ResignationDate?: string; RetirementDate?: string; } | null => {
+    return record.EmploymentDetail?.[0] || null;
   };
 
   const filteredEmployees = employees.filter(emp => {
@@ -183,9 +188,48 @@ const Directory = () => {
     const matchesName = !filters.name || fullName.includes(filters.name.toLowerCase());
     const matchesDept = !filters.department || emp.Department?.DepartmentName === filters.department;
     const matchesPosition = !filters.position || emp.Position === filters.position;
-    const matchesStatus = !filters.status || emp.EmploymentDetail?.EmploymentStatus === filters.status;
+    
+    // Filter by years of service
+    let matchesYearsOfService = true;
+    if (filters.yearsOfService) {
+      const empDetail = getEmploymentDetail(emp);
+      const hireDate = empDetail?.HireDate;
+      if (hireDate) {
+        try {
+          const hire = new Date(hireDate);
+          const now = new Date();
+          const years = now.getFullYear() - hire.getFullYear();
+          const months = now.getMonth() - hire.getMonth();
+          const totalYears = months < 0 ? years - 1 : years;
+          
+          switch (filters.yearsOfService) {
+            case '0-5':
+              matchesYearsOfService = totalYears >= 0 && totalYears < 5;
+              break;
+            case '5-10':
+              matchesYearsOfService = totalYears >= 5 && totalYears < 10;
+              break;
+            case '10-15':
+              matchesYearsOfService = totalYears >= 10 && totalYears < 15;
+              break;
+            case '15-20':
+              matchesYearsOfService = totalYears >= 15 && totalYears < 20;
+              break;
+            case '20+':
+              matchesYearsOfService = totalYears >= 20;
+              break;
+            default:
+              matchesYearsOfService = true;
+          }
+        } catch {
+          matchesYearsOfService = false;
+        }
+      } else {
+        matchesYearsOfService = false;
+      }
+    }
 
-    return matchesName && matchesDept && matchesPosition && matchesStatus;
+    return matchesName && matchesDept && matchesPosition && matchesYearsOfService;
   });
 
   const allFilteredRecords = filteredEmployees;
@@ -219,14 +263,34 @@ const Directory = () => {
   };
 
   const getEmployeePosition = (record: Employee) => {
-    return record.Position || 'N/A';
+    return record.Position || ' ';
   };
 
   const getEmployeeDepartment = (record: Employee) => {
     if ('Department' in record && record.Department) {
       return record.Department.DepartmentName;
     }
-    return 'N/A';
+    return ' ';
+  };
+
+  const calculateYearsOfService = (hireDate: string | undefined): string => {
+    if (!hireDate) return ' ';
+    try {
+      const hire = new Date(hireDate);
+      const now = new Date();
+      const years = now.getFullYear() - hire.getFullYear();
+      const months = now.getMonth() - hire.getMonth();
+      
+      if (years < 0) return ' ';
+      if (years === 0 && months < 0) return ' ';
+      
+      if (months < 0) {
+        return `${years - 1} years`;
+      }
+      return `${years} years`;
+    } catch {
+      return ' ';
+    }
   };
 
   const handleAdminAction = async (action: string, employeeId: string, newStatus?: string) => {
@@ -283,6 +347,48 @@ const Directory = () => {
         alert('Messaging feature coming soon');
         break;
     }
+  };
+
+  const handleDownload = () => {
+    // Prepare CSV data
+    const headers = ['First Name', 'Last Name', 'Middle Name', 'Position', 'Department', 'Email', 'Employment Status', 'Hire Date', 'Resignation Date'];
+    const csvRows = [headers.join(',')];
+
+    allFilteredRecords.forEach(record => {
+      const employmentDetail = getEmploymentDetail(record);
+      const row = [
+        record.FirstName || record.User?.FirstName || '',
+        record.LastName || record.User?.LastName || '',
+        record.MiddleName || '',
+        record.Position || '',
+        record.Department?.DepartmentName || '',
+        record.User?.Email || record.Email || '',
+        employmentDetail?.EmploymentStatus || '',
+        employmentDetail?.HireDate ? new Date(employmentDetail.HireDate).toLocaleDateString() : '',
+        employmentDetail?.ResignationDate ? new Date(employmentDetail.ResignationDate).toLocaleDateString() : ''
+      ];
+      // Escape commas and quotes in CSV
+      csvRows.push(row.map(field => {
+        const stringField = String(field || '');
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+          return `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+      }).join(','));
+    });
+
+    // Create and download CSV file
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `employee_directory_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading) {
@@ -396,23 +502,22 @@ const Directory = () => {
                 </select>
               </div>
 
-              {/* Status */}
+              {/* Years of Service */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
+                  Years of Service
                 </label>
                 <select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  value={filters.yearsOfService}
+                  onChange={(e) => handleFilterChange('yearsOfService', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                 >
                   <option value="">-- Select --</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Probationary">Probationary</option>
-                  <option value="Part_Time">Part Time</option>
-                  <option value="Hired">Hired</option>
-                  <option value="Resigned">Resigned</option>
-                  <option value="Retired">Retired</option>
+                  <option value="0-5">0-5 years</option>
+                  <option value="5-10">5-10 years</option>
+                  <option value="10-15">10-15 years</option>
+                  <option value="15-20">15-20 years</option>
+                  <option value="20+">20+ years</option>
                 </select>
               </div>
             </div>
@@ -437,12 +542,20 @@ const Directory = () => {
           </div>
         </div>
 
-        {/* Records Found */}
-        <div className="mb-6">
+        {/* Records Found and Download */}
+        <div className="mb-6 flex items-center justify-between">
           <p className="text-gray-600">
             <i className="fas fa-users mr-2"></i>
             ({totalRecords}) Records Found
           </p>
+          <button
+            onClick={handleDownload}
+            disabled={totalRecords === 0}
+            className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
+          >
+            <i className="fas fa-download mr-2"></i>
+            Download CSV
+          </button>
         </div>
 
         {/* Employee Cards Grid */}
@@ -481,9 +594,15 @@ const Directory = () => {
                 </p>
 
                 {/* Department */}
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 mb-1">
                   <i className="fas fa-building mr-1"></i>
                   {getEmployeeDepartment(record)}
+                </p>
+
+                {/* Years of Service */}
+                <p className="text-sm text-gray-600">
+                  <i className="fas fa-calendar-alt mr-1"></i>
+                  {calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}
                 </p>
               </div>
             </div>
@@ -549,17 +668,17 @@ const Directory = () => {
                   </div>
                 </div>
 
-                {/* Contact Information */}
+                                {/* Contact Information */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                    <i className="fas fa-address-card mr-2 text-[#800000]"></i>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">     
+                    <i className="fas fa-address-card mr-2 text-[#800000]"></i> 
                     Contact Information
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">       
                     <div>
                       <p className="text-sm text-gray-600">Email</p>
                       <p className="font-medium">
-                        {selectedEmployee.User?.Email || selectedEmployee.Email || 'N/A'}
+                        {selectedEmployee.User?.Email || selectedEmployee.Email || ' '}                                                                       
                       </p>
                     </div>
                     {/* <div>
@@ -572,28 +691,33 @@ const Directory = () => {
                 </div>
 
                 {/* Employment Details */}
-                {/* <div className="bg-gray-50 rounded-lg p-4"> */}
-                  {/* <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                    <i className="fas fa-briefcase mr-2 text-[#800000]"></i>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3"> 
+                    <i className="fas fa-briefcase mr-2 text-[#800000]"></i>    
                     Employment Details
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">       
                     <div>
-                      <p className="text-sm text-gray-600">Status</p>
+                      <p className="text-sm text-gray-600">Hire Date</p>        
                       <p className="font-medium">
-                        {selectedEmployee.EmploymentDetail?.EmploymentStatus || 'N/A'}
+                        {(() => {
+                          const empDetail = getEmploymentDetail(selectedEmployee);
+                          return empDetail?.HireDate ? new Date(empDetail.HireDate).toLocaleDateString() : ' ';
+                        })()}
                       </p>
-                    </div> */}
-                    {/* <div>
-                      <p className="text-sm text-gray-600">Hire Date</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">End Date / Retirement Date</p>
                       <p className="font-medium">
-                        {selectedEmployee.EmploymentDetail?.HireDate ? 
-                          new Date(selectedEmployee.EmploymentDetail.HireDate).toLocaleDateString() : 'N/A'
-                        }
+                        {(() => {
+                          const empDetail = getEmploymentDetail(selectedEmployee);
+                          return empDetail?.RetirementDate ? new Date(empDetail.RetirementDate).toLocaleDateString() :
+                            empDetail?.ResignationDate ? new Date(empDetail.ResignationDate).toLocaleDateString() : ' ';
+                        })()}
                       </p>
-                    </div> */}
-                  {/* </div> */}
-                {/* </div> */}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Quick Actions */}
                 <div className="space-y-4">
