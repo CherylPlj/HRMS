@@ -8,7 +8,7 @@ import { useAuth } from "@clerk/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Eye, ArrowLeft, AlertCircle, X } from 'lucide-react';
-import { validatePassword, loginRateLimiter, unknownIPRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
+import { validatePassword, sanitizePassword, loginRateLimiter, unknownIPRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
 import { getClientIp } from '@/lib/ip';
 import { validateEmailCharacters } from '@/lib/validation';
 
@@ -247,16 +247,19 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     setIsLoading(true);
 
     try {
-      const passwordValidation = validatePassword(newPassword);
-      if (passwordValidation) {
-        setPasswordError(passwordValidation);
+      // Sanitize password to prevent SQL injection
+      const sanitizedPassword = sanitizePassword(newPassword);
+      
+      // Validate password silently (no descriptive messages)
+      if (!validatePassword(sanitizedPassword)) {
+        setPasswordError('Invalid');
         setIsLoading(false);
         return;
       }
 
-      // Reset the password 
+      // Reset the password using sanitized password
       const passwordResetResult = await resetData.resetPassword({
-        password: newPassword
+        password: sanitizedPassword
       });
 
       console.log('Password reset result:', passwordResetResult);
@@ -481,18 +484,15 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                   value={newPassword}
                   onChange={(e) => {
                       const value = e.target.value;
-                      setNewPassword(value);
+                      const sanitized = sanitizePassword(value);
+                      setNewPassword(sanitized);
                     setError(null);
                       
                       // Real-time password validation
-                      const validation = validatePassword(value);
-                      setPasswordError(validation);
+                      const validation = validatePassword(sanitized);
+                      setPasswordError(validation ? null : 'Invalid');
                   }}
-                    className={`w-full px-3 py-2 pr-10 border ${
-                      passwordError ? 'border-red-300' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-1 ${
-                      passwordError ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
-                  }`}
+                  className={`w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-[#800000]`}
                   placeholder="Enter new password"
                 />
                   <button
@@ -504,9 +504,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                     <Eye className="h-[18px] w-[18px]" />
                   </button>
                 </div>
-                {passwordError && (
-                  <p className="mt-1 text-sm text-red-600">{passwordError}</p>
-                )}
+                {/* Password validation errors are not displayed to prevent information disclosure */}
               </div>
             )}
 
@@ -623,11 +621,11 @@ export default function SignInPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Replace portal entry in history if present
-    if (window.history.state) {
-      const currentPath = window.location.pathname;
-      window.history.replaceState({ url: currentPath, preventBack: true }, '', currentPath);
-    }
+    // Replace portal entry in history if present (removes portal from back navigation)
+    // This ensures portal is removed from history when navigating to sign-in
+    const currentPath = window.location.pathname;
+    // Replace current entry to remove portal from history
+    window.history.replaceState({ url: currentPath, preventBack: true }, '', currentPath);
 
     const handlePopState = () => {
       // Use setTimeout to check after navigation has occurred
@@ -841,17 +839,20 @@ export default function SignInPage() {
     }
     
     if (name === 'password') {
-      // Handle pasted content that might exceed max length
-      const trimmedValue = value.length > 50 ? value.slice(0, 50) : value;
+       // Sanitize password input to prevent SQL injection
+      const sanitized = sanitizePassword(value);
       
-      // Show password requirements immediately
-      const passwordValidationError = validatePassword(trimmedValue);
-      setError(passwordValidationError);
+      // Validate password silently (no error messages displayed)
+      const isValid = validatePassword(sanitized);
       
-      setPassword(trimmedValue);
-      
+      // Update password state with sanitized value
+      setPassword(sanitized);
+       // Clear any previous password errors silently
+       if (isValid) {
+        setError(null);
+      }
       // Clear email error if password is being edited and email is valid
-      if (!passwordValidationError && !validateEmailCharacters(email)) {
+      if (isValid && !validateEmailCharacters(email)) {
         setEmailError(null);
       }
     }
@@ -925,11 +926,13 @@ export default function SignInPage() {
         return;
       }
 
-      // Validate password complexity
-      const passwordError = validatePassword(password);
-      if (passwordError) {
+     // Sanitize password to prevent SQL injection
+     const sanitizedPassword = sanitizePassword(password);
+      
+     // Validate password silently (no descriptive messages)
+      if (!validatePassword(sanitizedPassword)) {
         setIsLoading(false);
-        showErrorPopup(passwordError);
+        showErrorPopup('Invalid Credentials');
         return;
       }
 
@@ -939,12 +942,12 @@ export default function SignInPage() {
         return;
       }
 
-      // Attempt to sign in with Clerk first
+      // Attempt to sign in with Clerk first (using sanitized password)
       let result;
       try {
         result = await signIn.create({
           identifier: email,
-          password: password,
+          password: sanitizedPassword,
         });
       } catch (clerkError: any) {
         recordFailedLoginAttempt(userIP);
@@ -1082,18 +1085,19 @@ export default function SignInPage() {
       // Force a small delay to ensure session is fully established
       await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Handle redirect - use replace to prevent going back to sign-in
-        // Remove sign-in page from history before redirecting
+        // Handle redirect - use replace to prevent going back to sign-in/portal
+        // Remove sign-in and portal pages from history before redirecting
         if (typeof window !== 'undefined') {
-          // Clear any history entries that might allow going back to sign-in
+          // Clear any history entries that might allow going back to sign-in or portal
           const redirectPath = redirectUrl || 
             (userRole === 'admin' || userRole === 'super admin' ? '/dashboard/admin' :
              userRole === 'faculty' ? '/dashboard/faculty' : '/dashboard');
           
-          // Replace current history entry to remove sign-in page
+          // Replace current history entry to remove sign-in page (and portal if it was there)
+          // This removes both portal and sign-in from browser history
           window.history.replaceState(null, '', redirectPath);
           
-          // Use replace to completely remove sign-in page from history
+          // Use replace to completely remove sign-in/portal pages from history
           window.location.replace(redirectPath);
         }
     } catch (err: any) {

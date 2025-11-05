@@ -182,37 +182,41 @@ export default function AdminDashboard() {
   }, [isLoaded, isSignedIn, user, router]);
 
   // Prevent back/forward navigation to sign-in or portal when logged in
+  // But allow normal navigation between dashboard views
   useEffect(() => {
     if (typeof window === 'undefined' || !isLoaded || !isSignedIn) return;
 
-    const dashboardPath = pathname || '/dashboard/admin';
-    
-    // Immediately replace current history entry to remove any sign-in/portal page
-    window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
-    
-    // Push a new history state to ensure sign-in/portal page is not accessible via back button
-    window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
-
-    // Function to check and redirect if on portal or sign-in
+    // Function to check and redirect if on portal or sign-in (but not dashboard views)
     const checkAndRedirect = () => {
       const currentPath = window.location.pathname;
       
       // If on portal or sign-in, immediately redirect back to dashboard
       if (currentPath === '/' || currentPath === '/sign-in' || currentPath.startsWith('/sign-in')) {
-        window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
-        router.replace(dashboardPath);
+        const dashboardPath = pathname || '/dashboard/admin';
+        const currentView = searchParams?.get('view') || 'dashboard';
+        const redirectPath = `${dashboardPath}?view=${currentView}`;
+        
+        window.history.replaceState({ url: redirectPath, preventBack: true }, '', redirectPath);
+        router.replace(redirectPath);
         // Push again to ensure portal/sign-in is not in history
-        window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+        window.history.pushState({ url: redirectPath, preventBack: true }, '', redirectPath);
       }
+      // Note: We don't interfere with dashboard view navigation - router.push handles history
     };
+
+    // Only check on mount - don't interfere with normal navigation
+    checkAndRedirect();
 
     // Intercept back/forward button navigation
     const handlePopState = () => {
-      checkAndRedirect();
+      // Use setTimeout to allow normal navigation, then check if we ended up on portal/sign-in
+      setTimeout(() => {
+        checkAndRedirect();
+      }, 0);
     };
 
-    // Also check periodically in case navigation happens outside popstate
-    const checkInterval = setInterval(checkAndRedirect, 100);
+    // Check periodically for portal/sign-in access (but don't interfere with dashboard navigation)
+    const checkInterval = setInterval(checkAndRedirect, 500);
 
     window.addEventListener('popstate', handlePopState);
     
@@ -220,7 +224,7 @@ export default function AdminDashboard() {
       window.removeEventListener('popstate', handlePopState);
       clearInterval(checkInterval);
     };
-  }, [isLoaded, isSignedIn, pathname, router]);
+  }, [isLoaded, isSignedIn, pathname, router, searchParams]);
 
   // Sync activeButton with URL query parameter
   useEffect(() => {
@@ -406,7 +410,6 @@ export default function AdminDashboard() {
             ${isSidebarOpen ? 'p-4' : 'p-2'}`}
                 onClick={() => {
                   handleButtonClick('dashboard');
-                  router.push('/dashboard/admin');
                 }}>
             <Image
               src="/sjsfilogo.png"

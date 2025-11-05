@@ -1,14 +1,77 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
-// Password validation
-export const validatePassword = (password: string): string | null => {
+// SQL injection prevention - check for dangerous patterns
+// Note: These patterns detect common SQL injection attempts, not legitimate password characters
+const SQL_INJECTION_PATTERNS = [
+  // SQL comments and statement terminators
+  /(--|\/\*|\*\/|;)/g,
+  // SQL injection attempts with OR/AND conditions
+  /(\b(OR|AND)\s+\d+\s*=\s*\d+)/gi,
+  /(\b(OR|AND)\s+['"]\s*=\s*['"])/gi,
+  /(\b(OR|AND)\s+['"]1['"]\s*=\s*['"]1['"])/gi,
+  /(\b(OR|AND)\s+1\s*=\s*1)/gi,
+  // Dangerous SQL keywords when used in injection context
+  /(\b(UNION|EXEC|EXECUTE)\s+(SELECT|ALL))/gi,
+];
+
+// Sanitize password input to prevent SQL injection and other security risks
+// Note: This removes dangerous characters but should be used with validation
+export const sanitizePassword = (password: string): string => {
+  if (!password || typeof password !== 'string') {
+    return '';
+  }
+  
+  // Remove null bytes and control characters (security risk)
+  let sanitized = password.replace(/[\x00-\x1F\x7F]/g, '');
+  
+  // Remove SQL comment patterns (security risk)
+  sanitized = sanitized.replace(/--/g, '');
+  sanitized = sanitized.replace(/\/\*/g, '');
+  sanitized = sanitized.replace(/\*\//g, '');
+  sanitized = sanitized.replace(/;/g, '');
+  
+  // Limit length to prevent buffer overflow
+  const maxLength = 50;
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.slice(0, maxLength);
+  }
+  
+  return sanitized;
+};
+
+// Check if password contains dangerous patterns
+export const hasSecurityRisks = (password: string): boolean => {
+  // Check for SQL injection patterns
+  for (const pattern of SQL_INJECTION_PATTERNS) {
+    if (pattern.test(password)) {
+      return true;
+    }
+  }
+  
+  // Check for null bytes or control characters
+  if (/[\x00-\x1F\x7F]/.test(password)) {
+    return true;
+  }
+  
+  // Check length constraints (security, not UX)
   const minLength = 8;
   const maxLength = 50;
+  if (password.length < minLength || password.length > maxLength) {
+    return true;
+  }
   
-  if (password.length > maxLength) return "Password must not exceed 50 characters";
-  if (password.length < minLength) return "Password must be at least 8 characters";
+  return false;
+};
+
+// Password validation - returns boolean (true if valid, false if invalid)
+// Does not display descriptive messages to prevent information disclosure
+export const validatePassword = (password: string): boolean => {
+  if (!password || typeof password !== 'string') {
+    return false;
+  }
   
-  return null;
+  // Check for security risks (SQL injection, length, etc.)
+  return !hasSecurityRisks(password);
 };
 
 // Brute force protection - separate limiters for known and unknown IPs
