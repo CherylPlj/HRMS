@@ -434,7 +434,7 @@ export default function AdminDashboard() {
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              { name: 'Reports', icon: 'fa-print', key: 'reports' },
+              // { name: 'Reports', icon: 'fa-print', key: 'reports' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
                 { name: 'Users', icon: 'fa-user-shield', key: 'user-management' },

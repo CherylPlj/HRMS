@@ -287,7 +287,7 @@ export default function FacultyDashboard() {
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
               { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              { name: 'Reports', icon: 'fa-print', key: 'reports' },
+              // { name: 'Reports', icon: 'fa-print', key: 'reports' },
             ].map((item) => (
               <a
                 key={item.key}
