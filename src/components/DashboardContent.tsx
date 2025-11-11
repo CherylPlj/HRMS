@@ -565,8 +565,8 @@ export default function DashboardContent() {
     <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</label>
+          {/* <div className="flex flex-col"> */}
+            {/* <label className="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</label>
             <div className="relative">
               <DatePicker
                 selected={startDate}
@@ -614,7 +614,7 @@ export default function DashboardContent() {
                 className="w-full"
               />
             </div>
-          </div>
+          </div>  */}
           <div className="flex items-end gap-2 pt-6">
             <button 
               onClick={() => {
