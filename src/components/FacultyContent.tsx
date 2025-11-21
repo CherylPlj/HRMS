@@ -1235,13 +1235,6 @@ const FacultyContent = () => {
                   <option value="Resigned">Resigned</option>
                 </select>
               </div>
-            <button
-              onClick={handleDownloadSelected}
-              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800 ml-auto"
-              disabled={selectedRows.length === 0}
-            >
-              <FaDownload /> Download Selected ({selectedRows.length})
-            </button>
           </div>
         </div>
       )}
@@ -1471,20 +1464,6 @@ const FacultyContent = () => {
                               className="text-blue-600 hover:text-blue-900"
                             >
                               <FaEye />
-                            </button>
-                            <button 
-                              onClick={() => openEditModal(faculty)}
-                              title="Edit" 
-                              className="text-indigo-600 hover:text-indigo-900"
-                            >
-                              <FaPen />
-                            </button>
-                            <button 
-                              onClick={() => openDeleteModal(faculty)}
-                              title="Delete" 
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <FaTrash />
                             </button>
                           </div>
                         </td>
