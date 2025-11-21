@@ -188,7 +188,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
                                 : 'bg-red-600 hover:bg-red-700'
                         } text-white px-4 py-2 rounded`}
                     >
-                        Yes, {status}
+                        Yes, {status === 'Approved' ? 'Approve' : 'Reject'}
                     </button>
                     <button
                         onClick={() => {
@@ -344,6 +344,55 @@ const ViewLeaveModal: React.FC<ViewLeaveModalProps> = ({ isOpen, onClose, leave 
     );
 };
 
+// Success Modal Component
+interface SuccessModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    status: LeaveStatus;
+    facultyName: string;
+}
+
+const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, status, facultyName }) => {
+    if (!isOpen) return null;
+
+    const isApproved = status === 'Approved';
+
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
+                <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4 ${
+                    isApproved ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                    {isApproved ? (
+                        <Check className="h-8 w-8 text-green-600" />
+                    ) : (
+                        <X className="h-8 w-8 text-red-600" />
+                    )}
+                </div>
+                <h2 className="text-2xl font-bold mb-2 text-[#800000]">
+                    Leave Request {isApproved ? 'Approved' : 'Rejected'}
+                </h2>
+                <p className="mb-4 text-gray-700">
+                    The leave request for <span className="font-semibold">{facultyName}</span> has been {isApproved ? 'approved' : 'rejected'} successfully.
+                </p>
+                <p className="mb-6 text-sm text-gray-500">
+                    An email notification has been sent to the employee.
+                </p>
+                <button
+                    onClick={onClose}
+                    className={`w-full px-4 py-2 rounded text-white font-semibold ${
+                        isApproved 
+                            ? 'bg-green-600 hover:bg-green-700' 
+                            : 'bg-red-600 hover:bg-red-700'
+                    } transition-colors`}
+                >
+                    OK
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const LeaveContent: React.FC = () => {
     const { user, isLoaded: isUserLoaded } = useUser();
     const router = useRouter();
@@ -374,6 +423,15 @@ const LeaveContent: React.FC = () => {
     const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
     const [deleteConfirmError, setDeleteConfirmError] = useState('');
     const [photosLoading, setPhotosLoading] = useState(false);
+    const [successModal, setSuccessModal] = useState<{
+        isOpen: boolean;
+        status: LeaveStatus | null;
+        facultyName: string;
+    }>({
+        isOpen: false,
+        status: null,
+        facultyName: ''
+    });
     const fetchLeavesRef = useRef(false); // Prevent duplicate calls
 
     // Memoize fetchLeaves to prevent unnecessary re-creations
@@ -526,8 +584,9 @@ const LeaveContent: React.FC = () => {
                 body: JSON.stringify({ status }),
             });
 
+            const statusVerb = status === 'Approved' ? 'approve' : 'reject';
             if (!response.ok) {
-                throw new Error(`Failed to ${status.toLowerCase()} leave request`);
+                throw new Error(`Failed to ${statusVerb} leave request`);
             }
 
             setLeaves(leaves.map(leave => 
@@ -535,10 +594,21 @@ const LeaveContent: React.FC = () => {
                     ? { ...leave, Status: status }
                     : leave
             ));
+            
+            // Close the confirmation modal
+            const facultyName = statusUpdateModal.facultyName;
             setStatusUpdateModal({ isOpen: false, leaveId: null, status: null, facultyName: '', leaveType: '', requestType: 'Leave' });
+            
+            // Show success modal
+            setSuccessModal({
+                isOpen: true,
+                status: status,
+                facultyName: facultyName
+            });
         } catch (err) {
             console.error('Error updating leave status:', err);
-            alert(`Failed to ${status.toLowerCase()} leave request`);
+            const statusVerb = status === 'Approved' ? 'approve' : 'reject';
+            alert(`Failed to ${statusVerb} leave request`);
         }
     };
 
@@ -869,6 +939,9 @@ const LeaveContent: React.FC = () => {
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Status
                                             </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Actions
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -930,11 +1003,23 @@ const LeaveContent: React.FC = () => {
                                                                 {leave.Status}
                                                             </span>
                                                         </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedLeave(leave);
+                                                                    setViewModalOpen(true);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-900 transition-colors"
+                                                                title="View details"
+                                                            >
+                                                                <Eye className="h-5 w-5" />
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan={7} className="text-center text-gray-400 py-12">
+                                                <td colSpan={8} className="text-center text-gray-400 py-12">
                                                     No Leave Logs Found
                                                 </td>
                                             </tr>
@@ -1028,6 +1113,14 @@ const LeaveContent: React.FC = () => {
                     setSelectedLeave(null);
                 }}
                 leave={selectedLeave}
+            />
+
+            {/* Success Modal */}
+            <SuccessModal
+                isOpen={successModal.isOpen}
+                onClose={() => setSuccessModal({ isOpen: false, status: null, facultyName: '' })}
+                status={successModal.status || 'Approved'}
+                facultyName={successModal.facultyName}
             />
         </div>
     );

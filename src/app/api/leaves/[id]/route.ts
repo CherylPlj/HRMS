@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { LeaveStatus, LeaveType } from '@prisma/client';
+import { sendEmail, generateLeaveStatusUpdateEmail, generateLeaveUpdateAdminNotificationEmail } from '@/lib/email';
 
 // Define CORS headers
 const corsHeaders = {
@@ -59,47 +60,107 @@ export async function PATCH(
             );
         }
 
-        const start = new Date(body.StartDate);
-        const end = new Date(body.EndDate);
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
+        // Only validate leave limits when APPROVING, not when rejecting
+        if (status === 'Approved') {
+            // Use existing leave dates if body dates are not provided
+            const startDate = body.StartDate ? new Date(body.StartDate) : existingLeave.StartDate;
+            const endDate = body.EndDate ? new Date(body.EndDate) : existingLeave.EndDate;
 
-        // Calculate days for this request
-        const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            if (!startDate || !endDate) {
+                return NextResponse.json(
+                    { error: 'Leave dates are required' },
+                    { status: 400, headers: corsHeaders }
+                );
+            }
 
-        // Get all approved leaves for this faculty in the current year (excluding this one)
-        const currentYear = new Date().getFullYear();
-        const approvedLeaves = await prisma.leave.findMany({
-            where: {
-                FacultyID: existingLeave.FacultyID,
-                Status: 'Approved',
-                RequestType: 'Leave',
-                LeaveID: {
-                    not: leaveId
-                },
-                StartDate: {
-                    gte: new Date(currentYear, 0, 1)
-                },
-                EndDate: {
-                    lte: new Date(currentYear, 11, 31)
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+
+            // Calculate days for this request
+            const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Get all approved leaves for this faculty in the current year (excluding this one)
+            const currentYear = new Date().getFullYear();
+            try {
+                const approvedLeaves = await prisma.leave.findMany({
+                    where: {
+                        FacultyID: existingLeave.FacultyID,
+                        Status: 'Approved',
+                        RequestType: 'Leave',
+                        LeaveID: {
+                            not: leaveId
+                        },
+                        StartDate: {
+                            gte: new Date(currentYear, 0, 1)
+                        },
+                        EndDate: {
+                            lte: new Date(currentYear, 11, 31)
+                        }
+                    }
+                });
+
+                // Calculate total approved days
+                const approvedDays = approvedLeaves.reduce((total, leave) => {
+                    if (!leave.StartDate || !leave.EndDate) return total;
+                    const leaveStart = new Date(leave.StartDate);
+                    const leaveEnd = new Date(leave.EndDate);
+                    const days = Math.ceil((leaveEnd.getTime() - leaveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    return total + days;
+                }, 0);
+
+                // Check if approving this request would exceed 10 days
+                if (approvedDays + requestDays > 10) {
+                    return NextResponse.json(
+                        { error: `Approving this request would exceed the annual leave limit of 10 days. You have used ${approvedDays} days and are requesting ${requestDays} more days.` },
+                        { status: 400, headers: corsHeaders }
+                    );
+                }
+            } catch (dbError) {
+                console.error('Database error during leave validation:', dbError);
+                // If it's a connection error, retry once
+                if (dbError instanceof Error && dbError.message.includes('prepared statement')) {
+                    try {
+                        const approvedLeaves = await prisma.leave.findMany({
+                            where: {
+                                FacultyID: existingLeave.FacultyID,
+                                Status: 'Approved',
+                                RequestType: 'Leave',
+                                LeaveID: {
+                                    not: leaveId
+                                },
+                                StartDate: {
+                                    gte: new Date(currentYear, 0, 1)
+                                },
+                                EndDate: {
+                                    lte: new Date(currentYear, 11, 31)
+                                }
+                            }
+                        });
+
+                        const approvedDays = approvedLeaves.reduce((total, leave) => {
+                            if (!leave.StartDate || !leave.EndDate) return total;
+                            const leaveStart = new Date(leave.StartDate);
+                            const leaveEnd = new Date(leave.EndDate);
+                            const days = Math.ceil((leaveEnd.getTime() - leaveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                            return total + days;
+                        }, 0);
+
+                        if (approvedDays + requestDays > 10) {
+                            return NextResponse.json(
+                                { error: `Approving this request would exceed the annual leave limit of 10 days. You have used ${approvedDays} days and are requesting ${requestDays} more days.` },
+                                { status: 400, headers: corsHeaders }
+                            );
+                        }
+                    } catch (retryError) {
+                        console.error('Database error on retry:', retryError);
+                        throw retryError;
+                    }
+                } else {
+                    throw dbError;
                 }
             }
-        });
-
-        // Calculate total approved days
-        const approvedDays = approvedLeaves.reduce((total, leave) => {
-            const leaveStart = new Date(leave.StartDate!);
-            const leaveEnd = new Date(leave.EndDate!);
-            const days = Math.ceil((leaveEnd.getTime() - leaveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-            return total + days;
-        }, 0);
-
-        // Check if editing this request would exceed 10 days
-        if (approvedDays + requestDays > 10) {
-            return NextResponse.json(
-                { error: `This edit would exceed the annual leave limit of 10 days. You have used ${approvedDays} days and are requesting ${requestDays} more days.` },
-                { status: 400, headers: corsHeaders }
-            );
         }
 
         const updatedLeave = await prisma.leave.update({
@@ -107,8 +168,62 @@ export async function PATCH(
             data: {
                 Status: status as LeaveStatus,
                 UpdatedAt: new Date()
+            },
+            include: {
+                Faculty: {
+                    include: {
+                        User: {
+                            select: {
+                                FirstName: true,
+                                LastName: true,
+                                Email: true
+                            }
+                        }
+                    }
+                }
             }
         });
+
+        // Send email notification to user when status changes
+        try {
+            const userEmail = updatedLeave.Faculty?.User?.Email;
+            if (userEmail) {
+                const employeeName = updatedLeave.Faculty.User
+                    ? `${updatedLeave.Faculty.User.FirstName} ${updatedLeave.Faculty.User.LastName}`
+                    : 'Employee';
+                
+                const leaveTypeDisplay = existingLeave.RequestType === 'Undertime'
+                    ? 'Undertime'
+                    : existingLeave.LeaveType
+                        ? `${existingLeave.LeaveType} Leave`
+                        : 'Leave';
+                
+                const emailContent = generateLeaveStatusUpdateEmail(
+                    employeeName,
+                    leaveTypeDisplay,
+                    existingLeave.StartDate?.toISOString() || '',
+                    existingLeave.EndDate?.toISOString() || '',
+                    status
+                );
+
+                const emailResult = await sendEmail({
+                    to: userEmail,
+                    subject: `Leave Request ${status} - ${leaveTypeDisplay}`,
+                    html: emailContent
+                });
+
+                if (emailResult.success) {
+                    console.log('User notification email sent successfully');
+                } else {
+                    console.error('Failed to send user notification email:', emailResult.error);
+                }
+            } else {
+                console.warn('User email not found for leave request:', leaveId);
+            }
+        } catch (emailError) {
+            console.error('Error sending user notification email:', emailError);
+            // Don't fail the request if email fails, just log it
+        }
 
         return NextResponse.json(updatedLeave, { headers: corsHeaders });
     } catch (error) {
@@ -275,8 +390,61 @@ export async function PUT(
                 TimeOut: body.TimeOut ? new Date(body.TimeOut) : null,
                 Reason: body.Reason,
                 UpdatedAt: new Date()
+            },
+            include: {
+                Faculty: {
+                    include: {
+                        User: {
+                            select: {
+                                FirstName: true,
+                                LastName: true,
+                                Email: true
+                            }
+                        }
+                    }
+                }
             }
         });
+
+        // Send email notification to HR admin when leave request is updated
+        try {
+            const employeeName = updatedLeave.Faculty?.User
+                ? `${updatedLeave.Faculty.User.FirstName} ${updatedLeave.Faculty.User.LastName}`
+                : 'Employee';
+            
+            const leaveTypeDisplay = updatedLeave.RequestType === 'Undertime'
+                ? 'Undertime'
+                : updatedLeave.LeaveType
+                    ? `${updatedLeave.LeaveType} Leave`
+                    : 'Leave';
+            
+            const emailContent = generateLeaveUpdateAdminNotificationEmail(
+                employeeName,
+                leaveTypeDisplay,
+                updatedLeave.StartDate?.toISOString() || '',
+                updatedLeave.EndDate?.toISOString() || '',
+                updatedLeave.TimeIn?.toISOString() || null,
+                updatedLeave.TimeOut?.toISOString() || null,
+                updatedLeave.Reason || '',
+                !!updatedLeave.employeeSignature,
+                !!updatedLeave.departmentHeadSignature
+            );
+
+            const emailResult = await sendEmail({
+                to: 'sjsfihrms@gmail.com',
+                subject: `Leave Request Updated - ${leaveTypeDisplay} - ${employeeName}`,
+                html: emailContent
+            });
+
+            if (emailResult.success) {
+                console.log('HR admin notification email sent successfully');
+            } else {
+                console.error('Failed to send HR admin notification email:', emailResult.error);
+            }
+        } catch (emailError) {
+            console.error('Error sending HR admin notification email:', emailError);
+            // Don't fail the request if email fails, just log it
+        }
 
         return NextResponse.json(updatedLeave, { headers: corsHeaders });
     } catch (error) {

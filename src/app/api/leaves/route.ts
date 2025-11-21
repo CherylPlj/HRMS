@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { LeaveStatus, LeaveType, RequestType, Leave, User, Department, Faculty } from '@prisma/client';
+import { sendEmail, generateLeaveRequestAdminNotificationEmail } from '@/lib/email';
 
 // Define a type for the transformed leave record
 type TransformedLeave = Leave & {
@@ -291,8 +292,64 @@ export async function POST(request: NextRequest) {
 
         // Create leave request using Prisma
         const leave = await prisma.leave.create({
-            data: leaveData
+            data: leaveData,
+            include: {
+                Faculty: {
+                    include: {
+                        User: {
+                            select: {
+                                FirstName: true,
+                                LastName: true,
+                            }
+                        },
+                        Department: {
+                            select: {
+                                DepartmentName: true
+                            }
+                        }
+                    }
+                }
+            }
         });
+
+        // Send email notification to admin
+        try {
+            const employeeName = leave.Faculty?.User 
+                ? `${leave.Faculty.User.FirstName} ${leave.Faculty.User.LastName}`
+                : 'Unknown Employee';
+            
+            const leaveTypeDisplay = RequestType === 'Undertime' 
+                ? 'Undertime' 
+                : `${LeaveType} Leave`;
+            
+            const emailContent = generateLeaveRequestAdminNotificationEmail(
+                employeeName,
+                leaveTypeDisplay,
+                leave.StartDate?.toISOString() || StartDate,
+                leave.EndDate?.toISOString() || EndDate,
+                leave.TimeIn?.toISOString() || TimeIn,
+                leave.TimeOut?.toISOString() || TimeOut,
+                leave.Status,
+                leave.Reason,
+                !!leave.employeeSignature,
+                !!leave.departmentHeadSignature
+            );
+
+            const emailResult = await sendEmail({
+                to: 'sjsfihrms@gmail.com',
+                subject: `New Leave Request - ${employeeName}`,
+                html: emailContent
+            });
+
+            if (emailResult.success) {
+                console.log('Admin notification email sent successfully');
+            } else {
+                console.error('Failed to send admin notification email:', emailResult.error);
+            }
+        } catch (emailError) {
+            console.error('Error sending admin notification email:', emailError);
+            // Don't fail the request if email fails, just log it
+        }
 
         // Log the activity
         // await prisma.activityLog.create({
