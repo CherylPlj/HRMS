@@ -257,14 +257,8 @@ export async function POST(request: NextRequest) {
                 const requestEnd = new Date(Math.min(end.getTime(), monthEnd.getTime()));
                 const daysRequestedInMonth = Math.ceil((requestEnd.getTime() - requestStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-                // Check if adding this request would exceed 10 days for this month
-                if (daysUsedInMonth + daysRequestedInMonth > 10) {
-                    const monthName = monthStart.toLocaleString('default', { month: 'long' });
-                    return NextResponse.json(
-                        { error: `This request would exceed the monthly leave limit of 10 days for ${monthName}. You have used ${daysUsedInMonth} days and are requesting ${daysRequestedInMonth} more days.` },
-                        { status: 400 }
-                    );
-                }
+                // Note: Unpaid leaves are allowed - days exceeding the 10-day limit will be considered unpaid
+                // All approved leaves (including unpaid ones) are still counted for future requests
 
                 // Move to next month
                 currentDate.setMonth(currentDate.getMonth() + 1);

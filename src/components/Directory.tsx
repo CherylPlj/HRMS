@@ -22,7 +22,10 @@ interface Employee {
   ContactInfo?: {
     Phone?: string;
     Email?: string;
-  };
+  } | Array<{
+    Phone?: string;
+    Email?: string;
+  }>;
   User?: {
     Status: string;
     UserID?: string;
@@ -323,8 +326,29 @@ const Directory = () => {
   };
 
   const handleContactAction = (action: string, record: Employee) => {
-    const email = 'User' in record && record.User && 'Email' in record.User ? record.User.Email : 'Email' in record ? record.Email : null;
-    const phone = 'Phone' in record ? record.Phone : 'ContactInfo' in record ? record.ContactInfo?.Phone : null;
+    // Get email from User, Employee, or ContactInfo (in that order)
+    let email: string | null = null;
+    if (record.User?.Email) {
+      email = record.User.Email;
+    } else if (record.Email) {
+      email = record.Email;
+    } else if (record.ContactInfo) {
+      if (Array.isArray(record.ContactInfo)) {
+        email = record.ContactInfo[0]?.Email || null;
+      } else {
+        email = (record.ContactInfo as { Phone?: string; Email?: string }).Email || null;
+      }
+    }
+    
+    // Handle ContactInfo as either array or object
+    let phone: string | null = null;
+    if (record.ContactInfo) {
+      if (Array.isArray(record.ContactInfo)) {
+        phone = record.ContactInfo[0]?.Phone || null;
+      } else {
+        phone = (record.ContactInfo as { Phone?: string; Email?: string }).Phone || null;
+      }
+    }
 
     switch (action) {
       case 'email':
@@ -356,13 +380,27 @@ const Directory = () => {
 
     allFilteredRecords.forEach(record => {
       const employmentDetail = getEmploymentDetail(record);
+      // Get email from User, Employee, or ContactInfo (in that order)
+      let email = '';
+      if (record.User?.Email) {
+        email = record.User.Email;
+      } else if (record.Email) {
+        email = record.Email;
+      } else if (record.ContactInfo) {
+        if (Array.isArray(record.ContactInfo)) {
+          email = record.ContactInfo[0]?.Email || '';
+        } else {
+          email = (record.ContactInfo as { Phone?: string; Email?: string }).Email || '';
+        }
+      }
+      
       const row = [
         record.FirstName || record.User?.FirstName || '',
         record.LastName || record.User?.LastName || '',
         record.MiddleName || '',
         record.Position || '',
         record.Department?.DepartmentName || '',
-        record.User?.Email || record.Email || '',
+        email,
         employmentDetail?.EmploymentStatus || '',
         employmentDetail?.HireDate ? new Date(employmentDetail.HireDate).toLocaleDateString() : '',
         employmentDetail?.ResignationDate ? new Date(employmentDetail.ResignationDate).toLocaleDateString() : ''
@@ -678,15 +716,40 @@ const Directory = () => {
                     <div>
                       <p className="text-sm text-gray-600">Email</p>
                       <p className="font-medium">
-                        {selectedEmployee.User?.Email || selectedEmployee.Email || ' '}                                                                       
+                        {(() => {
+                          // Check User email first, then Employee email, then ContactInfo email
+                          if (selectedEmployee.User?.Email) {
+                            return selectedEmployee.User.Email;
+                          }
+                          if (selectedEmployee.Email) {
+                            return selectedEmployee.Email;
+                          }
+                          // Handle ContactInfo as either array or object
+                          if (selectedEmployee.ContactInfo) {
+                            if (Array.isArray(selectedEmployee.ContactInfo)) {
+                              return selectedEmployee.ContactInfo[0]?.Email || ' ';
+                            }
+                            return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string }).Email || ' ';
+                          }
+                          return ' ';
+                        })()}
                       </p>
                     </div>
-                    {/* <div>
+                    <div>
                       <p className="text-sm text-gray-600">Phone</p>
                       <p className="font-medium">
-                        {selectedEmployee.ContactInfo?.Phone || 'N/A'}
+                        {(() => {
+                          // Handle ContactInfo as either array or object
+                          if (!selectedEmployee.ContactInfo) {
+                            return ' ';
+                          }
+                          if (Array.isArray(selectedEmployee.ContactInfo)) {
+                            return selectedEmployee.ContactInfo[0]?.Phone || ' ';
+                          }
+                          return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string }).Phone || ' ';
+                        })()}
                       </p>
-                    </div> */}
+                    </div>
                   </div>
                 </div>
 

@@ -558,7 +558,7 @@ export async function DELETE(
       .from('Employee')
       .update({
         isDeleted: true,
-        DateModified: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         updatedBy: user.id
       })
       .eq('EmployeeID', employeeId);
@@ -568,21 +568,28 @@ export async function DELETE(
       throw new Error(`Failed to soft delete employee record: ${deleteError.message}`);
     }
 
-    // Soft delete all related records
-    const relatedTables = ['ContactInfo', 'GovernmentID', 'EmploymentDetail', 'Education', 'WorkExperience', 'Family', 'Certificate', 'Skill'];
+    // Soft delete all related records that support soft delete
+    // Note: Some tables may not have isDeleted or updatedAt fields
+    const relatedTables = ['ContactInfo', 'GovernmentID', 'EmploymentDetail', 'Family', 'Certificate', 'Skill'];
     
     for (const table of relatedTables) {
-      const { error: relatedError } = await supabaseAdmin
-        .from(table)
-        .update({
-          isDeleted: true,
-          DateModified: new Date().toISOString(),
-          updatedBy: user.id
-        })
-        .eq('employeeId', employeeId);
+      try {
+        const { error: relatedError } = await supabaseAdmin
+          .from(table)
+          .update({
+            isDeleted: true,
+            updatedAt: new Date().toISOString(),
+            updatedBy: user.id
+          })
+          .eq('employeeId', employeeId);
 
-      if (relatedError) {
-        console.error(`Error soft deleting ${table}:`, relatedError);
+        if (relatedError) {
+          // Log but don't fail - some tables might not have these fields
+          console.error(`Error soft deleting ${table}:`, relatedError);
+        }
+      } catch (error) {
+        // Continue if table doesn't support soft delete
+        console.warn(`Could not soft delete from ${table}:`, error);
       }
     }
 

@@ -1536,7 +1536,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         {/* Employee Info Card */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex items-start space-x-6 mb-6">
-            <div 
+            <div
               className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();

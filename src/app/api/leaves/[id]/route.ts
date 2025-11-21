@@ -19,7 +19,7 @@ export async function OPTIONS() {
 
 export async function PATCH(
     request: NextRequest,
-    context: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
@@ -27,7 +27,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
         }
 
-        const { id } = context.params;
+        const { id } = await context.params;
         const leaveId = parseInt(id);
 
         if (isNaN(leaveId)) {
@@ -110,13 +110,8 @@ export async function PATCH(
                     return total + days;
                 }, 0);
 
-                // Check if approving this request would exceed 10 days
-                if (approvedDays + requestDays > 10) {
-                    return NextResponse.json(
-                        { error: `Approving this request would exceed the annual leave limit of 10 days. You have used ${approvedDays} days and are requesting ${requestDays} more days.` },
-                        { status: 400, headers: corsHeaders }
-                    );
-                }
+                // Note: Unpaid leaves are allowed - days exceeding the annual limit will be considered unpaid
+                // All approved leaves (including unpaid ones) are still counted for future requests
             } catch (dbError) {
                 console.error('Database error during leave validation:', dbError);
                 // If it's a connection error, retry once
@@ -147,12 +142,8 @@ export async function PATCH(
                             return total + days;
                         }, 0);
 
-                        if (approvedDays + requestDays > 10) {
-                            return NextResponse.json(
-                                { error: `Approving this request would exceed the annual leave limit of 10 days. You have used ${approvedDays} days and are requesting ${requestDays} more days.` },
-                                { status: 400, headers: corsHeaders }
-                            );
-                        }
+                        // Note: Unpaid leaves are allowed - days exceeding the annual limit will be considered unpaid
+                        // All approved leaves (including unpaid ones) are still counted for future requests
                     } catch (retryError) {
                         console.error('Database error on retry:', retryError);
                         throw retryError;
@@ -237,7 +228,7 @@ export async function PATCH(
 
 export async function PUT(
     request: NextRequest,
-    context: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
@@ -245,7 +236,7 @@ export async function PUT(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
         }
 
-        const { id } = context.params;
+        const { id } = await context.params;
         const leaveId = parseInt(id);
 
         if (isNaN(leaveId)) {
@@ -364,14 +355,8 @@ export async function PUT(
                 const requestEnd = new Date(Math.min(end.getTime(), monthEnd.getTime()));
                 const daysRequestedInMonth = Math.ceil((requestEnd.getTime() - requestStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-                // Check if editing this request would exceed 10 days for this month
-                if (daysUsedInMonth + daysRequestedInMonth > 10) {
-                    const monthName = monthStart.toLocaleString('default', { month: 'long' });
-                    return NextResponse.json(
-                        { error: `This edit would exceed the monthly leave limit of 10 days for ${monthName}. You have used ${daysUsedInMonth} days and are requesting ${daysRequestedInMonth} more days.` },
-                        { status: 400, headers: corsHeaders }
-                    );
-                }
+                // Note: Unpaid leaves are allowed - days exceeding the 10-day limit will be considered unpaid
+                // All approved leaves (including unpaid ones) are still counted for future requests
 
                 // Move to next month
                 currentDate.setMonth(currentDate.getMonth() + 1);
