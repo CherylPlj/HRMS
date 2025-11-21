@@ -424,7 +424,7 @@ export default function FacultyDashboard() {
           "How do I upload documents?",
           "Where is the campus located?"
         ]}
-        title="SJSFI Faculty Assistant"
+        title="SJSFI Employee Assistant"
         userRole="faculty"
       />
 

@@ -223,7 +223,7 @@ const exportColumnSections = [
   {
     title: 'Personal Information',
     keys: [
-      'EmployeeID', 'UserID', 'FirstName', 'LastName', 'MiddleName', 'ExtensionName',
+      'FirstName', 'LastName', 'MiddleName', 'ExtensionName',
       'Sex', 'DateOfBirth', 'PlaceOfBirth', 'CivilStatus', 'Nationality', 'Religion', 'BloodType'
     ],
   },
@@ -237,7 +237,7 @@ const exportColumnSections = [
     title: 'Employment Details',
     keys: [
       'Position', 'Designation', 'Department', 'EmploymentStatus', 'HireDate', 'ResignationDate',
-      'SalaryGrade', 'EmployeeType', 'createdAt', 'updatedAt'
+      'SalaryGrade', 'EmployeeType'
     ],
   },
   {
@@ -247,6 +247,9 @@ const exportColumnSections = [
     ],
   },
 ];
+
+// Excluded columns from export
+const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt'];
 
 const EmployeeContentNew = () => {
   // State for active tab
@@ -331,7 +334,10 @@ const EmployeeContentNew = () => {
     status: 'all',
     search: ''
   });
-  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(allExportColumns.map(col => col.key));
+  // Exclude EmployeeID, UserID, createdAt, updatedAt from default selection
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
+    allExportColumns.filter(col => !excludedColumns.includes(col.key)).map(col => col.key)
+  );
   const [pdfPaperSize, setPdfPaperSize] = useState<'a4' | 'letter' | 'legal'>('a4');
 
   // State for editing mode and edited employee
@@ -1065,10 +1071,25 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       });
       if (exportFormat === 'pdf') {
         params.append('paperSize', pdfPaperSize);
+        params.append('orientation', pdfOrientation);
+      }
+      if (hireDateFrom) {
+        params.append('hireDateFrom', hireDateFrom);
+      }
+      if (hireDateTo) {
+        params.append('hireDateTo', hireDateTo);
       }
       const response = await fetch(`/api/employees/export?${params}`);
       if (!response.ok) {
-        throw new Error('Failed to export employees');
+        const errorText = await response.text();
+        let errorMessage = 'Failed to export employees';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(`${errorMessage} (Status: ${response.status})`);
       }
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = `employees_export_${new Date().toISOString().split('T')[0]}`;
@@ -4031,7 +4052,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
                           {section.keys.map(key => {
                             const col = allExportColumns.find(c => c.key === key);
-                            if (!col) return null;
+                            if (!col || excludedColumns.includes(col.key)) return null;
                             return (
                               <label key={col.key} className="flex items-center space-x-2 text-sm">
                                 <input
@@ -4057,7 +4078,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                   <button
                     type="button"
                     className="mt-2 text-xs text-blue-600 underline"
-                    onClick={() => setSelectedExportColumns(allExportColumns.map(col => col.key))}
+                    onClick={() => setSelectedExportColumns(allExportColumns.filter(col => !excludedColumns.includes(col.key)).map(col => col.key))}
                   >
                     Select All
                   </button>
@@ -4155,24 +4176,32 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 </div>
 
                 {/* Hire Date Range */}
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700">Hire Date Range</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={hireDateFrom}
-                      onChange={e => setHireDateFrom(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
-                      placeholder="From"
-                    />
-                    <span className="self-center">to</span>
-                    <input
-                      type="date"
-                      value={hireDateTo}
-                      onChange={e => setHireDateTo(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-0 transition-colors bg-white"
-                      placeholder="To"
-                    />
+                <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-xl p-6 mt-8">
+                  <div className="flex items-center mb-6">
+                    <div className="bg-teal-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">5</div>
+                    <h3 className="text-xl font-bold text-gray-800">Hire Date Range (Optional)</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">From Date</label>
+                      <input
+                        type="date"
+                        value={hireDateFrom}
+                        onChange={e => setHireDateFrom(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:ring-0 transition-colors bg-white"
+                        placeholder="From"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">To Date</label>
+                      <input
+                        type="date"
+                        value={hireDateTo}
+                        onChange={e => setHireDateTo(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:ring-0 transition-colors bg-white"
+                        placeholder="To"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

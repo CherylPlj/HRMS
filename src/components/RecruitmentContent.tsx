@@ -858,7 +858,7 @@ const RecruitmentContent: React.FC = () => {
           
           {/* Search and Filter Section */}
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className={`grid grid-cols-1 ${activeTab === 'hired' ? 'md:grid-cols-4' : 'md:grid-cols-5'} gap-4`}>
               {/* Search */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -871,21 +871,23 @@ const RecruitmentContent: React.FC = () => {
                 />
               </div>
               
-              {/* Status Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  title="candidate-status-filter"
-                  value={candidateStatusFilter}
-                  onChange={(e) => setCandidateStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Statuses</option>
-                  {candidateStatuses.map((status) => (
-                    <option key={status} value={status}>{formatStatus(status)}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Status Filter - Hidden for Hired tab */}
+              {activeTab !== 'hired' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    title="candidate-status-filter"
+                    value={candidateStatusFilter}
+                    onChange={(e) => setCandidateStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Statuses</option>
+                    {candidateStatuses.map((status) => (
+                      <option key={status} value={status}>{formatStatus(status)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               
               {/* Vacancy Filter */}
               <div>
@@ -905,11 +907,13 @@ const RecruitmentContent: React.FC = () => {
                 </select>
               </div>
               
-              {/* Interview Date Filter */}
+              {/* Interview Date / Hire Date Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Interview Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {activeTab === 'hired' ? 'Hire Date' : 'Interview Date'}
+                </label>
                 <input
-                  title="Interview Date"
+                  title={activeTab === 'hired' ? 'Hire Date' : 'Interview Date'}
                   type="date"
                   value={candidateInterviewDateFilter}
                   onChange={(e) => setCandidateInterviewDateFilter(e.target.value)}
@@ -942,7 +946,7 @@ const RecruitmentContent: React.FC = () => {
                   <th className="px-4 py-2">Email</th>
                   <th className="px-4 py-2">Contact Number</th>
                   <th className="px-4 py-2">Date Applied</th>
-                  <th className="px-4 py-2">Interview Schedule</th>
+                  <th className="px-4 py-2">{activeTab === 'hired' ? 'Hire Date' : 'Interview Schedule'}</th>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Resume</th>
                   <th className="px-4 py-2">Actions</th>
@@ -1314,8 +1318,12 @@ const RecruitmentContent: React.FC = () => {
                     )}
                   </div>
                   <div className="mb-4">
-                    <label className="block mb-1 font-medium">Interview Schedule (7 AM - 7 PM only)</label>
-                    <p className="text-sm text-gray-600 mb-2">Setting an interview date will automatically update status to "Interview Scheduled"</p>
+                    <label className="block mb-1 font-medium">
+                      {activeTab === 'hired' || editCandidateData.Status === 'Hired' ? 'Hire Date' : 'Interview Schedule (7 AM - 7 PM only)'}
+                    </label>
+                    {activeTab !== 'hired' && editCandidateData.Status !== 'Hired' && (
+                      <p className="text-sm text-gray-600 mb-2">Setting an interview date will automatically update status to "Interview Scheduled"</p>
+                    )}
                     <input 
                       title="date-time-local"
                       type="datetime-local" 
@@ -1335,10 +1343,11 @@ const RecruitmentContent: React.FC = () => {
                         
                         setEditCandidateData(prev => {
                           if (!prev) return prev;
+                          const isHired = activeTab === 'hired' || prev.Status === 'Hired';
                           return {
                             ...prev,
                             InterviewDate: manilaDateTime || undefined,
-                            Status: selectedDateTime ? 'InterviewScheduled' : prev.Status
+                            Status: selectedDateTime && !isHired ? 'InterviewScheduled' : prev.Status
                           };
                         });
                       }} 
@@ -1356,9 +1365,16 @@ const RecruitmentContent: React.FC = () => {
                       onChange={e => setEditCandidateData({ ...editCandidateData, Status: e.target.value })}
                       required
                     >
-                      {candidateStatuses.map((status) => (
-                        <option key={status} value={status}>{formatStatus(status)}</option>
-                      ))}
+                      {activeTab === 'hired' || editCandidateData.Status === 'Hired' ? (
+                        <>
+                          <option value="Hired">{formatStatus('Hired')}</option>
+                          <option value="Withdrawn">{formatStatus('Withdrawn')}</option>
+                        </>
+                      ) : (
+                        candidateStatuses.map((status) => (
+                          <option key={status} value={status}>{formatStatus(status)}</option>
+                        ))
+                      )}
                     </select>
                   </div>
                   <div className="mb-4">

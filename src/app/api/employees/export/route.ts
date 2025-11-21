@@ -63,11 +63,14 @@ export async function GET(request: Request) {
     const hireDateTo = searchParams.get('hireDateTo');
     const orientation = searchParams.get('orientation') || 'portrait';
 
-    // Parse columns
-    let selectedColumns = Object.keys(COLUMN_LABELS);
+    // Parse columns - exclude EmployeeID, UserID, createdAt, updatedAt by default
+    const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt'];
+    let selectedColumns = Object.keys(COLUMN_LABELS).filter(col => !excludedColumns.includes(col));
     if (columnsParam) {
-      selectedColumns = columnsParam.split(',').filter(col => COLUMN_LABELS[col]);
-      if (selectedColumns.length === 0) selectedColumns = Object.keys(COLUMN_LABELS);
+      selectedColumns = columnsParam.split(',').filter(col => COLUMN_LABELS[col] && !excludedColumns.includes(col));
+      if (selectedColumns.length === 0) {
+        selectedColumns = Object.keys(COLUMN_LABELS).filter(col => !excludedColumns.includes(col));
+      }
     }
 
     // Build the query with joins
@@ -159,8 +162,9 @@ export async function GET(request: Request) {
       const pdfBuffer = await page.pdf({
         format: paperSize === 'a4' ? 'A4' : paperSize === 'letter' ? 'Letter' : 'Legal',
         printBackground: true,
-        margin: { top: '24mm', right: '16mm', bottom: '24mm', left: '16mm' },
+        margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
         landscape: orientation === 'landscape',
+        preferCSSPageSize: false,
       });
       await browser.close();
       return new NextResponse(pdfBuffer, {
@@ -271,16 +275,23 @@ function generatePDFHtml(employees: any[], columns: string[], paperSize: string)
       <meta charset="utf-8">
       <title>Employee Report</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; }
-        .pdf-page { ${getPaperSizeStyle(paperSize)} margin: 0 auto; background: #fff; padding: 16mm 8mm; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #800000; margin: 0; }
-        .header p { color: #666; margin: 5px 0; }
-        .summary { margin-bottom: 20px; }
-        .summary p { margin: 5px 0; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .pdf-page { ${getPaperSizeStyle(paperSize)} margin: 0 auto; background: #fff; padding: 5mm; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: auto; }
+        th, td { border: 1px solid #ddd; padding: 5px 4px; text-align: left; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; }
+        th { background-color: #f2f2f2; font-weight: bold; font-size: 9px; white-space: nowrap; }
+        td { font-size: 8px; }
+        .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #800000; }
+        .header h1 { color: #800000; margin: 0 0 5px 0; font-size: 18px; }
+        .header p { color: #666; margin: 3px 0; font-size: 10px; }
+        .summary { margin-bottom: 15px; padding: 8px; background-color: #f9f9f9; border-radius: 4px; }
+        .summary p { margin: 3px 0; font-size: 10px; }
+        @media print {
+          .pdf-page { page-break-after: auto; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+        }
       </style>
     </head>
     <body>

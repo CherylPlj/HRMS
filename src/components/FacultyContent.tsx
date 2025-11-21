@@ -1173,13 +1173,13 @@ const FacultyContent = () => {
               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
             >
               <FaPlus /> Add Faculty
-            </button> */}
+            </button> 
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
             >
               <FaFile /> Import CSV
-            </button>
+            </button>*/}
           <button
             onClick={handleDownloadPDF}
             className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"

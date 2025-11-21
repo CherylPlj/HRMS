@@ -1235,8 +1235,8 @@ const UserManagementContent: React.FC = () => {
               className="w-full p-2 border border-gray-300 rounded mb-4"
               >
               <option value="">Select a role...</option>
-              <option value="super admin">Super Admin</option>
-              <option value="student">Student</option>
+              {/* <option value="super admin">Super Admin</option> */}
+              {/* <option value="student">Student</option> */}
               <option value="cashier">Cashier</option>
               <option value="registrar">Registrar</option>
               <option value="faculty">Faculty</option>

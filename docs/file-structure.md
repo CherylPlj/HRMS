@@ -10,6 +10,7 @@ This document explains the purpose of the top-level folders and the most importa
 - **tsconfig*.json**: TypeScript configuration files.
 - **vercel.json**: Vercel deployment configuration.
 - **AI_TRAINING_GUIDE.md**, **OUT_OF_SCOPE_EXAMPLES.md**, **README.md**: Documentation.
+- **docs/API_DOCUMENTATION.md**: Comprehensive API documentation with endpoints, authentication, and examples.
 
 ### prisma
 - **schema.prisma**: Prisma ORM schema (database models and relations).
@@ -99,5 +100,8 @@ Edge middleware (auth, role checks, etc.) and test variant.
 - File names use kebab-case for routes (`route.ts`) and PascalCase for components.
 - Business logic belongs in `src/services/`; route files stay thin.
 - Shared helpers go in `src/lib/`; cross-cutting types go in `src/types/`.
+
+### API Documentation
+For detailed API documentation including all endpoints, authentication methods, request/response formats, and examples, see **[docs/API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**.
 
 

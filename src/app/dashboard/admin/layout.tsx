@@ -438,7 +438,7 @@ export default function AdminDashboard() {
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
                 { name: 'Users', icon: 'fa-user-shield', key: 'user-management' },
-                { name: 'Sessions', icon: 'fa-clock', key: 'session-management' }
+                // { name: 'Sessions', icon: 'fa-clock', key: 'session-management' }
               ] : [])
             ].map((item) => (
               <a

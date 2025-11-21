@@ -4,7 +4,7 @@ import PersonalData from '@/components/PersonalData';
 import DocumentsFaculty from '@/components/DocumentsFaculty';
 import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
 import "chart.js/auto";
-import "react-datepicker/dist/react-datepicker.css";
+// import "react-datepicker/dist/react-datepicker.css";
 import Head from 'next/head';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
