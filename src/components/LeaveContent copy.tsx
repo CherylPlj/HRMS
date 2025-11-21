@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExternalLink, Trash2, Download, Calendar, Check, X, Eye } from 'lucide-react';
 import Image from 'next/image';
 import { User } from 'lucide-react';
@@ -39,28 +39,16 @@ const formatRequestType = (requestType: string, leaveType: string | null | undef
     return `${leaveType} Leave`;
 };
 
-// Cache for profile photos to avoid repeated API calls
-const profilePhotoCache = new Map<string, string>();
-
 const fetchUserProfilePhoto = async (userId: string): Promise<string> => {
-    // Check cache first
-    if (profilePhotoCache.has(userId)) {
-        return profilePhotoCache.get(userId)!;
-    }
-
     try {
         const response = await fetch(`/api/users/${userId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch user data');
         }
         const data = await response.json();
-        const imageUrl = data.imageUrl || '/manprofileavatar.png';
-        // Cache the result
-        profilePhotoCache.set(userId, imageUrl);
-        return imageUrl;
+        return data.imageUrl || '/manprofileavatar.png';
     } catch (error) {
-        // Cache the default to avoid retrying failed requests
-        profilePhotoCache.set(userId, '/manprofileavatar.png');
+        console.error('Error fetching user profile photo:', error);
         return '/manprofileavatar.png';
     }
 };
@@ -231,7 +219,7 @@ const ViewLeaveModal: React.FC<ViewLeaveModalProps> = ({ isOpen, onClose, leave 
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <h3 className="font-semibold text-gray-600">Employee Information</h3>
+                            <h3 className="font-semibold text-gray-600">Faculty Information</h3>
                             <p className="text-gray-800">{leave.Faculty.Name}</p>
                             <p className="text-gray-600">{leave.Faculty.Department}</p>
                         </div>
@@ -373,25 +361,32 @@ const LeaveContent: React.FC = () => {
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
     const [deleteConfirmError, setDeleteConfirmError] = useState('');
-    const [photosLoading, setPhotosLoading] = useState(false);
-    const fetchLeavesRef = useRef(false); // Prevent duplicate calls
 
-    // Memoize fetchLeaves to prevent unnecessary re-creations
-    const fetchLeaves = useCallback(async () => {
-        // Prevent duplicate concurrent calls
-        if (fetchLeavesRef.current) {
+    useEffect(() => {
+        if (!isUserLoaded) {
+            return; // Wait for user to load
+        }
+
+        if (!user) {
+            console.log('No user found, redirecting to sign in...');
+            router.push('/sign-in');
             return;
         }
 
+        fetchLeaves();
+    }, [user, isUserLoaded, router]);
+
+    const fetchLeaves = async () => {
         try {
             if (!user?.id) {
+                console.error('No user ID found');
                 return;
             }
 
-            fetchLeavesRef.current = true;
             setLoading(true);
             setError(null);
             
+            console.log('Fetching all leaves...');
             const response = await fetch('/api/leaves', {
                 method: 'GET',
                 headers: {
@@ -400,86 +395,78 @@ const LeaveContent: React.FC = () => {
                 },
                 credentials: 'include',
             });
+            
+            // Log the full response for debugging
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            // Handle different response types
+            const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
 
+            let data;
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Failed to parse response as JSON:', e);
+                console.error('Response text:', responseText);
+                throw new Error('Invalid server response format');
+            }
+            
             if (!response.ok) {
+                console.error('Error response from API:', data);
                 if (response.status === 401) {
                     router.push('/sign-in');
                     return;
                 }
-                
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                throw new Error(errorData.error || errorData.details || `Server error: ${response.status}`);
+                throw new Error(data.error || data.details || `Server error: ${response.status}`);
             }
             
-            const data = await response.json();
-            
             if (!Array.isArray(data)) {
+                console.error('Invalid response format:', data);
                 throw new Error('Invalid response format from server');
+            }
+            
+            console.log('Number of leaves received:', data.length);
+            if (data.length > 0) {
+                console.log('First leave record:', data[0]);
             }
             
             setLeaves(data);
             setError(null);
 
-            // Deduplicate UserIDs to avoid fetching same photo multiple times
-            const uniqueUserIds = new Set<string>();
-            data.forEach((leave: TransformedLeave) => {
-                if (leave.Faculty?.UserID) {
-                    uniqueUserIds.add(leave.Faculty.UserID);
-                }
-            });
+            // Fetch profile photos for all faculty members
+            const photoPromises = data
+                .filter((leave: TransformedLeave) => leave.Faculty?.UserID)
+                .map(async (leave: TransformedLeave) => {
+                    if (leave.Faculty?.UserID) {
+                        try {
+                            const photoUrl = await fetchUserProfilePhoto(leave.Faculty.UserID);
+                            return [leave.Faculty.UserID, photoUrl];
+                        } catch (error) {
+                            console.error(`Failed to fetch photo for user ${leave.Faculty.UserID}:`, error);
+                            return [leave.Faculty.UserID, '/manprofileavatar.png'];
+                        }
+                    }
+                    return null;
+                });
 
-            // Fetch photos for users we don't already have (check both state and cache)
-            setProfilePhotos(prevPhotos => {
-                const userIdsToFetch = Array.from(uniqueUserIds).filter(
-                    userId => !prevPhotos[userId] && !profilePhotoCache.has(userId)
-                );
-
-                if (userIdsToFetch.length > 0) {
-                    setPhotosLoading(true);
-                    // Fetch profile photos in parallel for new users
-                    Promise.all(
-                        userIdsToFetch.map(async (userId) => {
-                            try {
-                                const photoUrl = await fetchUserProfilePhoto(userId);
-                                return [userId, photoUrl] as [string, string];
-                            } catch (error) {
-                                return [userId, '/manprofileavatar.png'] as [string, string];
-                            }
-                        })
-                    ).then((photoResults) => {
-                        const newPhotos = Object.fromEntries(photoResults);
-                        setProfilePhotos(prev => ({ ...prev, ...newPhotos }));
-                        setPhotosLoading(false);
-                    }).catch(() => {
-                        setPhotosLoading(false);
-                    });
-                }
-
-                return prevPhotos; // Return unchanged, async update will happen
-            });
+            const photoResults = await Promise.all(photoPromises);
+            const photos = Object.fromEntries(
+                photoResults.filter((result): result is [string, string] => result !== null)
+            );
+            setProfilePhotos(photos);
         } catch (err) {
             console.error('Error fetching leaves:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch leaves');
-            setLeaves([]);
+            setLeaves([]); // Reset leaves on error
         } finally {
             setLoading(false);
-            fetchLeavesRef.current = false;
         }
-    }, [user?.id, router]);
-
-    useEffect(() => {
-        if (!isUserLoaded) {
-            return;
-        }
-
-        if (!user) {
-            router.push('/sign-in');
-            return;
-        }
-
-        fetchLeaves();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, isUserLoaded]);
+    };
 
     const handleDelete = async (id: number) => {
         try {
@@ -548,45 +535,39 @@ const LeaveContent: React.FC = () => {
         if (activeTab === 'management') {
             // Title
             doc.setFontSize(16);
-            doc.text('Leave Requests Report (Pending)', 14, 15);
+            doc.text('Leave Management Report', 14, 15);
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-            // Filter to only pending leaves
-            const pendingLeaves = leaves.filter(leave => leave.Status === 'Pending');
-            const tableData = pendingLeaves.map(item => [
+            const tableData = leaves.map(item => [
                 item.Faculty?.Name || '',
                 item.Faculty?.Department || 'N/A',
-                item.LeaveType || formatRequestType(item.RequestType, item.LeaveType),
+                item.LeaveType,
                 formatDate(item.StartDate),
                 formatDate(item.EndDate),
                 item.Status
             ]);
 
             autoTable(doc, {
-                head: [['Employee', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Status']],
+                head: [['Faculty', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Status']],
                 body: tableData,
                 startY: 30,
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [128, 0, 0] }
             });
 
-            doc.save('leave-requests-pending.pdf');
+            doc.save('leave-management.pdf');
 
         } else if (activeTab === 'logs') {
             // Title
             doc.setFontSize(16);
-            doc.text('Leave Logs Report (Approved & Rejected)', 14, 15);
+            doc.text('Leave Logs Report', 14, 15);
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-            // Filter to only approved and rejected leaves
-            const approvedRejectedLeaves = leaves.filter(
-                leave => leave.Status === 'Approved' || leave.Status === 'Rejected'
-            );
-            const tableData = approvedRejectedLeaves.map(log => [
+            const tableData = leaves.map(log => [
                 `${log.Faculty?.Name}`,
-                log.LeaveType || formatRequestType(log.RequestType, log.LeaveType),
+                log.LeaveType,
                 formatDate(log.StartDate),
                 formatDate(log.EndDate),
                 calculateDuration(log.StartDate, log.EndDate),
@@ -602,7 +583,7 @@ const LeaveContent: React.FC = () => {
                 headStyles: { fillColor: [128, 0, 0] }
             });
 
-            doc.save('leave-logs-approved-rejected.pdf');
+            doc.save('leave-logs.pdf');
         }
     };
 
@@ -615,7 +596,8 @@ const LeaveContent: React.FC = () => {
     }
 
     if (!user) {
-        return null;
+        console.error('No user found');
+        return;
     }
 
     if (loading) {
@@ -640,15 +622,6 @@ const LeaveContent: React.FC = () => {
             </div>
         );
     }
-
-    // Filter leaves based on active tab
-    const pendingLeaves = activeTab === 'management' 
-        ? leaves.filter(leave => leave.Status === 'Pending')
-        : [];
-    
-    const approvedRejectedLeaves = activeTab === 'logs'
-        ? leaves.filter(leave => leave.Status === 'Approved' || leave.Status === 'Rejected')
-        : [];
 
     return (
         <div className="text-black p-6 min-h-screen bg-gray-50">
@@ -677,7 +650,14 @@ const LeaveContent: React.FC = () => {
                     </button>
                 </div>
                 <button
-                    onClick={handleDownloadPDF}
+                    onClick={() => {
+                        if (activeTab === 'logs') {
+                            console.log("Downloading Leave Logs...");
+                        } else {
+                            console.log("Downloading Leave Requests...");
+                        }
+                        handleDownloadPDF(); // download function
+                    }}
                     className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                     <Download size={18} />
@@ -715,8 +695,8 @@ const LeaveContent: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {pendingLeaves.length > 0 ? (
-                                            pendingLeaves.map((leave) => (
+                                        {leaves.length > 0 ? (
+                                            leaves.map((leave) => (
                                                 <tr key={leave.LeaveID} className="hover:bg-gray-50 transition-colors">
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="flex items-center">
@@ -843,106 +823,72 @@ const LeaveContent: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Employee
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Request Type
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Start Date
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                End Date
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Duration
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Date Submitted
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status
-                                            </th>
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Picture</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Employee Name</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Request Type</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Start Date</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">End Date</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Duration</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Date Submitted</th>
+                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {leaves.length > 0 ? (
+                                    leaves.map((leave) => (
+                                        <tr key={leave.LeaveID} className="hover:bg-gray-50 transition-colors duration-200">
+                                            <td className="px-4 py-3">
+                                                {leave.Faculty?.UserID && profilePhotos[leave.Faculty.UserID] ? (
+                                                    <Image
+                                                        src={profilePhotos[leave.Faculty.UserID]}
+                                                        alt={leave.Faculty.Name}
+                                                        width={40}
+                                                        height={40}
+                                                        className="rounded-full"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = '/manprofileavatar.png';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <User className="h-6 w-6 text-gray-400" />
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium">{leave.Faculty?.Name}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
+                                                    {formatRequestType(leave.RequestType, leave.LeaveType)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">{formatDate(leave.StartDate)}</td>
+                                            <td className="px-4 py-3 text-gray-600">{formatDate(leave.EndDate)}</td>
+                                            <td className="px-4 py-3 text-gray-600">{calculateDuration(leave.StartDate, leave.EndDate)}</td>
+                                            <td className="px-4 py-3 text-gray-600">{formatDate(leave.CreatedAt)}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm ${
+                                                    leave.Status === 'Approved' ? 'bg-green-50 text-green-700' :
+                                                    leave.Status === 'Rejected' ? 'bg-red-50 text-red-700' :
+                                                    'bg-yellow-50 text-yellow-700'
+                                                }`}>
+                                                    {leave.Status}
+                                                </span>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {approvedRejectedLeaves.length > 0 ? (
-                                            approvedRejectedLeaves.map((leave) => (
-                                                    <tr key={leave.LeaveID} className="hover:bg-gray-50 transition-colors duration-200">
-                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                            <div className="flex items-center">
-                                                                <div className="flex-shrink-0 h-10 w-10">
-                                                                    {leave.Faculty?.UserID && profilePhotos[leave.Faculty.UserID] ? (
-                                                                        <Image
-                                                                            src={profilePhotos[leave.Faculty.UserID]}
-                                                                            alt={leave.Faculty.Name}
-                                                                            width={40}
-                                                                            height={40}
-                                                                            className="rounded-full"
-                                                                            onError={(e) => {
-                                                                                const target = e.target as HTMLImageElement;
-                                                                                target.src = '/manprofileavatar.png';
-                                                                            }}
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                                            <User className="h-6 w-6 text-gray-400" />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="ml-4">
-                                                                    <div className="text-sm font-medium text-gray-900">
-                                                                        {leave.Faculty?.Name}
-                                                                    </div>
-                                                                    <div className="text-sm text-gray-500">
-                                                                        {leave.Faculty?.Department}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {formatRequestType(leave.RequestType, leave.LeaveType)}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {formatDate(leave.StartDate)}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {formatDate(leave.EndDate)}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {calculateDuration(leave.StartDate, leave.EndDate)}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {formatDate(leave.CreatedAt)}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                                leave.Status === 'Approved' 
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : 'bg-red-100 text-red-800'
-                                                            }`}>
-                                                                {leave.Status}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={7} className="text-center text-gray-400 py-12">
-                                                    No Leave Logs Found
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={8} className="text-center text-gray-400 py-12">
+                                            No Leave Logs Found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     )}
                 </div>
             </div>
