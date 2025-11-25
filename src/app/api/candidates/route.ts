@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
-import { googleDriveService } from '@/services/googleDriveService';
 // import { streamToBuffer } from '@/lib/utils';
 
 export async function GET() {
@@ -54,7 +53,6 @@ export async function POST(req: NextRequest) {
     const FirstName = formData.get('FirstName');
     const MiddleName = formData.get('MiddleName');
     const ExtensionName = formData.get('ExtensionName');
-    const FullName = formData.get('FullName');
     const Email = formData.get('Email');
     const ContactNumber = formData.get('ContactNumber');
     const DateOfBirth = formData.get('DateOfBirth');
@@ -63,6 +61,12 @@ export async function POST(req: NextRequest) {
     const Status = formData.get('Status');
     const resume = formData.get('resume') as File | null;
     const Sex = formData.get('Sex') as string;
+
+    // Generate FullName from component parts
+    const FullName = [LastName, FirstName, MiddleName, ExtensionName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
 
     // Validate required fields
     if (!VacancyID || !LastName || !FirstName || !Email) {
@@ -90,25 +94,41 @@ export async function POST(req: NextRequest) {
     let ResumeUrl = null;
     if (resume) {
       try {
-        // Upload file to Google Drive using the same approach as faculty-documents
+        // Upload file to Supabase Storage
         const fileName = `${Date.now()}_${resume.name}`;
-        console.log('Uploading resume to Google Drive:', {
+        console.log('Uploading file to Supabase Storage:', {
           fileName,
-          fileType: resume.type,
-          folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
+          mimeType: resume.type,
         });
 
-        const uploadResult = await googleDriveService.uploadFile(
-          resume,
-          fileName,
-          resume.type,
-          process.env.GOOGLE_DRIVE_FOLDER_ID
-        );
+        // Convert File to buffer
+        const buffer = await resume.arrayBuffer();
+        const fileBuffer = Buffer.from(buffer);
 
-        console.log('File upload successful:', uploadResult);
-        
-        Resume = uploadResult.fileId;
-        ResumeUrl = uploadResult.webViewLink;
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          .from('resumes')
+          .upload(fileName, fileBuffer, {
+            contentType: resume.type,
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Error uploading resume to Supabase:', uploadError);
+          // Continue without the resume if upload fails
+        } else {
+          // Get the public URL for the uploaded file
+          const { data: { publicUrl } } = supabaseAdmin.storage
+            .from('resumes')
+            .getPublicUrl(fileName);
+
+          Resume = uploadData.path;
+          ResumeUrl = publicUrl;
+          console.log('File uploaded successfully to Supabase Storage:', {
+            path: uploadData.path,
+            publicUrl
+          });
+        }
       } catch (error) {
         console.error('Error uploading resume:', error);
         // Continue without the resume if upload fails
@@ -136,15 +156,25 @@ export async function POST(req: NextRequest) {
         DateModified: new Date().toISOString(),
         createdBy: userId
       }])
-      .select()
+      .select(`
+        *,
+        Vacancy (
+          VacancyID,
+          VacancyName,
+          JobTitle,
+          HiringManager
+        )
+      `)
       .single();
 
     if (error) {
       console.error('Error creating candidate:', error);
-      // If candidate creation fails, delete the uploaded file from Google Drive
+      // If candidate creation fails, delete the uploaded file from Supabase Storage
       if (Resume) {
         try {
-          await googleDriveService.deleteFile(Resume);
+          await supabaseAdmin.storage
+            .from('resumes')
+            .remove([Resume]);
         } catch (deleteError) {
           console.error('Error deleting uploaded file:', deleteError);
         }

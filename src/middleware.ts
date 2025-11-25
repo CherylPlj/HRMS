@@ -73,21 +73,31 @@ export default clerkMiddleware(async (auth, req) => {
         
         // Add security headers
         const response = NextResponse.next();
-        response.headers.set("X-Frame-Options", "DENY");
+        
+        // Allow iframe embedding for resume preview API route
+        const isResumeApiRoute = url.pathname.startsWith('/api/candidates/resume/');
+        if (isResumeApiRoute) {
+            response.headers.set("X-Frame-Options", "SAMEORIGIN");
+        } else {
+            response.headers.set("X-Frame-Options", "DENY");
+        }
+        
         response.headers.set("X-Content-Type-Options", "nosniff");
         response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-        response.headers.set(
-            "Content-Security-Policy",
-            "default-src 'self'; " +
+        // Build CSP - allow resume API route in frame-src and object-src for preview
+        // Note: embed-src is not a valid CSP directive, use object-src instead
+        let csp = "default-src 'self'; " +
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://cdn.jsdelivr.net blob:; " +
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
             "img-src 'self' data: https: blob:; " +
             "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
             "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co https://clerk-telemetry.com; " +
             "frame-src 'self' https://*.clerk.accounts.dev; " +
+            "object-src 'self' blob:; " +
             "worker-src 'self' blob:; " +
-            "child-src 'self' blob:;"
-        );
+            "child-src 'self' blob:;";
+        
+        response.headers.set("Content-Security-Policy", csp);
 
         // Always allow access to ignored routes (including sign-in/sign-up to prevent loops)
         if (isIgnoredRoute(req)) {

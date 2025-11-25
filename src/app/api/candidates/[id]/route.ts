@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
-import { googleDriveService } from '@/services/googleDriveService';
 import { sendEmail, generateStatusUpdateEmail, generateInterviewScheduleEmail } from '@/lib/email';
 
 export async function GET(
@@ -63,7 +62,6 @@ export async function PATCH(
     const FirstName = formData.get('FirstName') as string;
     const MiddleName = formData.get('MiddleName') as string;
     const ExtensionName = formData.get('ExtensionName') as string;
-    const FullName = formData.get('FullName') as string;
     const Email = formData.get('Email') as string;
     const ContactNumber = formData.get('ContactNumber') as string;
     const DateOfBirth = formData.get('DateOfBirth') as string;
@@ -72,6 +70,12 @@ export async function PATCH(
     const resume = formData.get('resume') as File | null;
     const Sex = formData.get('Sex') as string;
     const VacancyID = formData.get('VacancyID') as string;
+
+    // Generate FullName from component parts
+    const FullName = [LastName, FirstName, MiddleName, ExtensionName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
 
     // Validate required fields
     if (!LastName || !FirstName || !Email || !Status) {
@@ -118,10 +122,18 @@ export async function PATCH(
     if (resume) {
       try {
         const timestamp = Date.now();
-        const fileName = `${timestamp}-${resume.name}`;
+        const fileName = `${timestamp}_${resume.name}`;
+        
+        // Convert File to buffer
+        const buffer = await resume.arrayBuffer();
+        const fileBuffer = Buffer.from(buffer);
+
         const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
           .from('resumes')
-          .upload(fileName, resume);
+          .upload(fileName, fileBuffer, {
+            contentType: resume.type,
+            upsert: false
+          });
 
         if (uploadError) {
           console.error('Error uploading resume:', uploadError);
@@ -136,7 +148,7 @@ export async function PATCH(
           .from('resumes')
           .getPublicUrl(fileName);
 
-        updateData.Resume = fileName;
+        updateData.Resume = uploadData.path;
         updateData.ResumeUrl = publicUrl;
       } catch (uploadError) {
         console.error('Error handling resume upload:', uploadError);

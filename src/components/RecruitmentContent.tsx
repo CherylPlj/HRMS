@@ -125,6 +125,52 @@ const formatName = (firstName: string, lastName: string, middleName?: string | n
   return `${firstName}${middleInitial} ${lastName}${extension}`;
 };
 
+// Helper function to get file type from URL
+const getFileType = (url: string): 'pdf' | 'image' | 'other' => {
+  if (!url) return 'other';
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('.pdf') || lowerUrl.includes('pdf')) return 'pdf';
+  if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg') || lowerUrl.includes('.png') || lowerUrl.includes('.gif')) return 'image';
+  return 'other';
+};
+
+// Helper function to get preview URL
+const getPreviewUrl = (url: string): string => {
+  if (!url || url.trim() === '') {
+    console.error('getPreviewUrl: Empty URL provided');
+    return '';
+  }
+  
+  // For Supabase storage URLs, use proxy endpoint to force inline display
+  if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+    try {
+      // Extract the file path from the Supabase URL
+      // Supabase URLs are typically: https://[project].supabase.co/storage/v1/object/public/resumes/[path]
+      const urlMatch = url.match(/\/resumes\/(.+)$/);
+      if (urlMatch && urlMatch[1] && urlMatch[1].trim() !== '') {
+        const filePath = urlMatch[1];
+        // URL encode the path to handle special characters and spaces
+        // Use proxy endpoint that sets Content-Disposition: inline
+        const proxyUrl = `/api/candidates/resume/${encodeURIComponent(filePath)}`;
+        console.log('Generated proxy URL:', proxyUrl, 'from original URL:', url);
+        return proxyUrl;
+      } else {
+        console.warn('getPreviewUrl: Could not extract file path from URL:', url);
+        // Return original URL as fallback
+        return url;
+      }
+    } catch (e) {
+      console.error('Error parsing Supabase URL:', e, 'URL:', url);
+      // Return original URL as fallback
+      return url;
+    }
+  }
+  
+  // For non-Supabase URLs, return as-is
+  console.log('getPreviewUrl: Returning original URL (not Supabase):', url);
+  return url;
+};
+
 const RecruitmentContent: React.FC = () => {
   // State declarations
   const [activeTab, setActiveTab] = useState<'candidates' | 'hired' | 'vacancies'>('candidates');
@@ -201,6 +247,10 @@ const RecruitmentContent: React.FC = () => {
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false);
   const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
   const [pendingEditSubmission, setPendingEditSubmission] = useState(false);
+
+  // Resume preview state
+  const [previewResumeUrl, setPreviewResumeUrl] = useState<string | null>(null);
+  const [previewCandidateName, setPreviewCandidateName] = useState<string>('');
 
   // Function declarations
 
@@ -342,15 +392,29 @@ const RecruitmentContent: React.FC = () => {
       if (!response.ok) throw new Error('Failed to create candidate');
       
       const newCandidate = await response.json();
-      setCandidates([...candidates, newCandidate]);
+      
+      // Refresh candidates list to ensure we have the latest data with Vacancy relation
+      const candidatesResponse = await fetch('/api/candidates');
+      if (candidatesResponse.ok) {
+        const updatedCandidates = await candidatesResponse.json();
+        setCandidates(updatedCandidates);
+      } else {
+        // Fallback: add the new candidate to the list
+        setCandidates([...candidates, newCandidate]);
+      }
 
       // If new candidate is hired, check vacancy status
       if (candidateStatus === 'Hired') {
         await updateVacancyStatusIfFilled(parseInt(candidateVacancy));
       }
 
+      // Set the added candidate name for the success modal
+      const fullName = `${candidateFirstName} ${candidateLastName}`.trim();
+      setAddedCandidateName(fullName);
+      
       setShowAddCandidate(false);
       resetCandidateForm();
+      setShowAddSuccessModal(true);
       toast.success('Candidate added successfully');
     } catch (error) {
       console.error('Error creating candidate:', error);
@@ -631,6 +695,10 @@ const RecruitmentContent: React.FC = () => {
   // Delete success state
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [deletedCandidateName, setDeletedCandidateName] = useState('');
+
+  // Add success state
+  const [showAddSuccessModal, setShowAddSuccessModal] = useState(false);
+  const [addedCandidateName, setAddedCandidateName] = useState('');
 
   // Vacancy edit/delete confirmation state
   const [showVacancyEditConfirmModal, setShowVacancyEditConfirmModal] = useState(false);
@@ -978,15 +1046,16 @@ const RecruitmentContent: React.FC = () => {
                     <td className="px-4 py-2">{formatStatus(c.Status)}</td>
                     <td className="px-4 py-2">
                       {c.ResumeUrl ? (
-                        <a 
-                          href={c.ResumeUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <button 
+                          onClick={() => {
+                            setPreviewResumeUrl(c.ResumeUrl || null);
+                            setPreviewCandidateName(c.FullName);
+                          }}
                           className={iconBtn}
-                          title="View Resume"
+                          title="Preview Resume"
                         >
-                          <i className="fas fa-file-alt text-blue-600"></i>
-                        </a>
+                          <i className="fas fa-eye text-blue-600"></i>
+                        </button>
                       ) : c.Resume ? (
                         <span className="text-gray-500" title={c.Resume}>
                           <i className="fas fa-file-alt"></i>
@@ -1198,123 +1267,99 @@ const RecruitmentContent: React.FC = () => {
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
               <div className="bg-white p-6 rounded shadow-lg w-[600px] max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-4">Edit Candidate</h3>
+                <p className="text-sm text-gray-600 mb-4">Note: Only Status and Interview Schedule can be modified.</p>
                 <form onSubmit={handleEditSubmit}>
+                  {/* Display-only fields */}
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <RequiredLabel text="Last Name" />
+                      <label className="block mb-1 font-medium text-gray-500">Last Name</label>
                       <input
                         title="Last Name"
                         type="text" 
-                        className="w-full border rounded px-3 py-2" 
+                        className="w-full border rounded px-3 py-2 bg-gray-100" 
                         value={editCandidateData.LastName}
-                        onChange={e => setEditCandidateData({ ...editCandidateData, LastName: e.target.value })} 
-                        required 
+                        readOnly
+                        disabled
                       />
                     </div>
                     <div>
-                      <RequiredLabel text="First Name" />
+                      <label className="block mb-1 font-medium text-gray-500">First Name</label>
                       <input
                         title="First Name"
                         type="text" 
-                        className="w-full border rounded px-3 py-2"
+                        className="w-full border rounded px-3 py-2 bg-gray-100"
                         value={editCandidateData.FirstName}
-                        onChange={e => setEditCandidateData({ ...editCandidateData, FirstName: e.target.value })} 
-                        required
+                        readOnly
+                        disabled
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block mb-1 font-medium">Middle Name</label>
+                      <label className="block mb-1 font-medium text-gray-500">Middle Name</label>
                       <input
                         title="Middle Name"
                         type="text" 
-                        className="w-full border rounded px-3 py-2" 
+                        className="w-full border rounded px-3 py-2 bg-gray-100" 
                         value={editCandidateData.MiddleName || ''} 
-                        onChange={e => setEditCandidateData({ ...editCandidateData, MiddleName: e.target.value })} 
+                        readOnly
+                        disabled
                       />
                     </div>
                     <div>
-                      <label className="block mb-1 font-medium">Extension Name</label>
+                      <label className="block mb-1 font-medium text-gray-500">Extension Name</label>
                       <input
                         title="Extension Name"
                         type="text" 
-                        className="w-full border rounded px-3 py-2" 
+                        className="w-full border rounded px-3 py-2 bg-gray-100" 
                         value={editCandidateData.ExtensionName || ''} 
-                        onChange={e => setEditCandidateData({ ...editCandidateData, ExtensionName: e.target.value })} 
-                        placeholder="Jr., Sr., III, etc."
+                        readOnly
+                        disabled
                       />
                     </div>
                   </div>
                   <div className="mb-4">
-                    <RequiredLabel text="Email" />
-                    <input title="email" type="email" className="w-full border rounded px-3 py-2" value={editCandidateData.Email} onChange={e => setEditCandidateData({ ...editCandidateData, Email: e.target.value })} required />
+                    <label className="block mb-1 font-medium text-gray-500">Email</label>
+                    <input title="email" type="email" className="w-full border rounded px-3 py-2 bg-gray-100" value={editCandidateData.Email} readOnly disabled />
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block mb-1 font-medium">Contact Number</label>
+                      <label className="block mb-1 font-medium text-gray-500">Contact Number</label>
                       <input
                         title="telephone"
                         type="tel"
-                        className="w-full border rounded px-3 py-2"
+                        className="w-full border rounded px-3 py-2 bg-gray-100"
                         value={editCandidateData.ContactNumber || ''} 
-                        onChange={e => setEditCandidateData({ ...editCandidateData, ContactNumber: e.target.value })} 
+                        readOnly
+                        disabled
                       />
                     </div>
                     <div>
-                      <RequiredLabel text="Sex" />
-                      <select 
+                      <label className="block mb-1 font-medium text-gray-500">Sex</label>
+                      <input
                         title="sex"
-                        className={`w-full border rounded px-3 py-2 ${!editCandidateData.Sex ? 'border-red-500' : ''}`}
+                        type="text"
+                        className="w-full border rounded px-3 py-2 bg-gray-100"
                         value={editCandidateData.Sex || ''} 
-                        onChange={e => setEditCandidateData({ ...editCandidateData, Sex: e.target.value })}
-                        required
-                      >
-                        <option value="">-- Select Sex --</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
-                      {!editCandidateData.Sex && (
-                        <p className="text-red-500 text-sm mt-1">Please select a sex</p>
-                      )}
+                        readOnly
+                        disabled
+                      />
                     </div>
                   </div>
                   <div className="mb-4">
-                    <RequiredLabel text="Date of Birth" />
-                      <input 
-                        title="Date of Birth"
-                        type="date" 
-                      className={`w-full border rounded px-3 py-2 ${
-                        !editCandidateData.DateOfBirth || !validateAge(editCandidateData.DateOfBirth).valid 
-                          ? 'border-red-500' 
-                          : ''
-                      }`}
+                    <label className="block mb-1 font-medium text-gray-500">Date of Birth</label>
+                    <input 
+                      title="Date of Birth"
+                      type="date" 
+                      className="w-full border rounded px-3 py-2 bg-gray-100"
                       value={editCandidateData.DateOfBirth ? new Date(editCandidateData.DateOfBirth).toISOString().split('T')[0] : ''} 
-                      onChange={e => {
-                        const selectedDate = e.target.value || null;
-                        const { valid, age } = validateAge(selectedDate);
-                        if (!valid && selectedDate) {
-                          toast.error(`Age must be between 18 and 65 years old (current age: ${age} years)`);
-                        }
-                        setEditCandidateData({ 
-                          ...editCandidateData, 
-                          DateOfBirth: selectedDate ? new Date(selectedDate).toISOString() : '' 
-                        });
-                      }} 
-                      required
-                      max={new Date().toISOString().split('T')[0]}
+                      readOnly
+                      disabled
                     />
                     {editCandidateData.DateOfBirth && (
-                      <div className={`mt-1 text-sm ${
-                        validateAge(editCandidateData.DateOfBirth).valid 
-                          ? 'text-gray-600' 
-                          : 'text-red-500'
-                      }`}>
+                      <div className="mt-1 text-sm text-gray-600">
                         Age: {calculateAge(editCandidateData.DateOfBirth)} years old
-                        {!validateAge(editCandidateData.DateOfBirth).valid && (
-                          <span className="block">Age must be between 18 and 65 years old</span>
-                        )}
-                    </div>
+                      </div>
                     )}
                   </div>
                   <div className="mb-4">
@@ -1378,9 +1423,22 @@ const RecruitmentContent: React.FC = () => {
                     </select>
                   </div>
                   <div className="mb-4">
-                    <label className="block mb-1 font-medium">Resume</label>
-                    <input title="Resume File" type="file" accept=".doc,.docx,.odt,.pdf,.rtf,.txt" onChange={handleEditResumeChange} />
-                    {editCandidateResume && <div className="mt-2 text-sm text-gray-600">Selected: {editCandidateResume.name}</div>}
+                    <label className="block mb-1 font-medium text-gray-500">Resume</label>
+                    {editCandidateData.ResumeUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewResumeUrl(editCandidateData.ResumeUrl || null);
+                          setPreviewCandidateName(editCandidateData.FullName);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                      >
+                        <i className="fas fa-eye"></i>
+                        Preview Resume
+                      </button>
+                    ) : (
+                      <span className="text-gray-500">No resume available</span>
+                    )}
                   </div>
                   <div className="flex justify-end space-x-2 mt-6">
                     <button 
@@ -2205,6 +2263,182 @@ const RecruitmentContent: React.FC = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Success Modal */}
+      {showAddSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[70]">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[400px]">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg
+                  className="h-6 w-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Candidate Added Successfully!
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {addedCandidateName} has been added to the system.
+              </p>
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                onClick={() => {
+                  setShowAddSuccessModal(false);
+                  setAddedCandidateName('');
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Resume Preview Modal */}
+      {previewResumeUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800">Resume Preview</h2>
+                <p className="text-sm text-gray-500">{previewCandidateName}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                {previewResumeUrl && (() => {
+                  const previewUrl = getPreviewUrl(previewResumeUrl);
+                  const urlToOpen = previewUrl || previewResumeUrl;
+                  return (
+                    <a
+                      href={urlToOpen}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-600 hover:text-gray-900"
+                      title="Open in New Tab"
+                    >
+                      <i className="fas fa-external-link-alt text-lg"></i>
+                    </a>
+                  );
+                })()}
+                <button
+                  onClick={() => {
+                    setPreviewResumeUrl(null);
+                    setPreviewCandidateName('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="Close"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              {(() => {
+                if (!previewResumeUrl) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <p className="text-gray-600">No resume URL provided</p>
+                    </div>
+                  );
+                }
+                
+                const fileType = getFileType(previewResumeUrl);
+                const previewUrl = getPreviewUrl(previewResumeUrl);
+                
+                if (!previewUrl) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <p className="text-gray-600 mb-4">Unable to generate preview URL</p>
+                      <a
+                        href={previewResumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        <i className="fas fa-external-link-alt mr-2"></i>
+                        Open Original URL
+                      </a>
+                    </div>
+                  );
+                }
+                
+                if (fileType === 'pdf') {
+                  // Ensure previewUrl is valid and not empty before rendering iframe
+                  if (!previewUrl || previewUrl === '/' || previewUrl.startsWith('http://localhost:3000/') && previewUrl === 'http://localhost:3000/') {
+                    return (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <p className="text-gray-600 mb-4">Invalid preview URL. Please use the link below to open the file.</p>
+                        <a
+                          href={previewResumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          <i className="fas fa-external-link-alt mr-2"></i>
+                          Open in New Tab
+                        </a>
+                      </div>
+                    );
+                  }
+                  
+                  // Use iframe with proper attributes - Chrome should allow this with our CSP settings
+                  return (
+                    <iframe
+                      src={previewUrl}
+                      title="Resume Preview"
+                      className="w-full h-full border-0"
+                      style={{ minHeight: '600px' }}
+                      onError={(e) => {
+                        console.error('Iframe load error:', e);
+                      }}
+                      onLoad={() => {
+                        console.log('Iframe loaded successfully with URL:', previewUrl);
+                      }}
+                    />
+                  );
+                } else if (fileType === 'image') {
+                  return (
+                    <img
+                      src={previewUrl}
+                      alt="Resume preview"
+                      className="max-w-full max-h-full object-contain mx-auto"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/file.svg';
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <i className="fas fa-file-alt text-6xl text-gray-400 mb-4"></i>
+                      <p className="text-gray-600 mb-4">Preview not available for this file type</p>
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 inline-flex items-center justify-center"
+                      >
+                        <i className="fas fa-external-link-alt mr-2"></i>
+                        Open in New Tab
+                      </a>
+                      <p className="text-xs text-gray-500 mt-2">Note: Some file types (like .doc, .docx) may download as browsers cannot display them inline</p>
+                    </div>
+                  );
+                }
+              })()}
             </div>
           </div>
         </div>
