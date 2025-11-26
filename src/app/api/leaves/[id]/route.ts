@@ -46,22 +46,25 @@ export async function PATCH(
         const body = await request.json();
         const { status } = body;
 
-        if (!status || !['Approved', 'Rejected'].includes(status)) {
+        if (!status || !['Approved', 'Returned'].includes(status)) {
             return NextResponse.json(
-                { error: 'Invalid status. Must be either Approved or Rejected' },
+                { error: 'Invalid status. Must be either Approved or Returned' },
                 { status: 400, headers: corsHeaders }
             );
         }
 
-        if (existingLeave.Status !== 'Pending') {
+        // Map string to enum value
+        const statusEnum = status === 'Approved' ? LeaveStatus.Approved : LeaveStatus.Returned;
+
+        if (existingLeave.Status !== LeaveStatus.Pending) {
             return NextResponse.json(
                 { error: 'Only pending requests can be updated' },
                 { status: 400, headers: corsHeaders }
             );
         }
 
-        // Only validate leave limits when APPROVING, not when rejecting
-        if (status === 'Approved') {
+        // Only validate leave limits when APPROVING, not when returning
+        if (statusEnum === LeaveStatus.Approved) {
             // Use existing leave dates if body dates are not provided
             const startDate = body.StartDate ? new Date(body.StartDate) : existingLeave.StartDate;
             const endDate = body.EndDate ? new Date(body.EndDate) : existingLeave.EndDate;
@@ -154,10 +157,11 @@ export async function PATCH(
             }
         }
 
+        // Ensure we're using the enum value, not a string
         const updatedLeave = await prisma.leave.update({
             where: { LeaveID: leaveId },
             data: {
-                Status: status as LeaveStatus,
+                Status: statusEnum, // This is now LeaveStatus.Approved or LeaveStatus.Returned
                 UpdatedAt: new Date()
             },
             include: {
@@ -194,7 +198,7 @@ export async function PATCH(
                     leaveTypeDisplay,
                     existingLeave.StartDate?.toISOString() || '',
                     existingLeave.EndDate?.toISOString() || '',
-                    status
+                    status // Use string for email template
                 );
 
                 const emailResult = await sendEmail({

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ExternalLink, Trash2, Download, Calendar, Check, X, Eye } from 'lucide-react';
+import { ExternalLink, Trash2, Download, Calendar, Check, X, Eye, Plus, Pen } from 'lucide-react';
 import Image from 'next/image';
 import { User } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
@@ -8,6 +8,13 @@ import type { Leave, Faculty, User as PrismaUser, Department } from '@prisma/cli
 import { LeaveType, LeaveStatus } from '@prisma/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+interface LeaveTypeItem {
+    LeaveTypeID: number;
+    LeaveTypeName: string;
+    NumberOfDays?: number | null;
+    IsActive?: boolean;
+}
 
 type LeaveWithRelations = Leave & {
     Faculty: (Faculty & {
@@ -126,10 +133,10 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
     const [confirmError, setConfirmError] = useState('');
 
     const handleConfirm = () => {
-        if (status === 'Rejected') {
+        if (status === LeaveStatus.Returned) {
             const expectedInput = requestType === 'Undertime' ? 'Undertime' : `${leaveType} Leave`;
             if (confirmInput.trim() !== expectedInput) {
-                setConfirmError(`Please type "${expectedInput}" to confirm rejection`);
+                setConfirmError(`Please type "${expectedInput}" to confirm return`);
                 return;
             }
         }
@@ -151,17 +158,17 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
             <div className="bg-white rounded-lg shadow-lg p-8 w-96 text-center">
                 <h2 className="text-2xl font-bold mb-4 text-[#800000]">Confirm Status Update</h2>
                 <p className="mb-4 text-gray-700">
-                    Are you sure you want to {status === 'Approved' ? 'approve' : 'reject'} the leave request for {facultyName}?
+                    Are you sure you want to {status === LeaveStatus.Approved ? 'approve' : 'return'} the leave request for {facultyName}?
                 </p>
 
-                {status === 'Rejected' && (
+                {status === LeaveStatus.Returned && (
                     <div className="mb-4">
                         <p className="text-sm text-gray-500 mb-2">
                             Please type{' '}
                             <span className="font-semibold">
                                 {requestType === 'Undertime' ? 'Undertime' : `${leaveType} Leave`}
                             </span>{' '}
-                            to confirm rejection.
+                            to confirm return.
                         </p>
                         <input
                             type="text"
@@ -183,12 +190,12 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
                     <button
                         onClick={handleConfirm}
                         className={`${
-                            status === 'Approved' 
+                            status === LeaveStatus.Approved 
                                 ? 'bg-green-600 hover:bg-green-700' 
                                 : 'bg-red-600 hover:bg-red-700'
                         } text-white px-4 py-2 rounded`}
                     >
-                        Yes, {status === 'Approved' ? 'Approve' : 'Reject'}
+                        Yes, {status === LeaveStatus.Approved ? 'Approve' : 'Return'}
                     </button>
                     <button
                         onClick={() => {
@@ -280,9 +287,9 @@ const ViewLeaveModal: React.FC<ViewLeaveModalProps> = ({ isOpen, onClose, leave 
                     <div>
                         <h3 className="font-semibold text-gray-600">Status</h3>
                         <span className={`px-2 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                            leave.Status === 'Approved' 
+                            leave.Status === LeaveStatus.Approved 
                                 ? 'bg-green-100 text-green-800'
-                                : leave.Status === 'Rejected'
+                                : leave.Status === LeaveStatus.Returned
                                 ? 'bg-red-100 text-red-800'
                                 : 'bg-yellow-100 text-yellow-800'
                         }`}>
@@ -355,7 +362,7 @@ interface SuccessModalProps {
 const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, status, facultyName }) => {
     if (!isOpen) return null;
 
-    const isApproved = status === 'Approved';
+    const isApproved = status === LeaveStatus.Approved;
 
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -370,10 +377,10 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, status, fa
                     )}
                 </div>
                 <h2 className="text-2xl font-bold mb-2 text-[#800000]">
-                    Leave Request {isApproved ? 'Approved' : 'Rejected'}
+                    Leave Request {isApproved ? 'Approved' : 'Returned'}
                 </h2>
                 <p className="mb-4 text-gray-700">
-                    The leave request for <span className="font-semibold">{facultyName}</span> has been {isApproved ? 'approved' : 'rejected'} successfully.
+                    The leave request for <span className="font-semibold">{facultyName}</span> has been {isApproved ? 'approved' : 'returned'} successfully.
                 </p>
                 <p className="mb-6 text-sm text-gray-500">
                     An email notification has been sent to the employee.
@@ -433,6 +440,26 @@ const LeaveContent: React.FC = () => {
         facultyName: ''
     });
     const fetchLeavesRef = useRef(false); // Prevent duplicate calls
+    
+    // Leave Type Management State
+    const [leaveTypes, setLeaveTypes] = useState<LeaveTypeItem[]>([]);
+    const [isLeaveTypeModalOpen, setIsLeaveTypeModalOpen] = useState(false);
+    const [showLeaveTypeListModal, setShowLeaveTypeListModal] = useState(false);
+    const [showLeaveTypeSuccessModal, setShowLeaveTypeSuccessModal] = useState(false);
+    const [isDeleteLeaveTypeModalOpen, setIsDeleteLeaveTypeModalOpen] = useState(false);
+    const [leaveTypeName, setLeaveTypeName] = useState('');
+    const [numberOfDays, setNumberOfDays] = useState<number | ''>('');
+    const [leaveTypeError, setLeaveTypeError] = useState<string | null>(null);
+    const [editingLeaveType, setEditingLeaveType] = useState<LeaveTypeItem | null>(null);
+    const [addingLeaveType, setAddingLeaveType] = useState(false);
+    const [leaveTypeToDelete, setLeaveTypeToDelete] = useState<LeaveTypeItem | null>(null);
+    const [deleteLeaveTypeConfirmation, setDeleteLeaveTypeConfirmation] = useState('');
+    const [isDeleteLeaveTypeConfirmed, setIsDeleteLeaveTypeConfirmed] = useState(false);
+    const [isDeletingLeaveType, setIsDeletingLeaveType] = useState(false);
+    const [isLeaveTypeReferenced, setIsLeaveTypeReferenced] = useState(false);
+    const [leaveTypeSuccessMessage, setLeaveTypeSuccessMessage] = useState('');
+    const [selectedLeaveTypes, setSelectedLeaveTypes] = useState<number[]>([]);
+    const [selectAllLeaveTypes, setSelectAllLeaveTypes] = useState(false);
 
     // Memoize fetchLeaves to prevent unnecessary re-creations
     const fetchLeaves = useCallback(async () => {
@@ -536,8 +563,141 @@ const LeaveContent: React.FC = () => {
         }
 
         fetchLeaves();
+        fetchLeaveTypes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, isUserLoaded]);
+
+    // Fetch leave types
+    const fetchLeaveTypes = useCallback(async () => {
+        try {
+            const response = await fetch('/api/leave-types', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setLeaveTypes(Array.isArray(data) ? data : []);
+            }
+        } catch (err) {
+            console.error('Error fetching leave types:', err);
+        }
+    }, []);
+
+    // Validate leave type name
+    const validateLeaveTypeName = (name: string): string | null => {
+        if (!name || name.trim().length < 3) {
+            return 'Leave type name must be at least 3 characters';
+        }
+        if (name.length > 50) {
+            return 'Leave type name must be less than 50 characters';
+        }
+        if (!/^[a-zA-Z0-9\s]+$/.test(name)) {
+            return 'Leave type name can only contain letters, numbers, and spaces';
+        }
+        const existing = leaveTypes.find(
+            lt => lt.LeaveTypeName.toLowerCase() === name.toLowerCase().trim() && 
+            (!editingLeaveType || lt.LeaveTypeID !== editingLeaveType.LeaveTypeID)
+        );
+        if (existing) {
+            return 'Leave type name already exists';
+        }
+        return null;
+    };
+
+    // Open add leave type modal
+    const openAddLeaveTypeModal = () => {
+        setEditingLeaveType(null);
+        setLeaveTypeName('');
+        setNumberOfDays('');
+        setLeaveTypeError(null);
+        setIsLeaveTypeModalOpen(true);
+    };
+
+    // Open edit leave type modal
+    const openEditLeaveTypeModal = (leaveType: LeaveTypeItem) => {
+        setEditingLeaveType(leaveType);
+        setLeaveTypeName(leaveType.LeaveTypeName);
+        setNumberOfDays(leaveType.NumberOfDays ?? '');
+        setLeaveTypeError(null);
+        setIsLeaveTypeModalOpen(true);
+    };
+
+    // Handle add or edit leave type
+    const handleAddOrEditLeaveType = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (leaveTypeError) return;
+
+        setAddingLeaveType(true);
+        try {
+            const url = editingLeaveType 
+                ? `/api/leave-types/${editingLeaveType.LeaveTypeID}`
+                : '/api/leave-types';
+            
+            const method = editingLeaveType ? 'PATCH' : 'POST';
+            
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    LeaveTypeName: leaveTypeName.trim(),
+                    NumberOfDays: numberOfDays === '' ? null : Number(numberOfDays),
+                }),
+            });
+
+            if (response.ok) {
+                setLeaveTypeSuccessMessage(
+                    editingLeaveType 
+                        ? 'Leave type updated successfully!' 
+                        : 'Leave type added successfully!'
+                );
+                setShowLeaveTypeSuccessModal(true);
+                setIsLeaveTypeModalOpen(false);
+                setLeaveTypeName('');
+                setNumberOfDays('');
+                setLeaveTypeError(null);
+                setEditingLeaveType(null);
+                await fetchLeaveTypes();
+            } else {
+                const error = await response.text();
+                setLeaveTypeError(error || 'Failed to save leave type');
+            }
+        } catch (error) {
+            setLeaveTypeError('An error occurred while saving the leave type');
+        } finally {
+            setAddingLeaveType(false);
+        }
+    };
+
+    // Handle delete leave type
+    const handleDeleteLeaveType = async (leaveType: LeaveTypeItem) => {
+        try {
+            const response = await fetch(`/api/leave-types/${leaveType.LeaveTypeID}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setLeaveTypeSuccessMessage('Leave type deleted successfully!');
+                setShowLeaveTypeSuccessModal(true);
+                setIsDeleteLeaveTypeModalOpen(false);
+                setLeaveTypeToDelete(null);
+                setDeleteLeaveTypeConfirmation('');
+                setIsDeleteLeaveTypeConfirmed(false);
+                await fetchLeaveTypes();
+            } else {
+                const error = await response.text();
+                setLeaveTypeError(error || 'Failed to delete leave type');
+            }
+        } catch (error) {
+            setLeaveTypeError('An error occurred while deleting the leave type');
+        }
+    };
 
     const handleDelete = async (id: number) => {
         try {
@@ -584,9 +744,10 @@ const LeaveContent: React.FC = () => {
                 body: JSON.stringify({ status }),
             });
 
-            const statusVerb = status === 'Approved' ? 'approve' : 'reject';
+            const statusVerb = status === LeaveStatus.Approved ? 'approve' : 'return';
             if (!response.ok) {
-                throw new Error(`Failed to ${statusVerb} leave request`);
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `Failed to ${statusVerb} leave request`);
             }
 
             setLeaves(leaves.map(leave => 
@@ -607,8 +768,9 @@ const LeaveContent: React.FC = () => {
             });
         } catch (err) {
             console.error('Error updating leave status:', err);
-            const statusVerb = status === 'Approved' ? 'approve' : 'reject';
-            alert(`Failed to ${statusVerb} leave request`);
+            const statusVerb = status === LeaveStatus.Approved ? 'approve' : 'return';
+            const errorMessage = err instanceof Error ? err.message : `Failed to ${statusVerb} leave request`;
+            alert(errorMessage);
         }
     };
 
@@ -623,7 +785,7 @@ const LeaveContent: React.FC = () => {
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
             // Filter to only pending leaves
-            const pendingLeaves = leaves.filter(leave => leave.Status === 'Pending');
+            const pendingLeaves = leaves.filter(leave => leave.Status === LeaveStatus.Pending);
             const tableData = pendingLeaves.map(item => [
                 item.Faculty?.Name || '',
                 item.Faculty?.Department || 'N/A',
@@ -646,13 +808,13 @@ const LeaveContent: React.FC = () => {
         } else if (activeTab === 'logs') {
             // Title
             doc.setFontSize(16);
-            doc.text('Leave Logs Report (Approved & Rejected)', 14, 15);
+            doc.text('Leave Logs Report (Approved & Returned)', 14, 15);
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-            // Filter to only approved and rejected leaves
+            // Filter to only approved and returned leaves
             const approvedRejectedLeaves = leaves.filter(
-                leave => leave.Status === 'Approved' || leave.Status === 'Rejected'
+                leave => leave.Status === LeaveStatus.Approved || leave.Status === LeaveStatus.Returned
             );
             const tableData = approvedRejectedLeaves.map(log => [
                 `${log.Faculty?.Name}`,
@@ -672,7 +834,7 @@ const LeaveContent: React.FC = () => {
                 headStyles: { fillColor: [128, 0, 0] }
             });
 
-            doc.save('leave-logs-approved-rejected.pdf');
+            doc.save('leave-logs-approved-returned.pdf');
         }
     };
 
@@ -713,11 +875,11 @@ const LeaveContent: React.FC = () => {
 
     // Filter leaves based on active tab
     const pendingLeaves = activeTab === 'management' 
-        ? leaves.filter(leave => leave.Status === 'Pending')
+        ? leaves.filter(leave => leave.Status === LeaveStatus.Pending)
         : [];
     
     const approvedRejectedLeaves = activeTab === 'logs'
-        ? leaves.filter(leave => leave.Status === 'Approved' || leave.Status === 'Rejected')
+        ? leaves.filter(leave => leave.Status === LeaveStatus.Approved || leave.Status === LeaveStatus.Returned)
         : [];
 
     return (
@@ -746,13 +908,30 @@ const LeaveContent: React.FC = () => {
                         Leave Logs
                     </button>
                 </div>
-                <button
-                    onClick={handleDownloadPDF}
-                    className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                    <Download size={18} />
-                    Download
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={openAddLeaveTypeModal}
+                        className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                        title="Add New Leave Type"
+                    >
+                        <Plus size={18} />
+                        Add Leave Type
+                    </button>
+                    <button
+                        onClick={() => setShowLeaveTypeListModal(true)}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 border border-gray-300"
+                        title="Manage Leave Types"
+                    >
+                        <Pen size={16} /> / <Trash2 size={16} />
+                    </button>
+                    <button
+                        onClick={handleDownloadPDF}
+                        className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
+                        <Download size={18} />
+                        Download
+                    </button>
+                </div>
             </div>
 
             {/* Main Content */}
@@ -830,9 +1009,9 @@ const LeaveContent: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                            leave.Status === 'Approved' 
+                                                            leave.Status === LeaveStatus.Approved 
                                                                 ? 'bg-green-100 text-green-800'
-                                                                : leave.Status === 'Rejected'
+                                                                : leave.Status === LeaveStatus.Returned
                                                                 ? 'bg-red-100 text-red-800'
                                                                 : 'bg-yellow-100 text-yellow-800'
                                                         }`}>
@@ -840,18 +1019,18 @@ const LeaveContent: React.FC = () => {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                        <div className="flex space-x-2">
+                                                        <div className="flex items-center space-x-2">
                                                             <button
                                                                 onClick={() => {
                                                                     setSelectedLeave(leave);
                                                                     setViewModalOpen(true);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-900 transition-colors"
+                                                                className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
                                                                 title="View details"
                                                             >
                                                                 <Eye className="h-5 w-5" />
                                                             </button>
-                                                            {leave.Status === 'Pending' && (
+                                                            {leave.Status === LeaveStatus.Pending && (
                                                                 <>
                                                                     <button
                                                                         onClick={() => setStatusUpdateModal({
@@ -862,7 +1041,7 @@ const LeaveContent: React.FC = () => {
                                                                             leaveType: leave.LeaveType || '',
                                                                             requestType: leave.RequestType
                                                                         })}
-                                                                        className="text-green-600 hover:text-green-900 transition-colors"
+                                                                        className="p-1.5 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors"
                                                                         title="Approve leave"
                                                                     >
                                                                         <Check className="h-5 w-5" />
@@ -871,13 +1050,13 @@ const LeaveContent: React.FC = () => {
                                                                         onClick={() => setStatusUpdateModal({
                                                                             isOpen: true,
                                                                             leaveId: leave.LeaveID,
-                                                                            status: 'Rejected',
+                                                                            status: 'Returned',
                                                                             facultyName: leave.Faculty?.Name || 'Unknown',
                                                                             leaveType: leave.LeaveType || '',
                                                                             requestType: leave.RequestType
                                                                         })}
-                                                                        className="text-red-600 hover:text-red-900 transition-colors"
-                                                                        title="Reject leave"
+                                                                        className="p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                                                                        title="Return leave"
                                                                     >
                                                                         <X className="h-5 w-5" />
                                                                     </button>
@@ -891,7 +1070,7 @@ const LeaveContent: React.FC = () => {
                                                                         setDeleteConfirmInput('');
                                                                         setDeleteConfirmError('');
                                                                     }}
-                                                                    className="text-red-600 hover:text-red-900 transition-colors"
+                                                                    className="p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
                                                                     title="Delete leave"
                                                                 >
                                                                     <Trash2 className="h-5 w-5" />
@@ -996,7 +1175,7 @@ const LeaveContent: React.FC = () => {
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                                leave.Status === 'Approved' 
+                                                                leave.Status === LeaveStatus.Approved 
                                                                     ? 'bg-green-100 text-green-800'
                                                                     : 'bg-red-100 text-red-800'
                                                             }`}>
@@ -1009,7 +1188,7 @@ const LeaveContent: React.FC = () => {
                                                                     setSelectedLeave(leave);
                                                                     setViewModalOpen(true);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-900 transition-colors"
+                                                                className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
                                                                 title="View details"
                                                             >
                                                                 <Eye className="h-5 w-5" />
@@ -1122,6 +1301,349 @@ const LeaveContent: React.FC = () => {
                 status={successModal.status || 'Approved'}
                 facultyName={successModal.facultyName}
             />
+
+            {/* Add/Edit Leave Type Modal */}
+            {isLeaveTypeModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-0 overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-4 border-b">
+                            <h2 className="text-2xl font-bold text-gray-800">{editingLeaveType ? 'Edit Leave Type' : 'Add New Leave Type'}</h2>
+                            <button
+                                onClick={() => {
+                                    setIsLeaveTypeModalOpen(false);
+                                    setLeaveTypeName('');
+                                    setNumberOfDays('');
+                                    setLeaveTypeError(null);
+                                    setEditingLeaveType(null);
+                                }}
+                                className="text-gray-400 hover:text-gray-700 focus:outline-none"
+                                aria-label="Close"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleAddOrEditLeaveType} className="px-6 py-6 space-y-6">
+                            <div>
+                                <label htmlFor="leaveType" className="block text-sm font-semibold text-gray-700 mb-1">
+                                    Leave Type <span className="text-red-600">*</span>
+                                </label>
+                                <input
+                                    id="leaveType"
+                                    type="text"
+                                    value={leaveTypeName}
+                                    onChange={e => {
+                                        setLeaveTypeName(e.target.value);
+                                        setLeaveTypeError(validateLeaveTypeName(e.target.value));
+                                    }}
+                                    className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-base ${leaveTypeError ? 'border-red-500' : 'border-gray-300'}`}
+                                    required
+                                    title="Type a leave type name"
+                                    placeholder="e.g. Sick, Vacation, Emergency"
+                                    autoComplete="off"
+                                    maxLength={50}
+                                />
+                                {leaveTypeError ? (
+                                    <div className="text-red-600 text-xs mt-1">{leaveTypeError}</div>
+                                ) : (
+                                    <div className="text-gray-400 text-xs mt-1">Alphanumeric, min 3 chars, unique.</div>
+                                )}
+                            </div>
+                            <div>
+                                <label htmlFor="numberOfDays" className="block text-sm font-semibold text-gray-700 mb-1">
+                                    Number of Days (Allowed Paid Leave)
+                                </label>
+                                <input
+                                    id="numberOfDays"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={numberOfDays}
+                                    onChange={e => {
+                                        const value = e.target.value;
+                                        setNumberOfDays(value === '' ? '' : Number(value));
+                                    }}
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-base"
+                                    title="Enter the number of allowed paid leave days for this leave type"
+                                    placeholder="e.g. 10 (leave empty for unlimited)"
+                                />
+                                <div className="text-gray-400 text-xs mt-1">
+                                    Enter the number of allowed paid leave days. Leave empty if unlimited.
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsLeaveTypeModalOpen(false);
+                                        setLeaveTypeName('');
+                                        setNumberOfDays('');
+                                        setLeaveTypeError(null);
+                                        setEditingLeaveType(null);
+                                    }}
+                                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-red-800 flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    disabled={!!leaveTypeError || addingLeaveType}
+                                >
+                                    {addingLeaveType ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : null}
+                                    {editingLeaveType ? 'Save Changes' : 'Save Leave Type'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Leave Type List Modal */}
+            {showLeaveTypeListModal && (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-0 overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-4 border-b">
+                            <h2 className="text-2xl font-bold text-gray-800">Manage Leave Types</h2>
+                            <button
+                                onClick={() => {
+                                    setShowLeaveTypeListModal(false);
+                                    setSelectedLeaveTypes([]);
+                                    setSelectAllLeaveTypes(false);
+                                }}
+                                className="text-gray-400 hover:text-gray-700 focus:outline-none"
+                                aria-label="Close"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="px-6 py-6">
+                            {selectedLeaveTypes.length > 0 && (
+                                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+                                    <span className="text-sm text-blue-800">
+                                        {selectedLeaveTypes.length} leave type{selectedLeaveTypes.length > 1 ? 's' : ''} selected
+                                    </span>
+                                    <button
+                                        onClick={async () => {
+                                            if (confirm(`Are you sure you want to delete ${selectedLeaveTypes.length} leave type(s)?`)) {
+                                                setIsDeletingLeaveType(true);
+                                                try {
+                                                    for (const leaveTypeId of selectedLeaveTypes) {
+                                                        const leaveType = leaveTypes.find(lt => lt.LeaveTypeID === leaveTypeId);
+                                                        if (leaveType) {
+                                                            await handleDeleteLeaveType(leaveType);
+                                                        }
+                                                    }
+                                                    setSelectedLeaveTypes([]);
+                                                    setSelectAllLeaveTypes(false);
+                                                } catch (error) {
+                                                    console.error('Error deleting leave types:', error);
+                                                } finally {
+                                                    setIsDeletingLeaveType(false);
+                                                }
+                                            }
+                                        }}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
+                                        disabled={isDeletingLeaveType}
+                                    >
+                                        <Trash2 size={14} /> Delete Selected
+                                    </button>
+                                </div>
+                            )}
+                            <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+                                {leaveTypes.length === 0 ? (
+                                    <li className="py-4 text-gray-500 text-center">No leave types found.</li>
+                                ) : (
+                                    <>
+                                        <li className="flex items-center py-2 border-b">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectAllLeaveTypes}
+                                                onChange={(e) => {
+                                                    setSelectAllLeaveTypes(e.target.checked);
+                                                    if (e.target.checked) {
+                                                        setSelectedLeaveTypes(leaveTypes.map(lt => lt.LeaveTypeID));
+                                                    } else {
+                                                        setSelectedLeaveTypes([]);
+                                                    }
+                                                }}
+                                                className="rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-3"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">Select All</span>
+                                        </li>
+                                        {leaveTypes.map((type) => (
+                                            <li key={type.LeaveTypeID} className="flex items-center justify-between py-3">
+                                                <div className="flex items-center gap-3 flex-grow">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedLeaveTypes.includes(type.LeaveTypeID)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedLeaveTypes([...selectedLeaveTypes, type.LeaveTypeID]);
+                                                            } else {
+                                                                setSelectedLeaveTypes(selectedLeaveTypes.filter(id => id !== type.LeaveTypeID));
+                                                                setSelectAllLeaveTypes(false);
+                                                            }
+                                                        }}
+                                                        className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-gray-800">{type.LeaveTypeName}</span>
+                                                        {type.NumberOfDays !== null && type.NumberOfDays !== undefined && (
+                                                            <span className="text-xs text-gray-500">
+                                                                {type.NumberOfDays} day{type.NumberOfDays !== 1 ? 's' : ''} allowed
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="flex items-center gap-2">
+                                                    <button
+                                                        className="text-indigo-600 hover:text-indigo-900"
+                                                        title="Edit"
+                                                        onClick={() => {
+                                                            setShowLeaveTypeListModal(false);
+                                                            openEditLeaveTypeModal(type);
+                                                        }}
+                                                    >
+                                                        <Pen size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="text-red-600 hover:text-red-900 ml-2"
+                                                        title="Delete"
+                                                        onClick={async () => {
+                                                            setLeaveTypeToDelete(type);
+                                                            setIsDeleteLeaveTypeModalOpen(true);
+                                                            setDeleteLeaveTypeConfirmation('');
+                                                            setIsDeleteLeaveTypeConfirmed(false);
+                                                            setIsDeletingLeaveType(true);
+                                                            try {
+                                                                const res = await fetch(`/api/leaves?leaveTypeId=${type.LeaveTypeID}`);
+                                                                const data = await res.json();
+                                                                setIsLeaveTypeReferenced(Array.isArray(data) && data.length > 0);
+                                                            } catch (err) {
+                                                                setIsLeaveTypeReferenced(false);
+                                                            } finally {
+                                                                setIsDeletingLeaveType(false);
+                                                            }
+                                                        }}
+                                                        disabled={isDeletingLeaveType}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </>
+                                )}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Leave Type Success Modal */}
+            {showLeaveTypeSuccessModal && (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 flex flex-col items-center">
+                        <h2 className="text-2xl font-bold text-green-700 mb-4">Success</h2>
+                        <p className="text-gray-800 mb-6 text-center">{leaveTypeSuccessMessage}</p>
+                        <button
+                            className="bg-[#800000] text-white px-6 py-2 rounded hover:bg-red-800"
+                            onClick={() => {
+                                setShowLeaveTypeSuccessModal(false);
+                            }}
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Leave Type Modal */}
+            {isDeleteLeaveTypeModalOpen && leaveTypeToDelete && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-800">Delete Leave Type</h2>
+                            <button
+                                onClick={() => {
+                                    setIsDeleteLeaveTypeModalOpen(false);
+                                    setLeaveTypeToDelete(null);
+                                    setDeleteLeaveTypeConfirmation('');
+                                    setIsDeleteLeaveTypeConfirmed(false);
+                                    setIsLeaveTypeReferenced(false);
+                                }}
+                                className="text-gray-500 hover:text-gray-700"
+                                title="Close"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                                {isLeaveTypeReferenced ? (
+                                    <p className="text-red-800 font-semibold">This leave type cannot be deleted.</p>
+                                ) : (
+                                    <>
+                                        <p className="text-red-800 mb-2">
+                                            This action cannot be undone. This will permanently delete the leave type <span className="font-semibold">{leaveTypeToDelete.LeaveTypeName}</span>.
+                                        </p>
+                                        <p className="text-sm text-red-700">
+                                            Please type <span className="font-semibold">{leaveTypeToDelete.LeaveTypeName}</span> to confirm.
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                            <input
+                                type="text"
+                                value={deleteLeaveTypeConfirmation}
+                                onChange={e => {
+                                    setDeleteLeaveTypeConfirmation(e.target.value);
+                                    setIsDeleteLeaveTypeConfirmed(e.target.value === leaveTypeToDelete.LeaveTypeName);
+                                }}
+                                placeholder="Type the leave type name"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                disabled={isLeaveTypeReferenced}
+                            />
+                        </div>
+
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => {
+                                    setIsDeleteLeaveTypeModalOpen(false);
+                                    setLeaveTypeToDelete(null);
+                                    setDeleteLeaveTypeConfirmation('');
+                                    setIsDeleteLeaveTypeConfirmed(false);
+                                    setIsLeaveTypeReferenced(false);
+                                }}
+                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setIsDeletingLeaveType(true);
+                                    await handleDeleteLeaveType(leaveTypeToDelete);
+                                    setIsDeletingLeaveType(false);
+                                }}
+                                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!isDeleteLeaveTypeConfirmed || isDeletingLeaveType || isLeaveTypeReferenced}
+                            >
+                                {isDeletingLeaveType ? (
+                                    <span className="flex items-center">
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                        Deleting...
+                                    </span>
+                                ) : (
+                                    'Delete Leave Type'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

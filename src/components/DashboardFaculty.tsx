@@ -209,7 +209,7 @@ export default function DashboardFaculty() {
         // Count submitted, approved, and rejected documents
         const submitted = documents?.filter(doc => doc.SubmissionStatus === 'Submitted').length || 0;
         const approved = documents?.filter(doc => doc.SubmissionStatus === 'Approved').length || 0;
-        const rejected = documents?.filter(doc => doc.SubmissionStatus === 'Rejected').length || 0;
+        const rejected = documents?.filter(doc => doc.SubmissionStatus === 'Returned').length || 0;
 
         // Calculate pending as total required minus documents that exist
         const existingDocumentTypes = new Set(documents?.map(doc => doc.DocumentTypeID) || []);
@@ -233,7 +233,7 @@ export default function DashboardFaculty() {
         const availableLeaves = 10; // This should be fetched from a configuration or calculated based on policy
         const pendingLeaves = leaves?.filter(leave => leave.Status === 'Pending').length || 0;
         const approvedLeaves = leaves?.filter(leave => leave.Status === 'Approved').length || 0;
-        const rejectedLeaves = leaves?.filter(leave => leave.Status === 'Rejected').length || 0;
+        const rejectedLeaves = leaves?.filter(leave => leave.Status === 'Returned').length || 0;
 
         setLeaveData({
           available: availableLeaves - approvedLeaves,
@@ -434,7 +434,7 @@ export default function DashboardFaculty() {
                 <div className="bg-red-100 rounded-lg p-4">
                   <i className="fas fa-times-circle text-red-700 mb-2"></i>
                   <p className="text-2xl font-bold">{documentRequirements.rejected}</p>
-                  <p className="text-sm text-red-700">Rejected</p>
+                  <p className="text-sm text-red-700">Returned</p>
                 </div>
               </div>
               <div className="mt-4 text-sm text-gray-600 text-center">
@@ -479,7 +479,7 @@ export default function DashboardFaculty() {
                 <div className="bg-red-100 rounded-lg p-4">
                   <i className="fas fa-times-circle text-red-700 mb-2"></i>
                   <p className="text-xl font-bold">{leaveData.rejected}</p>
-                  <p className="text-sm text-red-700">Rejected</p>
+                  <p className="text-sm text-red-700">Returned</p>
                 </div>
               </div>
             </div>

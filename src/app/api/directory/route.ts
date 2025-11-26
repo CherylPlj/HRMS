@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       .select(`
         *,
         EmploymentDetail(EmploymentStatus, HireDate, ResignationDate, RetirementDate),
-        ContactInfo(Phone, Email),
+        ContactInfo(Phone, Email, MessengerName, FBLink),
         Department(DepartmentName),
         User(Status)
       `)

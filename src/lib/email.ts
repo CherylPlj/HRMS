@@ -140,7 +140,7 @@ export function generateStatusUpdateEmail(candidateName: string, vacancyName: st
     case 'Hired':
       statusMessage = 'Welcome to Saint Joseph School of Fairview Inc.! You will receive additional information about your onboarding process soon.';
       break;
-    case 'Rejected':
+    case 'Returned':
       statusMessage = 'After careful consideration, we regret to inform you that we have decided to move forward with other candidates. We appreciate your interest in joining our team and wish you the best in your job search.';
       break;
     case 'Withdrawn':
@@ -414,6 +414,90 @@ export function generateLeaveUpdateAdminNotificationEmail(
   `;
 }
 
+export function generateNewApplicationNotificationEmail(
+  applicantName: string,
+  applicantEmail: string,
+  contactNumber: string | null,
+  messengerName: string | null,
+  fbLink: string | null,
+  vacancyName: string,
+  dateApplied: string
+) {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #800000; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">New Job Application Received</h1>
+      </div>
+      
+      <div style="padding: 20px; border: 1px solid #ddd; border-top: none;">
+        <p>Dear HR Team,</p>
+        
+        <p>A new job application has been submitted through the public application form.</p>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #800000;">
+          <h2 style="margin-top: 0; color: #800000;">Applicant Details</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; width: 40%;">Full Name:</td>
+              <td style="padding: 8px 0;">${applicantName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold;">Email:</td>
+              <td style="padding: 8px 0;"><a href="mailto:${applicantEmail}">${applicantEmail}</a></td>
+            </tr>
+            ${contactNumber ? `
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold;">Contact Number:</td>
+              <td style="padding: 8px 0;">${contactNumber}</td>
+            </tr>
+            ` : ''}
+            ${messengerName ? `
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold;">Messenger Name:</td>
+              <td style="padding: 8px 0;">${messengerName}</td>
+            </tr>
+            ` : ''}
+            ${fbLink ? `
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold;">Facebook Link:</td>
+              <td style="padding: 8px 0;"><a href="${fbLink}" target="_blank">${fbLink}</a></td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold;">Position Applied For:</td>
+              <td style="padding: 8px 0;"><strong>${vacancyName}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold;">Date Applied:</td>
+              <td style="padding: 8px 0;">${formatDate(dateApplied)}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p>Please log in to the HRMS system to review this application and proceed with the recruitment process.</p>
+        
+        <p>Best regards,<br>
+        HRMS System<br>
+        Saint Joseph School of Fairview Inc.</p>
+      </div>
+      
+      <div style="background-color: #f5f5f5; padding: 10px; text-align: center; font-size: 12px;">
+        <p>This is an automated message. Please do not reply to this email.</p>
+      </div>
+    </div>
+  `;
+}
+
 export function generateLeaveStatusUpdateEmail(
   employeeName: string,
   leaveType: string,
@@ -435,8 +519,8 @@ export function generateLeaveStatusUpdateEmail(
   if (status === 'Approved') {
     statusMessage = 'Your leave request has been <strong>approved</strong>. Please make sure to complete any pending tasks before your leave period begins.';
     statusColor = '#10b981'; // green
-  } else if (status === 'Rejected') {
-    statusMessage = 'We regret to inform you that your leave request has been <strong>rejected</strong>. If you have any questions or concerns, please contact the HR department.';
+  } else if (status === 'Returned') {
+    statusMessage = 'We regret to inform you that your leave request has been <strong>returned</strong>. If you have any questions or concerns, please contact the HR department.';
     statusColor = '#ef4444'; // red
   } else {
     statusMessage = 'Your leave request status has been updated.';
@@ -472,8 +556,8 @@ export function generateLeaveStatusUpdateEmail(
             <tr>
               <td style="padding: 8px 0; font-weight: bold;">Status:</td>
               <td style="padding: 8px 0;">
-                <span style="background-color: ${status === 'Approved' ? '#d1fae5' : status === 'Rejected' ? '#fee2e2' : '#fef3c7'}; 
-                           color: ${status === 'Approved' ? '#065f46' : status === 'Rejected' ? '#991b1b' : '#92400e'}; 
+                <span style="background-color: ${status === 'Approved' ? '#d1fae5' : status === 'Returned' ? '#fee2e2' : '#fef3c7'}; 
+                           color: ${status === 'Approved' ? '#065f46' : status === 'Returned' ? '#991b1b' : '#92400e'}; 
                            padding: 4px 8px; border-radius: 4px; font-weight: bold;">
                   ${status}
                 </span>

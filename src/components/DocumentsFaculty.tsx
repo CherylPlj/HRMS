@@ -58,7 +58,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     pending: documentTypes.length - documents.filter(doc => doc.SubmissionStatus !== 'Pending').length,
     submitted: documents.filter(doc => doc.SubmissionStatus === 'Submitted').length,
     approved: documents.filter(doc => doc.SubmissionStatus === 'Approved').length,
-    rejected: documents.filter(doc => doc.SubmissionStatus === 'Rejected').length
+    rejected: documents.filter(doc => doc.SubmissionStatus === 'Returned').length
   };
 
   // Fetch faculty ID for the current user
@@ -322,8 +322,13 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     }
   };
 
-  // For edit modal, only show selected and editable (not Approved) documents
-  const editableSelectedDocs = documents.filter(doc => selectedDocs.includes(doc.DocumentID) && doc.SubmissionStatus !== 'Approved');
+  // For edit modal, only show selected and editable (not Approved and not Submitted) documents
+  // Only allow editing when status is Returned or Pending
+  const editableSelectedDocs = documents.filter(doc => 
+    selectedDocs.includes(doc.DocumentID) && 
+    doc.SubmissionStatus !== 'Approved' && 
+    doc.SubmissionStatus !== 'Submitted'
+  );
 
   // Helper to get a better file name from URL
   const getFileName = (url: string | undefined) => {
@@ -571,7 +576,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-red-500">Rejected</p>
+              <p className="text-sm text-red-500">Returned</p>
               <h3 className="text-2xl font-bold text-red-700">{statusCounts.rejected}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center">
@@ -654,7 +659,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             title="Delete Selected"
             aria-label="Delete Selected"
             disabled={selectedDocs.length === 0 || documents.some(doc =>
-              selectedDocs.includes(doc.DocumentID) && doc.SubmissionStatus === 'Approved'
+              selectedDocs.includes(doc.DocumentID) && (doc.SubmissionStatus === 'Approved' || doc.SubmissionStatus === 'Submitted')
             )}
           >
             <FaTrash /> Delete
@@ -698,7 +703,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                         onChange={() => doc && handleSelectDoc(doc.DocumentID)}
                         aria-label={`Select document ${dt.DocumentTypeName}`}
                         title={`Select document ${dt.DocumentTypeName}`}
-                        disabled={!doc || doc.SubmissionStatus === 'Approved'}
+                        disabled={!doc || doc.SubmissionStatus === 'Approved' || doc.SubmissionStatus === 'Submitted'}
                       />
                     </td>
                     <td className="p-3 font-medium">{dt.DocumentTypeName}</td>
@@ -747,14 +752,14 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
                         ${doc && doc.SubmissionStatus === 'Approved'
                           ? 'bg-green-100 text-green-700'
-                          : doc && doc.SubmissionStatus === 'Rejected'
+                          : doc && doc.SubmissionStatus === 'Returned'
                             ? 'bg-red-100 text-red-700'
                             : doc && doc.FileUrl
                               ? 'bg-blue-100 text-blue-700'
                               : 'bg-gray-100 text-gray-700'}
                       `}>
                         {doc && doc.SubmissionStatus === 'Approved' ? 'Approved' :
-                          doc && doc.SubmissionStatus === 'Rejected' ? 'Rejected' :
+                          doc && doc.SubmissionStatus === 'Returned' ? 'Returned' :
                             // doc && doc.FileUrl ? 'Submitted' :
                             //   'Pending'}
                           doc && doc.SubmissionStatus === 'Submitted' ? 'Submitted' :
@@ -832,12 +837,12 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                           <td className="p-3">
                             <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium
                               ${isApproved ? 'bg-green-100 text-green-700' :
-                                existingDoc?.SubmissionStatus === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                existingDoc?.SubmissionStatus === 'Returned' ? 'bg-red-100 text-red-700' :
                                   existingDoc?.FileUrl ? 'bg-blue-100 text-blue-700' :
                                     'bg-gray-100 text-gray-700'}`}
                             >
                               {isApproved ? 'Approved' :
-                                existingDoc?.SubmissionStatus === 'Rejected' ? 'Rejected' :
+                                existingDoc?.SubmissionStatus === 'Returned' ? 'Returned' :
                                   existingDoc?.SubmissionStatus === 'Submitted' ? 'Submitted' :
                                     existingDoc?.FileUrl ? 'Submitted' :
                                       'Pending'}
@@ -879,7 +884,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             )}
                           </td>
                           <td className="p-3">
-                            {!isApproved && (
+                            {!isApproved && existingDoc?.SubmissionStatus !== 'Submitted' && (
                               <form
                                 onSubmit={(e) => handleUpload(e, dt)}
                                 className="flex items-center gap-2"

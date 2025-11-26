@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { LeaveStatus, LeaveType, RequestType, Leave, User, Department, Faculty } from '@prisma/client';
 import { sendEmail, generateLeaveRequestAdminNotificationEmail } from '@/lib/email';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Define a type for the transformed leave record
 type TransformedLeave = Leave & {
@@ -136,14 +137,55 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validate leave type
-        const validLeaveTypes = ['Sick', 'Vacation', 'Emergency', 'Maternity'];
-        if (LeaveType && !validLeaveTypes.includes(LeaveType)) {
-            console.error('Invalid leave type:', LeaveType);
-            return NextResponse.json(
-                { error: `Invalid leave type. Must be one of: ${validLeaveTypes.join(', ')}` },
-                { status: 400 }
-            );
+        // Validate leave type - fetch from database
+        // Note: Using Supabase directly since LeaveTypes might have IsActive field in Supabase but not in Prisma schema
+        try {
+            const { data: leaveTypesFromDB, error: leaveTypesError } = await supabaseAdmin
+                .from('LeaveTypes')
+                .select('LeaveTypeName, IsActive')
+                .order('LeaveTypeName', { ascending: true });
+
+            if (leaveTypesError) {
+                console.error('Error fetching leave types for validation:', leaveTypesError);
+                // Fallback to enum validation if database fetch fails
+                const validLeaveTypes = ['Sick', 'Vacation', 'Emergency', 'Maternity', 'Paternity'];
+                if (LeaveType && !validLeaveTypes.includes(LeaveType)) {
+                    return NextResponse.json(
+                        { error: `Invalid leave type. Must be one of: ${validLeaveTypes.join(', ')}` },
+                        { status: 400 }
+                    );
+                }
+            } else {
+                // Filter active leave types (IsActive is not false)
+                const activeLeaveTypes = (leaveTypesFromDB || []).filter((lt: any) => lt.IsActive !== false);
+                
+                // Extract base names (remove " Leave" suffix if present) for validation
+                const validLeaveTypeNames = activeLeaveTypes.map((lt: any) => {
+                    const name = lt.LeaveTypeName.trim();
+                    // Remove " Leave" suffix if present (case-insensitive)
+                    if (name.toLowerCase().endsWith(' leave')) {
+                        return name.slice(0, -6).trim(); // Remove " leave" (6 characters)
+                    }
+                    return name;
+                });
+
+                if (LeaveType && !validLeaveTypeNames.includes(LeaveType)) {
+                    console.error('Invalid leave type:', LeaveType, 'Valid types:', validLeaveTypeNames);
+                    return NextResponse.json(
+                        { error: `Invalid leave type. Must be one of: ${validLeaveTypeNames.join(', ')}` },
+                        { status: 400 }
+                    );
+                }
+            }
+        } catch (error) {
+            console.error('Error validating leave type:', error);
+            // Fallback to basic validation
+            if (!LeaveType || LeaveType.trim() === '') {
+                return NextResponse.json(
+                    { error: 'Leave type is required' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Validate dates

@@ -375,7 +375,7 @@ export default function DashboardContent() {
         setLeaveRequests({
           pending: leaves?.filter((l) => l.Status === "Pending").length || 0,
           approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
-          rejected: leaves?.filter((l) => l.Status === "Rejected").length || 0,
+          rejected: leaves?.filter((l) => l.Status === "Returned").length || 0,
         });
         console.log("Statuses:", leaves.map((l) => l.Status));
 
@@ -405,7 +405,7 @@ export default function DashboardContent() {
         // Filter out inactive candidates (those who are hired, rejected, or withdrawn)
         const activeCandidates = candidates?.filter(c => 
           !c.isDeleted && 
-          !['Hired', 'Rejected', 'Withdrawn'].includes(c.Status)
+          !['Hired', 'Returned', 'Withdrawn'].includes(c.Status)
         ) || [];
 
         setRecruitmentStats({
@@ -528,7 +528,7 @@ export default function DashboardContent() {
 
 
   const leavePieData = {
-    labels: ["Pending", "Approved", "Rejected"],
+    labels: ["Pending", "Approved", "Returned"],
     datasets: [
       {
         data: [leaveRequests.pending, leaveRequests.approved, leaveRequests.rejected],
@@ -1000,7 +1000,7 @@ export default function DashboardContent() {
             </div>
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
               <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.rejected}</p>
-              <p className="text-gray-600 font-medium text-center">Rejected</p>
+              <p className="text-gray-600 font-medium text-center">Returned</p>
             </div>
           </div>
           <div className="h-[200px] flex items-center justify-center">

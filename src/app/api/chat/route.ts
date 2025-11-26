@@ -194,7 +194,7 @@ const TRAINING_DATA = {
     
     "How do I use the employee directory?": "To use the employee directory:\n\n1. Go to the Directory section\n2. Use the search filters to find employees:\n   - Search by employee name\n   - Filter by department\n   - Filter by position/job title\n   - Filter by years of service\n3. Click on an employee card to view their full profile\n4. View contact information, employment details, and more\n5. As an admin, you can update employee status and manage accounts\n6. Download the directory as CSV if needed",
     
-    "How do I manage recruitment?": "To manage recruitment:\n\n1. Go to the Recruitment section\n2. Create new job postings (vacancies) by clicking 'Add Vacancy'\n3. View and manage candidate applications\n4. Shortlist candidates for interviews\n5. Schedule and track interviews\n6. Update candidate status (Hired, Rejected, etc.)\n7. View recruitment statistics on the dashboard",
+    "How do I manage recruitment?": "To manage recruitment:\n\n1. Go to the Recruitment section\n2. Create new job postings (vacancies) by clicking 'Add Vacancy'\n3. View and manage candidate applications\n4. Shortlist candidates for interviews\n5. Schedule and track interviews\n6. Update candidate status (Hired, Returned, etc.)\n7. View recruitment statistics on the dashboard",
     
     "How do I view employee information?": "To view employee information:\n\n1. Go to the Employees section to see all employees\n2. Or use the Directory section to search and filter employees\n3. Click on an employee to view their full profile\n4. View personal information, employment details, documents, and more\n5. Edit employee information as needed"
   },
@@ -208,7 +208,7 @@ const TRAINING_DATA = {
     
     "How do I update my personal information?": "To update your personal information:\n\n1. Go to the Personal Data section\n2. Click 'Edit' or the pencil icon\n3. Update the information you need to change\n4. Click 'Save' to apply changes\n\nMake sure to keep your contact information current for important notifications.",
     
-    "How do I view my leave request status?": "To view your leave request status:\n\n1. Go to the Leave Request section\n2. You'll see all your leave requests listed\n3. Each request shows its current status (Pending, Approved, Rejected)\n4. Click on a request to view full details\n5. Check for any comments or feedback from administrators"
+    "How do I view my leave request status?": "To view your leave request status:\n\n1. Go to the Leave Request section\n2. You'll see all your leave requests listed\n3. Each request shows its current status (Pending, Approved, Returned)\n4. Click on a request to view full details\n5. Check for any comments or feedback from administrators"
   },
   
   employee: {

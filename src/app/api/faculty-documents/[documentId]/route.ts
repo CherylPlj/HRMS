@@ -16,9 +16,9 @@ export async function PATCH(
     const body = await request.json();
     const { SubmissionStatus } = body;
 
-    if (!SubmissionStatus || !['Submitted', 'Approved', 'Rejected'].includes(SubmissionStatus)) {
+    if (!SubmissionStatus || !['Submitted', 'Approved', 'Returned'].includes(SubmissionStatus)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be Submitted, Approved, or Rejected' },
+        { error: 'Invalid status. Must be Submitted, Approved, or Returned' },
         { status: 400 }
       );
     }

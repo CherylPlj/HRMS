@@ -21,6 +21,7 @@ interface DocumentEmployeeRow {
   SubmissionStatus: string;
   employeeName: string;
   documentTypeName: string;
+  Title?: string;
   FilePath?: string;
   FileUrl?: string;
   DownloadUrl?: string;
@@ -75,6 +76,8 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
   const [isDeletingDocType, setIsDeletingDocType] = useState(false);
   const [isDocTypeReferenced, setIsDocTypeReferenced] = useState(false);
   const [docTypeSuccessMessage, setDocTypeSuccessMessage] = useState('');
+  const [selectedDocTypes, setSelectedDocTypes] = useState<number[]>([]);
+  const [selectAllDocTypes, setSelectAllDocTypes] = useState(false);
 
   // State for import functionality
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -83,19 +86,184 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper functions
-  const getViewUrl = (url: string) => url;
-  const getPreviewUrl = (url: string) => url;
+  const getFileType = (url: string | undefined): 'image' | 'pdf' | 'other' => {
+    if (!url) return 'other';
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes('.pdf') || lowerUrl.includes('pdf') || lowerUrl.includes('application/pdf')) return 'pdf';
+    if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg') || lowerUrl.includes('.png') || lowerUrl.includes('.gif') || lowerUrl.includes('image/')) return 'image';
+    return 'other';
+  };
 
-  const handleStatusChange = (docId: number, newStatus: string) => {
+  // Get URL for opening in new tab (original URL, not preview)
+  const getViewUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    // Return original URL for opening in new tab
+    return url;
+  };
+
+  // Get download URL - use proxy endpoint for Supabase files to force download
+  const getDownloadUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    
+    // Handle Supabase Storage URLs - use proxy endpoint with download parameter
+    if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+      const urlMatch = url.match(/\/documents\/(.+)$/);
+      if (urlMatch && urlMatch[1]) {
+        const filePath = urlMatch[1];
+        return `/api/documents/${encodeURIComponent(filePath)}?download=true`;
+      }
+    }
+    
+    // For Google Drive and other URLs, return as-is
+    return url;
+  };
+
+  // Handle download with proper filename
+  const handleDownload = async (url: string | undefined, fileName?: string) => {
+    if (!url) return;
+    
+    try {
+      const downloadUrl = getDownloadUrl(url);
+      
+      // Extract filename from URL if not provided
+      const getFileNameFromUrl = (url: string): string => {
+        try {
+          // Try to get filename from Content-Disposition header or URL
+          const urlPath = new URL(url).pathname;
+          const urlFileName = urlPath.split('/').pop() || '';
+          if (urlFileName && urlFileName.includes('.')) {
+            return decodeURIComponent(urlFileName);
+          }
+        } catch {
+          // If URL parsing fails, try to extract from path
+          const match = url.match(/\/([^\/]+\.\w+)(?:\?|$)/);
+          if (match && match[1]) {
+            return decodeURIComponent(match[1]);
+          }
+        }
+        return 'document';
+      };
+      
+      const finalFileName = fileName || getFileNameFromUrl(url);
+      
+      // For Supabase files using our proxy endpoint, fetch as blob
+      if (downloadUrl.includes('/api/documents/')) {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+          throw new Error('Failed to download file');
+        }
+        
+        // Try to get filename from Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let downloadFileName = finalFileName;
+        if (contentDisposition) {
+          const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (fileNameMatch && fileNameMatch[1]) {
+            downloadFileName = fileNameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = downloadFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      } else {
+        // For other URLs (Google Drive, etc.), try to fetch as blob first
+        try {
+          const response = await fetch(url, { mode: 'cors' });
+          if (response.ok) {
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = finalFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+          } else {
+            // Fallback: open in new tab if fetch fails
+            window.open(url, '_blank');
+          }
+        } catch (fetchError) {
+          // If fetch fails (CORS, etc.), try direct download
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = finalFileName;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      // Final fallback: open in new tab
+      window.open(url, '_blank');
+    }
+  };
+  
+  const getPreviewUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    
+    // Handle Supabase Storage URLs - use proxy endpoint for PDFs
+    if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+      const fileType = getFileType(url);
+      if (fileType === 'pdf') {
+        // Extract the file path from the Supabase URL
+        const urlMatch = url.match(/\/documents\/(.+)$/);
+        if (urlMatch && urlMatch[1]) {
+          const filePath = urlMatch[1];
+          return `/api/documents/${encodeURIComponent(filePath)}`;
+        }
+      }
+      // For images, return the URL directly
+      if (fileType === 'image') {
+        return url;
+      }
+    }
+    
+    // Handle Google Drive URLs
+    const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      const fileId = driveMatch[1];
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+    
+    // Handle export=download URLs
+    const downloadMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (downloadMatch) {
+      const fileId = downloadMatch[1];
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+    
+    return url;
+  };
+
+  const handleStatusChange = (docId: number, currentStatus: string) => {
     const doc = documents.find(d => d.DocumentID === docId);
     if (doc) {
       setPendingStatusUpdate({
         docId,
-        newStatus,
+        newStatus: currentStatus, // Will be updated in modal
         documentType: doc.documentTypeName,
         employeeName: doc.employeeName
       });
       setIsStatusUpdateModalOpen(true);
+    }
+  };
+
+  const handleStatusChangeInModal = (newStatus: string) => {
+    if (pendingStatusUpdate) {
+      setPendingStatusUpdate({
+        ...pendingStatusUpdate,
+        newStatus
+      });
     }
   };
 
@@ -328,7 +496,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                   <option value="all">All Statuses</option>
                   <option value="Submitted">Submitted</option>
                   <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
+                  <option value="Returned">Returned</option>
                 </select>
               </div>
             <button
@@ -355,6 +523,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -364,20 +533,20 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
             <tbody className="divide-y divide-gray-200">
               {docLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-400">Loading documents...</td>
+                  <td colSpan={7} className="py-8 text-center text-gray-400">Loading documents...</td>
                 </tr>
             ) : filteredDocuments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
+                  <td colSpan={7} className="py-8 text-center text-gray-400">No documents found.</td>
                 </tr>
               ) : (
               filteredDocuments
                   .sort((a, b) => {
-                    // Custom order: Submitted (1), Pending (2), Rejected (3), Approved (4)
+                    // Custom order: Submitted (1), Pending (2), Returned (3), Approved (4)
                     const getStatusOrder = (status: string) => {
                       switch (status) {
                         case 'Submitted': return 1;
-                        case 'Rejected': return 2;
+                        case 'Returned': return 2;
                         case 'Approved': return 3;
                         default: return 4;
                       }
@@ -398,6 +567,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                       >
                         <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{doc.employeeName || 'Unknown Employee'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700 font-medium">{doc.Title || doc.documentTypeName || 'Untitled'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
                         <td className="px-6 py-4">
@@ -405,7 +575,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                             ${
                               doc.SubmissionStatus === 'Approved'
                                 ? 'bg-green-100 text-green-800'
-                                : doc.SubmissionStatus === 'Rejected'
+                                : doc.SubmissionStatus === 'Returned'
                                 ? 'bg-red-100 text-red-800'
                                 : doc.SubmissionStatus === 'Submitted'
                                 ? 'bg-blue-100 text-blue-800'
@@ -416,17 +586,6 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                           </span>
                         </td>
                         <td className="px-6 py-4 flex items-center space-x-2">
-                          <select
-                            title="Change Submission Status"
-                            value={doc.SubmissionStatus}
-                            onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
-                            disabled={statusUpdating === doc.DocumentID}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                          >
-                            <option value="Submitted">Submitted</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Rejected">Rejected</option>
-                          </select>
                           {doc.FileUrl && (
                             <span className="flex items-center space-x-1">
                               <button
@@ -445,14 +604,21 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                               >
                                 <FaLink className="w-5 h-5" />
                               </a>
-                              <a
-                                href={doc.DownloadUrl || doc.FileUrl}
-                                download
+                              <button
+                                onClick={() => handleDownload(doc.DownloadUrl || doc.FileUrl, doc.Title || doc.documentTypeName)}
                                 className="text-gray-600 hover:text-gray-900"
                                 title="Download Document"
                               >
                                 <FaDownload className="w-5 h-5" />
-                              </a>
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(doc.DocumentID, doc.SubmissionStatus)}
+                                disabled={statusUpdating === doc.DocumentID || doc.SubmissionStatus === 'Submitted'}
+                                className="text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={doc.SubmissionStatus === 'Submitted' ? 'Cannot edit submitted documents. Only returned documents can be edited.' : 'Edit Status'}
+                              >
+                                <FaPen className="w-5 h-5" />
+                              </button>
                             </span>
                           )}
                         </td>
@@ -485,18 +651,28 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
             </div>
             
             <div className="mb-6">
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.employeeName}</span>?
+              <p className="text-gray-600 mb-4">
+                Update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.employeeName}</span>?
               </p>
-              <div className="bg-gray-50 p-4 rounded-md">
-                <p className="text-sm text-gray-600">
+              <div className="bg-gray-50 p-4 rounded-md mb-4">
+                <p className="text-sm text-gray-600 mb-2">
                   Current Status: <span className="font-medium text-gray-800">
                     {documents.find(d => d.DocumentID === pendingStatusUpdate.docId)?.SubmissionStatus}
                   </span>
                 </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  New Status: <span className="font-medium text-gray-800">{pendingStatusUpdate.newStatus}</span>
-                </p>
+                <label htmlFor="statusSelect" className="block text-sm font-medium text-gray-700 mb-2">
+                  New Status:
+                </label>
+                <select
+                  id="statusSelect"
+                  value={pendingStatusUpdate.newStatus}
+                  onChange={(e) => handleStatusChangeInModal(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                >
+                  <option value="Submitted">Submitted</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Returned">Returned</option>
+                </select>
               </div>
             </div>
 
@@ -547,7 +723,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
               </div>
               <div className="flex items-center space-x-4">
                 <a
-                  href={getPreviewUrl(selectedDocument.FileUrl)}
+                  href={getViewUrl(selectedDocument.FileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-gray-900"
@@ -555,16 +731,13 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                 >
                   <FaLink className="w-5 h-5" />
                 </a>
-                {selectedDocument.DownloadUrl && (
-                  <a
-                    href={selectedDocument.DownloadUrl}
-                    download
-                    className="text-gray-600 hover:text-gray-900"
-                    title="Download Document"
-                  >
-                    <FaDownload className="w-5 h-5" />
-                  </a>
-                )}
+                <button
+                  onClick={() => handleDownload(selectedDocument.DownloadUrl || selectedDocument.FileUrl, selectedDocument.Title || selectedDocument.documentTypeName)}
+                  className="text-gray-600 hover:text-gray-900"
+                  title="Download Document"
+                >
+                  <FaDownload className="w-5 h-5" />
+                </button>
                 <button
                   onClick={handleCloseViewer}
                   className="text-gray-500 hover:text-gray-700"
@@ -575,11 +748,48 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              <iframe 
-                src={getPreviewUrl(selectedDocument.FileUrl)}
-                className="w-full h-full border-0"
-                title="Document Preview"
-              />
+              {(() => {
+                const fileType = getFileType(selectedDocument.FileUrl);
+                const previewUrl = getPreviewUrl(selectedDocument.FileUrl);
+                
+                if (fileType === 'image') {
+                  return (
+                    <img 
+                      src={previewUrl} 
+                      alt="Document preview" 
+                      className="max-w-full max-h-full object-contain mx-auto"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/file.svg';
+                      }}
+                    />
+                  );
+                } else if (fileType === 'pdf') {
+                  return (
+                    <iframe 
+                      src={previewUrl}
+                      className="w-full h-full border-0"
+                      title="Document Preview"
+                      style={{ minHeight: '600px' }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <img src="/file.svg" alt="File icon" className="w-16 h-16 mb-4" />
+                      <p className="text-gray-600 mb-4">Preview not available for this file type</p>
+                      <a 
+                        href={selectedDocument.FileUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#a83232]"
+                      >
+                        Download File
+                      </a>
+                    </div>
+                  );
+                }
+              })()}
             </div>
           </div>
         </div>
@@ -690,50 +900,115 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
               </button>
             </div>
             <div className="px-6 py-6">
+              {selectedDocTypes.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+                  <span className="text-sm text-blue-800">
+                    {selectedDocTypes.length} document type{selectedDocTypes.length > 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete ${selectedDocTypes.length} document type(s)?`)) {
+                        setIsDeletingDocType(true);
+                        try {
+                          for (const docTypeId of selectedDocTypes) {
+                            const docType = documentTypes.find(dt => dt.DocumentTypeID === docTypeId);
+                            if (docType) {
+                              await handleDeleteDocType(docType);
+                            }
+                          }
+                          setSelectedDocTypes([]);
+                          setSelectAllDocTypes(false);
+                        } catch (error) {
+                          console.error('Error deleting document types:', error);
+                        } finally {
+                          setIsDeletingDocType(false);
+                        }
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
+                    disabled={isDeletingDocType}
+                  >
+                    <FaTrash /> Delete Selected
+                  </button>
+                </div>
+              )}
               <ul className="divide-y divide-gray-200">
                 {documentTypes.length === 0 ? (
                   <li className="py-4 text-gray-500 text-center">No document types found.</li>
                 ) : (
-                  documentTypes.map((type) => (
-                    <li key={type.DocumentTypeID} className="flex items-center justify-between py-3">
-                      <span className="text-gray-800">{type.DocumentTypeName}</span>
-                      <span className="flex items-center gap-2">
-                        <button
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Edit"
-                          onClick={() => {
-                            setShowDocTypeListModal(false);
-                            openEditDocTypeModal(type);
-                          }}
-                        >
-                          <FaPen />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-900 ml-2"
-                          title="Delete"
-                          onClick={async () => {
-                            setDocTypeToDelete(type);
-                            setIsDeleteDocTypeModalOpen(true);
-                            setDeleteDocTypeConfirmation('');
-                            setIsDeleteDocTypeConfirmed(false);
-                            setIsDeletingDocType(true);
-                            try {
-                              const res = await fetch(`/api/employee-documents?documentTypeId=${type.DocumentTypeID}`);
-                              const data = await res.json();
-                              setIsDocTypeReferenced(Array.isArray(data) && data.length > 0);
-                            } catch (err) {
-                              setIsDocTypeReferenced(false);
-                            } finally {
-                              setIsDeletingDocType(false);
-                            }
-                          }}
-                          disabled={isDeletingDocType}
-                        >
-                          <FaTrash />
-                        </button>
-                      </span>
+                  <>
+                    <li className="flex items-center py-2 border-b">
+                      <input
+                        type="checkbox"
+                        checked={selectAllDocTypes}
+                        onChange={(e) => {
+                          setSelectAllDocTypes(e.target.checked);
+                          if (e.target.checked) {
+                            setSelectedDocTypes(documentTypes.map(dt => dt.DocumentTypeID));
+                          } else {
+                            setSelectedDocTypes([]);
+                          }
+                        }}
+                        className="rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-3"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Select All</span>
                     </li>
-                  ))
+                    {documentTypes.map((type) => (
+                      <li key={type.DocumentTypeID} className="flex items-center justify-between py-3">
+                        <div className="flex items-center gap-3 flex-grow">
+                          <input
+                            type="checkbox"
+                            checked={selectedDocTypes.includes(type.DocumentTypeID)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedDocTypes([...selectedDocTypes, type.DocumentTypeID]);
+                              } else {
+                                setSelectedDocTypes(selectedDocTypes.filter(id => id !== type.DocumentTypeID));
+                                setSelectAllDocTypes(false);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                          />
+                          <span className="text-gray-800">{type.DocumentTypeName}</span>
+                        </div>
+                        <span className="flex items-center gap-2">
+                          <button
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Edit"
+                            onClick={() => {
+                              setShowDocTypeListModal(false);
+                              openEditDocTypeModal(type);
+                            }}
+                          >
+                            <FaPen />
+                          </button>
+                          <button
+                            className="text-red-600 hover:text-red-900 ml-2"
+                            title="Delete"
+                            onClick={async () => {
+                              setDocTypeToDelete(type);
+                              setIsDeleteDocTypeModalOpen(true);
+                              setDeleteDocTypeConfirmation('');
+                              setIsDeleteDocTypeConfirmed(false);
+                              setIsDeletingDocType(true);
+                              try {
+                                const res = await fetch(`/api/employee-documents?documentTypeId=${type.DocumentTypeID}`);
+                                const data = await res.json();
+                                setIsDocTypeReferenced(Array.isArray(data) && data.length > 0);
+                              } catch (err) {
+                                setIsDocTypeReferenced(false);
+                              } finally {
+                                setIsDeletingDocType(false);
+                              }
+                            }}
+                            disabled={isDeletingDocType}
+                          >
+                            <FaTrash />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </>
                 )}
               </ul>
             </div>

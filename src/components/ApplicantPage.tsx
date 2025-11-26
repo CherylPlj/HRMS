@@ -124,6 +124,8 @@ const ApplicantPage = () => {
     extName: '',
     email: '',
     contactNumber: '',
+    messengerName: '',
+    fbLink: '',
     vacancy: '',
     sex: '',
     dateOfBirth: '',
@@ -200,6 +202,13 @@ const ApplicantPage = () => {
         const phoneRegex = /^(\+63|0)[0-9]{10}$/;
         return !phoneRegex.test(value) ? 'Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)' : '';
       
+      case 'fbLink':
+        if (value && value.trim()) {
+          const urlRegex = /^(https?:\/\/)?(www\.)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+          return !urlRegex.test(value) ? 'Please enter a valid URL (e.g., https://facebook.com/yourprofile)' : '';
+        }
+        return '';
+      
       case 'sex':
         return !value ? 'Please select your sex' : '';
       
@@ -221,13 +230,21 @@ const ApplicantPage = () => {
     
     // Validate all required fields
     Object.entries(formData).forEach(([key, value]) => {
-      if (key !== 'resume' && key !== 'middleName' && key !== 'extName') {
+      if (key !== 'resume' && key !== 'middleName' && key !== 'extName' && key !== 'messengerName' && key !== 'fbLink') {
         const error = validateField(key, value as string);
         if (error) {
           newErrors[key] = error;
         }
       }
     });
+    
+    // Validate optional fields that have values
+    if (formData.fbLink && formData.fbLink.trim()) {
+      const error = validateField('fbLink', formData.fbLink);
+      if (error) {
+        newErrors.fbLink = error;
+      }
+    }
 
     // Resume validation
     if (!formData.resume) {
@@ -289,6 +306,12 @@ const ApplicantPage = () => {
       data.append('ExtensionName', formData.extName);
       data.append('Email', formData.email);
       data.append('ContactNumber', formData.contactNumber);
+      if (formData.messengerName) {
+        data.append('MessengerName', formData.messengerName);
+      }
+      if (formData.fbLink) {
+        data.append('FBLink', formData.fbLink);
+      }
       
       // Ensure sex is properly set
       if (!formData.sex) {
@@ -330,6 +353,8 @@ const ApplicantPage = () => {
         extName: '',
         email: '',
         contactNumber: '',
+        messengerName: '',
+        fbLink: '',
         vacancy: '',
         sex: '',
         dateOfBirth: '',
@@ -491,6 +516,23 @@ const ApplicantPage = () => {
                 </p>
               )}
             </div>
+            <InputField 
+              label="Messenger Name" 
+              name="messengerName" 
+              value={formData.messengerName} 
+              onChange={handleChange} 
+              placeholder="Your Messenger name"
+            />
+            <InputField 
+              label="Facebook Link" 
+              name="fbLink" 
+              type="url"
+              value={formData.fbLink} 
+              onChange={handleChange} 
+              placeholder="https://facebook.com/yourprofile"
+              error={errors.fbLink}
+              showErrorMessage={true}
+            />
             <div className="space-y-1 col-span-1 md:col-span-2">
               <label className="text-sm font-medium text-gray-700">
                 Vacancy <span className="text-red-500">*</span>

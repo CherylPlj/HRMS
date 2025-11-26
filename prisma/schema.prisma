@@ -179,6 +179,8 @@ model ContactInfo {
   id                     Int       @id @default(autoincrement())
   employeeId             String    @unique
   Phone                  String?
+  MessengerName          String?
+  FBLink                 String?
   PresentAddress         String?
   PermanentAddress       String?
   EmergencyContactName   String?
@@ -241,6 +243,12 @@ model DocumentType {
   AllowedFileTypes String[]
   Template         String?
   Document         Document[]
+}
+
+model LeaveTypes {
+  LeaveTypeID   Int        @id @default(autoincrement())
+  LeaveTypeName String     @unique
+  NumberOfDays  Int?
 }
 
 model Contract {
@@ -419,6 +427,8 @@ model Candidate {
   FullName      String
   Email         String
   ContactNumber String?
+  MessengerName String?
+  FBLink        String?
   Sex           Sex?
   DateOfBirth   DateTime?       @db.Date
   Phone         String?
@@ -647,7 +657,7 @@ enum SubmissionStatus {
   Submitted
   Pending
   Approved
-  Rejected
+  Returned
 }
 
 enum ContractType {
@@ -676,7 +686,7 @@ enum AttendanceStatus {
 enum LeaveStatus {
   Pending
   Approved
-  Rejected
+  Returned
 }
 
 enum LeaveType {
@@ -717,7 +727,7 @@ enum CandidateStatus {
   InterviewCompleted
   Offered
   Hired
-  Rejected
+  Returned
   Withdrawn
 }
 

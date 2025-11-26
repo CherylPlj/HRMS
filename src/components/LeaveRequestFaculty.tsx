@@ -10,8 +10,17 @@ import { FaRegCalendarAlt, FaClock, FaEye, FaPen, FaTrash } from 'react-icons/fa
 
 // Define leave types as string literals
 type RequestType = 'Leave' | 'Undertime';
-type LeaveType = 'Sick' | 'Vacation' | 'Emergency' | 'Maternity' | 'Paternity';
-type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
+type LeaveType = string; // Now dynamic from API
+type LeaveStatus = 'Pending' | 'Approved' | 'Returned';
+
+interface LeaveTypeItem {
+    LeaveTypeID: number;
+    LeaveTypeName: string;
+    IsActive?: boolean;
+}
+
+// Monthly leave limit constant
+const MONTHLY_LEAVE_LIMIT = 10;
 
 interface ComponentWithBackButton {
     onBack: () => void;
@@ -108,24 +117,45 @@ const checkDateOverlap = (
 };
 
 // Add helper function for calculating duration
-    const calculateDuration = (request: LeaveRequest) => {
-        if (request.RequestType === 'Undertime' && request.TimeIn && request.TimeOut) {
-            const timeIn = new Date(request.TimeIn);
-            const timeOut = new Date(request.TimeOut);
-            const diffMs = timeOut.getTime() - timeIn.getTime();
-            const hours = Math.floor(diffMs / (1000 * 60 * 60));
-            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            return `${hours}h ${minutes}m`;
-        } else {
-            const start = new Date(request.StartDate);
-            const end = new Date(request.EndDate);
-            // Calculate days without modifying the original time
-            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-            const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-            const days = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-            return `${days} day${days !== 1 ? 's' : ''}`;
-        }
-    };
+const calculateDuration = (request: LeaveRequest) => {
+    if (request.RequestType === 'Undertime' && request.TimeIn && request.TimeOut) {
+        const timeIn = new Date(request.TimeIn);
+        const timeOut = new Date(request.TimeOut);
+        const diffMs = timeOut.getTime() - timeIn.getTime();
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        return `${hours}h ${minutes}m`;
+    } else {
+        const start = new Date(request.StartDate);
+        const end = new Date(request.EndDate);
+        // Calculate days without modifying the original time
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        const days = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        return `${days} day${days !== 1 ? 's' : ''}`;
+    }
+};
+
+// Add helper function to format leave type name (avoid redundant "Leave")
+const formatLeaveTypeName = (leaveTypeName: string): string => {
+    if (!leaveTypeName) return '';
+    // Check if "Leave" is already in the name (case-insensitive)
+    if (leaveTypeName.toLowerCase().includes('leave')) {
+        return leaveTypeName;
+    }
+    return `${leaveTypeName} Leave`;
+};
+
+// Add helper function to extract base leave type name for API (removes " Leave" suffix)
+const extractBaseLeaveType = (leaveTypeName: string): string => {
+    if (!leaveTypeName) return '';
+    // Remove " Leave" suffix if present (case-insensitive)
+    const trimmed = leaveTypeName.trim();
+    if (trimmed.toLowerCase().endsWith(' leave')) {
+        return trimmed.slice(0, -6).trim(); // Remove " leave" (6 characters)
+    }
+    return trimmed;
+};
 
 const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const { user } = useUser();
@@ -141,7 +171,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [requestType, setRequestType] = useState<RequestType>('Leave');
-    const [leaveType, setLeaveType] = useState<LeaveType>('Sick');
+    const [leaveType, setLeaveType] = useState<LeaveType>('');
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
     const [startTime, setStartTime] = useState<Date | null>(null);
@@ -157,6 +187,8 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const [facultyId, setFacultyId] = useState<number | null>(null);
     const [facultyDetails, setFacultyDetails] = useState<FacultyDetails | null>(null);
     const [overlappingLeave, setOverlappingLeave] = useState<LeaveRequest | null>(null);
+    const [leaveTypes, setLeaveTypes] = useState<LeaveTypeItem[]>([]);
+    const [loadingLeaveTypes, setLoadingLeaveTypes] = useState(false);
 
     // Handle modal open/close
     const handleModalOpen = () => {
@@ -172,7 +204,12 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
         setShowSuccess(false);
         // Reset form state
         setRequestType('Leave');
-        setLeaveType('Sick');
+        // Set to first available leave type or empty
+        if (leaveTypes.length > 0 && leaveTypes[0]) {
+            setLeaveType(leaveTypes[0].LeaveTypeName);
+        } else {
+            setLeaveType('');
+        }
         setStartDate(null);
         setEndDate(null);
         setStartTime(null);
@@ -195,6 +232,52 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             }
         }
     }, [startDate, endDate]);
+
+    // Fetch leave types from API
+    useEffect(() => {
+        const fetchLeaveTypes = async () => {
+            setLoadingLeaveTypes(true);
+            try {
+                const response = await fetch('/api/leave-types', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        // Filter only active leave types
+                        const activeLeaveTypes = data.filter((lt: LeaveTypeItem) => lt.IsActive !== false);
+                        setLeaveTypes(activeLeaveTypes);
+                        // Set default leave type to first active one
+                        if (activeLeaveTypes[0]) {
+                            setLeaveType(activeLeaveTypes[0].LeaveTypeName);
+                        }
+                    } else {
+                        // No leave types available - show empty state
+                        setLeaveTypes([]);
+                        setLeaveType('');
+                    }
+                } else {
+                    // Error fetching - show empty state
+                    console.error('Failed to fetch leave types');
+                    setLeaveTypes([]);
+                    setLeaveType('');
+                }
+            } catch (err) {
+                console.error('Error fetching leave types:', err);
+                // Error - show empty state
+                setLeaveTypes([]);
+                setLeaveType('');
+            } finally {
+                setLoadingLeaveTypes(false);
+            }
+        };
+
+        fetchLeaveTypes();
+    }, []);
 
     useEffect(() => {
         const fetchUserAndFacultyDetails = async () => {
@@ -498,10 +581,14 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             setError(null);
 
             // Create request body
+            // Extract base leave type name (remove " Leave" suffix) for API compatibility
+            // The API expects enum values: Sick, Vacation, Emergency, Maternity (not "Sick Leave", etc.)
+            const baseLeaveType = requestType === 'Leave' ? extractBaseLeaveType(leaveType) : 'Sick'; // Undertime uses default, API may need update
+            
             const requestBody = {
                 FacultyID: facultyId,
                 RequestType: requestType,
-                LeaveType: leaveType,
+                LeaveType: baseLeaveType,
                 StartDate: startDate.toISOString(),
                 EndDate: endDate.toISOString(),
                 // Convert local time to UTC ISO string for backend compatibility
@@ -571,6 +658,11 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     };
 
     const handleEdit = (leave: LeaveRequest) => {
+        // Only allow editing if the leave request has been returned by admin
+        if (leave.Status !== 'Returned') {
+            setError('Only returned leave requests can be edited. Please wait for admin review or delete the pending request.');
+            return;
+        }
         setSelectedLeave(leave);
         setRequestType(leave.RequestType);
         setLeaveType(leave.LeaveType);
@@ -651,7 +743,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 },
                 body: JSON.stringify({
                     RequestType: requestType,
-                    LeaveType: leaveType,
+                    LeaveType: requestType === 'Leave' ? extractBaseLeaveType(leaveType) : undefined,
                     StartDate: startDate.toISOString(),
                     EndDate: endDate.toISOString(),
                     TimeIn: startTime?.toISOString(),
@@ -688,13 +780,13 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-[#800000]">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Total Leaves</h3>
-                    <p className="text-2xl font-bold text-[#800000]">10</p>
+                    <p className="text-2xl font-bold text-[#800000]">{MONTHLY_LEAVE_LIMIT}</p>
                     <p className="text-xs text-gray-600">Days Per Month</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-blue-500">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">Remaining</h3>
                     <p className="text-2xl font-bold text-blue-500">
-                        {Math.max(0, 10 - leaveRequests
+                        {Math.max(0, MONTHLY_LEAVE_LIMIT - leaveRequests
                             .filter(request => {
                                 const leaveDate = new Date(request.StartDate);
                                 const currentDate = new Date();
@@ -729,7 +821,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 const end = new Date(leave.EndDate);
                                 const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                                 return total + days;
-                            }, 0) - 10)}
+                            }, 0) - MONTHLY_LEAVE_LIMIT)}
                     </p>
                     <p className="text-xs text-gray-600">Days This Month</p>
                 </div>
@@ -748,9 +840,9 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                     <p className="text-xs text-gray-600">Requests</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-lg border-l-4 border-red-500">
-                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Rejected</h3>
+                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Returned</h3>
                     <p className="text-2xl font-bold text-red-500">
-                        {leaveRequests.filter(request => request.Status === 'Rejected').length}
+                        {leaveRequests.filter(request => request.Status === 'Returned').length}
                     </p>
                     <p className="text-xs text-gray-600">Requests</p>
                 </div>
@@ -803,7 +895,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                 leaveRequests.map((request) => (
                                     <tr key={request.LeaveID} className="hover:bg-gray-50 transition-colors duration-200">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {request.RequestType === 'Undertime' ? 'Undertime' : `${request.LeaveType} Leave`}
+                                            {request.RequestType === 'Undertime' ? 'Undertime' : formatLeaveTypeName(request.LeaveType)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(request.StartDate).toLocaleDateString()}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(request.EndDate).toLocaleDateString()}</td>
@@ -814,7 +906,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                                                 request.Status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                                request.Status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                                                request.Status === 'Returned' ? 'bg-red-100 text-red-800' :
                                                 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                                 {request.Status}
@@ -828,26 +920,26 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             >
                                                 <FaEye className="h-5 w-5" />
                                             </button>
+                                            {request.Status === 'Returned' && (
+                                                <button
+                                                    onClick={() => handleEdit(request)}
+                                                    className="text-[#800000] hover:text-[#600000] transition-colors duration-200"
+                                                    title="Edit Request"
+                                                >
+                                                    <FaPen className="h-4 w-4" />
+                                                </button>
+                                            )}
                                             {request.Status === 'Pending' && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleEdit(request)}
-                                                        className="text-[#800000] hover:text-[#600000] transition-colors duration-200"
-                                                        title="Edit Request"
-                                                    >
-                                                        <FaPen className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedLeave(request);
-                                                            setShowDeleteConfirm(true);
-                                                        }}
-                                                        className="text-red-600 hover:text-red-900 transition-colors duration-200"
-                                                        title="Delete Request"
-                                                    >
-                                                        <FaTrash className="h-4 w-4" />
-                                                    </button>
-                                                </>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedLeave(request);
+                                                        setShowDeleteConfirm(true);
+                                                    }}
+                                                    className="text-red-600 hover:text-red-900 transition-colors duration-200"
+                                                    title="Delete Request"
+                                                >
+                                                    <FaTrash className="h-4 w-4" />
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
@@ -986,12 +1078,21 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         value={leaveType}
                                         onChange={(e) => setLeaveType(e.target.value as LeaveType)}
                                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
+                                        disabled={loadingLeaveTypes}
                                     >
-                                        <option value="Sick">Sick Leave</option>
-                                        <option value="Vacation">Vacation Leave</option>
-                                        <option value="Emergency">Emergency Leave</option>
-                                        <option value="Maternity">Maternity Leave</option>
-                                        <option value="Paternity">Paternity Leave</option>
+                                        {loadingLeaveTypes ? (
+                                            <option>Loading leave types...</option>
+                                        ) : leaveTypes.length > 0 ? (
+                                            leaveTypes
+                                                .filter(lt => lt.IsActive !== false)
+                                                .map((type) => (
+                                                    <option key={type.LeaveTypeID} value={type.LeaveTypeName}>
+                                                        {formatLeaveTypeName(type.LeaveTypeName)}
+                                                    </option>
+                                                ))
+                                        ) : (
+                                            <option value="">No leave types available. Please contact administrator.</option>
+                                        )}
                                     </select>
                                 </div>
                             )}
@@ -1221,6 +1322,72 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     />
                                 </div>
 
+                                {/* Leave Balance Display */}
+                                {requestType === 'Leave' && (() => {
+                                    const currentDate = new Date();
+                                    const usedLeaveDays = leaveRequests
+                                        .filter(request => {
+                                            const leaveDate = new Date(request.StartDate);
+                                            return request.Status === 'Approved' && 
+                                                request.RequestType === 'Leave' &&
+                                                leaveDate.getMonth() === currentDate.getMonth() &&
+                                                leaveDate.getFullYear() === currentDate.getFullYear();
+                                        })
+                                        .reduce((total, leave) => {
+                                            const start = new Date(leave.StartDate);
+                                            const end = new Date(leave.EndDate);
+                                            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                            return total + days;
+                                        }, 0);
+
+                                    const remainingPaidDays = Math.max(0, MONTHLY_LEAVE_LIMIT - usedLeaveDays);
+                                    const pendingLeaveDays = leaveRequests
+                                        .filter(request => {
+                                            const leaveDate = new Date(request.StartDate);
+                                            return request.Status === 'Pending' && 
+                                                request.RequestType === 'Leave' &&
+                                                leaveDate.getMonth() === currentDate.getMonth() &&
+                                                leaveDate.getFullYear() === currentDate.getFullYear();
+                                        })
+                                        .reduce((total, leave) => {
+                                            const start = new Date(leave.StartDate);
+                                            const end = new Date(leave.EndDate);
+                                            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                            return total + days;
+                                        }, 0);
+
+                                    return (
+                                        <div className={`p-4 rounded-lg border-l-4 ${
+                                            remainingPaidDays === 0 
+                                                ? 'bg-red-50 border-red-400 text-red-800' 
+                                                : remainingPaidDays <= 3
+                                                ? 'bg-yellow-50 border-yellow-400 text-yellow-800'
+                                                : 'bg-blue-50 border-blue-400 text-blue-800'
+                                        }`}>
+                                            <p className="font-semibold mb-2">Leave Balance Information:</p>
+                                            <div className="space-y-1 text-sm">
+                                                <p>• Monthly Leave Allowance: <span className="font-medium">{MONTHLY_LEAVE_LIMIT} days</span></p>
+                                                <p>• Used This Month: <span className="font-medium">{usedLeaveDays} days</span></p>
+                                                {pendingLeaveDays > 0 && (
+                                                    <p>• Pending Requests: <span className="font-medium">{pendingLeaveDays} days</span></p>
+                                                )}
+                                                <p className="font-semibold mt-2">
+                                                    • Remaining Paid Leave: <span className={`font-bold text-lg ${
+                                                        remainingPaidDays === 0 
+                                                            ? 'text-red-600' 
+                                                            : remainingPaidDays <= 3
+                                                            ? 'text-yellow-600'
+                                                            : 'text-blue-600'
+                                                    }`}>{remainingPaidDays} days</span>
+                                                </p>
+                                                {remainingPaidDays === 0 && (
+                                                    <p className="text-xs mt-1 italic">Note: Any additional leave requests will be considered as unpaid leave.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 {/* Request Type Selection */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Request Type</label>
@@ -1243,12 +1410,21 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             value={leaveType}
                                             onChange={(e) => setLeaveType(e.target.value as LeaveType)}
                                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
+                                            disabled={loadingLeaveTypes}
                                         >
-                                            <option value="Sick">Sick Leave</option>
-                                            <option value="Vacation">Vacation Leave</option>
-                                            <option value="Emergency">Emergency Leave</option>
-                                            <option value="Maternity">Maternity Leave</option>
-                                            <option value="Paternity">Paternity Leave</option>
+                                            {loadingLeaveTypes ? (
+                                                <option>Loading leave types...</option>
+                                            ) : leaveTypes.length > 0 ? (
+                                                leaveTypes
+                                                    .filter(lt => lt.IsActive !== false)
+                                                    .map((type) => (
+                                                        <option key={type.LeaveTypeID} value={type.LeaveTypeName}>
+                                                            {formatLeaveTypeName(type.LeaveTypeName)}
+                                                        </option>
+                                                    ))
+                                            ) : (
+                                                <option value="">No leave types available. Please contact administrator.</option>
+                                            )}
                                         </select>
                                     </div>
                                 )}
@@ -1420,7 +1596,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                     <div className="bg-white rounded-lg w-full max-w-2xl mx-4 p-6">
                         <h2 className="text-2xl font-bold mb-4">Confirm {requestType === 'Undertime' ? 'Undertime' : 'Leave'} Request</h2>
                         
-                        {/* Warning for unpaid leaves */}
+                        {/* Leave calculation display */}
                         {requestType === 'Leave' && startDate && endDate && (
                             (() => {
                                 const currentDate = new Date();
@@ -1441,14 +1617,36 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
 
                                 const newLeaveDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                                 const totalDays = usedLeaveDays + newLeaveDays;
-                                const unpaidDays = Math.max(0, totalDays - 10);
+                                const remainingPaidDays = Math.max(0, MONTHLY_LEAVE_LIMIT - usedLeaveDays);
+                                const paidDaysFromRequest = Math.min(newLeaveDays, remainingPaidDays);
+                                const unpaidDays = Math.max(0, totalDays - MONTHLY_LEAVE_LIMIT);
 
-                                return unpaidDays > 0 ? (
-                                    <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
-                                        <p className="font-medium">Warning: Unpaid Leave Notice</p>
-                                        <p>This request will exceed your monthly leave allowance. {unpaidDays} day{unpaidDays !== 1 ? 's' : ''} will be considered as unpaid leave.</p>
+                                return (
+                                    <div className={`mb-4 p-4 rounded-lg border-l-4 ${
+                                        unpaidDays > 0 
+                                            ? 'bg-yellow-50 border-yellow-400 text-yellow-800' 
+                                            : 'bg-blue-50 border-blue-400 text-blue-800'
+                                    }`}>
+                                        <p className="font-semibold mb-2">Leave Balance Calculation:</p>
+                                        <div className="space-y-1 text-sm">
+                                            <p>• Monthly Leave Allowance: <span className="font-medium">{MONTHLY_LEAVE_LIMIT} days</span></p>
+                                            <p>• Already Used This Month: <span className="font-medium">{usedLeaveDays} days</span></p>
+                                            <p>• Remaining Paid Leave: <span className="font-medium">{remainingPaidDays} days</span></p>
+                                            <p>• Requested Days: <span className="font-medium">{newLeaveDays} day{newLeaveDays !== 1 ? 's' : ''}</span></p>
+                                            <p>• Paid Days from This Request: <span className="font-medium">{paidDaysFromRequest} day{paidDaysFromRequest !== 1 ? 's' : ''}</span></p>
+                                            {unpaidDays > 0 && (
+                                                <p className="font-semibold text-yellow-900 mt-2">
+                                                    ⚠️ Unpaid Leave: {unpaidDays} day{unpaidDays !== 1 ? 's' : ''} will be considered as unpaid leave.
+                                                </p>
+                                            )}
+                                            {unpaidDays === 0 && remainingPaidDays >= newLeaveDays && (
+                                                <p className="font-semibold text-blue-900 mt-2">
+                                                    ✓ All {newLeaveDays} day{newLeaveDays !== 1 ? 's' : ''} will be covered by paid leave.
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                ) : null;
+                                );
                             })()
                         )}
 
@@ -1544,14 +1742,8 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             )}
 
             {overlappingLeave && dateError && (
-                <div className="mt-2 flex items-center space-x-2">
+                <div className="mt-2">
                     <div className="text-sm text-red-600">{dateError}</div>
-                    <button
-                        onClick={() => handleEdit(overlappingLeave)}
-                        className="text-[#800000] hover:text-[#600000] text-sm font-medium underline"
-                    >
-                        Edit existing request
-                    </button>
                 </div>
             )}
         </div>

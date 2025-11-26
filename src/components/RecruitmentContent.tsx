@@ -82,7 +82,7 @@ const candidateStatuses = [
   'InterviewCompleted',
   'Offered',
   'Hired',
-  'Rejected',
+  'Returned',
   'Withdrawn'
 ];
 
@@ -835,7 +835,7 @@ const RecruitmentContent: React.FC = () => {
         const candidatesToUpdate = candidates.filter(
           c => c.VacancyID === vacancyId 
               && c.Status !== 'Hired' 
-              && c.Status !== 'Rejected' 
+              && c.Status !== 'Returned' 
               && c.Status !== 'Withdrawn'
         );
 

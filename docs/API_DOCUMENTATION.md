@@ -1101,7 +1101,7 @@ x-signature: <signature>
 **Document Submission Status:**
 - `Submitted`
 - `Approved`
-- `Rejected`
+- `Returned`
 - `Pending`
 
 **User Status:**

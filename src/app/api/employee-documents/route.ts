@@ -11,7 +11,54 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get('employeeId');
+    const all = searchParams.get('all') === 'true';
 
+    // If all=true, fetch all employee documents
+    if (all) {
+      const { data: documents, error } = await supabaseAdmin
+        .from('Document')
+        .select(`
+          *,
+          Employee:EmployeeID (
+            EmployeeID,
+            User:UserID (
+              FirstName,
+              LastName
+            )
+          ),
+          DocumentType:DocumentTypeID (
+            DocumentTypeName,
+            Description
+          )
+        `)
+        .not('EmployeeID', 'is', null)
+        .order('UploadDate', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      // Map the data to include employeeName and documentTypeName directly
+      const mappedDocuments = documents.map((doc: any) => ({
+        DocumentID: doc.DocumentID,
+        EmployeeID: doc.EmployeeID,
+        DocumentTypeID: doc.DocumentTypeID,
+        UploadDate: doc.UploadDate,
+        SubmissionStatus: doc.SubmissionStatus,
+        FilePath: doc.FilePath,
+        FileUrl: doc.FileUrl,
+        DownloadUrl: doc.DownloadUrl,
+        Title: doc.Title || doc.DocumentType?.DocumentTypeName || 'Untitled',
+        employeeName: doc.Employee?.User 
+          ? `${doc.Employee.User.FirstName} ${doc.Employee.User.LastName}`
+          : 'Unknown Employee',
+        documentTypeName: doc.DocumentType?.DocumentTypeName || 'Unknown Type'
+      }));
+
+      return NextResponse.json(mappedDocuments);
+    }
+
+    // Otherwise, require employeeId
     if (!employeeId) {
       return NextResponse.json(
         { error: 'Employee ID is required' },

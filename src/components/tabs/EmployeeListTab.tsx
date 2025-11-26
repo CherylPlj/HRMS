@@ -122,7 +122,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
   const getStatusOrder = (status: string) => {
     switch (status) {
       case 'Submitted': return 1;
-      case 'Rejected': return 2;
+      case 'Returned': return 2;
       case 'Approved': return 3;
       default: return 4;
     }
@@ -376,7 +376,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
                                                 ? 'bg-green-100 text-green-700'
                                                 : doc.SubmissionStatus === 'Submitted'
                                                 ? 'bg-blue-100 text-blue-700'
-                                                : doc.SubmissionStatus === 'Rejected'
+                                                : doc.SubmissionStatus === 'Returned'
                                                 ? 'bg-red-100 text-red-700'
                                                 : 'bg-gray-100 text-gray-700'
                                               : 'bg-gray-100 text-gray-700'

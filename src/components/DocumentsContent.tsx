@@ -25,6 +25,7 @@ interface DocumentEmployeeRow {
   SubmissionStatus: string;
   employeeName: string;
   documentTypeName: string;
+  Title?: string;
   FilePath?: string;
   FileUrl?: string;
   DownloadUrl?: string;
@@ -132,6 +133,7 @@ const DocumentsContent = () => {
     fetchDepartments();
   }, []);
 
+
   return (
     <div className="p-6">
       <div className="flex space-x-4 mb-6">
@@ -147,7 +149,6 @@ const DocumentsContent = () => {
         >
           Employee List
         </button>
-        
       </div>
       {loading ? (
         <div className="text-center py-4">Loading...</div>

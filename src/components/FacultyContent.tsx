@@ -183,33 +183,10 @@ const validateDocTypeName = (value: string) => {
 const getStatusOrder = (status: string) => {
   switch (status) {
     case 'Submitted': return 1;
-    case 'Rejected': return 2;
+    case 'Returned': return 2;
     case 'Approved': return 3;
     default: return 4;
   }
-};
-
-// Add this helper function to get a proper view URL for Google Drive files
-const getViewUrl = (url: string) => {
-  // Handle direct download link format
-  const downloadMatch = url.match(/https?:\/\/drive\.google\.com\/uc\?export=download&id=([\w-]+)/);
-  if (downloadMatch) {
-    return `https://drive.google.com/file/d/${downloadMatch[1]}/preview`;
-  }
-
-  // Handle view link format
-  const viewMatch = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\/view/);
-  if (viewMatch) {
-    return `https://drive.google.com/file/d/${viewMatch[1]}/preview`;
-  }
-
-  // Handle web content link format
-  const webContentMatch = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)/);
-  if (webContentMatch) {
-    return `https://drive.google.com/file/d/${webContentMatch[1]}/preview`;
-  }
-
-  return url;
 };
 
 // Add helper function to detect file type
@@ -229,8 +206,65 @@ const getFileType = (url: string | undefined, mimeType?: string): 'image' | 'pdf
   return 'other';
 };
 
+// Get URL for opening in new tab (original URL, not preview)
+// For Google Drive, convert to viewable link
+const getViewUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  
+  // Handle Google Drive URLs - convert to viewable link
+  const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+    return `https://drive.google.com/file/d/${fileId}/view`;
+  }
+  
+  // Handle export=download URLs
+  const downloadMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (downloadMatch) {
+    const fileId = downloadMatch[1];
+    return `https://drive.google.com/file/d/${fileId}/view`;
+  }
+  
+  // For Supabase and other URLs, return original URL
+  return url;
+};
+
+// Get download URL - use proxy endpoint for Supabase files to force download
+const getDownloadUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  
+  // Handle Supabase Storage URLs - use proxy endpoint with download parameter
+  if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+    const urlMatch = url.match(/\/documents\/(.+)$/);
+    if (urlMatch && urlMatch[1]) {
+      const filePath = urlMatch[1];
+      return `/api/documents/${encodeURIComponent(filePath)}?download=true`;
+    }
+  }
+  
+  // For Google Drive and other URLs, return as-is
+  return url;
+};
+
 const getPreviewUrl = (url: string | undefined) => {
   if (!url) return '';
+  
+  // Handle Supabase Storage URLs - use proxy endpoint for PDFs
+  if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+    const fileType = getFileType(url);
+    if (fileType === 'pdf') {
+      // Extract the file path from the Supabase URL
+      const urlMatch = url.match(/\/documents\/(.+)$/);
+      if (urlMatch && urlMatch[1]) {
+        const filePath = urlMatch[1];
+        return `/api/documents/${encodeURIComponent(filePath)}`;
+      }
+    }
+    // For images, return the URL directly
+    if (fileType === 'image') {
+      return url;
+    }
+  }
   
   // Handle Google Drive URLs
   const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -244,18 +278,6 @@ const getPreviewUrl = (url: string | undefined) => {
   if (downloadMatch) {
     const fileId = downloadMatch[1];
     return `https://drive.google.com/file/d/${fileId}/preview`;
-  }
-  
-  // Handle Supabase Storage URLs
-  if (url.includes('storage.googleapis.com') || url.includes('supabase')) {
-    // For images, return the URL directly
-    if (getFileType(url) === 'image') {
-      return url;
-    }
-    // For PDFs, return the URL directly as modern browsers can preview them
-    if (getFileType(url) === 'pdf') {
-      return url;
-    }
   }
   
   return url;
@@ -381,6 +403,8 @@ const FacultyContent = () => {
   const [docTypeToDelete, setDocTypeToDelete] = useState<DocumentType | null>(null);
   const [deleteDocTypeConfirmation, setDeleteDocTypeConfirmation] = useState('');
   const [isDeleteDocTypeConfirmed, setIsDeleteDocTypeConfirmed] = useState(false);
+  const [selectedDocTypes, setSelectedDocTypes] = useState<number[]>([]);
+  const [selectAllDocTypes, setSelectAllDocTypes] = useState(false);
 
   // CSV import and notifications
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -617,19 +641,29 @@ const FacultyContent = () => {
   };
 
   // Modify the status change handler
-  const handleStatusChange = (docId: number, newStatus: string) => {
+  const handleStatusChange = (docId: number, currentStatus: string) => {
     const doc = documents.find(d => d.DocumentID === docId);
     if (!doc) return;
 
     setPendingStatusUpdate({
       docId: docId,
-      newStatus: newStatus,
+      newStatus: currentStatus, // Will be updated in modal
       facultyName: doc.facultyName || 'Unknown Faculty',
       documentType: doc.documentTypeName || 'Unknown Type'
     });
     setSelectedDocumentId(docId);
-    setNewStatus(newStatus);
+    setNewStatus(currentStatus);
     setIsStatusUpdateModalOpen(true);
+  };
+
+  const handleStatusChangeInModal = (newStatus: string) => {
+    setNewStatus(newStatus);
+    if (pendingStatusUpdate) {
+      setPendingStatusUpdate({
+        ...pendingStatusUpdate,
+        newStatus
+      });
+    }
   };
 
   // Add new handler for confirmed status update
@@ -1282,7 +1316,7 @@ const FacultyContent = () => {
                   <option value="all">All Statuses</option>
                   <option value="Submitted">Submitted</option>
                   <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
+                  <option value="Returned">Returned</option>
                 </select>
               </div>
             <button
@@ -1359,7 +1393,7 @@ const FacultyContent = () => {
                   const getStatusOrder = (status: string) => {
                     switch (status) {
                       case 'Submitted': return 1;
-                      case 'Rejected': return 2;
+                      case 'Returned': return 2;
                       case 'Approved': return 3;
                       default: return 4;
                     }
@@ -1500,7 +1534,7 @@ const FacultyContent = () => {
                                                     ? 'bg-green-100 text-green-700'
                                                     : doc.SubmissionStatus === 'Submitted'
                                                     ? 'bg-blue-100 text-blue-700'
-                                                    : doc.SubmissionStatus === 'Rejected'
+                                                    : doc.SubmissionStatus === 'Returned'
                                                     ? 'bg-red-100 text-red-700'
                                                     : 'bg-gray-100 text-gray-700'
                                                   : 'bg-gray-100 text-gray-700'
@@ -1523,26 +1557,25 @@ const FacultyContent = () => {
                                                     <FaEye />
                                                   </button>
                                                   {doc.FileUrl && (
-                                                    <a
-                                                      href={doc.FileUrl}
-                                                      target="_blank"
-                                                      rel="noopener noreferrer"
-                                                      className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                      title="Open in New Tab"
-                                                    >
-                                                      <FaLink />
-                                                    </a>
-                                                  )}
-                                                  {doc.DownloadUrl && (
-                                                    <a
-                                                      href={doc.DownloadUrl}
-                                                      target="_blank"
-                                                      rel="noopener noreferrer"
-                                                      className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                      title="Download Document"
-                                                    >
-                                                      <FaDownload />
-                                                    </a>
+                                                    <>
+                                                      <a
+                                                        href={getViewUrl(doc.FileUrl)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                        title="Open in New Tab"
+                                                      >
+                                                        <FaLink />
+                                                      </a>
+                                                      <a
+                                                        href={getDownloadUrl(doc.DownloadUrl || doc.FileUrl)}
+                                                        download
+                                                        className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                        title="Download Document"
+                                                      >
+                                                        <FaDownload />
+                                                      </a>
+                                                    </>
                                                   )}
                                                 </div>
                                               ) : (
@@ -1614,11 +1647,11 @@ const FacultyContent = () => {
                      doc.documentTypeName.toLowerCase().includes(documentSearchTerm.toLowerCase()))
                   )
                   .sort((a, b) => {
-                    // Custom order: Submitted (1), Pending (2), Rejected (3), Approved (4)
+                    // Custom order: Submitted (1), Pending (2), Returned (3), Approved (4)
                     const getStatusOrder = (status: string) => {
                       switch (status) {
                         case 'Submitted': return 1;
-                        case 'Rejected': return 2;
+                        case 'Returned': return 2;
                         case 'Approved': return 3;
                         default: return 4;
                       }
@@ -1647,7 +1680,7 @@ const FacultyContent = () => {
                             ${
                               doc.SubmissionStatus === 'Approved'
                                 ? 'bg-green-100 text-green-800'
-                                : doc.SubmissionStatus === 'Rejected'
+                                : doc.SubmissionStatus === 'Returned'
                                 ? 'bg-red-100 text-red-800'
                                 : doc.SubmissionStatus === 'Submitted'
                                 ? 'bg-blue-100 text-blue-800'
@@ -1658,17 +1691,6 @@ const FacultyContent = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 flex items-center space-x-2">
-                          <select
-                            title="Change Submission Status"
-                            value={doc.SubmissionStatus}
-                            onChange={e => handleStatusChange(doc.DocumentID, e.target.value)}
-                            disabled={statusUpdating === doc.DocumentID}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                          >
-                            <option value="Submitted">Submitted</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Rejected">Rejected</option>
-                          </select>
                           {doc.FileUrl && (
                             <span className="flex items-center space-x-1">
                               <button
@@ -1688,13 +1710,21 @@ const FacultyContent = () => {
                                 <FaLink className="w-5 h-5" />
                               </a>
                               <a
-                                href={doc.DownloadUrl || doc.FileUrl}
+                                href={getDownloadUrl(doc.DownloadUrl || doc.FileUrl)}
                                 download
                                 className="text-gray-600 hover:text-gray-900"
                                 title="Download Document"
                               >
                                 <FaDownload className="w-5 h-5" />
                               </a>
+                              <button
+                                onClick={() => handleStatusChange(doc.DocumentID, doc.SubmissionStatus)}
+                                disabled={statusUpdating === doc.DocumentID}
+                                className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                                title="Edit Status"
+                              >
+                                <FaPen className="w-5 h-5" />
+                              </button>
                             </span>
                           )}
                         </td>
@@ -1964,18 +1994,28 @@ const FacultyContent = () => {
             </div>
             
             <div className="mb-6">
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.facultyName}</span>?
+              <p className="text-gray-600 mb-4">
+                Update the status of <span className="font-semibold">{pendingStatusUpdate.documentType}</span> for <span className="font-semibold">{pendingStatusUpdate.facultyName}</span>?
               </p>
-              <div className="bg-gray-50 p-4 rounded-md">
-                <p className="text-sm text-gray-600">
+              <div className="bg-gray-50 p-4 rounded-md mb-4">
+                <p className="text-sm text-gray-600 mb-2">
                   Current Status: <span className="font-medium text-gray-800">
                     {documents.find(d => d.DocumentID === pendingStatusUpdate.docId)?.SubmissionStatus}
                   </span>
                 </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  New Status: <span className="font-medium text-gray-800">{pendingStatusUpdate.newStatus}</span>
-                </p>
+                <label htmlFor="statusSelect" className="block text-sm font-medium text-gray-700 mb-2">
+                  New Status:
+                </label>
+                <select
+                  id="statusSelect"
+                  value={newStatus}
+                  onChange={(e) => handleStatusChangeInModal(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                >
+                  <option value="Submitted">Submitted</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Returned">Returned</option>
+                </select>
               </div>
             </div>
 
@@ -2026,7 +2066,7 @@ const FacultyContent = () => {
               </div>
               <div className="flex items-center space-x-4">
                 <a
-                  href={getPreviewUrl(selectedDocument.FileUrl)}
+                  href={getViewUrl(selectedDocument.FileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-gray-900"
@@ -2034,16 +2074,14 @@ const FacultyContent = () => {
                 >
                   <FaLink className="w-5 h-5" />
                 </a>
-                {selectedDocument.DownloadUrl && (
-                  <a
-                    href={selectedDocument.DownloadUrl}
-                    download
-                    className="text-gray-600 hover:text-gray-900"
-                    title="Download Document"
-                  >
-                    <FaDownload className="w-5 h-5" />
-                  </a>
-                )}
+                <a
+                  href={getDownloadUrl(selectedDocument.DownloadUrl || selectedDocument.FileUrl)}
+                  download
+                  className="text-gray-600 hover:text-gray-900"
+                  title="Download Document"
+                >
+                  <FaDownload className="w-5 h-5" />
+                </a>
                 <button
                   onClick={handleCloseViewer}
                   className="text-gray-500 hover:text-gray-700"
@@ -2158,7 +2196,11 @@ const FacultyContent = () => {
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h2 className="text-2xl font-bold text-gray-800">Manage Document Types</h2>
               <button
-                onClick={() => setShowDocTypeListModal(false)}
+                onClick={() => {
+                  setShowDocTypeListModal(false);
+                  setSelectedDocTypes([]);
+                  setSelectAllDocTypes(false);
+                }}
                 className="text-gray-400 hover:text-gray-700 focus:outline-none"
                 aria-label="Close"
               >
@@ -2168,51 +2210,116 @@ const FacultyContent = () => {
               </button>
             </div>
             <div className="px-6 py-6">
+              {selectedDocTypes.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+                  <span className="text-sm text-blue-800">
+                    {selectedDocTypes.length} document type{selectedDocTypes.length > 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete ${selectedDocTypes.length} document type(s)?`)) {
+                        setIsDeletingDocType(true);
+                        try {
+                          for (const docTypeId of selectedDocTypes) {
+                            const docType = documentTypes.find(dt => dt.DocumentTypeID === docTypeId);
+                            if (docType) {
+                              await handleDeleteDocType(docType);
+                            }
+                          }
+                          setSelectedDocTypes([]);
+                          setSelectAllDocTypes(false);
+                        } catch (error) {
+                          console.error('Error deleting document types:', error);
+                        } finally {
+                          setIsDeletingDocType(false);
+                        }
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
+                    disabled={isDeletingDocType}
+                  >
+                    <FaTrash /> Delete Selected
+                  </button>
+                </div>
+              )}
               <ul className="divide-y divide-gray-200">
                 {documentTypes.length === 0 ? (
                   <li className="py-4 text-gray-500 text-center">No document types found.</li>
                 ) : (
-                  documentTypes.map((type) => (
-                    <li key={type.DocumentTypeID} className="flex items-center justify-between py-3">
-                      <span className="text-gray-800">{type.DocumentTypeName}</span>
-                      <span className="flex items-center gap-2">
-                        <button
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Edit"
-                          onClick={() => {
-                            setShowDocTypeListModal(false);
-                            openEditDocTypeModal(type);
-                          }}
-                        >
-                          <FaPen />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-900 ml-2"
-                          title="Delete"
-                          onClick={async () => {
-                            setDocTypeToDelete(type);
-                            setIsDeleteDocTypeModalOpen(true);
-                            setDeleteDocTypeConfirmation('');
-                            setIsDeleteDocTypeConfirmed(false);
-                            // Check if this document type is referenced by any document
-                            setIsDeletingDocType(true);
-                            try {
-                              const res = await fetch(`/api/faculty-documents?documentTypeId=${type.DocumentTypeID}`);
-                              const data = await res.json();
-                              setIsDocTypeReferenced(Array.isArray(data) && data.length > 0);
-                            } catch (err) {
-                              setIsDocTypeReferenced(false); // fallback: allow delete if check fails
-                            } finally {
-                              setIsDeletingDocType(false);
-                            }
-                          }}
-                          disabled={isDeletingDocType}
-                        >
-                          <FaTrash />
-                        </button>
-                      </span>
+                  <>
+                    <li className="flex items-center py-2 border-b">
+                      <input
+                        type="checkbox"
+                        checked={selectAllDocTypes}
+                        onChange={(e) => {
+                          setSelectAllDocTypes(e.target.checked);
+                          if (e.target.checked) {
+                            setSelectedDocTypes(documentTypes.map(dt => dt.DocumentTypeID));
+                          } else {
+                            setSelectedDocTypes([]);
+                          }
+                        }}
+                        className="rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-3"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Select All</span>
                     </li>
-                  ))
+                    {documentTypes.map((type) => (
+                      <li key={type.DocumentTypeID} className="flex items-center justify-between py-3">
+                        <div className="flex items-center gap-3 flex-grow">
+                          <input
+                            type="checkbox"
+                            checked={selectedDocTypes.includes(type.DocumentTypeID)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedDocTypes([...selectedDocTypes, type.DocumentTypeID]);
+                              } else {
+                                setSelectedDocTypes(selectedDocTypes.filter(id => id !== type.DocumentTypeID));
+                                setSelectAllDocTypes(false);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                          />
+                          <span className="text-gray-800">{type.DocumentTypeName}</span>
+                        </div>
+                        <span className="flex items-center gap-2">
+                          <button
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Edit"
+                            onClick={() => {
+                              setShowDocTypeListModal(false);
+                              openEditDocTypeModal(type);
+                            }}
+                          >
+                            <FaPen />
+                          </button>
+                          <button
+                            className="text-red-600 hover:text-red-900 ml-2"
+                            title="Delete"
+                            onClick={async () => {
+                              setDocTypeToDelete(type);
+                              setIsDeleteDocTypeModalOpen(true);
+                              setDeleteDocTypeConfirmation('');
+                              setIsDeleteDocTypeConfirmed(false);
+                              // Check if this document type is referenced by any document
+                              setIsDeletingDocType(true);
+                              try {
+                                const res = await fetch(`/api/faculty-documents?documentTypeId=${type.DocumentTypeID}`);
+                                const data = await res.json();
+                                setIsDocTypeReferenced(Array.isArray(data) && data.length > 0);
+                              } catch (err) {
+                                setIsDocTypeReferenced(false); // fallback: allow delete if check fails
+                              } finally {
+                                setIsDeletingDocType(false);
+                              }
+                            }}
+                            disabled={isDeletingDocType}
+                          >
+                            <FaTrash />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </>
                 )}
               </ul>
             </div>

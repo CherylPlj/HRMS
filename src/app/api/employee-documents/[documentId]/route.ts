@@ -52,6 +52,55 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  context: { params: { documentId: string } }
+) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { params } = context;
+    const documentId = parseInt((await params).documentId);
+    const body = await request.json();
+    const { SubmissionStatus } = body;
+
+    if (!SubmissionStatus || !['Submitted', 'Approved', 'Returned'].includes(SubmissionStatus)) {
+      return NextResponse.json(
+        { error: 'Invalid status. Must be Submitted, Approved, or Returned' },
+        { status: 400 }
+      );
+    }
+
+    // Update the document status
+    const { data, error } = await supabaseAdmin
+      .from('Document')
+      .update({
+        SubmissionStatus,
+        UploadDate: new Date().toISOString()
+      })
+      .eq('DocumentID', documentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating document:', error);
+      return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+    }
+    if (!data) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error in PATCH operation:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: Request,
   context: { params: { documentId: string } }

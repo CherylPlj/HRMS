@@ -22,9 +22,13 @@ interface Employee {
   ContactInfo?: {
     Phone?: string;
     Email?: string;
+    MessengerName?: string;
+    FBLink?: string;
   } | Array<{
     Phone?: string;
     Email?: string;
+    MessengerName?: string;
+    FBLink?: string;
   }>;
   User?: {
     Status: string;
@@ -332,13 +336,13 @@ const Directory = () => {
       email = record.User.Email;
     } else if (record.Email) {
       email = record.Email;
-    } else if (record.ContactInfo) {
-      if (Array.isArray(record.ContactInfo)) {
-        email = record.ContactInfo[0]?.Email || null;
-      } else {
-        email = (record.ContactInfo as { Phone?: string; Email?: string }).Email || null;
+      } else if (record.ContactInfo) {
+        if (Array.isArray(record.ContactInfo)) {
+          email = record.ContactInfo[0]?.Email || null;
+        } else {
+          email = (record.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).Email || null;
+        }
       }
-    }
     
     // Handle ContactInfo as either array or object
     let phone: string | null = null;
@@ -346,7 +350,7 @@ const Directory = () => {
       if (Array.isArray(record.ContactInfo)) {
         phone = record.ContactInfo[0]?.Phone || null;
       } else {
-        phone = (record.ContactInfo as { Phone?: string; Email?: string }).Phone || null;
+        phone = (record.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).Phone || null;
       }
     }
 
@@ -375,7 +379,7 @@ const Directory = () => {
 
   const handleDownload = () => {
     // Prepare CSV data
-    const headers = ['First Name', 'Last Name', 'Middle Name', 'Position', 'Department', 'Email', 'Employment Status', 'Hire Date', 'Resignation Date'];
+    const headers = ['First Name', 'Last Name', 'Middle Name', 'Position', 'Department', 'Email', 'Phone', 'Messenger Name', 'FB Link', 'Employment Status', 'Hire Date', 'Resignation Date'];
     const csvRows = [headers.join(',')];
 
     allFilteredRecords.forEach(record => {
@@ -390,7 +394,24 @@ const Directory = () => {
         if (Array.isArray(record.ContactInfo)) {
           email = record.ContactInfo[0]?.Email || '';
         } else {
-          email = (record.ContactInfo as { Phone?: string; Email?: string }).Email || '';
+          email = (record.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).Email || '';
+        }
+      }
+      
+      // Get phone, messenger name, and FB link from ContactInfo
+      let phone = '';
+      let messengerName = '';
+      let fbLink = '';
+      if (record.ContactInfo) {
+        if (Array.isArray(record.ContactInfo)) {
+          phone = record.ContactInfo[0]?.Phone || '';
+          messengerName = record.ContactInfo[0]?.MessengerName || '';
+          fbLink = record.ContactInfo[0]?.FBLink || '';
+        } else {
+          const contactInfo = record.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string };
+          phone = contactInfo.Phone || '';
+          messengerName = contactInfo.MessengerName || '';
+          fbLink = contactInfo.FBLink || '';
         }
       }
       
@@ -401,6 +422,9 @@ const Directory = () => {
         record.Position || '',
         record.Department?.DepartmentName || '',
         email,
+        phone,
+        messengerName,
+        fbLink,
         employmentDetail?.EmploymentStatus || '',
         employmentDetail?.HireDate ? new Date(employmentDetail.HireDate).toLocaleDateString() : '',
         employmentDetail?.ResignationDate ? new Date(employmentDetail.ResignationDate).toLocaleDateString() : ''
@@ -729,7 +753,7 @@ const Directory = () => {
                             if (Array.isArray(selectedEmployee.ContactInfo)) {
                               return selectedEmployee.ContactInfo[0]?.Email || ' ';
                             }
-                            return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string }).Email || ' ';
+                            return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).Email || ' ';
                           }
                           return ' ';
                         })()}
@@ -746,7 +770,52 @@ const Directory = () => {
                           if (Array.isArray(selectedEmployee.ContactInfo)) {
                             return selectedEmployee.ContactInfo[0]?.Phone || ' ';
                           }
-                          return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string }).Phone || ' ';
+                          return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).Phone || ' ';
+                        })()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Messenger Name</p>
+                      <p className="font-medium">
+                        {(() => {
+                          // Handle ContactInfo as either array or object
+                          if (!selectedEmployee.ContactInfo) {
+                            return ' ';
+                          }
+                          if (Array.isArray(selectedEmployee.ContactInfo)) {
+                            return selectedEmployee.ContactInfo[0]?.MessengerName || ' ';
+                          }
+                          return (selectedEmployee.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).MessengerName || ' ';
+                        })()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">FB Link</p>
+                      <p className="font-medium">
+                        {(() => {
+                          // Handle ContactInfo as either array or object
+                          if (!selectedEmployee.ContactInfo) {
+                            return ' ';
+                          }
+                          let fbLink: string | undefined;
+                          if (Array.isArray(selectedEmployee.ContactInfo)) {
+                            fbLink = selectedEmployee.ContactInfo[0]?.FBLink;
+                          } else {
+                            fbLink = (selectedEmployee.ContactInfo as { Phone?: string; Email?: string; MessengerName?: string; FBLink?: string }).FBLink;
+                          }
+                          if (fbLink) {
+                            return (
+                              <a 
+                                href={fbLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {fbLink}
+                              </a>
+                            );
+                          }
+                          return ' ';
                         })()}
                       </p>
                     </div>
