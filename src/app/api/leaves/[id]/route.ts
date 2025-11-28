@@ -447,7 +447,7 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    context: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
@@ -455,7 +455,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
         }
 
-        const { id } = context.params;
+        const { id } = await context.params;
         const leaveId = parseInt(id);
 
         if (isNaN(leaveId)) {

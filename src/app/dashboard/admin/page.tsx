@@ -1,9 +1,7 @@
-// app/dashboard/admin/page.tsx
+"use client";
 
-const AdminPage = () => {
-    return (
-      <div className=''>This is the AdminPage</div>
-    )
-  }
-  
-  export default AdminPage
+import DashboardContent from '@/components/DashboardContent';
+
+export default function AdminDashboardPage() {
+  return <DashboardContent />;
+}

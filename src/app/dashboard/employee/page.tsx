@@ -1,11 +1,7 @@
-// app/dashboard/faculty/page.tsx
 "use client";
 
-export default function EmployeePage() {
-  return (
-    <div className="flex">
-      {/* <Sidebar />
-      <FacultyTable /> */}
-    </div>
-  );
+import DashboardFaculty from '@/components/DashboardFaculty';
+
+export default function EmployeeDashboardPage() {
+  return <DashboardFaculty />;
 }

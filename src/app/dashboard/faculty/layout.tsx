@@ -1,16 +1,12 @@
 "use client";
+import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
 import { LayoutDashboard } from 'lucide-react';
 import { UserProfile, UserButton } from '@clerk/nextjs';
-import DashboardFaculty from '@/components/DashboardFaculty';
-import PersonalData from '@/components/PersonalData';
-import DocumentsFaculty from '@/components/DocumentsFaculty';
-import LeaveRequestFaculty from '@/components/LeaveRequestFaculty';
-import Directory from '@/components/Directory';
-import Reports from '@/components/Reports';
 import Chatbot from '@/components/Chatbot';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
@@ -31,12 +27,9 @@ interface UserRoleData {
   UserRole: UserRole[];
 }
 
-export default function FacultyDashboard() {
+export default function FacultyDashboard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const viewParam = searchParams?.get('view') || 'dashboard';
-  const [activeButton, setActiveButton] = useState(viewParam);
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
@@ -194,23 +187,10 @@ export default function FacultyDashboard() {
     };
   }, [isLoaded, isSignedIn, pathname, router]);
 
-  // Sync activeButton with URL query parameter
-  useEffect(() => {
-    const view = searchParams?.get('view') || 'dashboard';
-    setActiveButton(view);
-  }, [searchParams]);
-
-  const handleButtonClick = (buttonName: string) => {
-    setActiveButton(buttonName);
-    // Update URL with query parameter without causing a full page reload
-    router.push(`${pathname}?view=${buttonName}`, { scroll: false });
-  };
-
   const handleLogout = async () => {
     try {
       await signOut(); // Properly end the session
       console.log('User logged out');
-      setActiveButton('dashboard'); // Reset state
       setLogoutModalVisible(false);
       router.push('/'); // Redirect to the landing page
     } catch (error) {
@@ -223,23 +203,30 @@ export default function FacultyDashboard() {
     setProfileVisible(!isProfileVisible);
   };
 
-  const renderContent = () => {
-    switch (activeButton) {
-      case 'dashboard':
-        return <DashboardFaculty />;
-      case 'personal-data':
-        return <PersonalData onBack={() => setActiveButton('dashboard')} />;
-      case 'documents':
-        return <DocumentsFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'leave':
-        return <LeaveRequestFaculty onBack={() => setActiveButton('dashboard')} />;
-      case 'directory':
-        return <Directory />;
-      case 'reports':
-        return <Reports />;
-      default:
-        return <div>Select a menu item to view its content.</div>;
+  // Helper function to determine if a route is active
+  const isActiveRoute = (route: string) => {
+    if (!pathname) return false;
+    if (route === 'dashboard') {
+      return pathname === '/dashboard/faculty' || pathname === '/dashboard/faculty/';
     }
+    return pathname === `/dashboard/faculty/${route}`;
+  };
+
+  // Helper function to get page title from pathname
+  const getPageTitle = () => {
+    if (!pathname) return '';
+    if (pathname === '/dashboard/faculty' || pathname === '/dashboard/faculty/') {
+      return 'DASHBOARD';
+    }
+    const route = pathname.split('/dashboard/faculty/')[1];
+    const titles: Record<string, string> = {
+      'personal-data': 'PERSONAL DATA',
+      'documents': 'DOCUMENTS',
+      'leave': 'LEAVE REQUEST',
+      'directory': 'DIRECTORY',
+      'reports': 'REPORTS',
+    };
+    return titles[route] || '';
   };
 
   return (
@@ -262,63 +249,66 @@ export default function FacultyDashboard() {
           </div>
 
           {/* Logo and Title - Made clickable */}
-          <div className={`flex flex-col items-center cursor-pointer
-            ${isSidebarOpen ? 'p-4' : 'p-2'}`}
-                onClick={() => {
-                  handleButtonClick('dashboard');
-                }}>
-            <img
+          <Link 
+            href="/dashboard/faculty"
+            className={`flex flex-col items-center cursor-pointer
+              ${isSidebarOpen ? 'p-4' : 'p-2'}`}
+          >
+            <Image
               src="/sjsfilogo.png"
               alt="Logo"
+              width={64}
+              height={64}
               className={`${isSidebarOpen ? 'w-12 h-12' : 'w-10 h-10'} mb-2 hover:opacity-80 transition-opacity`}
             />
             <span className={`text-white font-bold
               ${isSidebarOpen ? 'text-xl' : 'hidden'} hover:text-[#ffd700] transition-colors`}>
               SJSFI-HRMS
             </span>
-          </div>
+          </Link>
           
           {/* Navigation Menu */}
           <nav className={`flex-1 flex flex-col overflow-y-auto
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
             {[
-              { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
-              { name: 'Personal Data', icon: 'fa-user', key: 'personal-data' },
-              { name: 'Documents', icon: 'fa-file-alt', key: 'documents' },
-              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave' },
-              { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              // { name: 'Reports', icon: 'fa-print', key: 'reports' },
-            ].map((item) => (
-              <a
-                key={item.key}
-                href="#"
-                className={`flex items-center rounded-md cursor-pointer transition-colors
-                  ${isSidebarOpen 
-                    ? 'space-x-3 px-3 py-2' 
-                    : 'flex-col justify-center py-2 space-y-1'
-                  }
-                  ${activeButton === item.key ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
-                title={item.name}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleButtonClick(item.key);
-                }}
-              >
-                <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
-                  {typeof item.icon === 'string' ? (
-                    <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
-                  ) : (
-                    (() => {
-                      const Icon = item.icon as React.ComponentType<{ className?: string }>;
-                      return <Icon className={isSidebarOpen ? 'w-6 h-6' : 'w-5 h-5'} />;
-                    })()
-                  )}
-                </div>
-                <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
-                  {item.name}
-                </span>
-              </a>
-            ))}
+              { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard', route: '' },
+              { name: 'Personal Data', icon: 'fa-user', key: 'personal-data', route: 'personal-data' },
+              { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
+              { name: 'Leave Request', icon: 'fa-envelope', key: 'leave', route: 'leave' },
+              { name: 'Directory', icon: 'fa-address-book', key: 'directory', route: 'directory' },
+              // { name: 'Reports', icon: 'fa-print', key: 'reports', route: 'reports' },
+            ].map((item) => {
+              const href = item.route ? `/dashboard/faculty/${item.route}` : '/dashboard/faculty';
+              const isActive = isActiveRoute(item.key);
+              
+              return (
+                <Link
+                  key={item.key}
+                  href={href}
+                  className={`flex items-center rounded-md cursor-pointer transition-colors
+                    ${isSidebarOpen 
+                      ? 'space-x-3 px-3 py-2' 
+                      : 'flex-col justify-center py-2 space-y-1'
+                    }
+                    ${isActive ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
+                  title={item.name}
+                >
+                  <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
+                    {typeof item.icon === 'string' ? (
+                      <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+                    ) : (
+                      (() => {
+                        const Icon = item.icon as React.ComponentType<{ className?: string }>;
+                        return <Icon className={isSidebarOpen ? 'w-6 h-6' : 'w-5 h-5'} />;
+                      })()
+                    )}
+                  </div>
+                  <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
           </nav>
           {/* Logout Button removed; handled via user menu in header */}
         </div>
@@ -332,12 +322,7 @@ export default function FacultyDashboard() {
               {/* Title and Breadcrumb */}
               <div className="flex items-center">
                 <h1 className="text-xl font-bold text-red-700">
-                  {activeButton === 'dashboard' && 'DASHBOARD'}
-                  {activeButton === 'personal-data' && 'PERSONAL DATA'}
-                  {activeButton === 'documents' && 'DOCUMENTS'}
-                  {activeButton === 'leave' && 'LEAVE REQUEST'}
-                  {activeButton === 'directory' && 'DIRECTORY'}
-                  {activeButton === 'reports' && 'REPORTS'}
+                  {getPageTitle()}
                 </h1>
               </div>
 
@@ -374,7 +359,7 @@ export default function FacultyDashboard() {
 
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
-            {renderContent()}
+            {children}
           </main>
         </div>
 

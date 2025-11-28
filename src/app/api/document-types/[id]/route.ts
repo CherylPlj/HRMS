@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // PATCH: Update a document type
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let body;
   try {
     body = await request.json();
@@ -38,8 +38,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // DELETE: Delete a document type
-export async function DELETE(request: Request, context: { params: { id: string } }) {
-  const id = context.params.id;
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
 
   // Check if any documents reference this document type
   const { data: referencingDocs, error: refError } = await supabaseAdmin

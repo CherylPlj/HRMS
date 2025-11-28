@@ -1,18 +1,10 @@
 "use client";
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react'; // Import useRef for drag and resize functionality
 import { useUser, useClerk } from '@clerk/nextjs'; // Import useClerk for session management
-import DashboardContent from '@/components/DashboardContent';
-import FacultyContent from '@/components/FacultyContent';
-import LeaveContent from '@/components/LeaveContent';
-import EmployeeContentNew from '@/components/EmployeeContentNew';
-import RecruitmentContent from '@/components/RecruitmentContent';
-import UserManagementContent from '@/components/UserManagementContent';
-import SessionManagementContent from '@/components/SessionManagementContent';
 import Chatbot from '@/components/Chatbot';
-import Directory from '@/components/Directory';
-import Reports from '@/components/Reports';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile, UserButton } from '@clerk/nextjs';
 import { LayoutDashboard } from 'lucide-react';
@@ -51,12 +43,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const viewParam = searchParams?.get('view') || 'dashboard';
-  const [activeButton, setActiveButton] = useState(viewParam);
   const [isLogoutModalVisible, setLogoutModalVisible] = useState(false);
   const [isAdminInfoVisible, setAdminInfoVisible] = useState(false); // State for Admin Info Modal
   const [isEditProfileVisible, setEditProfileVisible] = useState(false); // State for Edit Profile Modal
@@ -193,13 +182,11 @@ export default function AdminDashboard() {
       // If on portal or sign-in, immediately redirect back to dashboard
       if (currentPath === '/' || currentPath === '/sign-in' || currentPath.startsWith('/sign-in')) {
         const dashboardPath = pathname || '/dashboard/admin';
-        const currentView = searchParams?.get('view') || 'dashboard';
-        const redirectPath = `${dashboardPath}?view=${currentView}`;
         
-        window.history.replaceState({ url: redirectPath, preventBack: true }, '', redirectPath);
-        router.replace(redirectPath);
+        window.history.replaceState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
+        router.replace(dashboardPath);
         // Push again to ensure portal/sign-in is not in history
-        window.history.pushState({ url: redirectPath, preventBack: true }, '', redirectPath);
+        window.history.pushState({ url: dashboardPath, preventBack: true }, '', dashboardPath);
       }
       // Note: We don't interfere with dashboard view navigation - router.push handles history
     };
@@ -224,25 +211,12 @@ export default function AdminDashboard() {
       window.removeEventListener('popstate', handlePopState);
       clearInterval(checkInterval);
     };
-  }, [isLoaded, isSignedIn, pathname, router, searchParams]);
-
-  // Sync activeButton with URL query parameter
-  useEffect(() => {
-    const view = searchParams?.get('view') || 'dashboard';
-    setActiveButton(view);
-  }, [searchParams]);
-
-  const handleButtonClick = (buttonName: string) => {
-    setActiveButton(buttonName);
-    // Update URL with query parameter without causing a full page reload
-    router.push(`${pathname}?view=${buttonName}`, { scroll: false });
-  };
+  }, [isLoaded, isSignedIn, pathname, router]);
 
   const handleLogout = async () => {
     try {
       await signOut(); // Properly end the session
       console.log('User logged out');
-      setActiveButton('dashboard'); // Reset state
       setLogoutModalVisible(false);
       router.push('/'); // Redirect to the landing page
     } catch (error) {
@@ -361,29 +335,33 @@ export default function AdminDashboard() {
     setProfileVisible(!isProfileVisible);
   };
 
-  const renderContent = () => {
-    switch (activeButton) {
-      case 'dashboard':
-        return <DashboardContent />;
-      case 'document':
-        return <FacultyContent />;
-      case 'employees':
-        return <EmployeeContentNew />;
-      case 'recruitment':
-        return <RecruitmentContent />;
-      case 'leave':
-        return <LeaveContent />;
-      case 'directory':
-        return <Directory />;
-      case 'reports':
-        return <Reports />;
-      case 'user-management':
-        return userRole === 'super admin' ? <UserManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
-      case 'session-management':
-        return userRole === 'super admin' ? <SessionManagementContent /> : <div>Access denied. Super Admin privileges required.</div>;
-      default:
-        return <div>Select a menu item to view its content.</div>;
+  // Helper function to determine if a route is active
+  const isActiveRoute = (route: string) => {
+    if (!pathname) return false;
+    if (route === 'dashboard') {
+      return pathname === '/dashboard/admin' || pathname === '/dashboard/admin/';
     }
+    return pathname === `/dashboard/admin/${route}`;
+  };
+
+  // Helper function to get page title from pathname
+  const getPageTitle = () => {
+    if (!pathname) return '';
+    if (pathname === '/dashboard/admin' || pathname === '/dashboard/admin/') {
+      return 'DASHBOARD';
+    }
+    const route = pathname.split('/dashboard/admin/')[1];
+    const titles: Record<string, string> = {
+      'employees': 'EMPLOYEES',
+      'documents': 'DOCUMENTS',
+      'leave': 'LEAVE',
+      'recruitment': 'RECRUITMENT',
+      'directory': 'DIRECTORY',
+      'reports': 'REPORTS',
+      'user-management': 'USER MANAGEMENT',
+      'session-management': 'SESSION MANAGEMENT',
+    };
+    return titles[route] || '';
   };
 
   return (
@@ -406,11 +384,11 @@ export default function AdminDashboard() {
           </div>
 
           {/* Logo and Title - Made clickable */}
-          <div className={`flex flex-col items-center cursor-pointer
-            ${isSidebarOpen ? 'p-4' : 'p-2'}`}
-                onClick={() => {
-                  handleButtonClick('dashboard');
-                }}>
+          <Link 
+            href="/dashboard/admin"
+            className={`flex flex-col items-center cursor-pointer
+              ${isSidebarOpen ? 'p-4' : 'p-2'}`}
+          >
             <Image
               src="/sjsfilogo.png"
               alt="Logo"
@@ -422,55 +400,56 @@ export default function AdminDashboard() {
               ${isSidebarOpen ? 'text-xl' : 'hidden'} hover:text-[#ffd700] transition-colors`}>
               SJSFI-HRMS
             </span>
-          </div>
+          </Link>
           
           {/* Navigation Menu */}
           <nav className={`flex-1 flex flex-col overflow-y-auto
             ${isSidebarOpen ? 'space-y-1 px-3' : 'space-y-3 px-2'} py-2`}>
-                        {[
-              { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
-              { name: 'Employees', icon: 'fa-users', key: 'employees' },
-              { name: 'Documents', icon: 'fa-file-alt', key: 'document' },
-              { name: 'Leave', icon: 'fa-clipboard', key: 'leave' },
-              { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment' },
-              { name: 'Directory', icon: 'fa-address-book', key: 'directory' },
-              // { name: 'Reports', icon: 'fa-print', key: 'reports' },
+            {[
+              { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard', route: '' },
+              { name: 'Employees', icon: 'fa-users', key: 'employees', route: 'employees' },
+              { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
+              { name: 'Leave', icon: 'fa-clipboard', key: 'leave', route: 'leave' },
+              { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment', route: 'recruitment' },
+              { name: 'Directory', icon: 'fa-address-book', key: 'directory', route: 'directory' },
+              // { name: 'Reports', icon: 'fa-print', key: 'reports', route: 'reports' },
               // Super Admin exclusive items
               ...(userRole === 'super admin' ? [
-                { name: 'Users', icon: 'fa-user-shield', key: 'user-management' },
-                // { name: 'Sessions', icon: 'fa-clock', key: 'session-management' }
+                { name: 'Users', icon: 'fa-user-shield', key: 'user-management', route: 'user-management' },
+                // { name: 'Sessions', icon: 'fa-clock', key: 'session-management', route: 'session-management' }
               ] : [])
-            ].map((item) => (
-              <a
-                key={item.key}
-                href="#"
-                className={`flex items-center rounded-md cursor-pointer transition-colors
-                  ${isSidebarOpen 
-                    ? 'space-x-3 px-3 py-2' 
-                    : 'flex-col justify-center py-2 space-y-1'
-                  }
-                  ${activeButton === item.key ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
-                title={item.name}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleButtonClick(item.key);
-                }}
-              >
-                <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
-                  {typeof item.icon === 'string' ? (
-                    <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
-                  ) : (
-                    (() => {
-                      const Icon = item.icon as React.ComponentType<{ className?: string }>;
-                      return <Icon className={isSidebarOpen ? 'w-6 h-6' : 'w-5 h-5'} />;
-                    })()
-                  )}
-                </div>
-                <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
-                  {item.name}
-                </span>
-              </a>
-            ))}
+            ].map((item) => {
+              const href = item.route ? `/dashboard/admin/${item.route}` : '/dashboard/admin';
+              const isActive = isActiveRoute(item.key);
+              
+              return (
+                <Link
+                  key={item.key}
+                  href={href}
+                  className={`flex items-center rounded-md cursor-pointer transition-colors
+                    ${isSidebarOpen 
+                      ? 'space-x-3 px-3 py-2' 
+                      : 'flex-col justify-center py-2 space-y-1'
+                    }
+                    ${isActive ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
+                  title={item.name}
+                >
+                  <div className={`flex justify-center ${isSidebarOpen ? 'w-8' : 'w-full'}`}>
+                    {typeof item.icon === 'string' ? (
+                      <i className={`fas ${item.icon} ${isSidebarOpen ? 'text-2xl' : 'text-lg'}`}></i>
+                    ) : (
+                      (() => {
+                        const Icon = item.icon as React.ComponentType<{ className?: string }>;
+                        return <Icon className={isSidebarOpen ? 'w-6 h-6' : 'w-5 h-5'} />;
+                      })()
+                    )}
+                  </div>
+                  <span className={`${isSidebarOpen ? 'text-base' : 'text-[10px] text-center w-full'}`}>
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
           </nav>
           {/* Logout Button removed; handled via user menu in header */}
         </div>
@@ -484,15 +463,7 @@ export default function AdminDashboard() {
               {/* Title and Breadcrumb */}
               <div className="flex items-center">
                 <h1 className="text-xl font-bold text-red-700">
-                  {activeButton === 'dashboard' && 'DASHBOARD'}
-                  {activeButton === 'document' && 'DOCUMENTS'}
-                  {activeButton === 'employees' && 'EMPLOYEES'}
-                  {activeButton === 'leave' && 'LEAVE'}
-                  {activeButton === 'recruitment' && 'RECRUITMENT'}
-                  {activeButton === 'directory' && 'DIRECTORY'}
-                  {activeButton === 'reports' && 'REPORTS'}
-                  {activeButton === 'user-management' && 'USER MANAGEMENT'}
-                  {activeButton === 'session-management' && 'SESSION MANAGEMENT'}
+                  {getPageTitle()}
                 </h1>
               </div>
 
@@ -529,7 +500,7 @@ export default function AdminDashboard() {
 
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
-            {renderContent()}
+            {children}
           </main>
         </div>
 
