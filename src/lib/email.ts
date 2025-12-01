@@ -124,7 +124,7 @@ export function generateInterviewScheduleEmail(candidateName: string, vacancyNam
   `;
 }
 
-export function generateStatusUpdateEmail(candidateName: string, vacancyName: string, newStatus: string) {
+export function generateStatusUpdateEmail(candidateName: string, vacancyName: string, newStatus: string, offerLink?: string) {
   let statusMessage = '';
   
   switch(newStatus) {
@@ -135,7 +135,7 @@ export function generateStatusUpdateEmail(candidateName: string, vacancyName: st
       statusMessage = 'Thank you for attending the interview. Our team is currently reviewing your application and we will get back to you with our decision soon.';
       break;
     case 'Offered':
-      statusMessage = 'Congratulations! We would like to offer you the position. You will receive a formal offer letter shortly with more details.';
+      statusMessage = 'Congratulations! We would like to offer you the position. Please complete your employee information using the link below to proceed with your onboarding.';
       break;
     case 'Hired':
       statusMessage = 'Welcome to Saint Joseph School of Fairview Inc.! You will receive additional information about your onboarding process soon.';
@@ -162,6 +162,15 @@ export function generateStatusUpdateEmail(candidateName: string, vacancyName: st
         <p>This email is regarding your application for the <strong>${vacancyName}</strong> position.</p>
         
         <p>${statusMessage}</p>
+        
+        ${newStatus === 'Offered' && offerLink ? `
+        <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; text-align: center; border-left: 4px solid #800000;">
+          <p style="margin: 0 0 15px 0; font-weight: bold;">Next Steps:</p>
+          <p style="margin: 0 0 15px 0;">Please click the link below to submit your employee information:</p>
+          <a href="${offerLink}" style="display: inline-block; background-color: #800000; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0;">Submit Employee Information</a>
+          <p style="margin: 15px 0 0 0; font-size: 12px; color: #666;">This link will expire in 30 days. Please complete the form as soon as possible.</p>
+        </div>
+        ` : ''}
         
         <p>If you have any questions, please contact us at:</p>
         <p style="margin-left: 20px;">
@@ -488,6 +497,58 @@ export function generateNewApplicationNotificationEmail(
         
         <p>Best regards,<br>
         HRMS System<br>
+        Saint Joseph School of Fairview Inc.</p>
+      </div>
+      
+      <div style="background-color: #f5f5f5; padding: 10px; text-align: center; font-size: 12px;">
+        <p>This is an automated message. Please do not reply to this email.</p>
+      </div>
+    </div>
+  `;
+}
+
+export function generateReturnedInfoEmail(
+  candidateName: string,
+  vacancyName: string,
+  returnReason: string,
+  editLink: string
+) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #800000; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">Employee Information Returned</h1>
+      </div>
+      
+      <div style="padding: 20px; border: 1px solid #ddd; border-top: none;">
+        <p>Dear ${candidateName},</p>
+        
+        <p>Thank you for submitting your employee information for the <strong>${vacancyName}</strong> position.</p>
+        
+        <p>After reviewing your submitted information, we need some clarification or corrections. Please review the following:</p>
+        
+        <div style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <h3 style="margin-top: 0; color: #856404;">Return Reason:</h3>
+          <p style="color: #856404; margin-bottom: 0;">${returnReason}</p>
+        </div>
+        
+        <p><strong>Next Steps:</strong></p>
+        <p>Please click the link below to review and update your employee information based on the feedback above, then resubmit:</p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; text-align: center; border-left: 4px solid #800000;">
+          <a href="${editLink}" style="display: inline-block; background-color: #800000; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0;">Edit and Resubmit Information</a>
+          <p style="margin: 15px 0 0 0; font-size: 12px; color: #666;">This link will allow you to update your information and resubmit.</p>
+        </div>
+        
+        <p>We appreciate your attention to these details and look forward to completing your onboarding process.</p>
+        
+        <p>If you have any questions, please contact us at:</p>
+        <p style="margin-left: 20px;">
+          Email: sjsfihrms@gmail.com<br>
+          Phone: (02) 8-693-5661
+        </p>
+        
+        <p>Best regards,<br>
+        HR Department<br>
         Saint Joseph School of Fairview Inc.</p>
       </div>
       

@@ -285,16 +285,41 @@ const Directory = () => {
     try {
       const hire = new Date(hireDate);
       const now = new Date();
-      const years = now.getFullYear() - hire.getFullYear();
-      const months = now.getMonth() - hire.getMonth();
       
-      if (years < 0) return ' ';
-      if (years === 0 && months < 0) return ' ';
+      // Calculate total months difference
+      const yearsDiff = now.getFullYear() - hire.getFullYear();
+      const monthsDiff = now.getMonth() - hire.getMonth();
+      const daysDiff = now.getDate() - hire.getDate();
       
-      if (months < 0) {
-        return `${years - 1} years`;
+      // Calculate total months
+      let totalMonths = yearsDiff * 12 + monthsDiff;
+      
+      // Adjust if the day hasn't been reached yet this month
+      if (daysDiff < 0) {
+        totalMonths--;
       }
-      return `${years} years`;
+      
+      if (totalMonths < 0) return ' ';
+      
+      // If less than 1 month, return "less than a month"
+      if (totalMonths === 0) {
+        return 'less than a month';
+      }
+      
+      // If less than 12 months, return months
+      if (totalMonths < 12) {
+        return `${totalMonths} ${totalMonths === 1 ? 'month' : 'months'}`;
+      }
+      
+      // Otherwise, calculate years and remaining months
+      const years = Math.floor(totalMonths / 12);
+      const remainingMonths = totalMonths % 12;
+      
+      if (remainingMonths === 0) {
+        return `${years} ${years === 1 ? 'year' : 'years'}`;
+      }
+      
+      return `${years} ${years === 1 ? 'year' : 'years'}, ${remainingMonths} ${remainingMonths === 1 ? 'month' : 'months'}`;
     } catch {
       return ' ';
     }

@@ -341,6 +341,9 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
     if (route === 'dashboard') {
       return pathname === '/dashboard/admin' || pathname === '/dashboard/admin/';
     }
+    if (route === 'performance') {
+      return pathname.startsWith('/dashboard/admin/performance');
+    }
     return pathname === `/dashboard/admin/${route}`;
   };
 
@@ -355,6 +358,9 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
       'employees': 'EMPLOYEES',
       'documents': 'DOCUMENTS',
       'leave': 'LEAVE',
+      'performance': 'PERFORMANCE',
+      'disciplinary': 'DISCIPLINARY ACTION',
+      'disciplinary-history': 'DISCIPLINARY HISTORY',
       'recruitment': 'RECRUITMENT',
       'directory': 'DIRECTORY',
       'reports': 'REPORTS',
@@ -410,6 +416,8 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
               { name: 'Employees', icon: 'fa-users', key: 'employees', route: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave', route: 'leave' },
+              { name: 'Performance', icon: 'fa-chart-line', key: 'performance', route: 'performance' },
+              { name: 'Disciplinary Action', icon: 'fa-gavel', key: 'disciplinary', route: 'disciplinary' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment', route: 'recruitment' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory', route: 'directory' },
               // { name: 'Reports', icon: 'fa-print', key: 'reports', route: 'reports' },

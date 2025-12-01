@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { currentUser } from '@clerk/nextjs/server';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const full = searchParams.get('full') === 'true';
+
+    // Get all active categories from DisciplinaryCategory table
+    const categories = await (prisma as any).disciplinaryCategory.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    // Return full objects if requested, otherwise just names for backward compatibility
+    if (full) {
+      return NextResponse.json(categories);
+    }
+    return NextResponse.json(categories.map((c: { name: string }) => c.name));
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch categories' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+
+    if (!body.name) {
+      return NextResponse.json(
+        { error: 'Category name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if category already exists
+    const existing = await (prisma as any).disciplinaryCategory.findUnique({
+      where: { name: body.name },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Category with this name already exists' },
+        { status: 400 }
+      );
+    }
+
+    const category = await (prisma as any).disciplinaryCategory.create({
+      data: {
+        name: body.name,
+        description: body.description,
+        isActive: body.isActive !== undefined ? body.isActive : true,
+        createdBy: user.id,
+      },
+    });
+
+    return NextResponse.json(category, { status: 201 });
+  } catch (error) {
+    console.error('Error creating category:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create category';
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}

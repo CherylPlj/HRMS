@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
 import { sendEmail, generateStatusUpdateEmail, generateInterviewScheduleEmail } from '@/lib/email';
+import crypto from 'crypto';
 
 export async function GET(
   req: NextRequest,
@@ -44,11 +45,13 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Ensure params.id exists
-    if (!params?.id) {
+    const { id } = await params;
+    
+    // Ensure id exists
+    if (!id) {
       return NextResponse.json(
         { error: 'Candidate ID is required' },
         { status: 400 }
@@ -70,6 +73,8 @@ export async function PATCH(
     const resume = formData.get('resume') as File | null;
     const Sex = formData.get('Sex') as string;
     const VacancyID = formData.get('VacancyID') as string;
+    const EmployeeInfoSubmitted = formData.get('EmployeeInfoSubmitted');
+    const ResetSubmittedInfo = formData.get('ResetSubmittedInfo') === 'true';
 
     // Generate FullName from component parts
     const FullName = [LastName, FirstName, MiddleName, ExtensionName]
@@ -89,7 +94,7 @@ export async function PATCH(
     const { data: currentCandidate } = await supabaseAdmin
       .from('Candidate')
       .select('Status, Vacancy (VacancyName)')
-      .eq('CandidateID', params.id)
+      .eq('CandidateID', id)
       .single();
 
     // Get the vacancy name for email notifications
@@ -100,6 +105,18 @@ export async function PATCH(
       .single();
 
     const vacancyName = vacancy?.VacancyName || '';
+
+    // Generate token if status is changing to "Offered"
+    let token: string | null = null;
+    let tokenExpiry: Date | null = null;
+    
+    if (Status === 'Offered' && Status !== currentCandidate?.Status) {
+      // Generate a secure random token
+      token = crypto.randomBytes(32).toString('hex');
+      // Set token expiry to 30 days from now
+      tokenExpiry = new Date();
+      tokenExpiry.setDate(tokenExpiry.getDate() + 30);
+    }
 
     // Prepare update data
     const updateData: any = {
@@ -117,6 +134,21 @@ export async function PATCH(
       Phone: ContactNumber || null,
       DateModified: new Date().toISOString()
     };
+
+    // Handle resetting submitted employee info
+    if (ResetSubmittedInfo) {
+      updateData.EmployeeInfoSubmitted = false;
+      updateData.EmployeeInfoSubmittedDate = null;
+      updateData.SubmittedEmployeeInfo = null;
+    } else if (EmployeeInfoSubmitted !== null) {
+      updateData.EmployeeInfoSubmitted = EmployeeInfoSubmitted === 'true';
+    }
+
+    // Add token and token expiry if status is "Offered"
+    if (token && tokenExpiry) {
+      updateData.Token = token;
+      updateData.TokenExpiry = tokenExpiry.toISOString();
+    }
 
     // Handle resume upload if provided
     if (resume) {
@@ -163,7 +195,7 @@ export async function PATCH(
     const { data: candidate, error } = await supabaseAdmin
       .from('Candidate')
       .update(updateData)
-      .eq('CandidateID', params.id)
+      .eq('CandidateID', id)
       .select('*')
       .single();
 
@@ -204,6 +236,30 @@ export async function PATCH(
             html: generateInterviewScheduleEmail(FullName, vacancyName, formattedInterviewDate)
           });
         } 
+        // For "Offered" status, send email with token link
+        else if (Status === 'Offered') {
+          // Get the token from the updated candidate record
+          const candidateToken = candidate?.Token || token;
+          if (candidateToken) {
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
+              ? `https://${process.env.VERCEL_URL}` 
+              : 'http://localhost:3000');
+            const offerLink = `${baseUrl}/offered-applicant/${candidateToken}`;
+            
+            await sendEmail({
+              to: Email,
+              subject: 'Application Status Update - Saint Joseph School of Fairview Inc.',
+              html: generateStatusUpdateEmail(FullName, vacancyName, Status, offerLink)
+            });
+          } else {
+            // Fallback if token wasn't generated
+            await sendEmail({
+              to: Email,
+              subject: 'Application Status Update - Saint Joseph School of Fairview Inc.',
+              html: generateStatusUpdateEmail(FullName, vacancyName, Status)
+            });
+          }
+        }
         // For all other status changes, send the status update email
         else {
           await sendEmail({

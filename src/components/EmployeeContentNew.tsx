@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync, FaDownload, FaFileCsv, FaFilePdf } from 'react-icons/fa';
+import { useUser } from '@clerk/nextjs';
+import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync, FaDownload, FaFileCsv, FaFilePdf, FaChartLine } from 'react-icons/fa';
 import { Search } from 'lucide-react';
 import MedicalTab from './tabs/MedicalTab';
 import SkillsTab from './tabs/SkillsTab';
@@ -10,6 +11,7 @@ import WorkExperienceTab from './tabs/WorkExperienceTab';
 import PromotionHistoryTab from './tabs/PromotionHistoryTab';
 import ContactInfoTab from './tabs/ContactInfoTab';
 import GovernmentIDsTab from './tabs/GovernmentIDsTab';
+import PerformanceHistoryTab from './tabs/PerformanceHistoryTab';
 
 // Define interfaces for the PDS sections
 interface PersonalInfo {
@@ -162,6 +164,7 @@ interface EmployeeFormState {
   EmergencyContactNumber: string;
   EmployeeType: string;
   SalaryGrade: string;
+  SalaryAmount: number | null;
 
   Education?: Education[];
   EmploymentHistory?: EmploymentHistory[];
@@ -252,6 +255,9 @@ const exportColumnSections = [
 const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt'];
 
 const EmployeeContentNew = () => {
+  const { user } = useUser();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
   // State for active tab
   const [activeTab, setActiveTab] = useState('personal');
   
@@ -309,6 +315,7 @@ const EmployeeContentNew = () => {
     EmergencyContactNumber: '',
     EmployeeType: 'Regular',
     SalaryGrade: '',
+    SalaryAmount: null,
 
     Education: [],
     EmploymentHistory: [],
@@ -385,16 +392,17 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     ContractID: null,
     EmergencyContactName: '',
     EmergencyContactNumber: '',
-    EmployeeType: 'Regular',
-    SalaryGrade: '',
+        EmployeeType: 'Regular',
+        SalaryGrade: '',
+        SalaryAmount: null,
 
-    Education: [],
-    EmploymentHistory: [],
-    MedicalInfo: {},
+        Education: [],
+        EmploymentHistory: [],
+        MedicalInfo: {},
 
-    createdAt: null,
-    updatedAt: null
-  });
+        createdAt: null,
+        updatedAt: null
+      });
 
   // Add new state for photo modal
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -416,6 +424,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     { id: 'family', label: 'Family Background', icon: FaUsers },
     { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
     { id: 'work', label: 'Employment History', icon: FaBriefcase },
+    { id: 'performance', label: 'Performance History', icon: FaChartLine },
     { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
     { id: 'other', label: 'Other Information', icon: FaEllipsisH },
   ];
@@ -572,6 +581,38 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       ]);
     }
   };
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (user?.publicMetadata?.role) {
+        const role = user.publicMetadata.role.toString().toLowerCase();
+        setIsAdmin(role.includes('admin') || role.includes('super admin') || role.includes('superadmin'));
+      } else if (user?.emailAddresses?.[0]?.emailAddress) {
+        // Fallback: check via API
+        try {
+          const response = await fetch('/api/verifyUserRole', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.emailAddresses[0].emailAddress }),
+          });
+          if (response.ok) {
+            const userData = await response.json();
+            const userRoles = userData.Role || [];
+            const hasAdminRole = userRoles.some((role: string) => 
+              role.toLowerCase().includes('admin') || 
+              role.toLowerCase().includes('super admin') ||
+              role.toLowerCase().includes('superadmin')
+            );
+            setIsAdmin(hasAdminRole);
+          }
+        } catch (error) {
+          console.error('Error checking admin role:', error);
+        }
+      }
+    };
+    checkAdminRole();
+  }, [user]);
 
   useEffect(() => {
     fetchDepartments();
@@ -970,6 +1011,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         EmergencyContactNumber: '',
         EmployeeType: 'Regular',
         SalaryGrade: '',
+        SalaryAmount: null,
         Education: [],
         EmploymentHistory: [],
         MedicalInfo: {},
@@ -1294,6 +1336,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       EmergencyContactNumber: '',
       EmployeeType: 'Regular',
       SalaryGrade: '',
+      SalaryAmount: null,
 
       Education: [],
       EmploymentHistory: [],
@@ -1359,6 +1402,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       EmergencyContactNumber: employee.ContactInfo?.EmergencyContactNumber || employee.EmergencyContactNumber || '',
       EmployeeType: employee.EmployeeType || 'Regular',
       SalaryGrade: employee.EmploymentDetail?.SalaryGrade || employee.SalaryGrade || '',
+      SalaryAmount: employee.EmploymentDetail?.SalaryAmount || employee.SalaryAmount || null,
 
       Education: employee.Education || [],
       EmploymentHistory: employee.EmploymentHistory || [],
@@ -1448,6 +1492,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         EmergencyContactName: editEmployee.EmergencyContactName || null,
         EmergencyContactNumber: editEmployee.EmergencyContactNumber || null,
         SalaryGrade: editEmployee.SalaryGrade || null,
+        SalaryAmount: editEmployee.SalaryAmount || null,
         Photo: editEmployee.Photo || null
       };
 
@@ -1872,7 +1917,11 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               </div>
             )}
 
-
+            {activeTab === 'performance' && (
+              <div className="space-y-6">
+                <PerformanceHistoryTab employeeId={selectedEmployee?.EmployeeID || selectedEmployee?.employeeId || ''} />
+              </div>
+            )}
 
             {activeTab === 'medical' && (
               <div className="space-y-6">
@@ -3033,8 +3082,147 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               <div className="overflow-y-auto max-h-[calc(95vh-200px)] flex-1">
                 <div className="p-8">
                   <div className="space-y-8">
-                    {/* Step 1: Basic Information */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                    {/* For admins, only show Employment Details */}
+                    {isAdmin ? (
+                      <>
+                        {/* Step 4: Employment Details - Only section for admins */}
+                        <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-xl p-6">
+                          <div className="flex items-center mb-6">
+                            <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">1</div>
+                            <h3 className="text-xl font-bold text-gray-800">Employment Details</h3>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <label className="flex text-sm font-semibold text-gray-700 items-center">
+                                <span className="text-red-500 mr-1">*</span>
+                                Employment Status
+                              </label>
+                              <select
+                                value={editEmployee.EmploymentStatus}
+                                onChange={(e) => setEditEmployee({...editEmployee, EmploymentStatus: e.target.value})}
+                                required
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              >
+                                <option value="">Select status...</option>
+                                <option value="Regular">Regular</option>
+                                <option value="Probationary">Probationary</option>
+                                <option value="Resigned">Resigned</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="flex text-sm font-semibold text-gray-700 items-center">
+                                <span className="text-red-500 mr-1">*</span>
+                                Hire Date
+                              </label>
+                              <input
+                                type="date"
+                                value={editEmployee.HireDate}
+                                onChange={(e) => setEditEmployee({...editEmployee, HireDate: e.target.value})}
+                                required
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                Resignation Date
+                              </label>
+                              <input
+                                type="date"
+                                value={editEmployee.ResignationDate || ''}
+                                onChange={(e) => setEditEmployee({...editEmployee, ResignationDate: e.target.value || null})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                Position <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={editEmployee.Position}
+                                onChange={(e) => setEditEmployee({...editEmployee, Position: e.target.value})}
+                                placeholder="Position"
+                                required
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                Designation <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                value={editEmployee.Designation || ''}
+                                onChange={(e) => setEditEmployee({...editEmployee, Designation: e.target.value})}
+                                required
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              >
+                                <option value="">Select designation...</option>
+                                <option value="President">President</option>
+                                <option value="Admin_Officer">Admin Officer</option>
+                                <option value="Vice_President">Vice President</option>
+                                <option value="Registrar">Registrar</option>
+                                <option value="Faculty">Faculty</option>
+                                <option value="Principal">Principal</option>
+                                <option value="Cashier">Cashier</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                Department <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                value={editEmployee.DepartmentID || ''}
+                                onChange={(e) => setEditEmployee({...editEmployee, DepartmentID: parseInt(e.target.value) || null})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              >
+                                <option value="">Select department...</option>
+                                {departments.map((dept) => (
+                                  <option key={dept.id} value={dept.id}>
+                                    {dept.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                Salary Grade
+                              </label>
+                              <input
+                                type="text"
+                                value={editEmployee.SalaryGrade}
+                                onChange={(e) => setEditEmployee({...editEmployee, SalaryGrade: e.target.value})}
+                                placeholder="Salary Grade"
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-semibold text-gray-700">
+                                Salary Amount
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editEmployee.SalaryAmount || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value.trim();
+                                  if (value === '') {
+                                    setEditEmployee({...editEmployee, SalaryAmount: null});
+                                  } else {
+                                    const parsed = parseFloat(value);
+                                    setEditEmployee({...editEmployee, SalaryAmount: isNaN(parsed) ? null : parsed});
+                                  }
+                                }}
+                                placeholder="Salary Amount"
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Step 1: Basic Information */}
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
                       <div className="flex items-center mb-6">
                         <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">1</div>
                         <h3 className="text-xl font-bold text-gray-800">Basic Information</h3>
@@ -3454,139 +3642,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                       </div>
                     </div>
 
-                    {/* Step 4: Employment Details */}
-                    <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-xl p-6">
-                      <div className="flex items-center mb-6">
-                        <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">4</div>
-                        <h3 className="text-xl font-bold text-gray-800">Employment Details</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="flex text-sm font-semibold text-gray-700 items-center">
-                            <span className="text-red-500 mr-1">*</span>
-                            Employment Status
-                          </label>
-                          <select
-                            value={editEmployee.EmploymentStatus}
-                            onChange={(e) => setEditEmployee({...editEmployee, EmploymentStatus: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          >
-                            <option value="">Select status...</option>
-                            <option value="Regular">Regular</option>
-                            <option value="Probationary">Probationary</option>
-                            <option value="Resigned">Resigned</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="flex text-sm font-semibold text-gray-700 items-center">
-                            <span className="text-red-500 mr-1">*</span>
-                            Hire Date
-                          </label>
-                          <input
-                            type="date"
-                            value={editEmployee.HireDate}
-                            onChange={(e) => setEditEmployee({...editEmployee, HireDate: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Resignation Date
-                          </label>
-                          <input
-                            type="date"
-                            value={editEmployee.ResignationDate || ''}
-                            onChange={(e) => setEditEmployee({...editEmployee, ResignationDate: e.target.value || null})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Position <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={editEmployee.Position}
-                            onChange={(e) => setEditEmployee({...editEmployee, Position: e.target.value})}
-                            placeholder="Position"
-                            required
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          />
-                  </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Designation <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={editEmployee.Designation || ''}
-                            onChange={(e) => setEditEmployee({...editEmployee, Designation: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          >
-                            <option value="">Select designation...</option>
-                            <option value="President">President</option>
-                            <option value="Admin_Officer">Admin Officer</option>
-                            <option value="Vice_President">Vice President</option>
-                            <option value="Registrar">Registrar</option>
-                            <option value="Faculty">Faculty</option>
-                            <option value="Principal">Principal</option>
-                            <option value="Cashier">Cashier</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Department <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={editEmployee.DepartmentID || ''}
-                            onChange={(e) => setEditEmployee({...editEmployee, DepartmentID: parseInt(e.target.value) || null})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          >
-                            <option value="">Select department...</option>
-                            {departments.map((dept) => (
-                              <option key={dept.id} value={dept.id}>
-                                {dept.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Contract ID
-                          </label>
-                          <input
-                            type="number"
-                            value={editEmployee.ContractID || ''}
-                            onChange={(e) => {
-                              const value = e.target.value.trim();
-                              if (value === '') {
-                                setEditEmployee({...editEmployee, ContractID: null});
-                              } else {
-                                const parsed = parseInt(value);
-                                setEditEmployee({...editEmployee, ContractID: isNaN(parsed) ? null : parsed});
-                              }
-                            }}
-                            placeholder="Contract ID (leave empty if none)"
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Salary Grade
-                          </label>
-                          <input
-                            type="text"
-                            value={editEmployee.SalaryGrade}
-                            onChange={(e) => setEditEmployee({...editEmployee, SalaryGrade: e.target.value})}
-                            placeholder="Salary Grade"
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Step 5: Emergency Contact */}
                     <div className="bg-gradient-to-br from-red-50 to-pink-50 border border-red-200 rounded-xl p-6">
                       <div className="flex items-center mb-6">
@@ -3620,6 +3675,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                         </div>
                       </div>
                     </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

@@ -21,6 +21,7 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { AIDashboard } from "./ai/AIDashboard";
 
 interface User {
   UserID: string;
@@ -1024,6 +1025,16 @@ export default function DashboardContent() {
         </div>
       </div>
 
+      {/* AI Insights Section */}
+      <div className="mt-8">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <FaGraduationCap className="text-[#800000]" />
+            AI Insights & Recommendations
+          </h2>
+          <AIDashboard />
+        </div>
+      </div>
      
     </div>
   );

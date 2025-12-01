@@ -247,7 +247,8 @@ export async function PATCH(
       data.EmploymentStatus !== undefined || 
       data.Designation !== undefined || 
       data.Position !== undefined || 
-      data.SalaryGrade !== undefined;
+      data.SalaryGrade !== undefined ||
+      data.SalaryAmount !== undefined;
 
     // Update or create EmploymentDetail record
     if (employmentFieldsChanged) {
@@ -261,6 +262,7 @@ export async function PATCH(
           Designation: data.Designation || null,
           Position: data.Position || null,
           SalaryGrade: data.SalaryGrade || null,
+          SalaryAmount: data.SalaryAmount !== undefined ? (data.SalaryAmount || null) : undefined,
           updatedAt: new Date().toISOString()
         }, {
           onConflict: 'employeeId'

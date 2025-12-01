@@ -276,6 +276,9 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
     if (route === 'dashboard') {
       return pathname === '/dashboard/employee' || pathname === '/dashboard/employee/';
     }
+    if (route === 'performance') {
+      return pathname.startsWith('/dashboard/employee/performance');
+    }
     return pathname === `/dashboard/employee/${route}`;
   };
 
@@ -292,6 +295,8 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
       'personal-data': 'PERSONAL DATA',
       'documents': 'DOCUMENTS',
       'leave': 'LEAVE REQUEST',
+      'performance': 'PERFORMANCE',
+      'disciplinary-records': 'DISCIPLINARY RECORDS',
       'directory': 'DIRECTORY',
       'reports': 'REPORTS',
     };
@@ -344,6 +349,8 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data', route: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
               { name: 'Leave Request', icon: 'fa-envelope', key: 'leave', route: 'leave' },
+              { name: 'Performance', icon: 'fa-chart-line', key: 'performance', route: 'performance' },
+              { name: 'Disciplinary Records', icon: 'fa-gavel', key: 'disciplinary-records', route: 'disciplinary-records' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory', route: 'directory' },
               // { name: 'Reports', icon: 'fa-print', key: 'reports', route: 'reports' },
             ].map((item) => {

@@ -209,6 +209,9 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
     if (route === 'dashboard') {
       return pathname === '/dashboard/faculty' || pathname === '/dashboard/faculty/';
     }
+    if (route === 'performance') {
+      return pathname.startsWith('/dashboard/faculty/performance');
+    }
     return pathname === `/dashboard/faculty/${route}`;
   };
 
@@ -223,6 +226,7 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
       'personal-data': 'PERSONAL DATA',
       'documents': 'DOCUMENTS',
       'leave': 'LEAVE REQUEST',
+      'disciplinary-records': 'DISCIPLINARY RECORDS',
       'directory': 'DIRECTORY',
       'reports': 'REPORTS',
     };
@@ -275,6 +279,8 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data', route: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
               { name: 'Leave Request', icon: 'fa-envelope', key: 'leave', route: 'leave' },
+              { name: 'Performance', icon: 'fa-chart-line', key: 'performance', route: 'performance' },
+              { name: 'Disciplinary Records', icon: 'fa-gavel', key: 'disciplinary-records', route: 'disciplinary-records' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory', route: 'directory' },
               // { name: 'Reports', icon: 'fa-print', key: 'reports', route: 'reports' },
             ].map((item) => {
