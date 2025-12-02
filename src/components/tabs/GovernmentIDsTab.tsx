@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaEdit, FaCheck, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { maskGovtId } from '@/lib/formValidation';
 interface GovernmentIDs {
   SSSNumber?: string | null;
   TINNumber?: string | null;
@@ -92,6 +93,9 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
     onInputChange(field, formatted);
   };
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [revealedIds, setRevealedIds] = useState<Set<keyof GovernmentIDs>>(new Set());
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [revealedIdsVersion, setRevealedIdsVersion] = useState(0);
 
   // Auto-hide notification after 5 seconds
   useEffect(() => {
@@ -102,6 +106,104 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
       return () => clearTimeout(timer);
     }
   }, [notification]);
+
+  // Auto-hide revealed IDs after 5 seconds
+  useEffect(() => {
+    // Clear any existing timer
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
+    if (revealedIds.size > 0) {
+      hideTimerRef.current = setTimeout(() => {
+        setRevealedIds(new Set());
+        setRevealedIdsVersion(prev => prev + 1);
+        hideTimerRef.current = null;
+      }, 5000);
+    }
+
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+    };
+  }, [revealedIds.size, revealedIdsVersion]);
+
+  const toggleReveal = (field: keyof GovernmentIDs) => {
+    // Clear existing timer when toggling
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
+    setRevealedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(field)) {
+        newSet.delete(field);
+      } else {
+        newSet.add(field);
+      }
+      return newSet;
+    });
+    // Increment version to trigger useEffect after state update
+    setRevealedIdsVersion(v => v + 1);
+  };
+
+  const renderLabelWithEye = (field: keyof GovernmentIDs, labelText: string, value: string | null | undefined) => {
+    if (!value) {
+      return (
+        <label className="block text-sm font-medium text-gray-700">
+          {labelText}
+        </label>
+      );
+    }
+
+    const isRevealed = revealedIds.has(field);
+    
+    return (
+      <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+        <span>{labelText}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleReveal(field);
+          }}
+          className="text-gray-500 hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+          title={isRevealed ? 'Hide ID' : 'Show ID'}
+          aria-label={isRevealed ? 'Hide ID' : 'Show ID'}
+        >
+          {isRevealed ? (
+            <FaEyeSlash className="w-4 h-4" />
+          ) : (
+            <FaEye className="w-4 h-4" />
+          )}
+        </button>
+      </label>
+    );
+  };
+
+  const renderMaskedID = (field: keyof GovernmentIDs, value: string | null | undefined) => {
+    if (!value) {
+      return (
+        <p className="mt-1 text-sm text-gray-900">
+          No ID number has been entered yet.
+        </p>
+      );
+    }
+    
+    const isRevealed = revealedIds.has(field);
+    const displayValue = isRevealed ? value : maskGovtId(value);
+    
+    return (
+      <p className="mt-1 text-sm text-gray-900">
+        {displayValue}
+      </p>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -156,7 +258,7 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
       {/* Government IDs Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">SSS Number</label>
+          {renderLabelWithEye('SSSNumber', 'SSS Number', governmentIDs?.SSSNumber)}
           {isEditing ? (
             <input
               type="text"
@@ -169,12 +271,12 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               maxLength={12}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.SSSNumber || 'No ID number has been entered yet.'}</p>
+            renderMaskedID('SSSNumber', governmentIDs?.SSSNumber)
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">TIN Number</label>
+          {renderLabelWithEye('TINNumber', 'TIN Number', governmentIDs?.TINNumber)}
           {isEditing ? (
             <input
               type="text"
@@ -187,12 +289,12 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               maxLength={11}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.TINNumber || 'No ID number has been entered yet.'}</p>
+            renderMaskedID('TINNumber', governmentIDs?.TINNumber)
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">PhilHealth Number</label>
+          {renderLabelWithEye('PhilHealthNumber', 'PhilHealth Number', governmentIDs?.PhilHealthNumber)}
           {isEditing ? (
             <input
               type="text"
@@ -205,12 +307,12 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               maxLength={13}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PhilHealthNumber || 'No ID number has been entered yet.'}</p>
+            renderMaskedID('PhilHealthNumber', governmentIDs?.PhilHealthNumber)
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Pag-IBIG Number</label>
+          {renderLabelWithEye('PagIbigNumber', 'Pag-IBIG Number', governmentIDs?.PagIbigNumber)}
           {isEditing ? (
             <input
               type="text"
@@ -223,12 +325,12 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               maxLength={14}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PagIbigNumber || 'No ID number has been entered yet.'}</p>
+            renderMaskedID('PagIbigNumber', governmentIDs?.PagIbigNumber)
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">GSIS Number</label>
+          {renderLabelWithEye('GSISNumber', 'GSIS Number', governmentIDs?.GSISNumber)}
           {isEditing ? (
             <input
               type="text"
@@ -241,12 +343,12 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               maxLength={11}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.GSISNumber || 'No ID number has been entered yet.'}</p>
+            renderMaskedID('GSISNumber', governmentIDs?.GSISNumber)
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">PRC License Number</label>
+          {renderLabelWithEye('PRCLicenseNumber', 'PRC License Number', governmentIDs?.PRCLicenseNumber)}
           {isEditing ? (
             <input
               type="text"
@@ -259,7 +361,7 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
               maxLength={7}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{governmentIDs?.PRCLicenseNumber || 'No ID number has been entered yet.'}</p>
+            renderMaskedID('PRCLicenseNumber', governmentIDs?.PRCLicenseNumber)
           )}
         </div>
 

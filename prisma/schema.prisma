@@ -653,7 +653,7 @@ model trainings {
 model PerformanceReview {
   id              String                @id @default(cuid())
   employeeId      String
-  reviewerId      String
+  reviewerId      String?              // Made optional - not all employees have user accounts
   period          String?               // e.g., "Q1 2024"
   startDate       DateTime              @db.Date
   endDate         DateTime              @db.Date
@@ -674,7 +674,7 @@ model PerformanceReview {
   reviewedAt      DateTime?             // When the review was completed
   approvedAt      DateTime?             // When the review was approved
   employee        Employee              @relation(fields: [employeeId], references: [EmployeeID])
-  reviewer        User                  @relation("PerformanceReviewer", fields: [reviewerId], references: [UserID])
+  reviewer        User?                 @relation("PerformanceReviewer", fields: [reviewerId], references: [UserID])
   performanceGoals PerformanceGoal[]     @relation("ReviewGoals")
 
   @@index([employeeId])
@@ -1203,6 +1203,7 @@ model PerformanceModule {
   updatedAt           DateTime            @updatedAt
   employee            Employee            @relation(fields: [employeeId], references: [EmployeeID])
   trainingRecommendations TrainingRecommendation[]
+  promotionRecommendations PromotionRecommendation[]
   
   @@index([employeeId])
   @@index([promotionEligibilityScore])
@@ -1228,6 +1229,30 @@ model TrainingRecommendation {
   @@index([performanceModuleId])
   @@index([priority])
   @@index([status])
+}
+
+model PromotionRecommendation {
+  id                    String            @id @default(cuid())
+  performanceModuleId   String
+  recommendedPosition   String
+  recommendedSalaryGrade String?
+  recommendedSalaryAmount Decimal?         @db.Decimal(10, 2)
+  promotionReason       String?           @db.Text
+  eligibilityScore      Decimal?          @db.Decimal(5, 2)
+  priority              PromotionPriority  @default(Medium)
+  status                PromotionRecommendationStatus @default(Pending)
+  aiGenerated           Boolean           @default(true)
+  approvedBy            String?
+  approvedAt            DateTime?
+  rejectedReason        String?           @db.Text
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  performanceModule     PerformanceModule @relation(fields: [performanceModuleId], references: [id], onDelete: Cascade)
+  
+  @@index([performanceModuleId])
+  @@index([priority])
+  @@index([status])
+  @@index([eligibilityScore])
 }
 
 model CandidateScreening {
@@ -1326,6 +1351,21 @@ enum TrainingRecommendationStatus {
   Rejected
   Completed
   InProgress
+}
+
+enum PromotionPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum PromotionRecommendationStatus {
+  Pending
+  Approved
+  Rejected
+  UnderReview
+  Completed
 }
 
 enum CandidateRecommendation {

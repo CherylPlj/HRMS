@@ -9,6 +9,7 @@ import {
   sanitizePhone,
   sanitizeUrl,
   sanitizeGovtId,
+  maskGovtId,
   validateEmail,
   validatePhone,
   validateUrl,
@@ -1080,37 +1081,37 @@ const OfferedApplicantPage = () => {
                   {employeeInfo.SSSNumber && (
                     <div>
                       <label className="text-sm text-gray-600">SSS Number</label>
-                      <p className="font-medium">{employeeInfo.SSSNumber}</p>
+                      <p className="font-medium">{maskGovtId(employeeInfo.SSSNumber)}</p>
                     </div>
                   )}
                   {employeeInfo.TINNumber && (
                     <div>
                       <label className="text-sm text-gray-600">TIN Number</label>
-                      <p className="font-medium">{employeeInfo.TINNumber}</p>
+                      <p className="font-medium">{maskGovtId(employeeInfo.TINNumber)}</p>
                     </div>
                   )}
                   {employeeInfo.PhilHealthNumber && (
                     <div>
                       <label className="text-sm text-gray-600">PhilHealth Number</label>
-                      <p className="font-medium">{employeeInfo.PhilHealthNumber}</p>
+                      <p className="font-medium">{maskGovtId(employeeInfo.PhilHealthNumber)}</p>
                     </div>
                   )}
                   {employeeInfo.PagIbigNumber && (
                     <div>
                       <label className="text-sm text-gray-600">Pag-IBIG Number</label>
-                      <p className="font-medium">{employeeInfo.PagIbigNumber}</p>
+                      <p className="font-medium">{maskGovtId(employeeInfo.PagIbigNumber)}</p>
                     </div>
                   )}
                   {employeeInfo.GSISNumber && (
                     <div>
                       <label className="text-sm text-gray-600">GSIS Number</label>
-                      <p className="font-medium">{employeeInfo.GSISNumber}</p>
+                      <p className="font-medium">{maskGovtId(employeeInfo.GSISNumber)}</p>
                     </div>
                   )}
                   {employeeInfo.PRCLicenseNumber && (
                     <div>
                       <label className="text-sm text-gray-600">PRC License Number</label>
-                      <p className="font-medium">{employeeInfo.PRCLicenseNumber}</p>
+                      <p className="font-medium">{maskGovtId(employeeInfo.PRCLicenseNumber)}</p>
                     </div>
                   )}
                   {employeeInfo.PRCValidity && (

@@ -10,6 +10,8 @@ import DisciplinaryHistoryContent from './DisciplinaryHistoryContent';
 import DisciplinaryDashboard from './DisciplinaryDashboard';
 import DisciplinarySettings from './DisciplinarySettings';
 import CaseViewModal from './CaseViewModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
+import SuccessModal from './SuccessModal';
 import Pagination from './Pagination';
 import {
   fetchDisciplinaryRecords,
@@ -64,6 +66,16 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<DisciplinaryRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Success modal state
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [successRecordInfo, setSuccessRecordInfo] = useState<{ caseNo?: string; employee?: string } | null>(null);
 
   // Fetch data from API
   const fetchRecords = useCallback(async () => {
@@ -141,8 +153,16 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
     const fetchSettings = async () => {
       try {
         const [categories, violationTypes] = await Promise.all([
-          fetchCategories(),
-          fetchViolationTypes({ isActive: true }),
+          fetchCategories().catch((err) => {
+            console.error('Error fetching categories:', err);
+            toast.error('Failed to load categories. Please try again or add categories in Settings.');
+            return []; // Return empty array as fallback
+          }),
+          fetchViolationTypes({ isActive: true }).catch((err) => {
+            console.error('Error fetching violation types:', err);
+            toast.error('Failed to load violation types.');
+            return []; // Return empty array as fallback
+          }),
         ]);
         
         setCategoriesList(categories);
@@ -154,6 +174,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
         })));
       } catch (err) {
         console.error('Error fetching settings:', err);
+        toast.error('Failed to load disciplinary settings. Please refresh the page.');
       }
     };
 
@@ -191,22 +212,30 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
 
   const handleViewRecord = (record: DisciplinaryRecord) => {
     setViewingRecord(record);
-    setEditingRecord(record);
+    setEditingRecord(null); // Don't set editingRecord for view mode
     setIsModalOpen(true);
   };
 
-  const handleDeleteRecord = async (recordId: string) => {
-    if (!window.confirm('Are you sure you want to delete this disciplinary record?')) {
-      return;
-    }
+  const handleDeleteRecord = (record: DisciplinaryRecord) => {
+    setRecordToDelete(record);
+    setIsDeleteModalOpen(true);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await deleteDisciplinaryRecord(recordId);
+      await deleteDisciplinaryRecord(recordToDelete.id);
       toast.success('Record deleted successfully');
+      setIsDeleteModalOpen(false);
+      setRecordToDelete(null);
       fetchRecords(); // Refresh list
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
       toast.error(errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -232,7 +261,14 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
           offenseCount: recordData.offenseCount,
         });
         recordId = updated.id;
-        toast.success('Record updated successfully');
+        
+        // Show success modal for update
+        setSuccessMessage('The disciplinary record has been updated successfully.');
+        setSuccessRecordInfo({
+          caseNo: editingRecord.caseNo,
+          employee: editingRecord.employee,
+        });
+        setIsSuccessModalOpen(true);
       } else {
         // Create new record
         if (!recordData.employeeId) {
@@ -291,10 +327,13 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
         }
       }
       
+      // Close the edit/view modal
       setIsModalOpen(false);
       setEditingRecord(null);
       setViewingRecord(null);
-      fetchRecords(); // Refresh list
+      
+      // Refresh list (but don't wait for it to complete before showing success modal)
+      fetchRecords();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save record';
       toast.error(errorMessage);
@@ -835,7 +874,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
         </>
       )}
 
-          {/* Add/Edit Modal */}
+          {/* Add/Edit/View Modal */}
           <CaseViewModal
             isOpen={isModalOpen}
             onClose={() => {
@@ -844,11 +883,37 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
               setViewingRecord(null);
             }}
             onSubmit={handleSubmitRecord}
-            record={editingRecord}
+            record={viewingRecord || editingRecord}
             employees={employees}
             supervisors={adminEmployees}
             categories={categoriesList}
             violationTypes={violationTypesList}
+            viewMode={!!viewingRecord && !editingRecord}
+          />
+
+          {/* Delete Confirmation Modal */}
+          <DeleteConfirmationModal
+            isOpen={isDeleteModalOpen}
+            onClose={() => {
+              setIsDeleteModalOpen(false);
+              setRecordToDelete(null);
+            }}
+            onConfirm={handleConfirmDelete}
+            record={recordToDelete}
+            isDeleting={isDeleting}
+          />
+
+          {/* Success Modal */}
+          <SuccessModal
+            isOpen={isSuccessModalOpen}
+            onClose={() => {
+              setIsSuccessModalOpen(false);
+              setSuccessMessage('');
+              setSuccessRecordInfo(null);
+            }}
+            title="Record Updated Successfully!"
+            message={successMessage}
+            recordInfo={successRecordInfo || undefined}
           />
 
           {/* Import Modal */}

@@ -9,6 +9,7 @@ import SeverityTag from './SeverityTag';
 import StatusTag from './StatusTag';
 import FileThumbnail from './FileThumbnail';
 import EvidencePreviewModal from './EvidencePreviewModal';
+import Pagination from './Pagination';
 import { EvidenceFile } from '@/types/disciplinary';
 import { mockDisciplinaryRecords } from './mockData';
 
@@ -33,6 +34,8 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
   } | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<DisciplinaryRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Fetch user's Employee ID
   useEffect(() => {
@@ -96,6 +99,7 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
     );
     setRecords(filteredRecords);
     setLoading(false);
+    setCurrentPage(1); // Reset to first page when records change
 
     // Future implementation:
     // const response = await fetch(`/api/disciplinary/my-records?employeeId=${employeeId}`);
@@ -144,6 +148,24 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
     };
   }, [records]);
 
+  // Calculate pagination
+  const totalPages = Math.ceil(records.length / itemsPerPage);
+  const paginatedRecords = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return records.slice(startIndex, endIndex);
+  }, [records, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -157,12 +179,12 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div>
+        {/* <div>
           <h2 className="text-2xl font-bold text-gray-900">My Disciplinary Records</h2>
           <p className="text-sm text-gray-600 mt-1">
             View your disciplinary action history and case details
           </p>
-        </div>
+        </div> */}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -233,7 +255,7 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {records.map((record) => (
+                  {paginatedRecords.map((record) => (
                     <tr
                       key={record.id}
                       className="hover:bg-gray-50 transition-colors"
@@ -296,6 +318,18 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
               </table>
             </div>
           </div>
+        )}
+
+        {/* Pagination */}
+        {records.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={records.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         )}
       </div>
 

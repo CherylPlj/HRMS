@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'react-hot-toast'
 import PerformanceSummaryCard from '@/components/performance/PerformanceSummaryCard'
 import ScoreBadge from '@/components/performance/ScoreBadge'
 import ReviewTable from '@/components/performance/ReviewTable'
@@ -22,22 +23,30 @@ import KPIFormModal, { KPIFormData } from '@/components/performance/KPIFormModal
 import Pagination from '@/components/disciplinary/Pagination'
 import { TrendingUp, Users, BookOpen, FileText, ClipboardList, GraduationCap, TrendingUp as TrendingUpIcon, Plus, Eye, Target } from 'lucide-react'
 import {
-  mockPerformanceSummary,
-  mockTopPerformers,
-  mockEmployeesNeedingImprovement,
-  mockPerformanceReviews,
-  mockTrainingRecommendations,
-  mockPromotionRecommendations,
   mockEmployees,
   mockReviewers,
-  mockKPIs,
 } from '@/components/performance/mockData'
-import { PerformanceReview, KPI } from '@/types/performance'
+import { PerformanceReview, KPI, Employee, TrainingRecommendation, PromotionRecommendation } from '@/types/performance'
+import {
+  fetchPerformanceReviews,
+  fetchKPIs,
+  fetchDashboardSummary,
+  createPerformanceReview,
+  updatePerformanceReview,
+  createKPI,
+  updateKPI,
+  deleteKPI,
+  transformPerformanceReview,
+  transformKPI,
+} from '@/lib/performanceApi'
 
 export default function PerformanceDashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [reviews, setReviews] = useState<PerformanceReview[]>(mockPerformanceReviews)
-  const [kpis, setKPIs] = useState<KPI[]>(mockKPIs)
+  const [reviews, setReviews] = useState<PerformanceReview[]>([])
+  const [kpis, setKPIs] = useState<KPI[]>([])
+  const [dashboardSummary, setDashboardSummary] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [kpisLoading, setKpisLoading] = useState(true)
   
   // Pagination states for Reviews tab
   const [reviewsCurrentPage, setReviewsCurrentPage] = useState(1)
@@ -46,14 +55,28 @@ export default function PerformanceDashboardPage() {
   // Pagination states for Training tab
   const [trainingCurrentPage, setTrainingCurrentPage] = useState(1)
   const [trainingItemsPerPage, setTrainingItemsPerPage] = useState(10)
+  const [trainingRecommendations, setTrainingRecommendations] = useState<TrainingRecommendation[]>([])
+  const [trainingLoading, setTrainingLoading] = useState(false)
+  const [trainingTotalPages, setTrainingTotalPages] = useState(1)
+  const [trainingTotalItems, setTrainingTotalItems] = useState(0)
   
   // Pagination states for Promotions tab
   const [promotionsCurrentPage, setPromotionsCurrentPage] = useState(1)
   const [promotionsItemsPerPage, setPromotionsItemsPerPage] = useState(10)
+  const [promotionRecommendations, setPromotionRecommendations] = useState<PromotionRecommendation[]>([])
+  const [promotionsLoading, setPromotionsLoading] = useState(false)
+  const [promotionsTotalPages, setPromotionsTotalPages] = useState(1)
+  const [promotionsTotalItems, setPromotionsTotalItems] = useState(0)
   
   // Pagination states for KPIs tab
   const [kpisCurrentPage, setKpisCurrentPage] = useState(1)
   const [kpisItemsPerPage, setKpisItemsPerPage] = useState(10)
+  const [kpisTotalPages, setKpisTotalPages] = useState(1)
+  const [kpisTotalItems, setKpisTotalItems] = useState(0)
+  
+  // Employee and reviewer lists
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [reviewers, setReviewers] = useState<Employee[]>([])
   
   // Modal states
   const [viewModalOpen, setViewModalOpen] = useState(false)
@@ -106,43 +129,36 @@ export default function PerformanceDashboardPage() {
     setFormModalOpen(true)
   }
 
-  const handleSubmitReview = (data: ReviewFormData) => {
-    console.log('Review submitted (static):', data)
-    // In a real app, this would save to the backend
-    // For now, just update the local state if editing
-    if (isEditMode && selectedReview) {
-      const updatedReviews = reviews.map((r) =>
-        r.id === selectedReview.id
-          ? {
-              ...r,
-              ...data,
-              employeeName: mockEmployees.find((e) => e.id === data.employeeId)?.name || r.employeeName,
-              reviewerName: mockReviewers.find((e) => e.id === data.reviewerId)?.name || r.reviewerName,
-            }
-          : r
-      )
-      setReviews(updatedReviews)
-    } else {
-      // Add new review
-      const newReview: PerformanceReview = {
-        id: `REV${Date.now()}`,
-        employeeId: data.employeeId,
-        employeeName: mockEmployees.find((e) => e.id === data.employeeId)?.name || '',
-        reviewerId: data.reviewerId,
-        reviewerName: mockReviewers.find((e) => e.id === data.reviewerId)?.name || '',
-        period: `Q${Math.floor(new Date(data.startDate).getMonth() / 3) + 1} ${new Date(data.startDate).getFullYear()}`,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        kpiScore: data.kpiScore,
-        behaviorScore: data.behaviorScore,
-        attendanceScore: data.attendanceScore,
-        totalScore: data.totalScore,
-        status: 'draft',
-        remarks: data.remarks,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+  const handleSubmitReview = async (data: ReviewFormData) => {
+    try {
+      if (isEditMode && selectedReview) {
+        const updated = await updatePerformanceReview(selectedReview.id, {
+          ...data,
+          period: `Q${Math.floor(new Date(data.startDate).getMonth() / 3) + 1} ${new Date(data.startDate).getFullYear()}`,
+        })
+        setReviews(reviews.map((r) => (r.id === selectedReview.id ? updated : r)))
+        toast.success('Performance review updated successfully!', {
+          duration: 4000,
+          icon: '✅',
+        })
+      } else {
+        const newReview = await createPerformanceReview({
+          ...data,
+          period: `Q${Math.floor(new Date(data.startDate).getMonth() / 3) + 1} ${new Date(data.startDate).getFullYear()}`,
+          status: 'draft',
+        })
+        setReviews([...reviews, newReview])
+        toast.success('Performance review created successfully!', {
+          duration: 4000,
+          icon: '✅',
+        })
       }
-      setReviews([...reviews, newReview])
+      setFormModalOpen(false)
+      fetchReviews()
+      fetchDashboard()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save review'
+      toast.error(errorMessage)
     }
   }
 
@@ -158,33 +174,36 @@ export default function PerformanceDashboardPage() {
     setKpiFormModalOpen(true)
   }
 
-  const handleDeleteKPI = (kpiId: string) => {
+  const handleDeleteKPI = async (kpiId: string) => {
     if (confirm('Are you sure you want to delete this KPI/metric? This action cannot be undone.')) {
-      setKPIs(kpis.filter((k) => k.id !== kpiId))
+      try {
+        await deleteKPI(kpiId)
+        setKPIs(kpis.filter((k) => k.id !== kpiId))
+        toast.success('KPI deleted successfully')
+        fetchKPIsData()
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete KPI'
+        toast.error(errorMessage)
+      }
     }
   }
 
-  const handleSubmitKPI = (data: KPIFormData) => {
-    console.log('KPI submitted (static):', data)
-    if (isKPIEditMode && selectedKPI) {
-      const updatedKPIs = kpis.map((k) =>
-        k.id === selectedKPI.id
-          ? {
-              ...k,
-              ...data,
-              updatedAt: new Date().toISOString(),
-            }
-          : k
-      )
-      setKPIs(updatedKPIs)
-    } else {
-      const newKPI: KPI = {
-        id: `KPI${Date.now()}`,
-        ...data,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+  const handleSubmitKPI = async (data: KPIFormData) => {
+    try {
+      if (isKPIEditMode && selectedKPI) {
+        const updated = await updateKPI(selectedKPI.id, data)
+        setKPIs(kpis.map((k) => (k.id === selectedKPI.id ? updated : k)))
+        toast.success('KPI updated successfully')
+      } else {
+        const newKPI = await createKPI(data)
+        setKPIs([...kpis, newKPI])
+        toast.success('KPI created successfully')
       }
-      setKPIs([...kpis, newKPI])
+      setKpiFormModalOpen(false)
+      fetchKPIsData()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save KPI'
+      toast.error(errorMessage)
     }
   }
 
@@ -195,6 +214,212 @@ export default function PerformanceDashboardPage() {
   const handleApprovePromotion = (promotion: any) => {
     console.log('Approve promotion clicked (static):', promotion)
   }
+
+  const handleAnalyzePromotions = async () => {
+    try {
+      // Show confirmation for large batches
+      const confirmMessage = 'This will analyze employees using AI. To avoid exceeding quota, only 50 employees will be analyzed per run, and employees analyzed in the last 7 days will be skipped. Continue?'
+      if (!confirm(confirmMessage)) return
+
+      toast.loading('Starting promotion analysis... This may take several minutes.', { id: 'analyze-promotions' })
+      
+      const response = await fetch('/api/performance/analyze-promotions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxEmployees: 50, // Limit to 50 per request
+          skipRecent: true, // Skip recently analyzed
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to analyze')
+      
+      toast.success(data.message || 'Promotion analysis completed', { id: 'analyze-promotions' })
+      // Refresh promotion recommendations
+      if (activeTab === 'promotions') {
+        fetchPromotionRecommendations()
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to analyze promotions', { id: 'analyze-promotions' })
+    }
+  }
+
+  const handleAnalyzeTraining = async () => {
+    try {
+      // Show confirmation for large batches
+      const confirmMessage = 'This will analyze employees using AI. To avoid exceeding quota, only 50 employees will be analyzed per run, and employees analyzed in the last 7 days will be skipped. Continue?'
+      if (!confirm(confirmMessage)) return
+
+      toast.loading('Starting training analysis... This may take several minutes.', { id: 'analyze-training' })
+      
+      const response = await fetch('/api/performance/analyze-training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxEmployees: 50, // Limit to 50 per request
+          skipRecent: true, // Skip recently analyzed
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to analyze')
+      
+      toast.success(data.message || 'Training analysis completed', { id: 'analyze-training' })
+      // Refresh training recommendations
+      if (activeTab === 'training') {
+        fetchTrainingRecommendations()
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to analyze training needs', { id: 'analyze-training' })
+    }
+  }
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const response = await fetchPerformanceReviews({
+        page: reviewsCurrentPage,
+        limit: reviewsItemsPerPage,
+      })
+      const transformedReviews = response.reviews.map(transformPerformanceReview)
+      setReviews(transformedReviews)
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+      toast.error('Failed to fetch reviews')
+    }
+  }, [reviewsCurrentPage, reviewsItemsPerPage])
+
+  const fetchKPIsData = useCallback(async () => {
+    try {
+      setKpisLoading(true)
+      const response = await fetchKPIs({
+        page: kpisCurrentPage,
+        limit: kpisItemsPerPage,
+      })
+      const transformedKPIs = response.kpis.map(transformKPI)
+      setKPIs(transformedKPIs)
+      setKpisTotalPages(response.pagination.totalPages)
+      setKpisTotalItems(response.pagination.total)
+    } catch (error) {
+      console.error('Error fetching KPIs:', error)
+      toast.error('Failed to fetch KPIs')
+    } finally {
+      setKpisLoading(false)
+    }
+  }, [kpisCurrentPage, kpisItemsPerPage])
+
+  const fetchDashboard = useCallback(async () => {
+    try {
+      const summary = await fetchDashboardSummary()
+      setDashboardSummary(summary)
+    } catch (error) {
+      console.error('Error fetching dashboard summary:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const response = await fetch('/api/employees?all=true')
+      if (!response.ok) throw new Error('Failed to fetch employees')
+      const data = await response.json()
+      
+      const employeesList = (data.employees || data).map((emp: any) => ({
+        id: emp.EmployeeID,
+        name: `${emp.FirstName} ${emp.MiddleName || ''} ${emp.LastName}`.trim(),
+        department: emp.Department?.DepartmentName || '',
+        position: emp.EmploymentDetail?.[0]?.Position || '',
+        email: emp.ContactInfo?.[0]?.Email || '',
+      }))
+      
+      setEmployees(employeesList)
+    } catch (error) {
+      console.error('Error fetching employees:', error)
+      toast.error('Failed to load employees')
+    }
+  }, [])
+
+  const fetchReviewers = useCallback(async () => {
+    try {
+      // Fetch employees from Admin department (same as disciplinary module)
+      const employeesResponse = await fetch('/api/employees?all=true')
+      if (!employeesResponse.ok) throw new Error('Failed to fetch employees')
+      const employeesData = await employeesResponse.json()
+      
+      // Filter employees from Admin department
+      const reviewersList = (employeesData.employees || employeesData)
+        .filter((emp: any) => emp.Department?.DepartmentName === 'Admin')
+        .map((emp: any) => ({
+          id: emp.EmployeeID, // Use EmployeeID - backend will convert to UserID
+          name: `${emp.FirstName} ${emp.MiddleName || ''} ${emp.LastName}`.trim(),
+          department: emp.Department?.DepartmentName || '',
+          position: emp.EmploymentDetail?.[0]?.Position || '',
+          email: emp.ContactInfo?.[0]?.Email || '',
+        }))
+      
+      setReviewers(reviewersList)
+    } catch (error) {
+      console.error('Error fetching reviewers:', error)
+      toast.error('Failed to load reviewers')
+    }
+  }, [])
+
+  const fetchTrainingRecommendations = useCallback(async () => {
+    try {
+      setTrainingLoading(true)
+      const response = await fetch(
+        `/api/performance/training-recommendations?page=${trainingCurrentPage}&limit=${trainingItemsPerPage}`
+      )
+      if (!response.ok) throw new Error('Failed to fetch training recommendations')
+      const data = await response.json()
+      setTrainingRecommendations(data.recommendations)
+      setTrainingTotalPages(data.pagination.totalPages)
+      setTrainingTotalItems(data.pagination.total)
+    } catch (error) {
+      console.error('Error fetching training recommendations:', error)
+      toast.error('Failed to load training recommendations')
+    } finally {
+      setTrainingLoading(false)
+    }
+  }, [trainingCurrentPage, trainingItemsPerPage])
+
+  const fetchPromotionRecommendations = useCallback(async () => {
+    try {
+      setPromotionsLoading(true)
+      const response = await fetch(
+        `/api/performance/promotion-recommendations?page=${promotionsCurrentPage}&limit=${promotionsItemsPerPage}`
+      )
+      if (!response.ok) throw new Error('Failed to fetch promotion recommendations')
+      const data = await response.json()
+      setPromotionRecommendations(data.recommendations)
+      setPromotionsTotalPages(data.pagination.totalPages)
+      setPromotionsTotalItems(data.pagination.total)
+    } catch (error) {
+      console.error('Error fetching promotion recommendations:', error)
+      toast.error('Failed to load promotion recommendations')
+    } finally {
+      setPromotionsLoading(false)
+    }
+  }, [promotionsCurrentPage, promotionsItemsPerPage])
+
+  useEffect(() => {
+    fetchDashboard()
+    fetchReviews()
+    fetchKPIsData()
+    fetchEmployees()
+    fetchReviewers()
+  }, [fetchDashboard, fetchReviews, fetchKPIsData, fetchEmployees, fetchReviewers])
+
+  useEffect(() => {
+    if (activeTab === 'training') {
+      fetchTrainingRecommendations()
+    }
+  }, [activeTab, fetchTrainingRecommendations])
+
+  useEffect(() => {
+    if (activeTab === 'promotions') {
+      fetchPromotionRecommendations()
+    }
+  }, [activeTab, fetchPromotionRecommendations])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -217,29 +442,14 @@ export default function PerformanceDashboardPage() {
     return reviews.slice(startIndex, endIndex)
   }, [reviews, reviewsCurrentPage, reviewsItemsPerPage])
 
-  // Pagination calculations for Training tab
-  const trainingTotalPages = Math.ceil(mockTrainingRecommendations.length / trainingItemsPerPage)
-  const paginatedTrainingRecommendations = useMemo(() => {
-    const startIndex = (trainingCurrentPage - 1) * trainingItemsPerPage
-    const endIndex = startIndex + trainingItemsPerPage
-    return mockTrainingRecommendations.slice(startIndex, endIndex)
-  }, [trainingCurrentPage, trainingItemsPerPage])
+  // Training recommendations - already paginated by API
+  const paginatedTrainingRecommendations = trainingRecommendations
 
-  // Pagination calculations for Promotions tab
-  const promotionsTotalPages = Math.ceil(mockPromotionRecommendations.length / promotionsItemsPerPage)
-  const paginatedPromotionRecommendations = useMemo(() => {
-    const startIndex = (promotionsCurrentPage - 1) * promotionsItemsPerPage
-    const endIndex = startIndex + promotionsItemsPerPage
-    return mockPromotionRecommendations.slice(startIndex, endIndex)
-  }, [promotionsCurrentPage, promotionsItemsPerPage])
+  // Promotion recommendations - already paginated by API
+  const paginatedPromotionRecommendations = promotionRecommendations
 
-  // Pagination calculations for KPIs tab
-  const kpisTotalPages = Math.ceil(kpis.length / kpisItemsPerPage)
-  const paginatedKPIs = useMemo(() => {
-    const startIndex = (kpisCurrentPage - 1) * kpisItemsPerPage
-    const endIndex = startIndex + kpisItemsPerPage
-    return kpis.slice(startIndex, endIndex)
-  }, [kpis, kpisCurrentPage, kpisItemsPerPage])
+  // Pagination calculations for KPIs tab - using API pagination
+  const paginatedKPIs = kpis // API already handles pagination
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -280,28 +490,27 @@ export default function PerformanceDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <PerformanceSummaryCard
           title="Average KPI Score"
-          value={mockPerformanceSummary.averageKpiScore.toFixed(1)}
+          value={loading ? '...' : (dashboardSummary?.averageKpiScore?.toFixed(1) || '0.0')}
           icon={<TrendingUp className="h-4 w-4" />}
           description="Across all employees"
-          trend={{ value: 5.2, isPositive: true }}
         />
         <PerformanceSummaryCard
           title="Employees Up for Promotion"
-          value={mockPerformanceSummary.employeesUpForPromotion}
+          value={loading ? '...' : (dashboardSummary?.employeesUpForPromotion || 0)}
           icon={<Users className="h-4 w-4" />}
           description="Ready for advancement"
         />
         <PerformanceSummaryCard
           title="Employees Needing Training"
-          value={mockPerformanceSummary.employeesNeedingTraining}
+          value={loading ? '...' : (dashboardSummary?.employeesNeedingTraining || 0)}
           icon={<BookOpen className="h-4 w-4" />}
           description="Require skill development"
         />
         <PerformanceSummaryCard
-          title="Total Reviews This Quarter"
-          value={mockPerformanceSummary.totalReviewsThisQuarter}
+          title="Total Reviews"
+          value={loading ? '...' : (dashboardSummary?.totalReviews || 0)}
           icon={<FileText className="h-4 w-4" />}
-          description="Q1 2024"
+          description="All time"
         />
       </div>
 
@@ -326,27 +535,41 @@ export default function PerformanceDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockTopPerformers.map((performer) => (
-                    <TableRow key={performer.id}>
-                      <TableCell className="font-medium">
-                        {performer.employeeName}
-                      </TableCell>
-                      <TableCell>{performer.department}</TableCell>
-                      <TableCell>{performer.position}</TableCell>
-                      <TableCell>
-                        <ScoreBadge score={performer.kpiScore} />
-                      </TableCell>
-                      <TableCell>
-                        <ScoreBadge score={performer.behaviorScore} />
-                      </TableCell>
-                      <TableCell>
-                        <ScoreBadge score={performer.attendanceScore} />
-                      </TableCell>
-                      <TableCell>
-                        <ScoreBadge score={performer.totalScore} />
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">
+                        Loading...
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : dashboardSummary?.topPerformers?.length > 0 ? (
+                    dashboardSummary.topPerformers.map((performer: any) => (
+                      <TableRow key={performer.id}>
+                        <TableCell className="font-medium">
+                          {performer.employeeName}
+                        </TableCell>
+                        <TableCell>{performer.department}</TableCell>
+                        <TableCell>{performer.position}</TableCell>
+                        <TableCell>
+                          <ScoreBadge score={performer.kpiScore} />
+                        </TableCell>
+                        <TableCell>
+                          <ScoreBadge score={performer.behaviorScore} />
+                        </TableCell>
+                        <TableCell>
+                          <ScoreBadge score={performer.attendanceScore} />
+                        </TableCell>
+                        <TableCell>
+                          <ScoreBadge score={performer.totalScore} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No top performers found
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -376,7 +599,14 @@ export default function PerformanceDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockEmployeesNeedingImprovement.map((employee) => (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : dashboardSummary?.employeesNeedingImprovement?.length > 0 ? (
+                    dashboardSummary.employeesNeedingImprovement.map((employee: any) => (
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium">
                         {employee.employeeName}
@@ -397,7 +627,7 @@ export default function PerformanceDashboardPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {employee.improvementAreas.map((area, idx) => (
+                          {Array.isArray(employee.improvementAreas) && employee.improvementAreas.map((area: string, idx: number) => (
                             <span
                               key={idx}
                               className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded"
@@ -408,7 +638,14 @@ export default function PerformanceDashboardPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        No employees needing improvement found
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -451,12 +688,18 @@ export default function PerformanceDashboardPage() {
 
       {activeTab === 'training' && (
         <div>
-          {/* <div className="mb-6">
-            <h2 className="text-2xl font-bold">Training Recommendations</h2>
-            <p className="text-muted-foreground mt-1">
-              Employees recommended for training and skill development
-            </p>
-          </div> */}
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Training Recommendations</h2>
+              <p className="text-muted-foreground mt-1">
+                AI-powered training recommendations based on skill gaps and performance
+              </p>
+            </div>
+            <Button onClick={handleAnalyzeTraining} variant="outline">
+              <GraduationCap className="h-4 w-4 mr-2" />
+              Run AI Analysis
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Training Recommendations</CardTitle>
@@ -477,7 +720,13 @@ export default function PerformanceDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedTrainingRecommendations.length === 0 ? (
+                    {trainingLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
+                          Loading training recommendations...
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedTrainingRecommendations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-muted-foreground">
                           No training recommendations found
@@ -519,11 +768,11 @@ export default function PerformanceDashboardPage() {
               </div>
             </CardContent>
           </Card>
-          {mockTrainingRecommendations.length > 0 && (
+          {trainingTotalItems > 0 && (
             <Pagination
               currentPage={trainingCurrentPage}
               totalPages={trainingTotalPages}
-              totalItems={mockTrainingRecommendations.length}
+              totalItems={trainingTotalItems}
               itemsPerPage={trainingItemsPerPage}
               onPageChange={(page) => setTrainingCurrentPage(page)}
               onItemsPerPageChange={(newItemsPerPage) => {
@@ -537,12 +786,18 @@ export default function PerformanceDashboardPage() {
 
       {activeTab === 'promotions' && (
         <div>
-          {/* <div className="mb-6">
-            <h2 className="text-2xl font-bold">Promotion Recommendations</h2>
-            <p className="text-muted-foreground mt-1">
-              Employees recommended for promotion based on performance
-            </p>
-          </div> */}
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Promotion Recommendations</h2>
+              <p className="text-muted-foreground mt-1">
+                AI-powered promotion recommendations based on performance and years in service
+              </p>
+            </div>
+            <Button onClick={handleAnalyzePromotions} variant="outline">
+              <TrendingUpIcon className="h-4 w-4 mr-2" />
+              Run AI Analysis
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Promotion Recommendations</CardTitle>
@@ -565,7 +820,13 @@ export default function PerformanceDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedPromotionRecommendations.length === 0 ? (
+                    {promotionsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center text-muted-foreground">
+                          Loading promotion recommendations...
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedPromotionRecommendations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center text-muted-foreground">
                           No promotion recommendations found
@@ -615,11 +876,11 @@ export default function PerformanceDashboardPage() {
               </div>
             </CardContent>
           </Card>
-          {mockPromotionRecommendations.length > 0 && (
+          {promotionsTotalItems > 0 && (
             <Pagination
               currentPage={promotionsCurrentPage}
               totalPages={promotionsTotalPages}
-              totalItems={mockPromotionRecommendations.length}
+              totalItems={promotionsTotalItems}
               itemsPerPage={promotionsItemsPerPage}
               onPageChange={(page) => setPromotionsCurrentPage(page)}
               onItemsPerPageChange={(newItemsPerPage) => {
@@ -639,11 +900,11 @@ export default function PerformanceDashboardPage() {
             onEdit={handleEditKPI}
             onDelete={handleDeleteKPI}
           />
-          {kpis.length > 0 && (
+          {kpisTotalItems > 0 && (
             <Pagination
               currentPage={kpisCurrentPage}
               totalPages={kpisTotalPages}
-              totalItems={kpis.length}
+              totalItems={kpisTotalItems}
               itemsPerPage={kpisItemsPerPage}
               onPageChange={(page) => setKpisCurrentPage(page)}
               onItemsPerPageChange={(newItemsPerPage) => {
@@ -666,8 +927,8 @@ export default function PerformanceDashboardPage() {
         open={formModalOpen}
         onOpenChange={setFormModalOpen}
         onSubmit={handleSubmitReview}
-        employees={mockEmployees}
-        reviewers={mockReviewers}
+        employees={employees}
+        reviewers={reviewers}
         review={isEditMode ? selectedReview : null}
       />
 

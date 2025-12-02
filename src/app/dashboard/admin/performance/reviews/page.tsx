@@ -1,57 +1,58 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, Search, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'react-hot-toast'
 import ReviewTable from '@/components/performance/ReviewTable'
 import Pagination from '@/components/disciplinary/Pagination'
-import { mockPerformanceReviews } from '@/components/performance/mockData'
 import { PerformanceReview } from '@/types/performance'
+import { fetchPerformanceReviews, transformPerformanceReview } from '@/lib/performanceApi'
 
 export default function PerformanceReviewsPage() {
   const router = useRouter()
-  const [reviews] = useState<PerformanceReview[]>(mockPerformanceReviews)
+  const [reviews, setReviews] = useState<PerformanceReview[]>([])
+  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetchPerformanceReviews({
+        page: currentPage,
+        limit: itemsPerPage,
+        status: statusFilter,
+        search: searchQuery || undefined,
+      })
+
+      const transformedReviews = response.reviews.map(transformPerformanceReview)
+      setReviews(transformedReviews)
+      setTotalPages(response.pagination.totalPages)
+      setTotalItems(response.pagination.total)
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch reviews'
+      toast.error(errorMessage)
+      setReviews([])
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, itemsPerPage, statusFilter, searchQuery])
+
+  useEffect(() => {
+    fetchReviews()
+  }, [fetchReviews])
 
   const handleView = (review: PerformanceReview) => {
     router.push(`/dashboard/admin/performance/reviews/${review.id}`)
   }
-
-  // Filter reviews based on search query and status
-  const filteredReviews = useMemo(() => {
-    let filtered = reviews
-
-    // Filter by search query (employee name, reviewer name, or period)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (review) =>
-          review.employeeName.toLowerCase().includes(query) ||
-          review.reviewerName.toLowerCase().includes(query) ||
-          review.period.toLowerCase().includes(query)
-      )
-    }
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((review) => review.status === statusFilter)
-    }
-
-    return filtered
-  }, [reviews, searchQuery, statusFilter])
-
-  // Calculate pagination based on filtered reviews
-  const totalPages = Math.ceil(filteredReviews.length / itemsPerPage)
-  const paginatedReviews = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    return filteredReviews.slice(startIndex, endIndex)
-  }, [filteredReviews, currentPage, itemsPerPage])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -149,45 +150,59 @@ export default function PerformanceReviewsPage() {
 
         {/* Results Count */}
         <div className="text-sm text-gray-600">
-          Showing {filteredReviews.length} of {reviews.length} review{reviews.length !== 1 ? 's' : ''}
-          {hasActiveFilters && ' (filtered)'}
+          {loading ? (
+            'Loading...'
+          ) : (
+            <>
+              Showing {reviews.length} of {totalItems} review{totalItems !== 1 ? 's' : ''}
+              {hasActiveFilters && ' (filtered)'}
+            </>
+          )}
         </div>
       </div>
 
-      <ReviewTable reviews={paginatedReviews} onView={handleView} />
-
-      {/* Pagination */}
-      {filteredReviews.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredReviews.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-        />
-      )}
-
-      {/* No Results Message */}
-      {filteredReviews.length === 0 && reviews.length > 0 && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-gray-600 text-lg mb-2">No reviews found</p>
-          <p className="text-gray-500 text-sm">
-            {hasActiveFilters
-              ? 'Try adjusting your search or filter criteria.'
-              : 'No performance reviews available.'}
-          </p>
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              onClick={handleClearFilters}
-              className="mt-4"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
-          )}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">Loading reviews...</p>
         </div>
+      ) : (
+        <>
+          <ReviewTable reviews={reviews} onView={handleView} />
+
+          {/* Pagination */}
+          {reviews.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+            />
+          )}
+
+          {/* No Results Message */}
+          {!loading && reviews.length === 0 && (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-gray-600 text-lg mb-2">No reviews found</p>
+              <p className="text-gray-500 text-sm">
+                {hasActiveFilters
+                  ? 'Try adjusting your search or filter criteria.'
+                  : 'No performance reviews available.'}
+              </p>
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  className="mt-4"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

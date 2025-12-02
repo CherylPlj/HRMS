@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { SeverityLevel } from '@/types/disciplinary';
 import { toast } from 'react-hot-toast';
+import Pagination from './Pagination';
 
 interface ViolationType {
   id: string;
@@ -37,12 +38,27 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const filteredViolations = violationTypes.filter((vt) => {
-    const matchesSearch = vt.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || vt.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredViolations = useMemo(() => 
+    violationTypes.filter((vt) => {
+      const matchesSearch = vt.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || vt.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    }), [violationTypes, searchQuery, categoryFilter]
+  );
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredViolations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedViolations = filteredViolations.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search query, category filter, or violation types change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, violationTypes]);
 
   // Count cases per violation type
   const violationCounts: Record<string, number> = {};
@@ -260,75 +276,90 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
         {/* Violation Types List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {filteredViolations.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Violation Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Default Severity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cases Count
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredViolations.map((violation) => (
-                  <tr key={violation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {violation.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {violation.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          violation.defaultSeverity === 'Minor'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : violation.defaultSeverity === 'Moderate'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {violation.defaultSeverity}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                        {violationCounts[violation.name] || 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(violation)}
-                          className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(violation)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+            <>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Violation Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Default Severity
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cases Count
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedViolations.map((violation) => (
+                    <tr key={violation.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {violation.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {violation.category}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            violation.defaultSeverity === 'Minor'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : violation.defaultSeverity === 'Moderate'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {violation.defaultSeverity}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                          {violationCounts[violation.name] || 0}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(violation)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(violation)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredViolations.length > itemsPerPage && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredViolations.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={(newItemsPerPage) => {
+                    setItemsPerPage(newItemsPerPage);
+                    setCurrentPage(1);
+                  }}
+                />
+              )}
+            </>
           ) : (
             <div className="p-8 text-center text-gray-500">
               {searchQuery || categoryFilter !== 'all'

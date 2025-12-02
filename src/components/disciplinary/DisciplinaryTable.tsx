@@ -12,7 +12,7 @@ import { EvidenceFile } from '@/types/disciplinary';
 interface DisciplinaryTableProps {
   records: DisciplinaryRecord[];
   onEdit: (record: DisciplinaryRecord) => void;
-  onDelete: (recordId: string) => void;
+  onDelete: (record: DisciplinaryRecord) => void;
   onView: (record: DisciplinaryRecord) => void;
 }
 
@@ -168,7 +168,7 @@ const DisciplinaryTable: React.FC<DisciplinaryTableProps> = ({
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onDelete(record.id)}
+                        onClick={() => onDelete(record)}
                         className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
                         title="Delete"
                       >

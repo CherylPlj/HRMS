@@ -241,6 +241,7 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
           supervisors={supervisors}
           categories={categories}
           violationTypes={violationTypes}
+          viewMode={true}
         />
       )}
     </div>

@@ -1,19 +1,90 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import ScoreBadge from '@/components/performance/ScoreBadge'
-import { mockPerformanceReviews } from '@/components/performance/mockData'
 import { PerformanceReview } from '@/types/performance'
 
 export default function EmployeeReviewDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const reviewId = params?.id as string
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [review, setReview] = useState<PerformanceReview | null>(null)
+
+  useEffect(() => {
+    if (reviewId) {
+      fetchReview()
+    }
+  }, [reviewId])
+
+  const fetchReview = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch(`/api/performance/reviews/${reviewId}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('Review not found')
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to fetch review' }))
+          const errorMessage = errorData.error || 'Failed to fetch review'
+          
+          // Hide technical database errors
+          const isTechnicalError = 
+            errorMessage.includes('prepared statement') ||
+            errorMessage.includes('ConnectorError') ||
+            errorMessage.includes('QueryError') ||
+            errorMessage.includes('PostgresError') ||
+            errorMessage.includes('Prisma');
+          
+          throw new Error(
+            isTechnicalError 
+              ? 'Failed to load review. Please try again later.'
+              : errorMessage
+          )
+        }
+        return
+      }
+
+      const data = await response.json()
+      
+      // Transform backend response to frontend format
+      // Note: Reviewer information is excluded for employee/faculty views
+      const transformedReview: PerformanceReview = {
+        id: data.id,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName || '',
+        reviewerId: '', // Excluded for employee/faculty
+        reviewerName: '', // Excluded for employee/faculty
+        period: data.period || '',
+        startDate: data.startDate || '',
+        endDate: data.endDate || '',
+        kpiScore: data.kpiScore || 0,
+        behaviorScore: data.behaviorScore || 0,
+        attendanceScore: data.attendanceScore || 0,
+        totalScore: data.totalScore || data.overallScore || 0,
+        status: data.status || 'draft',
+        remarks: data.remarks || '',
+        createdAt: data.createdAt || '',
+        updatedAt: data.updatedAt || '',
+      }
+
+      setReview(transformedReview)
+    } catch (err) {
+      console.error('Error fetching review:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load review')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!params || !reviewId) {
     return (
@@ -29,19 +100,24 @@ export default function EmployeeReviewDetailsPage() {
     )
   }
 
-  // Find the review (in a real app, this would be fetched from API)
-  // For static UI, we'll filter to only show reviews for the current employee
-  const review: PerformanceReview | undefined = mockPerformanceReviews
-    .filter((r) => r.employeeId === 'EMP001')
-    .find((r) => r.id === reviewId)
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading review...</span>
+        </div>
+      </div>
+    )
+  }
 
-  if (!review) {
+  if (error || !review) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Review Not Found</h1>
           <p className="text-muted-foreground mb-4">
-            This review doesn't exist or you don't have access to it.
+            {error || 'This review doesn\'t exist or you don\'t have access to it.'}
           </p>
           <Button onClick={() => router.back()}>Go Back</Button>
         </div>
@@ -99,10 +175,6 @@ export default function EmployeeReviewDetailsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Reviewer</p>
-                <p className="font-medium text-lg">{review.reviewerName}</p>
-              </div>
               <div>
                 <p className="text-sm text-muted-foreground">Period</p>
                 <p className="font-medium">{review.period}</p>

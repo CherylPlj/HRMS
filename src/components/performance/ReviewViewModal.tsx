@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ChevronDown, ChevronUp, Eye, History } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, History, X } from 'lucide-react'
 import ScoreBadge from './ScoreBadge'
 import { PerformanceReview } from '@/types/performance'
 import { mockPerformanceReviews } from './mockData'
@@ -26,12 +26,14 @@ interface ReviewViewModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   review: PerformanceReview | null
+  allReviews?: PerformanceReview[] // Optional: all reviews to find previous ones
 }
 
 const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
   open,
   onOpenChange,
   review,
+  allReviews = [],
 }) => {
   const [showPreviousReviews, setShowPreviousReviews] = useState(false)
 
@@ -40,16 +42,23 @@ const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
   const previousReviews = useMemo(() => {
     if (!review) return []
     
-    return mockPerformanceReviews
+    // Use allReviews if provided, otherwise fall back to mock data (for backward compatibility)
+    const reviewsToSearch = allReviews.length > 0 ? allReviews : mockPerformanceReviews
+    
+    return reviewsToSearch
       .filter(
         (r) =>
           r.employeeId === review.employeeId &&
           r.id !== review.id &&
-          new Date(r.endDate) < new Date(review.endDate)
+          new Date(r.endDate || r.createdAt) < new Date(review.endDate || review.createdAt)
       )
-      .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())
+      .sort((a, b) => {
+        const dateA = new Date(a.endDate || a.createdAt).getTime()
+        const dateB = new Date(b.endDate || b.createdAt).getTime()
+        return dateB - dateA
+      })
       .slice(0, 5) // Limit to 5 most recent previous reviews in modal
-  }, [review])
+  }, [review, allReviews])
 
   if (!review) return null
 
@@ -86,22 +95,21 @@ const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="relative mb-4">
           <DialogTitle>Performance Review Details</DialogTitle>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-0 top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
+          </button>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Employee Information */}
+          {/* Review Information */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Employee Name</p>
-              <p className="font-medium text-lg">{review.employeeName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Reviewer</p>
-              <p className="font-medium text-lg">{review.reviewerName}</p>
-            </div>
             <div>
               <p className="text-sm text-muted-foreground">Period</p>
               <p className="font-medium">{review.period}</p>

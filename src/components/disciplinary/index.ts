@@ -17,6 +17,8 @@ export { default as Pagination } from './Pagination';
 export { default as SeverityTag } from './SeverityTag';
 export { default as StatusTag } from './StatusTag';
 export { default as FileThumbnail } from './FileThumbnail';
+export { default as DeleteConfirmationModal } from './DeleteConfirmationModal';
+export { default as SuccessModal } from './SuccessModal';
 
 // Export types
 export * from '@/types/disciplinary';

@@ -13,19 +13,32 @@ export async function GET(request: NextRequest) {
     const full = searchParams.get('full') === 'true';
 
     // Get all active categories from DisciplinaryCategory table
-    const categories = await (prisma as any).disciplinaryCategory.findMany({
-      where: {
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    let categories;
+    try {
+      categories = await (prisma as any).disciplinaryCategory.findMany({
+        where: {
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+    } catch (dbError: any) {
+      // Handle case where table doesn't exist or schema issue
+      console.error('Database error fetching categories:', dbError);
+      if (dbError.code === 'P2021' || dbError.message?.includes('does not exist')) {
+        return NextResponse.json(
+          { error: 'Categories table does not exist. Please run database migrations.' },
+          { status: 500 }
+        );
+      }
+      throw dbError;
+    }
 
     // Return full objects if requested, otherwise just names for backward compatibility
     if (full) {
@@ -34,8 +47,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(categories.map((c: { name: string }) => c.name));
   } catch (error) {
     console.error('Error fetching categories:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch categories';
     return NextResponse.json(
-      { error: 'Failed to fetch categories' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

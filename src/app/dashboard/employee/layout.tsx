@@ -300,6 +300,14 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
       'directory': 'DIRECTORY',
       'reports': 'REPORTS',
     };
+    // Handle nested routes like performance/reviews/[id]
+    if (route?.startsWith('performance')) {
+      if (route === 'performance') {
+        return 'PERFORMANCE';
+      }
+      // For nested routes like performance/reviews/[id], return PERFORMANCE
+      return 'PERFORMANCE';
+    }
     return titles[route] || '';
   };
 

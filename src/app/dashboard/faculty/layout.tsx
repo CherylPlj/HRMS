@@ -226,10 +226,19 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
       'personal-data': 'PERSONAL DATA',
       'documents': 'DOCUMENTS',
       'leave': 'LEAVE REQUEST',
+      'performance': 'PERFORMANCE',
       'disciplinary-records': 'DISCIPLINARY RECORDS',
       'directory': 'DIRECTORY',
       'reports': 'REPORTS',
     };
+    // Handle nested routes like performance/reviews/[id]
+    if (route?.startsWith('performance')) {
+      if (route === 'performance') {
+        return 'PERFORMANCE';
+      }
+      // For nested routes like performance/reviews/[id], return PERFORMANCE
+      return 'PERFORMANCE';
+    }
     return titles[route] || '';
   };
 

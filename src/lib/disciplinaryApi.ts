@@ -395,14 +395,42 @@ export async function fetchDashboardStatistics(): Promise<DashboardStatistics> {
  * Fetch categories
  */
 export async function fetchCategories(): Promise<string[]> {
-  const response = await fetch('/api/disciplinary/categories');
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to fetch categories' }));
-    throw new Error(error.error || 'Failed to fetch categories');
-  }
+  try {
+    const response = await fetch('/api/disciplinary/categories');
+    
+    if (!response.ok) {
+      // Try to get error message from response
+      let errorMessage = 'Failed to fetch categories';
+      try {
+        const error = await response.json();
+        errorMessage = error.error || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      
+      // If it's a 404 or empty response, return empty array instead of throwing
+      if (response.status === 404) {
+        console.warn('Categories endpoint not found, returning empty array');
+        return [];
+      }
+      
+      throw new Error(errorMessage);
+    }
 
-  return response.json();
+    const data = await response.json();
+    // Ensure we return an array
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error in fetchCategories:', error);
+    // If it's a network error or other issue, return empty array as fallback
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.warn('Network error fetching categories, returning empty array');
+      return [];
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**

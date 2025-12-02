@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Employee } from '@/types/performance'
+import SearchableEmployeeSelect from '@/components/disciplinary/SearchableEmployeeSelect'
 
 interface ReviewFormProps {
   employees: Employee[]
@@ -86,45 +87,43 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="employeeId">Employee *</Label>
-              <Select
-                id="employeeId"
-                name="employeeId"
+              <Label htmlFor="employeeId">Employee <span className="text-[#800000]">*</span></Label>
+              <SearchableEmployeeSelect
+                employees={employees.map(emp => ({ id: emp.id, name: `${emp.name} - ${emp.position}` }))}
                 value={formData.employeeId}
-                onChange={handleChange}
+                onChange={(employeeId, employeeName) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    employeeId,
+                  }))
+                }}
                 required
-              >
-                <option value="">Select employee</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} - {emp.position}
-                  </option>
-                ))}
-              </Select>
+                placeholder="Search or select employee..."
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reviewerId">Reviewer *</Label>
+              <Label htmlFor="reviewerId">Reviewer</Label>
               <Select
                 id="reviewerId"
                 name="reviewerId"
                 value={formData.reviewerId}
                 onChange={handleChange}
-                required
               >
-                <option value="">Select reviewer</option>
+                <option value="">Use current user (you)</option>
                 {reviewers.map((rev) => (
                   <option key={rev.id} value={rev.id}>
                     {rev.name} - {rev.position}
                   </option>
                 ))}
               </Select>
+              <p className="text-xs text-muted-foreground">If left blank, you will be set as the reviewer automatically</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date *</Label>
+              <Label htmlFor="startDate">Start Date <span className="text-[#800000]">*</span></Label>
               <Input
                 id="startDate"
                 name="startDate"
@@ -136,7 +135,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date *</Label>
+              <Label htmlFor="endDate">End Date <span className="text-[#800000]">*</span></Label>
               <Input
                 id="endDate"
                 name="endDate"
@@ -150,7 +149,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="kpiScore">KPI Score (0-100) *</Label>
+              <Label htmlFor="kpiScore">KPI Score (0-100) <span className="text-[#800000]">*</span></Label>
               <Input
                 id="kpiScore"
                 name="kpiScore"
@@ -165,7 +164,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="behaviorScore">Behavior Score (0-100) *</Label>
+              <Label htmlFor="behaviorScore">Behavior Score (0-100) <span className="text-[#800000]">*</span></Label>
               <Input
                 id="behaviorScore"
                 name="behaviorScore"
@@ -180,7 +179,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="attendanceScore">Attendance Score (0-100) *</Label>
+              <Label htmlFor="attendanceScore">Attendance Score (0-100) <span className="text-[#800000]">*</span></Label>
               <Input
                 id="attendanceScore"
                 name="attendanceScore"

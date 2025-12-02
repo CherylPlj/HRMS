@@ -15,6 +15,7 @@ interface SearchableEmployeeSelectProps {
   error?: string;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 const SearchableEmployeeSelect: React.FC<SearchableEmployeeSelectProps> = ({
@@ -24,6 +25,7 @@ const SearchableEmployeeSelect: React.FC<SearchableEmployeeSelectProps> = ({
   error,
   required = false,
   placeholder = 'Search or select employee...',
+  disabled = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -97,7 +99,9 @@ const SearchableEmployeeSelect: React.FC<SearchableEmployeeSelectProps> = ({
   };
 
   const handleInputFocus = () => {
-    setIsOpen(true);
+    if (!disabled) {
+      setIsOpen(true);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -125,12 +129,13 @@ const SearchableEmployeeSelect: React.FC<SearchableEmployeeSelectProps> = ({
           onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          disabled={disabled}
           className={`w-full pl-10 pr-20 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent ${
             error ? 'border-red-500' : 'border-gray-300'
-          }`}
+          } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-          {selectedEmployee && (
+          {selectedEmployee && !disabled && (
             <button
               type="button"
               onClick={handleClear}
@@ -140,21 +145,23 @@ const SearchableEmployeeSelect: React.FC<SearchableEmployeeSelectProps> = ({
               <X className="h-4 w-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded"
-            title="Toggle dropdown"
-          >
-            <ChevronDown
-              className={`h-5 w-5 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
-            />
-          </button>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              title="Toggle dropdown"
+            >
+              <ChevronDown
+                className={`h-5 w-5 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+              />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Dropdown List */}
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
           {filteredEmployees.length > 0 ? (
             <ul className="py-1">

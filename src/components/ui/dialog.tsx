@@ -16,31 +16,35 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange?.(false)}
+        aria-hidden="true"
       />
-      {children}
+      <div className="relative z-50 w-full max-w-full">
+        {children}
+      </div>
     </div>
   )
 }
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
-  ({ className, children, onClose, ...props }, ref) => {
+  ({ className, children, onClose, style, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
-          "relative z-50 grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
+          "relative w-full max-w-lg gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg mx-auto",
           className
         )}
+        style={{ maxHeight: 'calc(100vh - 2rem)', ...style }}
         {...props}
       >
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>

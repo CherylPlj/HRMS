@@ -220,6 +220,46 @@ export const validateAddress = (address: string | null | undefined, fieldName: s
   return { valid: true };
 };
 
+// Mask government ID number for display - shows only first 2-4 digits, masks the rest
+// This provides better security by exposing minimal information
+export const maskGovtId = (id: string | null | undefined): string => {
+  if (!id || !id.trim()) return '';
+  
+  const trimmed = id.trim();
+  
+  // If the ID contains dashes (formatted), preserve the format
+  if (trimmed.includes('-')) {
+    const parts = trimmed.split('-');
+    const maskedParts = parts.map((part, index) => {
+      if (part.length <= 2) {
+        // For very short parts, mask all for security
+        return '*'.repeat(part.length);
+      } else if (index === 0) {
+        // First part: show first 2 digits only, mask the rest
+        return part.slice(0, 2) + '*'.repeat(Math.max(0, part.length - 2));
+      } else {
+        // All other parts (middle and last): mask completely
+        return '*'.repeat(part.length);
+      }
+    });
+    return maskedParts.join('-');
+  } else {
+    // No dashes - show first 2-4 digits depending on length, mask the rest
+    if (trimmed.length <= 2) {
+      // If too short, mask all
+      return '*'.repeat(trimmed.length);
+    } else if (trimmed.length <= 6) {
+      // For shorter IDs, show first 2 digits
+      const firstTwo = trimmed.slice(0, 2);
+      return firstTwo + '*'.repeat(trimmed.length - 2);
+    } else {
+      // For longer IDs, show first 4 digits (similar to credit card masking)
+      const firstFour = trimmed.slice(0, 4);
+      return firstFour + '*'.repeat(trimmed.length - 4);
+    }
+  }
+};
+
 // Validate at least one government ID is provided
 export const validateAtLeastOneGovtId = (govtIds: {
   SSSNumber?: string;
