@@ -25,6 +25,7 @@ import {
     formatDate,
     calculateDuration
 } from './leave';
+import ManageLeaveTypes from './ManageLeaveTypes';
 
 const LeaveContent: React.FC = () => {
     const { user, isLoaded: isUserLoaded } = useUser();
@@ -533,21 +534,10 @@ const LeaveContent: React.FC = () => {
                     </button>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={openAddLeaveTypeModal}
-                        className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-                        title="Add New Leave Type"
-                    >
-                        <Plus size={18} />
-                        Add Leave Type
-                    </button>
-                    <button
-                        onClick={() => setShowLeaveTypeListModal(true)}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 border border-gray-300"
-                        title="Manage Leave Types"
-                    >
-                        <Pen size={16} /> / <Trash2 size={16} />
-                    </button>
+                    <ManageLeaveTypes
+                        leaveTypes={leaveTypes}
+                        onUpdate={fetchLeaveTypes}
+                    />
                     <button
                         onClick={handleDownloadPDF}
                         className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"

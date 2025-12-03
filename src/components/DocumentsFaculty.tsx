@@ -42,6 +42,11 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   const [error, setError] = useState<string | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
   const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<number[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -51,6 +56,8 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [uploadingStates, setUploadingStates] = useState<{ [key: number]: boolean }>({});
   const [uploadSuccessStates, setUploadSuccessStates] = useState<{ [key: number]: boolean }>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Add status count calculations - Fixed pending calculation
   const statusCounts = {
@@ -687,10 +694,16 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             <tr>
               <td colSpan={6} className="p-3 text-center">No document types found</td>
             </tr>
-          ) : (
-            documentTypes
-              .filter(dt => String(dt.DocumentTypeName).toLowerCase().includes(search.toLowerCase()))
-              .map((dt, idx) => {
+          ) : (() => {
+            const filtered = documentTypes.filter(dt => String(dt.DocumentTypeName).toLowerCase().includes(search.toLowerCase()));
+            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedItems = filtered.slice(startIndex, endIndex);
+            
+            return (
+              <>
+                {paginatedItems.map((dt, idx) => {
                 const doc = documents.find(d => d.DocumentTypeID === dt.DocumentTypeID);
                 const fileType = doc ? getFileType(doc.FileUrl) : 'other';
                 const fileIcon = getFileTypeIcon(fileType);
@@ -770,10 +783,66 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                     <td className="p-3">{doc ? new Date(doc.UploadDate).toLocaleDateString() : '-'}</td>
                   </tr>
                 );
-              })
-          )}
+              })}
+              </>
+            );
+          })()}
         </tbody>
       </table>
+      {/* Pagination Controls */}
+      {(() => {
+        const filtered = documentTypes.filter(dt => String(dt.DocumentTypeName).toLowerCase().includes(search.toLowerCase()));
+        const totalPages = Math.ceil(filtered.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
+        
+        if (documentTypes.length === 0) return null;
+        
+        return (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Items per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">
+                Showing <span className="font-semibold">{startIndex + 1}-{endIndex}</span> of <span className="font-semibold">{filtered.length}</span>
+              </span>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700 px-3">
+                  Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
       {/* Summary Row */}
       <div className="flex justify-between items-center mt-2">
         <span className={isComplete ? "text-green-700 font-semibold" : "text-yellow-700 font-semibold"}>{isComplete ? "Complete" : "Incomplete"}</span>

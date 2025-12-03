@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { FaEye, FaDownload, FaLink, FaTimes, FaPlus, FaPen, FaTrash, FaFile } from 'react-icons/fa';
+import ManageDocumentTypes from '../ManageDocumentTypes';
 
 interface Employee {
   EmployeeID: string;
@@ -84,6 +85,10 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Helper functions
   const getFileType = (url: string | undefined): 'image' | 'pdf' | 'other' => {
@@ -450,6 +455,11 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
      doc.employeeName.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
      doc.documentTypeName.toLowerCase().includes(documentSearchTerm.toLowerCase()))
   );
+  
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [documentSearchTerm, selectedDocumentType, selectedDocumentStatus]);
 
   return (
     <div>
@@ -499,20 +509,10 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                   <option value="Returned">Returned</option>
                 </select>
               </div>
-            <button
-              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
-              onClick={openAddDocTypeModal}
-            >
-              <FaPlus /> Add New Document Type
-            </button>
-            <button
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300"
-              onClick={() => setShowDocTypeListModal(true)}
-              title="Manage Document Types"
-              type="button"
-            >
-              <FaPen /> / <FaTrash/>
-            </button>
+            <ManageDocumentTypes
+              documentTypes={documentTypes}
+              onUpdate={() => window.location.reload()}
+            />
           </div>
         </div>
 
@@ -539,33 +539,38 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-gray-400">No documents found.</td>
                 </tr>
-              ) : (
-              filteredDocuments
-                  .sort((a, b) => {
-                    // Custom order: Submitted (1), Pending (2), Returned (3), Approved (4)
-                    const getStatusOrder = (status: string) => {
-                      switch (status) {
-                        case 'Submitted': return 1;
-                        case 'Returned': return 2;
-                        case 'Approved': return 3;
-                        default: return 4;
-                      }
-                    };
-                    const orderA = getStatusOrder(a.SubmissionStatus);
-                    const orderB = getStatusOrder(b.SubmissionStatus);
-                    if (orderA !== orderB) {
-                      return orderA - orderB;
+              ) : (() => {
+                const sorted = [...filteredDocuments].sort((a, b) => {
+                  // Custom order: Submitted (1), Pending (2), Returned (3), Approved (4)
+                  const getStatusOrder = (status: string) => {
+                    switch (status) {
+                      case 'Submitted': return 1;
+                      case 'Returned': return 2;
+                      case 'Approved': return 3;
+                      default: return 4;
                     }
-                    // If same status, sort by date (newest first)
-                    return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
-                  })
-                  .map((doc, idx) => {
+                  };
+                  const orderA = getStatusOrder(a.SubmissionStatus);
+                  const orderB = getStatusOrder(b.SubmissionStatus);
+                  if (orderA !== orderB) {
+                    return orderA - orderB;
+                  }
+                  // If same status, sort by date (newest first)
+                  return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
+                });
+                
+                const totalPages = Math.ceil(sorted.length / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedDocuments = sorted.slice(startIndex, endIndex);
+                
+                return paginatedDocuments.map((doc, idx) => {
                     return (
                       <tr
                         key={doc.DocumentID}
                         className="hover:bg-gray-100 transition-colors"
                       >
-                        <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{startIndex + idx + 1}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{doc.employeeName || 'Unknown Employee'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700 font-medium">{doc.Title || doc.documentTypeName || 'Untitled'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
@@ -624,11 +629,82 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                         </td>
                       </tr>
                     );
-                  })
-              )}
+                  });
+              })()}
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {(() => {
+          if (docLoading || filteredDocuments.length === 0) return null;
+          
+          const sorted = [...filteredDocuments].sort((a, b) => {
+            const getStatusOrder = (status: string) => {
+              switch (status) {
+                case 'Submitted': return 1;
+                case 'Returned': return 2;
+                case 'Approved': return 3;
+                default: return 4;
+              }
+            };
+            const orderA = getStatusOrder(a.SubmissionStatus);
+            const orderB = getStatusOrder(b.SubmissionStatus);
+            if (orderA !== orderB) {
+              return orderA - orderB;
+            }
+            return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
+          });
+          
+          const totalPages = Math.ceil(sorted.length / itemsPerPage);
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = Math.min(startIndex + itemsPerPage, sorted.length);
+          
+          return (
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Items per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{startIndex + 1}-{endIndex}</span> of <span className="font-semibold">{sorted.length}</span>
+                </span>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-700 px-3">
+                    Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
       {/* Status Update Confirmation Modal */}
       {isStatusUpdateModalOpen && pendingStatusUpdate && (

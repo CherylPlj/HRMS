@@ -57,6 +57,10 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter and search functionality
   useEffect(() => {
@@ -88,6 +92,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
     }
 
     setFilteredEmployees(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [employees, searchTerm, selectedDepartment, selectedStatus]);
 
   // Handle select all
@@ -95,9 +100,16 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
     const checked = e.target.checked;
     setSelectAll(checked);
     if (checked) {
-      setSelectedRows(filteredEmployees.map(employee => employee.EmployeeID));
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+      setSelectedRows(paginatedEmployees.map(employee => employee.EmployeeID));
     } else {
-      setSelectedRows([]);
+      // Only deselect items on current page
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+      setSelectedRows(prev => prev.filter(id => !paginatedEmployees.some(emp => emp.EmployeeID === id)));
     }
   };
 
@@ -191,10 +203,15 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <input
                   type="checkbox"
-                  checked={selectAll}
+                  checked={(() => {
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const endIndex = startIndex + itemsPerPage;
+                    const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+                    return paginatedEmployees.length > 0 && paginatedEmployees.every(emp => selectedRows.includes(emp.EmployeeID));
+                  })()}
                   onChange={handleSelectAll}
                   className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                  title="Select all employees"
+                  title="Select all employees on this page"
                 />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -221,7 +238,13 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredEmployees.map((employee) => {
+            {(() => {
+              const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+              const startIndex = (currentPage - 1) * itemsPerPage;
+              const endIndex = startIndex + itemsPerPage;
+              const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+              
+              return paginatedEmployees.map((employee) => {
               const documentsForEmployee = documents.filter(doc => doc.EmployeeID === employee.EmployeeID);
               const submittedCount = documentTypes.filter(dt =>
                 documentsForEmployee.some(doc =>
@@ -441,7 +464,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
                   )}
                 </React.Fragment>
               );
-            })}
+            })})()}
             {filteredEmployees.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
@@ -452,6 +475,58 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination Controls */}
+      {filteredEmployees.length > 0 && (() => {
+        const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, filteredEmployees.length);
+        
+        return (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Items per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">
+                Showing <span className="font-semibold">{startIndex + 1}-{endIndex}</span> of <span className="font-semibold">{filteredEmployees.length}</span>
+              </span>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700 px-3">
+                  Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };

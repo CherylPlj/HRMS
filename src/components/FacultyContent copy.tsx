@@ -266,6 +266,12 @@ const FacultyContent = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<any | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
+  
+  // Pagination state
+  const [facultyCurrentPage, setFacultyCurrentPage] = useState(1);
+  const [facultyItemsPerPage, setFacultyItemsPerPage] = useState(10);
+  const [docCurrentPage, setDocCurrentPage] = useState(1);
+  const [docItemsPerPage, setDocItemsPerPage] = useState(10);
 
   // Add Faculty modal and form
   const [isAddFacultyModalOpen, setIsAddFacultyModalOpen] = useState(false);
@@ -378,6 +384,11 @@ const FacultyContent = () => {
     fetchDepartments();
   }, []);
 
+  // Reset document pagination when filters change
+  useEffect(() => {
+    setDocCurrentPage(1);
+  }, [documentSearchTerm, selectedDocumentType, selectedDocumentStatus]);
+  
   // Add filter and search functionality
   useEffect(() => {
     let filtered = [...facultyList];
@@ -408,6 +419,7 @@ const FacultyContent = () => {
     }
 
     setFilteredFacultyList(filtered);
+    setFacultyCurrentPage(1); // Reset to first page when filters change
   }, [facultyList, searchTerm, selectedDepartment, selectedStatus]);
 
   const handleAddFaculty = async (e: React.FormEvent) => {
@@ -834,9 +846,16 @@ const FacultyContent = () => {
     const checked = e.target.checked;
     setSelectAll(checked);
     if (checked) {
-      setSelectedRows(filteredFacultyList.map(faculty => faculty.FacultyID));
+      const startIndex = (facultyCurrentPage - 1) * facultyItemsPerPage;
+      const endIndex = startIndex + facultyItemsPerPage;
+      const paginatedFaculty = filteredFacultyList.slice(startIndex, endIndex);
+      setSelectedRows(paginatedFaculty.map(faculty => faculty.FacultyID));
     } else {
-      setSelectedRows([]);
+      // Only deselect items on current page
+      const startIndex = (facultyCurrentPage - 1) * facultyItemsPerPage;
+      const endIndex = startIndex + facultyItemsPerPage;
+      const paginatedFaculty = filteredFacultyList.slice(startIndex, endIndex);
+      setSelectedRows(prev => prev.filter(id => !paginatedFaculty.some(fac => fac.FacultyID === id)));
     }
   };
 
@@ -1184,10 +1203,15 @@ const FacultyContent = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input
                       type="checkbox"
-                      checked={selectAll}
+                      checked={(() => {
+                        const startIndex = (facultyCurrentPage - 1) * facultyItemsPerPage;
+                        const endIndex = startIndex + facultyItemsPerPage;
+                        const paginatedFaculty = filteredFacultyList.slice(startIndex, endIndex);
+                        return paginatedFaculty.length > 0 && paginatedFaculty.every(fac => selectedRows.includes(fac.FacultyID));
+                      })()}
                       onChange={handleSelectAll}
                       className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                      title="Select all faculty members"
+                      title="Select all faculty members on this page"
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1214,7 +1238,13 @@ const FacultyContent = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredFacultyList.map((faculty) => {
+                {(() => {
+                  const totalPages = Math.ceil(filteredFacultyList.length / facultyItemsPerPage);
+                  const startIndex = (facultyCurrentPage - 1) * facultyItemsPerPage;
+                  const endIndex = startIndex + facultyItemsPerPage;
+                  const paginatedFaculty = filteredFacultyList.slice(startIndex, endIndex);
+                  
+                  return paginatedFaculty.map((faculty) => {
                   const documentsForFaculty = documents.filter(doc => doc.FacultyID === faculty.FacultyID);
                   const submittedCount = documentTypes.filter(dt =>
                     documentsForFaculty.some(doc =>
@@ -1449,7 +1479,8 @@ const FacultyContent = () => {
                       )}
                     </React.Fragment>
                   );
-                })}
+                });
+                })()}
                 {filteredFacultyList.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
@@ -1462,6 +1493,58 @@ const FacultyContent = () => {
           </div>
         )
       )}
+      
+      {/* Faculty Pagination Controls */}
+      {activeView === 'facultyManagement' && filteredFacultyList.length > 0 && (() => {
+        const totalPages = Math.ceil(filteredFacultyList.length / facultyItemsPerPage);
+        const startIndex = (facultyCurrentPage - 1) * facultyItemsPerPage;
+        const endIndex = Math.min(startIndex + facultyItemsPerPage, filteredFacultyList.length);
+        
+        return (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Items per page:</span>
+              <select
+                value={facultyItemsPerPage}
+                onChange={(e) => {
+                  setFacultyItemsPerPage(Number(e.target.value));
+                  setFacultyCurrentPage(1);
+                }}
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">
+                Showing <span className="font-semibold">{startIndex + 1}-{endIndex}</span> of <span className="font-semibold">{filteredFacultyList.length}</span>
+              </span>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFacultyCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={facultyCurrentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700 px-3">
+                  Page <span className="font-semibold">{facultyCurrentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                </span>
+                <button
+                  onClick={() => setFacultyCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={facultyCurrentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Document Management Table */}
       {activeView === 'documentManagement' && (
@@ -1487,8 +1570,8 @@ const FacultyContent = () => {
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-400">No documents found.</td>
                 </tr>
-              ) : (
-                documents
+              ) : (() => {
+                const filtered = documents
                   .filter(doc => 
                     (selectedDocumentStatus === 'all' || doc.SubmissionStatus === selectedDocumentStatus) &&
                     (selectedDocumentType === 'all' || doc.DocumentTypeID === selectedDocumentType) &&
@@ -1513,15 +1596,21 @@ const FacultyContent = () => {
                     }
                     // If same status, sort by date (newest first)
                     return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
-                  })
-                  .map((doc, idx) => {
+                  });
+                
+                const totalPages = Math.ceil(filtered.length / docItemsPerPage);
+                const startIndex = (docCurrentPage - 1) * docItemsPerPage;
+                const endIndex = startIndex + docItemsPerPage;
+                const paginatedDocs = filtered.slice(startIndex, endIndex);
+                
+                return paginatedDocs.map((doc, idx) => {
                     return (
                       <tr
                         key={doc.DocumentID}
                         className="hover:bg-gray-100 transition-colors"
                       >
                         {/* Removed document selection checkbox */}
-                        <td className="px-6 py-4 text-sm text-gray-700">{idx + 1}</td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{startIndex + idx + 1}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{doc.facultyName || 'Unknown Faculty'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
                         <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
@@ -1585,12 +1674,75 @@ const FacultyContent = () => {
                         </td>
                       </tr>
                     );
-                  })
-              )}
+                  });
+              })()}
             </tbody>
           </table>
         </div>
       )}
+      
+      {/* Document Pagination Controls */}
+      {activeView === 'documentManagement' && (() => {
+        const filtered = documents
+          .filter(doc => 
+            (selectedDocumentStatus === 'all' || doc.SubmissionStatus === selectedDocumentStatus) &&
+            (selectedDocumentType === 'all' || doc.DocumentTypeID === selectedDocumentType) &&
+            (documentSearchTerm === '' || 
+             doc.facultyName.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+             doc.documentTypeName.toLowerCase().includes(documentSearchTerm.toLowerCase()))
+          );
+        
+        if (filtered.length === 0) return null;
+        
+        const totalPages = Math.ceil(filtered.length / docItemsPerPage);
+        const startIndex = (docCurrentPage - 1) * docItemsPerPage;
+        const endIndex = Math.min(startIndex + docItemsPerPage, filtered.length);
+        
+        return (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Items per page:</span>
+              <select
+                value={docItemsPerPage}
+                onChange={(e) => {
+                  setDocItemsPerPage(Number(e.target.value));
+                  setDocCurrentPage(1);
+                }}
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">
+                Showing <span className="font-semibold">{startIndex + 1}-{endIndex}</span> of <span className="font-semibold">{filtered.length}</span>
+              </span>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDocCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={docCurrentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700 px-3">
+                  Page <span className="font-semibold">{docCurrentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                </span>
+                <button
+                  onClick={() => setDocCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={docCurrentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
       
 
       {/* Edit Faculty Modal */}

@@ -2,177 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaSync, FaDownload, FaFileCsv, FaFilePdf, FaChartLine } from 'react-icons/fa';
-import { Search } from 'lucide-react';
-import MedicalTab from './tabs/MedicalTab';
-import SkillsTab from './tabs/SkillsTab';
-import CertificatesTab from './tabs/CertificatesTab';
-import WorkExperienceTab from './tabs/WorkExperienceTab';
-import PromotionHistoryTab from './tabs/PromotionHistoryTab';
-import ContactInfoTab from './tabs/ContactInfoTab';
-import GovernmentIDsTab from './tabs/GovernmentIDsTab';
-import PerformanceHistoryTab from './tabs/PerformanceHistoryTab';
+import { FaSync, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaUpload, FaEdit, FaEye } from 'react-icons/fa';
+import { EmployeeList, EmployeeDetail, EmployeeDashboard, PhotoModal, SuccessModal, ErrorModal } from './employee';
+import { AlertCircle } from 'lucide-react';
+import { Employee, EmployeeFormState, Department, Pagination as PaginationType } from './employee/types';
+import { allExportColumns, excludedColumns, exportColumnSections } from './employee/constants';
+import { calculateYearsOfService, formatDesignation } from './employee/utils';
 
-// Define interfaces for the PDS sections
-interface PersonalInfo {
-  surname: string;
-  firstName: string;
-  middleName: string;
-  nameExtension: string;
-  birthDate: string;
-  birthPlace: string;
-  sex: 'Male' | 'Female';
-  civilStatus: string;
-  height: string;
-  weight: string;
-  bloodType: string;
-  gsis: string;
-  pagibig: string;
-  philhealth: string;
-  sss: string;
-  tin: string;
-  agencyNumber: string;
-  citizenship: string;
-  dualCitizenshipType: string;
-  country: string;
-}
-
-interface ContactInfo {
-  residentialAddress: {
-    houseNumber: string;
-    street: string;
-    subdivision: string;
-    barangay: string;
-    city: string;
-    province: string;
-    zipCode: string;
-  };
-  permanentAddress: {
-    houseNumber: string;
-    street: string;
-    subdivision: string;
-    barangay: string;
-    city: string;
-    province: string;
-    zipCode: string;
-  };
-  telephone: string;
-  mobile: string;
-  email: string;
-}
-
-interface FamilyBackground {
-  spouse: {
-    surname: string;
-    firstName: string;
-    middleName: string;
-    occupation: string;
-    employer: string;
-    businessAddress: string;
-    telephone: string;
-  };
-  parents: {
-    father: {
-      surname: string;
-      firstName: string;
-      middleName: string;
-      nameExtension: string;
-    };
-    mother: {
-      surname: string;
-      firstName: string;
-      middleName: string;
-    };
-  };
-  children: Array<{
-    name: string;
-    birthDate: string;
-  }>;
-}
-
-interface Education {
-  level: string;
-  schoolName: string;
-  course?: string;
-  yearGraduated?: number;
-  honors?: string;
-}
-
-
-
-interface EmploymentHistory {
-  schoolName: string;
-    position: string;
-  startDate: Date;
-  endDate?: Date;
-  reasonForLeaving?: string;
-}
-
-
-
-interface MedicalInfo {
-  medicalNotes?: string;
-  lastCheckup?: Date;
-  vaccination?: string;
-  allergies?: string;
-}
-
-interface OtherInfo {
-  skills: string[];
-  recognitions: string[];
-  organizations: string[];
-}
-
-interface EmployeeFormState {
-  EmployeeID: string;
-  UserID: string;
-  LastName: string;
-  FirstName: string;
-  MiddleName: string;
-  ExtensionName: string;
-  Sex: string;
-  Photo: string;
-  DateOfBirth: string;
-  PlaceOfBirth: string;
-  CivilStatus: string;
-  Nationality: string;
-  Religion: string;
-  BloodType: string;
-  Email: string;
-  Phone: string;
-  Address: string;
-  PresentAddress: string;
-  PermanentAddress: string;
-  
-  // Government IDs
-  SSSNumber: string;
-  TINNumber: string;
-  PhilHealthNumber: string;
-  PagIbigNumber: string;
-  GSISNumber: string;
-  PRCLicenseNumber: string;
-  PRCValidity: string;
-
-  EmploymentStatus: string;
-  HireDate: string;
-  ResignationDate: string | null;
-  Designation: string | null;
-  Position: string;
-  DepartmentID: number | null;
-  ContractID: number | null;
-  EmergencyContactName: string;
-  EmergencyContactNumber: string;
-  EmployeeType: string;
-  SalaryGrade: string;
-  SalaryAmount: number | null;
-
-  Education?: Education[];
-  EmploymentHistory?: EmploymentHistory[];
-  MedicalInfo?: MedicalInfo;
-
-  createdAt: Date | null;
-  updatedAt: Date | null;
-}
+// Import types from employee module
+import { Education, EmploymentHistory, MedicalInfo } from './employee/types';
 
 interface ApiResponse {
   success: boolean;
@@ -181,82 +19,16 @@ interface ApiResponse {
 }
 
 
-// Place at the top with other useState hooks
-const allExportColumns = [
-  { key: 'EmployeeID', label: 'Employee ID' },
-  { key: 'UserID', label: 'User ID' },
-  { key: 'FirstName', label: 'First Name' },
-  { key: 'LastName', label: 'Last Name' },
-  { key: 'MiddleName', label: 'Middle Name' },
-  { key: 'ExtensionName', label: 'Extension Name' },
-  { key: 'Sex', label: 'Sex' },
-  { key: 'DateOfBirth', label: 'Date of Birth' },
-  { key: 'PlaceOfBirth', label: 'Place of Birth' },
-  { key: 'CivilStatus', label: 'Civil Status' },
-  { key: 'Nationality', label: 'Nationality' },
-  { key: 'Religion', label: 'Religion' },
-  { key: 'BloodType', label: 'Blood Type' },
-  { key: 'Email', label: 'Email' },
-  { key: 'Phone', label: 'Phone' },
-  { key: 'PresentAddress', label: 'Present Address' },
-  { key: 'PermanentAddress', label: 'Permanent Address' },
-  { key: 'Position', label: 'Position' },
-  { key: 'Designation', label: 'Designation' },
-  { key: 'Department', label: 'Department' },
-  { key: 'EmploymentStatus', label: 'Employment Status' },
-  { key: 'HireDate', label: 'Hire Date' },
-  { key: 'ResignationDate', label: 'Resignation Date' },
-  { key: 'SalaryGrade', label: 'Salary Grade' },
-  { key: 'EmployeeType', label: 'Employee Type' },
-  { key: 'SSSNumber', label: 'SSS Number' },
-  { key: 'TINNumber', label: 'TIN Number' },
-  { key: 'PhilHealthNumber', label: 'PhilHealth Number' },
-  { key: 'PagIbigNumber', label: 'Pag-IBIG Number' },
-  { key: 'GSISNumber', label: 'GSIS Number' },
-  { key: 'PRCLicenseNumber', label: 'PRC License Number' },
-  { key: 'PRCValidity', label: 'PRC Validity' },
-  { key: 'EmergencyContactName', label: 'Emergency Contact Name' },
-  { key: 'EmergencyContactNumber', label: 'Emergency Contact Number' },
-  { key: 'createdAt', label: 'Created At' },
-  { key: 'updatedAt', label: 'Updated At' },
-];
-
-// Place at the top with other constants
-const exportColumnSections = [
-  {
-    title: 'Personal Information',
-    keys: [
-      'FirstName', 'LastName', 'MiddleName', 'ExtensionName',
-      'Sex', 'DateOfBirth', 'PlaceOfBirth', 'CivilStatus', 'Nationality', 'Religion', 'BloodType'
-    ],
-  },
-  {
-    title: 'Contact Information',
-    keys: [
-      'Email', 'Phone', 'PresentAddress', 'PermanentAddress', 'EmergencyContactName', 'EmergencyContactNumber'
-    ],
-  },
-  {
-    title: 'Employment Details',
-    keys: [
-      'Position', 'Designation', 'Department', 'EmploymentStatus', 'HireDate', 'ResignationDate',
-      'SalaryGrade', 'EmployeeType'
-    ],
-  },
-  {
-    title: 'Government IDs',
-    keys: [
-      'SSSNumber', 'TINNumber', 'PhilHealthNumber', 'PagIbigNumber', 'GSISNumber', 'PRCLicenseNumber', 'PRCValidity'
-    ],
-  },
-];
-
-// Excluded columns from export
-const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt'];
 
 const EmployeeContentNew = () => {
   const { user } = useUser();
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // State for active view (dashboard or list)
+  const [activeView, setActiveView] = useState<'dashboard' | 'list'>('dashboard');
+  
+  // State for employee category (active or inactive)
+  const [employeeCategory, setEmployeeCategory] = useState<'active' | 'inactive'>('active');
   
   // State for active tab
   const [activeTab, setActiveTab] = useState('personal');
@@ -416,18 +188,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   const [sameAsPresentAddress, setSameAsPresentAddress] = useState(false);
   const [editSameAsPresentAddress, setEditSameAsPresentAddress] = useState(false);
 
-  // Tabs configuration
-  const tabs = [
-    { id: 'personal', label: 'Personal Information', icon: FaUserCircle },
-    { id: 'government', label: 'Government IDs', icon: FaIdCard },
-    { id: 'contact', label: 'Contact Information', icon: FaPhone },
-    { id: 'family', label: 'Family Background', icon: FaUsers },
-    { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
-    { id: 'work', label: 'Employment History', icon: FaBriefcase },
-    { id: 'performance', label: 'Performance History', icon: FaChartLine },
-    { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
-    { id: 'other', label: 'Other Information', icon: FaEllipsisH },
-  ];
 
   // Handle edit button click
   const handleEditClick = () => {
@@ -794,50 +554,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     }
   };
 
-  // Filter employees based on search term and filters
-  const currentEmployees = viewMode === 'all' ? allEmployees : employees;
-  const filteredEmployees = currentEmployees.filter(employee => {
-    const fullName = (employee.fullName || '').toLowerCase();
-    const email = employee.email?.toLowerCase() || '';
-    const position = employee.position?.toLowerCase() || '';
-    const departmentId = employee.DepartmentID?.toString() || '';
-    const designation = employee.designation?.toLowerCase() || '';
-    const status = employee.status?.toLowerCase() || '';
-    const searchQuery = searchTerm.toLowerCase();
-
-    const matchesSearch = 
-      fullName.includes(searchQuery) || 
-      email.includes(searchQuery) || 
-      position.includes(searchQuery);
-    
-    const matchesDepartment = 
-      departmentFilter === 'all' || 
-      departmentId === departmentFilter;
-    
-    const matchesDesignation = 
-      designationFilter === 'all' || 
-      designation === designationFilter.toLowerCase();
-
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      status === statusFilter.toLowerCase();
-
-    return matchesSearch && matchesDepartment && matchesDesignation && matchesStatus;
-  })
-  // Sort by name order
-  .sort((a, b) => {
-    if (nameOrder === 'asc') {
-      // Sort by name A-Z when explicitly selected
-      const nameA = (a.firstName || '').toLowerCase();
-      const nameB = (b.firstName || '').toLowerCase();
-      return nameA.localeCompare(nameB);
-    } else {
-      // Default: Sort by creation date (latest first)
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    }
-  });
 
   const handleEmployeeSelect = (employee: any) => {
     console.log('Selected employee:', employee);
@@ -1487,6 +1203,8 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
         // Employment Info
         ResignationDate: editEmployee.ResignationDate || null,
+        // Automatically set status to "Resigned" if resignation date is provided
+        EmploymentStatus: editEmployee.ResignationDate ? 'Resigned' : editEmployee.EmploymentStatus,
         Designation: editEmployee.Designation || null,
         ContractID: editEmployee.ContractID || null,
         EmergencyContactName: editEmployee.EmergencyContactName || null,
@@ -1535,789 +1253,147 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     setEditSameAsPresentAddress(false);
   };
 
-  // Helper function to calculate years of service
-  const calculateYearsOfService = (hireDate: string): string => {
-    if (!hireDate) return 'N/A';
-    const hire = new Date(hireDate);
-    const now = new Date();
-    const years = now.getFullYear() - hire.getFullYear();
-    const months = now.getMonth() - hire.getMonth();
-    
-    if (months < 0) {
-      return `${years - 1} years, ${12 + months} months`;
-    }
-    return `${years} years, ${months} months`;
-  };
-
-  // Helper function to format designation display
-  const formatDesignation = (designation: string | null): string => {
-    if (!designation) return 'N/A';
-    return designation.replace(/_/g, ' ');
-  };
 
   // If an employee is selected, show the personal data tabs
   if (selectedEmployee) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        {/* Header with back button */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleBackToList}
-              className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Employees
-            </button>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              {selectedEmployee?.fullName || `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`.trim()}
-            </h1>
-          </div>
-        </div>
+      <>
+        <EmployeeDetail
+          employee={selectedEmployee}
+          departments={departments}
+          onBack={handleBackToList}
+          onPhotoClick={handlePhotoClick}
+        />
 
-        {/* Employee Info Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex items-start space-x-6 mb-6">
-            <div
-              className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isEditing) {
-                  const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
-                  if (fileInput) fileInput.click();
-                } else if (selectedEmployee?.photo) {
-                  handlePhotoClick(e, selectedEmployee.photo, `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`);
-                }
-              }}
-            >
-              {selectedEmployee?.photo ? (
-                <img 
-                  src={selectedEmployee?.photo} 
-                  alt={`${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[#800000]">
-                  <span className="text-white font-medium">
-                    {(selectedEmployee?.firstName || '').charAt(0)}{(selectedEmployee?.surname || '').charAt(0)}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">First Name</label>
-                    <input
-                      type="text"
-                      value={editedEmployee?.firstName || ''}
-                      onChange={(e) => handleEditInputChange('firstName', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                    <input
-                      type="text"
-                      value={editedEmployee?.surname || ''}
-                      onChange={(e) => handleEditInputChange('surname', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Position</label>
-                    <input
-                      type="text"
-                      value={editedEmployee?.position || ''}
-                      onChange={(e) => handleEditInputChange('position', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {selectedEmployee?.fullName || `${selectedEmployee?.firstName || ''} ${selectedEmployee?.surname || ''}`.trim()}
-                  </h2>
-                  <p className="text-gray-500">{selectedEmployee?.position}</p>
-                  <p className="text-gray-500">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-500">Position</label>
-              <p className="text-lg font-semibold text-gray-800">{selectedEmployee?.position}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-500">Designation</label>
-              <p className="text-lg font-semibold text-gray-800">{formatDesignation(selectedEmployee?.designation)}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-500">Department</label>
-              <p className="text-lg font-semibold text-gray-800">{departments.find(dept => dept.id === selectedEmployee?.DepartmentID)?.name || 'No Department'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-500">Email</label>
-              <p className="text-lg font-semibold text-gray-800">{selectedEmployee?.email}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-500">Status</label>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                selectedEmployee?.status === 'Active' || selectedEmployee?.status === 'Regular'
-                  ? 'bg-green-100 text-green-800'
-                  : selectedEmployee?.status === 'Resigned'
-                  ? 'bg-red-100 text-red-800'
-                  : selectedEmployee?.status === 'Probationary'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {selectedEmployee?.status}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                    activeTab === tab.id
-                      ? 'border-[#800000] text-[#800000]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-6">
-            {activeTab === 'personal' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Surname</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.surname}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">First Name</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.firstName}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Middle Name</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.middleName}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Name Extension</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.nameExtension || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Date of Birth</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.birthDate}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Place of Birth</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.birthPlace}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Sex</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.sex}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Civil Status</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedEmployee?.civilStatus}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'government' && (
-              <div className="space-y-6">
-                <GovernmentIDsTab 
-                  employeeId={selectedEmployee?.employeeId || ''}
-                  governmentIDs={{
-                    SSSNumber: selectedEmployee?.GovernmentID?.SSSNumber || null,
-                    TINNumber: selectedEmployee?.GovernmentID?.TINNumber || null,
-                    PhilHealthNumber: selectedEmployee?.GovernmentID?.PhilHealthNumber || null,
-                    PagIbigNumber: selectedEmployee?.GovernmentID?.PagIbigNumber || null,
-                    GSISNumber: selectedEmployee?.GovernmentID?.GSISNumber || null,
-                    PRCLicenseNumber: selectedEmployee?.GovernmentID?.PRCLicenseNumber || null,
-                    PRCValidity: selectedEmployee?.GovernmentID?.PRCValidity || null,
-                  }}
-                  isEditing={false}
-                  onInputChange={() => {}}
-                />
-              </div>
-            )}
-
-            {activeTab === 'contact' && (
-              <div className="space-y-6">
-                <ContactInfoTab 
-                  employeeId={selectedEmployee?.employeeId || ''}
-                  contactInfo={{
-                    Email: selectedEmployee?.ContactInfo?.Email || null,
-                    Phone: selectedEmployee?.ContactInfo?.Phone || null,
-                    PresentAddress: selectedEmployee?.ContactInfo?.PresentAddress || null,
-                    PermanentAddress: selectedEmployee?.ContactInfo?.PermanentAddress || null,
-                    EmergencyContactName: selectedEmployee?.ContactInfo?.EmergencyContactName || null,
-                    EmergencyContactNumber: selectedEmployee?.ContactInfo?.EmergencyContactNumber || null,
-                  }}
-                  isEditing={false}
-                  onInputChange={() => {}}
-                />
-              </div>
-            )}
-
-            {activeTab === 'family' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Family Background</h3>
-                <div className="space-y-4">
-                  {selectedEmployee?.Family?.map((member: any, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Type</label>
-                          <p className="mt-1 text-sm text-gray-900">{member.type || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Name</label>
-                          <p className="mt-1 text-sm text-gray-900">{member.name || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Occupation</label>
-                          <p className="mt-1 text-sm text-gray-900">{member.occupation || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Date of Birth</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString() : 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Contact Number</label>
-                          <p className="mt-1 text-sm text-gray-900">{member.contactNumber || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Dependent</label>
-                          <p className="mt-1 text-sm text-gray-900">{member.isDependent ? 'Yes' : 'No'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {(!selectedEmployee?.Family || selectedEmployee?.Family.length === 0) && (
-                    <p className="text-gray-500 italic">No family background information available.</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'education' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Educational Background</h3>
-                <div className="space-y-4">
-                  {selectedEmployee?.Education?.map((edu: Education, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                          <label className="block text-sm font-medium text-gray-600">Level</label>
-                          <p className="mt-1 text-sm text-gray-900">{edu.level || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">School Name</label>
-                          <p className="mt-1 text-sm text-gray-900">{edu.schoolName || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600">Course</label>
-                          <p className="mt-1 text-sm text-gray-900">{edu.course || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Year Graduated</label>
-                          <p className="mt-1 text-sm text-gray-900">{edu.yearGraduated || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Honors</label>
-                          <p className="mt-1 text-sm text-gray-900">{edu.honors || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  ))}
-                  {(!selectedEmployee?.Education || selectedEmployee?.Education.length === 0) && (
-                    <p className="text-gray-500 italic">No educational records found.</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-
-
-            {activeTab === 'work' && (
-              <div className="space-y-8">
-                {/* Current Employment at SJSFI Section */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900">Employment Details at SJSFI</h3>
-                  
-                  {/* Current Employment Summary */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <h4 className="text-md font-medium text-blue-900 mb-3">Current Position</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-blue-700">Position</label>
-                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.position || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-700">Designation</label>
-                        <p className="mt-1 text-sm text-blue-900">{formatDesignation(selectedEmployee?.designation) || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-700">Employment Status</label>
-                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.status || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-700">Hire Date</label>
-                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.hireDate || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-700">Years of Service</label>
-                        <p className="mt-1 text-sm text-blue-900">{calculateYearsOfService(selectedEmployee?.hireDate || '')}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-700">Salary Grade</label>
-                        <p className="mt-1 text-sm text-blue-900">{selectedEmployee?.salaryGrade || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Promotion History Timeline */}
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 mb-4">Position & Salary History</h4>
-                    <PromotionHistoryTab employeeId={selectedEmployee?.employeeId || ''} />
-                  </div>
-                </div>
-
-                {/* Previous Work Experience Section */}
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-6">Previous Employment History</h3>
-                  <WorkExperienceTab employeeId={selectedEmployee?.employeeId || ''} />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'performance' && (
-              <div className="space-y-6">
-                <PerformanceHistoryTab employeeId={selectedEmployee?.EmployeeID || selectedEmployee?.employeeId || ''} />
-              </div>
-            )}
-
-            {activeTab === 'medical' && (
-              <div className="space-y-6">
-                <MedicalTab 
-                  employeeId={selectedEmployee?.employeeId || ''} 
-                  bloodType={selectedEmployee?.BloodType || selectedEmployee?.bloodType || null}
-                />
-              </div>
-            )}
-
-            {activeTab === 'other' && (
-              <div className="space-y-8">
-                {/* Skills Section */}
-                <div>
-                  <SkillsTab employeeId={selectedEmployee?.employeeId || ''} />
-                </div>
-
-                {/* Certificates Section */}
-                <div className="border-t pt-6">
-                  <CertificatesTab employeeId={selectedEmployee?.employeeId || ''} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        <PhotoModal
+          isOpen={isPhotoModalOpen}
+          photo={selectedPhoto}
+          onClose={handleClosePhotoModal}
+        />
+        <SuccessModal
+          isOpen={showSuccessModal}
+          message={successMessage}
+          onClose={() => setShowSuccessModal(false)}
+        />
+        <ErrorModal
+          isOpen={!!errorMessage}
+          message={errorMessage}
+          onClose={() => setErrorMessage('')}
+        />
+      </>
     );
   }
 
-  // Main employee list view
+  // Main employee view with dashboard/list toggle
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Add Employee Button */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex gap-3">
+    <>
+      {/* View Toggle Buttons */}
+      <div className="mb-6 flex justify-between items-center">
+        <div className="flex space-x-4">
           <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-[#800000] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+            onClick={() => setActiveView('dashboard')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              activeView === 'dashboard'
+                ? 'bg-[#800000] text-white shadow-md'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            <FaPlus /> Add Employee
+            Dashboard
           </button>
           <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+            onClick={() => setActiveView('list')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              activeView === 'list'
+                ? 'bg-[#800000] text-white shadow-md'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            <FaUpload /> Import Employees
-          </button>
-          <button
-            onClick={() => setIsExportModalOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
-          >
-            <FaDownload /> Export Employees
+            Employee List
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleToggleView}
-            disabled={isLoadingAll}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoadingAll ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Loading...
-              </>
-            ) : viewMode === 'paginated' ? (
-              <>
-                <FaEye /> Show All ({pagination.totalCount})
-              </>
-            ) : (
-              <>
-                <FaEye /> Show Paginated
-              </>
-            )}
-          </button>
-          <div className="flex gap-2">
+      </div>
+
+      {/* Dashboard View */}
+      {activeView === 'dashboard' && (
+        <div className="p-6">
+          <EmployeeDashboard 
+            employees={allEmployees.length > 0 ? allEmployees : employees}
+            departments={departments}
+          />
+        </div>
+      )}
+
+      {/* List View */}
+      {activeView === 'list' && (
+        <>
+          {/* Employee Category Tabs (Active/Inactive) */}
+          <div className="mb-6 flex space-x-4 border-b border-gray-200">
             <button
-              onClick={() => handleQuickExport('csv')}
-              disabled={isExporting}
-              className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              title="Export current view as CSV"
+              onClick={() => setEmployeeCategory('active')}
+              className={`px-6 py-3 font-medium transition-colors border-b-2 ${
+                employeeCategory === 'active'
+                  ? 'border-[#800000] text-[#800000]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              {isExporting ? (
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-              ) : (
-                <FaFileCsv className="w-4 h-4" />
-              )}
-              CSV
+              Active Employees
             </button>
             <button
-              onClick={() => handleQuickExport('pdf')}
-              disabled={isExporting}
-              className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              title="Export current view as PDF"
+              onClick={() => setEmployeeCategory('inactive')}
+              className={`px-6 py-3 font-medium transition-colors border-b-2 ${
+                employeeCategory === 'inactive'
+                  ? 'border-[#800000] text-[#800000]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              {isExporting ? (
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-              ) : (
-                <FaFilePdf className="w-4 h-4" />
-              )}
-              PDF
+              Retired/Resigned Employees
             </button>
-          </div>
-          {viewMode === 'all' && (
-            <span className="text-sm text-gray-600">
-              Showing all {allEmployees.length} employees
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Search and Filter Section */}
-      <div className="mb-8 flex flex-wrap gap-4 items-center">
-        <div className="flex-1 min-w-[300px]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search employees..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-            />
-          </div>
-        </div>
-        <select
-          value={departmentFilter}
-          onChange={(e) => setDepartmentFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-        >
-          <option value="all">All Departments</option>
-          {departments.map((dept) => (
-            <option key={dept.id} value={dept.id.toString()}>
-              {dept.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={designationFilter}
-          onChange={(e) => setDesignationFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-        >
-          <option value="all">All Designations</option>
-          <option value="president">President</option>
-          <option value="admin_officer">Admin Officer</option>
-          <option value="vice_president">Vice President</option>
-          <option value="registrar">Registrar</option>
-          <option value="faculty">Faculty</option>
-          <option value="principal">Principal</option>
-          <option value="cashier">Cashier</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-        >
-          <option value="all">All Statuses</option>
-          <option value="Regular">Regular</option>
-          <option value="Probationary">Probationary</option>
-          <option value="Resigned">Resigned</option>
-          <option value="Hired">Hired</option>
-        </select>
-        {/* Order by Name Dropdown */}
-        <select
-          value={nameOrder}
-          onChange={e => setNameOrder(e.target.value as 'asc' | 'desc')}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-          title="Order by Name"
-        >
-          <option value="desc">Latest Added</option>
-          <option value="asc">Name A-Z</option>
-        </select>
-      </div>
-
-      {/* Employees Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]"></div>
-            <span className="ml-2 text-gray-600">Loading employees...</span>
-          </div>
-        ) : (
-          <>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Photo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Position
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Designation
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Department
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredEmployees.map((employee) => (
-                <tr 
-                  key={employee.id} 
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handleEmployeeSelect(employee)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div 
-                      className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (employee.photo) {
-                          handlePhotoClick(e, employee.photo, `${employee.firstName} ${employee.surname}`);
-                        }
-                      }}
-                    >
-                      {employee.photo ? (
-                        <img 
-                          src={employee.photo} 
-                          alt={`${employee.firstName} ${employee.surname}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#800000]">
-                          <span className="text-white font-medium">
-                            {(employee.firstName || '').charAt(0)}{(employee.surname || '').charAt(0)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {employee.fullName || `${employee.firstName} ${employee.surname}`.trim()}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {employee.employeeType}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.position}
-                  </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDesignation(employee.designation)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {(() => {
-                      // Debug logging for department display
-                      if (employee.employeeId === '2025-0001') {
-                        console.log('DEBUG table display - Employee object:', employee);
-                        console.log('DEBUG table display - departmentName:', employee.departmentName);
-                        console.log('DEBUG table display - DepartmentID:', employee.DepartmentID);
-                        console.log('DEBUG table display - Department object:', employee.Department);
-                      }
-                      return employee.departmentName || 'No Department';
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.email || 'No email'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEmployeeSelect(employee);
-                        }}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        <FaEye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditEmployee(employee);
-                        }}
-                        className="text-[#800000] hover:text-red-800"
-                      >
-                        <FaEdit className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-            {/* Pagination Controls - Only show in paginated mode */}
-            {viewMode === 'paginated' && (
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={!pagination.hasPrevPage}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={!pagination.hasNextPage}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-      </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing{' '}
-                    <span className="font-medium">
-                      {((pagination.currentPage - 1) * pagination.limit) + 1}
-                    </span>{' '}
-                    to{' '}
-                    <span className="font-medium">
-                      {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)}
-                    </span>{' '}
-                    of{' '}
-                    <span className="font-medium">{pagination.totalCount}</span> results
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={() => handlePageChange(pagination.currentPage - 1)}
-                      disabled={!pagination.hasPrevPage}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-
-                    {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (pagination.totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (pagination.currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (pagination.currentPage >= pagination.totalPages - 2) {
-                        pageNum = pagination.totalPages - 4 + i;
-                      } else {
-                        pageNum = pagination.currentPage - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            pageNum === pagination.currentPage
-                              ? 'z-10 bg-[#800000] border-[#800000] text-white'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-
-                    <button
-                      onClick={() => handlePageChange(pagination.currentPage + 1)}
-                      disabled={!pagination.hasNextPage}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </nav>
-                </div>
+            {employeeCategory === 'inactive' && (
+              <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span>Data retention: 3 years per Data Privacy Act (Philippines) & DOLE requirements</span>
               </div>
-            </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+
+          <EmployeeList
+            employees={employeeCategory === 'active' 
+              ? employees.filter(e => e.status !== 'Resigned' && e.status !== 'Retired' && e.status !== 'resigned' && e.status !== 'retired')
+              : employees.filter(e => e.status === 'Resigned' || e.status === 'Retired' || e.status === 'resigned' || e.status === 'retired')
+            }
+            allEmployees={employeeCategory === 'active'
+              ? allEmployees.filter(e => e.status !== 'Resigned' && e.status !== 'Retired' && e.status !== 'resigned' && e.status !== 'retired')
+              : allEmployees.filter(e => e.status === 'Resigned' || e.status === 'Retired' || e.status === 'resigned' || e.status === 'retired')
+            }
+            departments={departments}
+            pagination={pagination}
+            viewMode={viewMode}
+            isLoading={isLoading}
+            isLoadingAll={isLoadingAll}
+            isExporting={isExporting}
+            searchTerm={searchTerm}
+            departmentFilter={departmentFilter}
+            designationFilter={designationFilter}
+            statusFilter={employeeCategory === 'active' ? statusFilter : (statusFilter === 'all' ? 'Resigned' : statusFilter)}
+            nameOrder={nameOrder}
+            onSearchChange={setSearchTerm}
+            onDepartmentFilterChange={setDepartmentFilter}
+            onDesignationFilterChange={setDesignationFilter}
+            onStatusFilterChange={setStatusFilter}
+            onNameOrderChange={setNameOrder}
+            onEmployeeSelect={handleEmployeeSelect}
+            onEmployeeEdit={handleEditEmployee}
+            onPhotoClick={handlePhotoClick}
+            onPageChange={handlePageChange}
+            onToggleView={handleToggleView}
+            onAddEmployee={() => setIsAddModalOpen(true)}
+            onImportEmployees={() => setIsImportModalOpen(true)}
+            onExportEmployees={() => setIsExportModalOpen(true)}
+            onQuickExport={handleQuickExport}
+            showDataRetention={employeeCategory === 'inactive'}
+          />
+        </>
+      )}
 
       {/* Add Employee Modal - Modern & User-Friendly */}
       {isAddModalOpen && (
@@ -3106,8 +2182,15 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                                 <option value="">Select status...</option>
                                 <option value="Regular">Regular</option>
                                 <option value="Probationary">Probationary</option>
+                                <option value="Hired">Hired</option>
                                 <option value="Resigned">Resigned</option>
+                                <option value="Retired">Retired</option>
                               </select>
+                              {editEmployee.ResignationDate && editEmployee.EmploymentStatus !== 'Resigned' && (
+                                <p className="text-sm text-yellow-600 mt-1">
+                                  ⚠️ Status will be automatically set to "Resigned" when saved
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <label className="flex text-sm font-semibold text-gray-700 items-center">
@@ -3129,9 +2212,23 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                               <input
                                 type="date"
                                 value={editEmployee.ResignationDate || ''}
-                                onChange={(e) => setEditEmployee({...editEmployee, ResignationDate: e.target.value || null})}
+                                onChange={(e) => {
+                                  const resignationDate = e.target.value || null;
+                                  // Automatically set status to "Resigned" when resignation date is added
+                                  const updatedEmployee = {
+                                    ...editEmployee,
+                                    ResignationDate: resignationDate,
+                                    EmploymentStatus: resignationDate ? 'Resigned' : editEmployee.EmploymentStatus
+                                  };
+                                  setEditEmployee(updatedEmployee);
+                                }}
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
                               />
+                              {editEmployee.ResignationDate && (
+                                <p className="text-sm text-blue-600 mt-1">
+                                  ✓ Status will be automatically set to "Resigned"
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <label className="block text-sm font-semibold text-gray-700">
@@ -3899,63 +2996,21 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         </div>
       )}
 
-      {/* Photo Modal */}
-      {isPhotoModalOpen && selectedPhoto && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
-          onClick={handleClosePhotoModal}
-        >
-          <div 
-            className="relative bg-white rounded-lg p-2 max-w-4xl max-h-[90vh]"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 bg-white rounded-full p-1"
-              onClick={handleClosePhotoModal}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="flex items-center justify-center min-h-[200px]">
-              <img
-                src={selectedPhoto.url}
-                alt={selectedPhoto.alt}
-                className="max-w-full max-h-[85vh] object-contain"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          onClick={() => setShowSuccessModal(false)}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl transform transition-all"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-2">Success!</h3>
-              <p className="text-sm text-gray-500 mb-4">{successMessage}</p>
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PhotoModal
+        isOpen={isPhotoModalOpen}
+        photo={selectedPhoto}
+        onClose={handleClosePhotoModal}
+      />
+      <SuccessModal
+        isOpen={showSuccessModal}
+        message={successMessage}
+        onClose={() => setShowSuccessModal(false)}
+      />
+      <ErrorModal
+        isOpen={!!errorMessage}
+        message={errorMessage}
+        onClose={() => setErrorMessage('')}
+      />
 
       {/* Export Employee Modal */}
       {isExportModalOpen && (
@@ -4300,35 +3355,23 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
           </div>
         </div>
       )}
-      {/* Error Notification Modal */}
-      {errorMessage && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          onClick={() => setErrorMessage('')}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl border border-red-400 transform transition-all"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h3 className="text-lg leading-6 font-medium text-red-900 mb-2">Error</h3>
-              <p className="text-sm text-gray-500 mb-4">{errorMessage}</p>
-              <button
-                onClick={() => setErrorMessage('')}
-                className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+
+      <PhotoModal
+        isOpen={isPhotoModalOpen}
+        photo={selectedPhoto}
+        onClose={handleClosePhotoModal}
+      />
+      <SuccessModal
+        isOpen={showSuccessModal}
+        message={successMessage}
+        onClose={() => setShowSuccessModal(false)}
+      />
+      <ErrorModal
+        isOpen={!!errorMessage}
+        message={errorMessage}
+        onClose={() => setErrorMessage('')}
+      />
+    </>
   );
 };
 

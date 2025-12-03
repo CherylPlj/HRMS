@@ -27,6 +27,7 @@ interface ReviewViewModalProps {
   onOpenChange: (open: boolean) => void
   review: PerformanceReview | null
   allReviews?: PerformanceReview[] // Optional: all reviews to find previous ones
+  userRole?: 'employee' | 'faculty' | 'admin' // Optional: user role to determine view behavior
 }
 
 const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
@@ -34,6 +35,7 @@ const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
   onOpenChange,
   review,
   allReviews = [],
+  userRole = 'employee',
 }) => {
   const [showPreviousReviews, setShowPreviousReviews] = useState(false)
 
@@ -224,8 +226,8 @@ const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
               </div>
             )}
 
-            {/* Show message if no previous reviews */}
-            {previousReviews.length === 0 && (
+            {/* Show message if no previous reviews - hide in faculty view */}
+            {previousReviews.length === 0 && userRole !== 'faculty' && (
               <div className="mt-4 pt-4 border-t">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <History className="h-4 w-4" />

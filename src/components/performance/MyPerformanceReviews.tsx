@@ -381,6 +381,7 @@ const MyPerformanceReviews: React.FC<MyPerformanceReviewsProps> = ({
         onOpenChange={handleModalClose}
         review={selectedReview}
         allReviews={transformedReviews}
+        userRole={userRole}
       />
     </div>
   )
