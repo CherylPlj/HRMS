@@ -15,8 +15,6 @@ const COLUMN_LABELS: Record<string, string> = {
   PlaceOfBirth: 'Place of Birth',
   CivilStatus: 'Civil Status',
   Nationality: 'Nationality',
-  Religion: 'Religion',
-  BloodType: 'Blood Type',
   Email: 'Email',
   Phone: 'Phone',
   PresentAddress: 'Present Address',
@@ -83,7 +81,7 @@ export async function GET(request: Request) {
         GovernmentID(SSSNumber, TINNumber, PhilHealthNumber, PagIbigNumber, GSISNumber, PRCLicenseNumber, PRCValidity),
         Department(DepartmentName),
         Family(id, type, name, dateOfBirth, occupation, isDependent, relationship, contactNumber, address),
-        skills(id, name, proficiencyLevel, yearsOfExperience, description),
+        skills(id, name, proficiencyLevel, description),
         MedicalInfo(medicalNotes, lastCheckup, vaccination, allergies, hasDisability, disabilityType, disabilityDetails),
         Education(id, level, schoolName, course, yearGraduated, honors),
         Eligibility(id, type, rating, licenseNumber, examDate, validUntil),
@@ -202,8 +200,6 @@ function getColumnValue(emp: any, col: string) {
     case 'PlaceOfBirth': return emp.PlaceOfBirth || '';
     case 'CivilStatus': return emp.CivilStatus || '';
     case 'Nationality': return emp.Nationality || '';
-    case 'Religion': return emp.Religion || '';
-    case 'BloodType': return emp.BloodType || '';
     case 'Email': return contactInfo.Email || '';
     case 'Phone': return contactInfo.Phone || '';
     case 'PresentAddress': return contactInfo.PresentAddress || '';

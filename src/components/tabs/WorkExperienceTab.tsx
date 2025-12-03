@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { useUser } from '@clerk/nextjs';
+import { isAdmin } from '@/utils/roleUtils';
 
 interface WorkExperience {
   id?: number;
@@ -28,6 +30,7 @@ interface FormErrors {
 }
 
 const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => {
+  const { user } = useUser();
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<WorkExperience | null>(null);
@@ -35,6 +38,13 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setIsUserAdmin(isAdmin(user));
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchWorkExperiences();
@@ -194,23 +204,25 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Work Experience</h3>
-        <button
-          onClick={() => {
-            setCurrentRecord({
-              id: 0,
-              employeeId,
-              schoolName: '',
-              position: '',
-              startDate: new Date(),
-              endDate: null,
-              reasonForLeaving: null
-            });
-            setShowForm(true);
-          }}
-          className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
-        >
-          <FaPlus /> Add Work Experience
-        </button>
+        {!isUserAdmin && (
+          <button
+            onClick={() => {
+              setCurrentRecord({
+                id: 0,
+                employeeId,
+                schoolName: '',
+                position: '',
+                startDate: new Date(),
+                endDate: null,
+                reasonForLeaving: null
+              });
+              setShowForm(true);
+            }}
+            className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+          >
+            <FaPlus /> Add Work Experience
+          </button>
+        )}
       </div>
 
       {/* List of work experiences */}
@@ -237,23 +249,25 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setCurrentRecord(experience);
-                    setShowForm(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <FaEdit />
-                </button>
-                <button
-                  onClick={() => handleDelete(experience.id!)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <FaTrash />
-                </button>
-              </div>
+              {!isUserAdmin && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setCurrentRecord(experience);
+                      setShowForm(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(experience.id!)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}

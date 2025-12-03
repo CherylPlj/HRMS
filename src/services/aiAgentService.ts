@@ -403,7 +403,6 @@ Provide a JSON response (no markdown, just valid JSON):
     const currentSkills = employee.skills.map(s => ({
       name: s.name,
       proficiency: s.proficiencyLevel,
-      years: s.yearsOfExperience,
     }));
 
     const completedTrainings = employee.trainings.map(t => t.title);

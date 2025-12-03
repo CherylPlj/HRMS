@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { useUser } from '@clerk/nextjs';
+import { isAdmin } from '@/utils/roleUtils';
 
 interface Skill {
   id: number;
   employeeId: string;
   name: string;
   proficiencyLevel: string;
-  yearsOfExperience: number;
   description?: string;
 }
 
@@ -20,12 +21,20 @@ interface Notification {
 }
 
 const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
+  const { user } = useUser();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentSkill, setCurrentSkill] = useState<Skill | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setIsUserAdmin(isAdmin(user));
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchSkills();
@@ -65,6 +74,20 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSkill) return;
+
+    // Check for duplicate skill name (case-insensitive)
+    const duplicateSkill = skills.find(
+      skill => 
+        skill.name.toLowerCase() === currentSkill.name.toLowerCase() &&
+        skill.id !== currentSkill.id // Exclude current skill when editing
+    );
+    if (duplicateSkill) {
+      setNotification({
+        type: 'error',
+        message: 'A skill with this name already exists. Please choose a different name.'
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -162,22 +185,23 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Skills</h3>
-        <button
-          onClick={() => {
-            setCurrentSkill({
-              id: 0,
-              employeeId,
-              name: '',
-              proficiencyLevel: 'Beginner',
-              yearsOfExperience: 0,
-              description: '',
-            });
-            setShowForm(true);
-          }}
-          className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
-        >
-          <FaPlus /> Add Skill
-        </button>
+        {!isUserAdmin && (
+          <button
+            onClick={() => {
+              setCurrentSkill({
+                id: 0,
+                employeeId,
+                name: '',
+                proficiencyLevel: 'Beginner',
+                description: '',
+              });
+              setShowForm(true);
+            }}
+            className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+          >
+            <FaPlus /> Add Skill
+          </button>
+        )}
       </div>
 
       {/* List of skills */}
@@ -192,30 +216,29 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
                     ({skill.proficiencyLevel})
                   </span>
                 </div>
-                <p className="text-sm text-gray-600">
-                  Years of Experience: {skill.yearsOfExperience}
-                </p>
                 {skill.description && (
                   <p className="text-sm text-gray-600 mt-1">{skill.description}</p>
                 )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setCurrentSkill(skill);
-                    setShowForm(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <FaEdit />
-                </button>
-                <button
-                  onClick={() => handleDelete(skill.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <FaTrash />
-                </button>
-              </div>
+              {!isUserAdmin && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setCurrentSkill(skill);
+                      setShowForm(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(skill.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -274,22 +297,6 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Years of Experience <span className="text-red-500">*</span></label>
-                  <input
-                    type="number"
-                    value={currentSkill.yearsOfExperience}
-                    onChange={(e) =>
-                      setCurrentSkill({
-                        ...currentSkill,
-                        yearsOfExperience: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                    required
-                    min="0"
-                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>

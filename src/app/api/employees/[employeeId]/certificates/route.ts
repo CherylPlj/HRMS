@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/utils/serverRoleUtils';
 
 export async function GET(
   request: NextRequest,
@@ -33,6 +35,19 @@ export async function POST(
   context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot add certificates
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to add certificates' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId } = await context.params;
     const formData = await request.formData();
     const fileData = formData.get('file') as File | null;

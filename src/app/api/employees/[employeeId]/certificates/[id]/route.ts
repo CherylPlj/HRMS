@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/utils/serverRoleUtils';
 
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot edit certificates
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to edit certificates' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId, id } = await context.params;
     const formData = await request.formData();
     const fileData = formData.get('file') as File | null;
@@ -89,6 +104,19 @@ export async function DELETE(
   context: { params: Promise<{ employeeId: string; id: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot delete certificates
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to delete certificates' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId, id } = await context.params;
     const certificateId = parseInt(id);
 

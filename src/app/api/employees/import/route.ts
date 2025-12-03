@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
         CivilStatus: data.CivilStatus,
         Nationality: data.Nationality,
         Religion: data.Religion,
-        BloodType: data.BloodType,
         ContractID: data.ContractID && data.ContractID.trim() !== '' ? Number(data.ContractID) : null,
         DepartmentID: data.DepartmentID ? Number(data.DepartmentID) : undefined,
         Email: data.Email,

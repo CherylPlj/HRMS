@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/utils/serverRoleUtils';
 
 export async function PUT(
   request: NextRequest,
@@ -10,6 +11,14 @@ export async function PUT(
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot edit work experience
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to edit work experience' },
+        { status: 403 }
+      );
     }
 
     const { employeeId, id } = params;
@@ -56,6 +65,14 @@ export async function DELETE(
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot delete work experience
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to delete work experience' },
+        { status: 403 }
+      );
     }
 
     const { employeeId, id } = params;

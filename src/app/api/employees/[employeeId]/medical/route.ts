@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/utils/serverRoleUtils';
 
 export async function GET(
   request: Request,
@@ -47,6 +49,19 @@ export async function POST(
   context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot add/edit medical information
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to add or edit medical information' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId } = await context.params;
     const data = await request.json();
 
@@ -58,8 +73,6 @@ export async function POST(
     if (data.healthInsuranceExpiryDate) data.healthInsuranceExpiryDate = new Date(data.healthInsuranceExpiryDate);
 
     // Ensure numeric fields are properly typed
-    if (data.height) data.height = parseFloat(data.height);
-    if (data.weight) data.weight = parseFloat(data.weight);
     if (data.disabilityPercentage) data.disabilityPercentage = parseInt(data.disabilityPercentage);
 
     const medicalInfo = await prisma.medicalInfo.create({
@@ -69,6 +82,7 @@ export async function POST(
         lastCheckup: data.lastCheckup,
         vaccination: data.vaccination,
         allergies: data.allergies,
+        bloodType: data.bloodType,
         hasDisability: data.hasDisability || false,
         disabilityType: data.disabilityType,
         disabilityDetails: data.disabilityDetails,
@@ -82,9 +96,6 @@ export async function POST(
         communicationNeeds: data.communicationNeeds,
         workplaceModifications: data.workplaceModifications,
         emergencyProtocol: data.emergencyProtocol,
-        bloodPressure: data.bloodPressure,
-        height: data.height,
-        weight: data.weight,
         emergencyProcedures: data.emergencyProcedures,
         primaryPhysician: data.primaryPhysician,
         physicianContact: data.physicianContact,
@@ -119,6 +130,19 @@ export async function PUT(
   context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot add/edit medical information
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to add or edit medical information' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId } = await context.params;
     const data = await request.json();
 
@@ -130,8 +154,6 @@ export async function PUT(
     if (data.healthInsuranceExpiryDate) data.healthInsuranceExpiryDate = new Date(data.healthInsuranceExpiryDate);
 
     // Ensure numeric fields are properly typed
-    if (data.height) data.height = parseFloat(data.height);
-    if (data.weight) data.weight = parseFloat(data.weight);
     if (data.disabilityPercentage) data.disabilityPercentage = parseInt(data.disabilityPercentage);
 
     const updatedMedicalInfo = await prisma.medicalInfo.upsert({
@@ -143,6 +165,7 @@ export async function PUT(
         lastCheckup: data.lastCheckup,
         vaccination: data.vaccination,
         allergies: data.allergies,
+        bloodType: data.bloodType,
         hasDisability: data.hasDisability,
         disabilityType: data.disabilityType,
         disabilityDetails: data.disabilityDetails,
@@ -156,9 +179,6 @@ export async function PUT(
         communicationNeeds: data.communicationNeeds,
         workplaceModifications: data.workplaceModifications,
         emergencyProtocol: data.emergencyProtocol,
-        bloodPressure: data.bloodPressure,
-        height: data.height,
-        weight: data.weight,
         emergencyProcedures: data.emergencyProcedures,
         primaryPhysician: data.primaryPhysician,
         physicianContact: data.physicianContact,
@@ -172,6 +192,7 @@ export async function PUT(
         lastCheckup: data.lastCheckup,
         vaccination: data.vaccination,
         allergies: data.allergies,
+        bloodType: data.bloodType,
         hasDisability: data.hasDisability || false,
         disabilityType: data.disabilityType,
         disabilityDetails: data.disabilityDetails,
@@ -185,9 +206,6 @@ export async function PUT(
         communicationNeeds: data.communicationNeeds,
         workplaceModifications: data.workplaceModifications,
         emergencyProtocol: data.emergencyProtocol,
-        bloodPressure: data.bloodPressure,
-        height: data.height,
-        weight: data.weight,
         emergencyProcedures: data.emergencyProcedures,
         primaryPhysician: data.primaryPhysician,
         physicianContact: data.physicianContact,
@@ -222,6 +240,19 @@ export async function DELETE(
   context: { params: Promise<{ employeeId: string }> }
 ) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot delete medical information
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to delete medical information' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId } = await context.params;
 
     await prisma.medicalInfo.delete({

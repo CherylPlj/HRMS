@@ -83,6 +83,9 @@ const OfferedApplicantPage = () => {
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [consentGiven, setConsentGiven] = useState(false);
+  const [religionConsent, setReligionConsent] = useState(false);
+  const [messengerConsent, setMessengerConsent] = useState(false);
+  const [fbLinkConsent, setFbLinkConsent] = useState(false);
 
   const [employeeInfo, setEmployeeInfo] = useState<EmployeeInfo>({
     DateOfBirth: '',
@@ -245,6 +248,16 @@ const OfferedApplicantPage = () => {
     if (employeeInfo.FBLink) {
       const fbLinkValidation = validateUrl(employeeInfo.FBLink, true);
       if (!fbLinkValidation.valid) errors.FBLink = fbLinkValidation.error || '';
+      if (!fbLinkConsent) errors.FBLink = 'Please provide consent to share your Facebook profile link.';
+    }
+    
+    // Validate consent for optional sensitive fields
+    if (employeeInfo.Religion && !religionConsent) {
+      errors.Religion = 'Please provide consent to share your religious affiliation.';
+    }
+    
+    if (employeeInfo.MessengerName && !messengerConsent) {
+      errors.MessengerName = 'Please provide consent to share your Messenger name.';
     }
     
     // Validate at least one government ID
@@ -576,15 +589,34 @@ const OfferedApplicantPage = () => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Religion</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Religion <span className="text-gray-500 text-xs font-normal">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     name="Religion"
                     value={employeeInfo.Religion}
                     onChange={handleInputChange}
+                    placeholder="Religion (optional)"
                     disabled={alreadySubmitted && !infoReturned}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
                   />
+                  {employeeInfo.Religion && (
+                    <div className="flex items-start mt-2">
+                      <input
+                        type="checkbox"
+                        id="religionConsent"
+                        checked={religionConsent}
+                        onChange={(e) => setReligionConsent(e.target.checked)}
+                        disabled={alreadySubmitted && !infoReturned}
+                        className="mt-1 rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2 disabled:bg-gray-100"
+                        required={!!employeeInfo.Religion}
+                      />
+                      <label htmlFor="religionConsent" className="text-xs text-gray-600">
+                        I consent to providing my religious affiliation. This information is optional and will only be used for accommodation purposes if needed.
+                      </label>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Blood Type</label>
@@ -673,7 +705,7 @@ const OfferedApplicantPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Messenger Name
+                    Messenger Name <span className="text-gray-500 text-xs font-normal">(Optional - for communication)</span>
                   </label>
                   <input
                     type="text"
@@ -684,10 +716,26 @@ const OfferedApplicantPage = () => {
                     disabled={alreadySubmitted && !infoReturned}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
                   />
+                  {employeeInfo.MessengerName && (
+                    <div className="flex items-start mt-2">
+                      <input
+                        type="checkbox"
+                        id="messengerConsent"
+                        checked={messengerConsent}
+                        onChange={(e) => setMessengerConsent(e.target.checked)}
+                        disabled={alreadySubmitted && !infoReturned}
+                        className="mt-1 rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2 disabled:bg-gray-100"
+                        required={!!employeeInfo.MessengerName}
+                      />
+                      <label htmlFor="messengerConsent" className="text-xs text-gray-600">
+                        I consent to providing my Messenger name for easier communication channels aside from email.
+                      </label>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Facebook Profile Link
+                    Facebook Profile Link <span className="text-gray-500 text-xs font-normal">(Optional - for communication)</span>
                   </label>
                   <input
                     type="url"
@@ -702,6 +750,22 @@ const OfferedApplicantPage = () => {
                   />
                   {formErrors.FBLink && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.FBLink}</p>
+                  )}
+                  {employeeInfo.FBLink && (
+                    <div className="flex items-start mt-2">
+                      <input
+                        type="checkbox"
+                        id="fbLinkConsent"
+                        checked={fbLinkConsent}
+                        onChange={(e) => setFbLinkConsent(e.target.checked)}
+                        disabled={alreadySubmitted && !infoReturned}
+                        className="mt-1 rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2 disabled:bg-gray-100"
+                        required={!!employeeInfo.FBLink}
+                      />
+                      <label htmlFor="fbLinkConsent" className="text-xs text-gray-600">
+                        I consent to providing my Facebook profile link for easier communication channels aside from email.
+                      </label>
+                    </div>
                   )}
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/utils/serverRoleUtils';
 
 export async function GET(
   request: NextRequest,
@@ -41,6 +42,14 @@ export async function POST(
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot add work experience
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to add work experience' },
+        { status: 403 }
+      );
     }
 
     const { employeeId } = await params;
@@ -85,6 +94,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if user is admin - admins cannot edit work experience
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to edit work experience' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId } = await params;
     const data = await request.json();
 
@@ -126,6 +143,14 @@ export async function DELETE(
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin - admins cannot delete work experience
+    if (await isUserAdmin()) {
+      return NextResponse.json(
+        { error: 'Admins are not allowed to delete work experience' },
+        { status: 403 }
+      );
     }
 
     const { employeeId } = await params;

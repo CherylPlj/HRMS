@@ -14,7 +14,6 @@ export interface EmployeeFormState {
   CivilStatus: string;
   Nationality: string;
   Religion: string;
-  BloodType: string;
   Email: string;
   Phone: string;
   Address: string;
@@ -97,7 +96,6 @@ export interface Employee {
   phone: string;
   hireDate: string;
   salaryGrade: string;
-  BloodType?: string;
   DepartmentID?: number;
   Department?: {
     DepartmentID: number;

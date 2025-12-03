@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaDownload } from 'react-icons/fa';
+import { useUser } from '@clerk/nextjs';
+import { isAdmin } from '@/utils/roleUtils';
 
 interface Certificate {
   id: number;
@@ -22,6 +24,7 @@ interface Notification {
 }
 
 const CertificatesTab: React.FC<CertificatesTabProps> = ({ employeeId }) => {
+  const { user } = useUser();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentCertificate, setCurrentCertificate] = useState<Certificate | null>(null);
@@ -29,6 +32,13 @@ const CertificatesTab: React.FC<CertificatesTabProps> = ({ employeeId }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setIsUserAdmin(isAdmin(user));
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchCertificates();
@@ -156,24 +166,26 @@ const CertificatesTab: React.FC<CertificatesTabProps> = ({ employeeId }) => {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Certificates</h3>
-        <button
-          onClick={() => {
-            setCurrentCertificate({
-              id: 0,
-              employeeId,
-              title: '',
-              issuedBy: '',
-              issueDate: new Date(),
-              expiryDate: null,
-              description: '',
-              fileUrl: '',
-            });
-            setShowForm(true);
-          }}
-          className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
-        >
-          <FaPlus /> Add Certificate
-        </button>
+        {!isUserAdmin && (
+          <button
+            onClick={() => {
+              setCurrentCertificate({
+                id: 0,
+                employeeId,
+                title: '',
+                issuedBy: '',
+                issueDate: new Date(),
+                expiryDate: null,
+                description: '',
+                fileUrl: '',
+              });
+              setShowForm(true);
+            }}
+            className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+          >
+            <FaPlus /> Add Certificate
+          </button>
+        )}
       </div>
 
       {/* List of certificates */}
@@ -209,21 +221,25 @@ const CertificatesTab: React.FC<CertificatesTabProps> = ({ employeeId }) => {
                     <FaDownload />
                   </a>
                 )}
-                <button
-                  onClick={() => {
-                    setCurrentCertificate(certificate);
-                    setShowForm(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <FaEdit />
-                </button>
-                <button
-                  onClick={() => handleDelete(certificate.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <FaTrash />
-                </button>
+                {!isUserAdmin && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setCurrentCertificate(certificate);
+                        setShowForm(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(certificate.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <FaTrash />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

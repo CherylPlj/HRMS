@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { useUser } from '@clerk/nextjs';
+import {
+  maskHealthInsuranceNumber,
+  maskPwdIdNumber,
+  maskPhoneNumber,
+  maskSensitiveText,
+  maskBloodType,
+  canViewUnmaskedMedicalData,
+  getUserRole
+} from '@/utils/medicalDataMasking';
+import { isAdmin } from '@/utils/roleUtils';
 
 interface MedicalInfo {
   id?: number;
@@ -8,6 +19,7 @@ interface MedicalInfo {
   lastCheckup?: Date;
   vaccination?: string;
   allergies?: string;
+  bloodType?: string;
   
   // Disability Information
   hasDisability: boolean;
@@ -25,9 +37,6 @@ interface MedicalInfo {
   emergencyProtocol?: string;
   
   // Medical Information
-  bloodPressure?: string;
-  height?: number;
-  weight?: number;
   emergencyProcedures?: string;
   primaryPhysician?: string;
   physicianContact?: string;
@@ -38,7 +47,6 @@ interface MedicalInfo {
 
 interface MedicalTabProps {
   employeeId: string;
-  bloodType?: string | null;
 }
 
 interface Notification {
@@ -46,18 +54,37 @@ interface Notification {
   message: string;
 }
 
-const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
+const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
+  const { user } = useUser();
   const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<MedicalInfo | null>(null);
-  const [bpSystolic, setBpSystolic] = useState<string>('');
-  const [bpDiastolic, setBpDiastolic] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canViewUnmasked, setCanViewUnmasked] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [showMaskedInfo, setShowMaskedInfo] = useState<{
+    medicalNotes: boolean;
+    bloodType: boolean;
+    allergies: boolean;
+    disabilityDetails: boolean;
+    pwdIdNumber: boolean;
+    physicianContact: boolean;
+    healthInsuranceNumber: boolean;
+    emergencyProcedures: boolean;
+  }>({
+    medicalNotes: false,
+    bloodType: false,
+    allergies: false,
+    disabilityDetails: false,
+    pwdIdNumber: false,
+    physicianContact: false,
+    healthInsuranceNumber: false,
+    emergencyProcedures: false,
+  });
   const [formErrors, setFormErrors] = useState<{
     medicalNotes?: string;
-    bloodPressure?: string;
     allergies?: string;
     vaccination?: string;
     primaryPhysician?: string;
@@ -67,22 +94,18 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
     emergencyProcedures?: string;
   }>({});
 
+  // Check user permissions for viewing unmasked medical data
+  useEffect(() => {
+    if (user) {
+      const userRole = getUserRole(user);
+      setCanViewUnmasked(canViewUnmaskedMedicalData(userRole));
+      setIsUserAdmin(isAdmin(user));
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchMedicalInfo();
   }, [employeeId]);
-
-  // Keep bpSystolic and bpDiastolic in sync when editing a record
-  useEffect(() => {
-    if (!currentRecord) {
-      setBpSystolic('');
-      setBpDiastolic('');
-      return;
-    }
-    const bp = currentRecord.bloodPressure || '';
-    const parts = bp.split('/');
-    setBpSystolic(parts[0] || '');
-    setBpDiastolic(parts[1] || '');
-  }, [currentRecord]);
 
   // Auto-hide notifications after 5 seconds
   useEffect(() => {
@@ -120,10 +143,9 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentRecord) return;
-    // Build a record copy where bloodPressure is the combined systolic/diastolic
+    // Build a record copy
     const record: typeof currentRecord = {
       ...currentRecord,
-      bloodPressure: (bpSystolic || bpDiastolic) ? `${bpSystolic}/${bpDiastolic}` : '',
       emergencyProcedures: currentRecord.emergencyProcedures ? currentRecord.emergencyProcedures.trim() : ''
     };
 
@@ -138,13 +160,6 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
     // Medical notes: allow only letters, numbers and spaces
     if (record.medicalNotes && !/^[A-Za-z0-9\s]*$/.test(record.medicalNotes)) {
       errors.medicalNotes = 'Medical notes may only contain letters, numbers and spaces.';
-    }
-
-    // Blood pressure: accept formats like '120/80' where each side is 1-3 digits
-    if (record.bloodPressure) {
-      if (!/^\d{1,3}\/\d{1,3}$/.test(record.bloodPressure.trim())) {
-        errors.bloodPressure = 'e.g. 120/80';
-      }
     }
 
     // Allergies & vaccination: limit length
@@ -252,33 +267,44 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Medical Information</h3>
-        <button
-          onClick={() => {
-            setCurrentRecord({
-              id: medicalInfo?.id || 0,
-              employeeId,
-              hasDisability: medicalInfo?.hasDisability || false,
-              medicalNotes: medicalInfo?.medicalNotes || '',
-              lastCheckup: medicalInfo?.lastCheckup ? new Date(medicalInfo.lastCheckup) : undefined,
-              bloodPressure: medicalInfo?.bloodPressure || '',
-              disabilityType: medicalInfo?.disabilityType || '',
-              pwdIdNumber: medicalInfo?.pwdIdNumber || '',
-              pwdIdValidity: medicalInfo?.pwdIdValidity ? new Date(medicalInfo.pwdIdValidity) : undefined,
-              primaryPhysician: medicalInfo?.primaryPhysician || '',
-              healthInsuranceProvider: medicalInfo?.healthInsuranceProvider || '',
-              healthInsuranceNumber: medicalInfo?.healthInsuranceNumber || '',
-              accommodationsNeeded: medicalInfo?.accommodationsNeeded || '',
-              assistiveTechnology: medicalInfo?.assistiveTechnology || '',
-              emergencyProtocol: medicalInfo?.emergencyProtocol || '',
-              allergies: medicalInfo?.allergies || '',
-              vaccination: medicalInfo?.vaccination || '',
-            });
-            setShowForm(true);
-          }}
-          className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
-        >
-          <FaEdit /> Edit Medical Info
-        </button>
+        {!isUserAdmin && (
+          <button
+            onClick={() => {
+              setCurrentRecord({
+                id: medicalInfo?.id || 0,
+                employeeId,
+                hasDisability: medicalInfo?.hasDisability || false,
+                medicalNotes: medicalInfo?.medicalNotes || '',
+                lastCheckup: medicalInfo?.lastCheckup ? new Date(medicalInfo.lastCheckup) : undefined,
+                bloodType: medicalInfo?.bloodType || '',
+                disabilityType: medicalInfo?.disabilityType || '',
+                disabilityDetails: medicalInfo?.disabilityDetails || '',
+                pwdIdNumber: medicalInfo?.pwdIdNumber || '',
+                pwdIdValidity: medicalInfo?.pwdIdValidity ? new Date(medicalInfo.pwdIdValidity) : undefined,
+                disabilityCertification: medicalInfo?.disabilityCertification || '',
+                disabilityPercentage: medicalInfo?.disabilityPercentage || undefined,
+                assistiveTechnology: medicalInfo?.assistiveTechnology || '',
+                mobilityAids: medicalInfo?.mobilityAids || '',
+                communicationNeeds: medicalInfo?.communicationNeeds || '',
+                workplaceModifications: medicalInfo?.workplaceModifications || '',
+                emergencyProtocol: medicalInfo?.emergencyProtocol || '',
+                accommodationsNeeded: medicalInfo?.accommodationsNeeded || '',
+                primaryPhysician: medicalInfo?.primaryPhysician || '',
+                physicianContact: medicalInfo?.physicianContact || '',
+                healthInsuranceProvider: medicalInfo?.healthInsuranceProvider || '',
+                healthInsuranceNumber: medicalInfo?.healthInsuranceNumber || '',
+                healthInsuranceExpiryDate: medicalInfo?.healthInsuranceExpiryDate ? new Date(medicalInfo.healthInsuranceExpiryDate) : undefined,
+                emergencyProcedures: medicalInfo?.emergencyProcedures || '',
+                allergies: medicalInfo?.allergies || '',
+                vaccination: medicalInfo?.vaccination || '',
+              });
+              setShowForm(true);
+            }}
+            className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+          >
+            <FaEdit /> Edit Medical Info
+          </button>
+        )}
       </div>
 
       {/* Notification */}
@@ -312,35 +338,95 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Medical Notes</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.medicalNotes || 'N/A'}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-sm text-gray-900">
+                    {maskSensitiveText(medicalInfo.medicalNotes, canViewUnmasked || showMaskedInfo.medicalNotes)}
+                  </p>
+                  {!canViewUnmasked && medicalInfo.medicalNotes && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMaskedInfo({ ...showMaskedInfo, medicalNotes: !showMaskedInfo.medicalNotes })}
+                      className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                      aria-label={showMaskedInfo.medicalNotes ? 'Hide medical notes' : 'Show medical notes'}
+                      title={showMaskedInfo.medicalNotes ? 'Hide medical notes' : 'Show medical notes'}
+                    >
+                      {showMaskedInfo.medicalNotes ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Last Checkup</label>
                 <p className="mt-1 text-sm text-gray-900">{medicalInfo.lastCheckup ? new Date(medicalInfo.lastCheckup).toLocaleDateString() : 'N/A'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Blood Pressure</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.bloodPressure ? medicalInfo.bloodPressure : 'N/A / N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Height</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.height ? `${medicalInfo.height} cm` : 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Weight</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.weight ? `${medicalInfo.weight} kg` : 'N/A'}</p>
+                <label className="block text-sm font-medium text-gray-700">Blood Type</label>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-sm text-gray-900">
+                    {maskBloodType(medicalInfo.bloodType, canViewUnmasked || showMaskedInfo.bloodType)}
+                  </p>
+                  {!canViewUnmasked && medicalInfo.bloodType && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMaskedInfo({ ...showMaskedInfo, bloodType: !showMaskedInfo.bloodType })}
+                      className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                      aria-label={showMaskedInfo.bloodType ? 'Hide blood type' : 'Show blood type'}
+                      title={showMaskedInfo.bloodType ? 'Hide blood type' : 'Show blood type'}
+                    >
+                      {showMaskedInfo.bloodType ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Allergies</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.allergies || 'N/A'}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-sm text-gray-900">
+                    {maskSensitiveText(medicalInfo.allergies, canViewUnmasked || showMaskedInfo.allergies)}
+                  </p>
+                  {!canViewUnmasked && medicalInfo.allergies && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMaskedInfo({ ...showMaskedInfo, allergies: !showMaskedInfo.allergies })}
+                      className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                      aria-label={showMaskedInfo.allergies ? 'Hide allergies' : 'Show allergies'}
+                      title={showMaskedInfo.allergies ? 'Hide allergies' : 'Show allergies'}
+                    >
+                      {showMaskedInfo.allergies ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Vaccination</label>
                 <p className="mt-1 text-sm text-gray-900">{medicalInfo.vaccination || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Blood Type</label>
-                <p className="mt-1 text-sm text-gray-900">{bloodType || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -361,11 +447,59 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Disability Details</label>
-                    <p className="mt-1 text-sm text-gray-900">{medicalInfo.disabilityDetails || 'N/A'}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="text-sm text-gray-900">
+                        {maskSensitiveText(medicalInfo.disabilityDetails, canViewUnmasked || showMaskedInfo.disabilityDetails)}
+                      </p>
+                      {!canViewUnmasked && medicalInfo.disabilityDetails && (
+                        <button
+                          type="button"
+                          onClick={() => setShowMaskedInfo({ ...showMaskedInfo, disabilityDetails: !showMaskedInfo.disabilityDetails })}
+                          className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                          aria-label={showMaskedInfo.disabilityDetails ? 'Hide disability details' : 'Show disability details'}
+                          title={showMaskedInfo.disabilityDetails ? 'Hide disability details' : 'Show disability details'}
+                        >
+                          {showMaskedInfo.disabilityDetails ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">PWD ID Number</label>
-                    <p className="mt-1 text-sm text-gray-900">{medicalInfo.pwdIdNumber || 'N/A'}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="text-sm text-gray-900">
+                        {maskPwdIdNumber(medicalInfo.pwdIdNumber, canViewUnmasked || showMaskedInfo.pwdIdNumber)}
+                      </p>
+                      {!canViewUnmasked && medicalInfo.pwdIdNumber && (
+                        <button
+                          type="button"
+                          onClick={() => setShowMaskedInfo({ ...showMaskedInfo, pwdIdNumber: !showMaskedInfo.pwdIdNumber })}
+                          className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                          aria-label={showMaskedInfo.pwdIdNumber ? 'Hide PWD ID number' : 'Show PWD ID number'}
+                          title={showMaskedInfo.pwdIdNumber ? 'Hide PWD ID number' : 'Show PWD ID number'}
+                        >
+                          {showMaskedInfo.pwdIdNumber ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">PWD ID Validity</label>
@@ -416,7 +550,31 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Physician Contact</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.physicianContact || 'N/A'}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-sm text-gray-900">
+                    {maskPhoneNumber(medicalInfo.physicianContact, canViewUnmasked || showMaskedInfo.physicianContact)}
+                  </p>
+                  {!canViewUnmasked && medicalInfo.physicianContact && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMaskedInfo({ ...showMaskedInfo, physicianContact: !showMaskedInfo.physicianContact })}
+                      className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                      aria-label={showMaskedInfo.physicianContact ? 'Hide physician contact' : 'Show physician contact'}
+                      title={showMaskedInfo.physicianContact ? 'Hide physician contact' : 'Show physician contact'}
+                    >
+                      {showMaskedInfo.physicianContact ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Health Insurance Provider</label>
@@ -424,7 +582,31 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Health Insurance Number</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.healthInsuranceNumber || 'N/A'}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-sm text-gray-900">
+                    {maskHealthInsuranceNumber(medicalInfo.healthInsuranceNumber, canViewUnmasked || showMaskedInfo.healthInsuranceNumber)}
+                  </p>
+                  {!canViewUnmasked && medicalInfo.healthInsuranceNumber && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMaskedInfo({ ...showMaskedInfo, healthInsuranceNumber: !showMaskedInfo.healthInsuranceNumber })}
+                      className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                      aria-label={showMaskedInfo.healthInsuranceNumber ? 'Hide health insurance number' : 'Show health insurance number'}
+                      title={showMaskedInfo.healthInsuranceNumber ? 'Hide health insurance number' : 'Show health insurance number'}
+                    >
+                      {showMaskedInfo.healthInsuranceNumber ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Health Insurance Expiry Date</label>
@@ -434,7 +616,31 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Emergency Procedures</label>
-                <p className="mt-1 text-sm text-gray-900">{medicalInfo.emergencyProcedures || 'N/A'}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-sm text-gray-900">
+                    {maskSensitiveText(medicalInfo.emergencyProcedures, canViewUnmasked || showMaskedInfo.emergencyProcedures)}
+                  </p>
+                  {!canViewUnmasked && medicalInfo.emergencyProcedures && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMaskedInfo({ ...showMaskedInfo, emergencyProcedures: !showMaskedInfo.emergencyProcedures })}
+                      className="text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 rounded p-1 transition-colors"
+                      aria-label={showMaskedInfo.emergencyProcedures ? 'Hide emergency procedures' : 'Show emergency procedures'}
+                      title={showMaskedInfo.emergencyProcedures ? 'Hide emergency procedures' : 'Show emergency procedures'}
+                    >
+                      {showMaskedInfo.emergencyProcedures ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -500,65 +706,22 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId, bloodType }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Blood Pressure</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="000"
-                          value={bpSystolic}
-                          onChange={(e) => {
-                            const digits = e.target.value.replace(/\D/g, '').slice(0, 3);
-                            setBpSystolic(digits);
-                            setCurrentRecord({ ...currentRecord, bloodPressure: (digits || bpDiastolic) ? `${digits}/${bpDiastolic}` : '' });
-                            if (formErrors.bloodPressure) setFormErrors({ ...formErrors, bloodPressure: undefined });
-                          }}
-                          className="w-16 bg-gray-50 text-black p-2 rounded border border-gray-300"
-                        />
-                        <div className="text-lg leading-none">/</div>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="000"
-                          value={bpDiastolic}
-                          onChange={(e) => {
-                            const digits = e.target.value.replace(/\D/g, '').slice(0, 3);
-                            setBpDiastolic(digits);
-                            setCurrentRecord({ ...currentRecord, bloodPressure: (bpSystolic || digits) ? `${bpSystolic}/${digits}` : '' });
-                            if (formErrors.bloodPressure) setFormErrors({ ...formErrors, bloodPressure: undefined });
-                          }}
-                          className="w-16 bg-gray-50 text-black p-2 rounded border border-gray-300"
-                        />
-                      </div>
-                      {formErrors.bloodPressure && (
-                        <p className="mt-1 text-sm text-red-600">{formErrors.bloodPressure}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
-                      <input
-                        type="number"
-                        step="1"
-                        value={currentRecord?.height ?? ''}
-                        placeholder="E.g. 170"
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, height: e.target.value ? parseInt(e.target.value, 10) : undefined })
-                        }
+                      <label className="block text-sm font-medium text-gray-700">Blood Type</label>
+                      <select
+                        value={currentRecord.bloodType || ''}
+                        onChange={(e) => setCurrentRecord({ ...currentRecord, bloodType: e.target.value || undefined })}
                         className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Weight (kg)</label>
-                      <input
-                        type="number"
-                        step="1"
-                        value={currentRecord?.weight ?? ''}
-                        placeholder="E.g. 70"
-                        onChange={(e) =>
-                          setCurrentRecord({ ...currentRecord, weight: e.target.value ? parseInt(e.target.value, 10) : undefined })
-                        }
-                        className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                      />
+                      >
+                        <option value="">Select blood type...</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Allergies</label>

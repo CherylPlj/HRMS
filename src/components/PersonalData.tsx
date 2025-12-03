@@ -37,7 +37,6 @@ interface FacultyDetails {
   CivilStatus: string | null;
   Nationality: string | null;
   Religion: string | null;
-  BloodType: string | null;
   Email: string | null;
   DepartmentID: number | null;
   ContractID: number | null;
@@ -309,7 +308,6 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             CivilStatus: employeeData.CivilStatus || '',
             Nationality: employeeData.Nationality || '',
             Religion: employeeData.Religion || '',
-            BloodType: employeeData.BloodType || '',
             Email: employeeData.ContactInfo?.Email || employeeData.Email || '',
             DepartmentID: employeeData.DepartmentID,
             ContractID: employeeData.ContractID,
@@ -422,7 +420,6 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
            CivilStatus: employeeData.CivilStatus || '',
            Nationality: employeeData.Nationality || '',
            Religion: employeeData.Religion || '',
-           BloodType: employeeData.BloodType || '',
            Email: employeeData.ContactInfo?.Email || employeeData.Email || '',
            DepartmentID: employeeData.DepartmentID,
            ContractID: employeeData.ContractID,
@@ -515,7 +512,6 @@ const PersonalData: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                     CivilStatus: updatedData.CivilStatus || '',
                     Nationality: updatedData.Nationality || '',
                     Religion: updatedData.Religion || '',
-                    BloodType: updatedData.BloodType || '',
                     Email: updatedData.ContactInfo?.Email || updatedData.Email || '',
                     DepartmentID: updatedData.DepartmentID,
                     ContractID: updatedData.ContractID,
@@ -784,7 +780,6 @@ const handleDownload = () => {
         CivilStatus: data.CivilStatus || '',
         Nationality: data.Nationality || '',
         Religion: data.Religion || '',
-        BloodType: data.BloodType || '',
         DepartmentID: data.DepartmentID,
         ContractID: data.ContractID,
         Position: data.EmploymentDetail?.Position || data.Position || '',
@@ -1533,29 +1528,6 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                 </select>
               ) : (
                 <p className="mt-1 text-sm text-gray-900">{facultyDetails?.CivilStatus || 'N/A'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Blood Type</label>
-              {editingTabs.personal ? (
-                <select
-                  title="Blood Type"
-                  value={editedDetails?.BloodType || ''}
-                  onChange={(e) => handleInputChange('BloodType', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                >
-                  <option value="">Select Blood Type</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.BloodType || 'N/A'}</p>
               )}
             </div>
           </div>

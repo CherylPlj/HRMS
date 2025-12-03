@@ -210,7 +210,6 @@ export async function PATCH(
     if (data.CivilStatus !== undefined) updateFields.CivilStatus = data.CivilStatus || null;
     if (data.Nationality !== undefined) updateFields.Nationality = data.Nationality || null;
     if (data.Religion !== undefined) updateFields.Religion = data.Religion || null;
-    if (data.BloodType !== undefined) updateFields.BloodType = data.BloodType || null;
     if (data.DepartmentID !== undefined) updateFields.DepartmentID = data.DepartmentID || null;
     if (data.ContractID !== undefined) updateFields.ContractID = data.ContractID || null;
 

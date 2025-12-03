@@ -60,7 +60,6 @@ const EmployeeContentNew = () => {
     CivilStatus: '',
     Nationality: '',
     Religion: '',
-    BloodType: '',
     Email: '',
     Phone: '',
     Address: '',
@@ -118,6 +117,10 @@ const EmployeeContentNew = () => {
     allExportColumns.filter(col => !excludedColumns.includes(col.key)).map(col => col.key)
   );
   const [pdfPaperSize, setPdfPaperSize] = useState<'a4' | 'letter' | 'legal'>('a4');
+  const [religionConsent, setReligionConsent] = useState(false);
+  const [editReligionConsent, setEditReligionConsent] = useState(false);
+  const [messengerConsent, setMessengerConsent] = useState(false);
+  const [fbLinkConsent, setFbLinkConsent] = useState(false);
 
   // State for editing mode and edited employee
   const [isEditing, setIsEditing] = useState(false);
@@ -139,7 +142,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     CivilStatus: '',
     Nationality: '',
     Religion: '',
-    BloodType: '',
     Email: '',
     Phone: '',
     Address: '',
@@ -211,7 +213,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         CivilStatus: editedEmployee.CivilStatus || null,
         Nationality: editedEmployee.Nationality || null,
         Religion: editedEmployee.Religion || null,
-        BloodType: editedEmployee.BloodType || null,
         Email: editedEmployee.Email || null,
         Phone: editedEmployee.Phone || null,
         Address: editedEmployee.Address || null,
@@ -640,7 +641,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         CivilStatus: newEmployee.CivilStatus || null,
         Nationality: newEmployee.Nationality || null,
         Religion: newEmployee.Religion || null,
-        BloodType: newEmployee.BloodType || null,
         Email: newEmployee.Email || null,
         Phone: newEmployee.Phone || null,
         Address: newEmployee.Address || null,
@@ -703,7 +703,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         CivilStatus: '',
         Nationality: '',
         Religion: '',
-        BloodType: '',
         Email: '',
         Phone: '',
         Address: '',
@@ -1025,7 +1024,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       CivilStatus: '',
       Nationality: '',
       Religion: '',
-      BloodType: '',
       Email: '',
       Phone: '',
       Address: '',
@@ -1091,7 +1089,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       CivilStatus: employee.CivilStatus || '',
       Nationality: employee.Nationality || '',
       Religion: employee.Religion || '',
-      BloodType: employee.BloodType || '',
       Email: employee.ContactInfo?.Email || employee.email || '',
       Phone: employee.ContactInfo?.Phone || employee.phone || '',
       Address: employee.Address || '',
@@ -1188,7 +1185,6 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         CivilStatus: editEmployee.CivilStatus || null,
         Nationality: editEmployee.Nationality || null,
         Religion: editEmployee.Religion || null,
-        BloodType: editEmployee.BloodType || null,
         PresentAddress: editEmployee.PresentAddress || null,
         PermanentAddress: editEmployee.PermanentAddress || null,
         
@@ -1690,35 +1686,30 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                   </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
-                            Religion
+                            Religion <span className="text-gray-500 text-xs font-normal">(Optional)</span>
                           </label>
                           <input
                             type="text"
                             value={newEmployee.Religion}
                             onChange={(e) => setNewEmployee({...newEmployee, Religion: e.target.value})}
-                            placeholder="Religion"
+                            placeholder="Religion (optional)"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Blood Type
-                          </label>
-                          <select
-                            value={newEmployee.BloodType}
-                            onChange={(e) => setNewEmployee({...newEmployee, BloodType: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                          >
-                            <option value="">Select blood type...</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                          </select>
+                          {newEmployee.Religion && (
+                            <div className="flex items-start mt-2">
+                              <input
+                                type="checkbox"
+                                id="religionConsent"
+                                checked={religionConsent}
+                                onChange={(e) => setReligionConsent(e.target.checked)}
+                                className="mt-1 rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2"
+                                required={!!newEmployee.Religion}
+                              />
+                              <label htmlFor="religionConsent" className="text-xs text-gray-600">
+                                I consent to providing my religious affiliation. This information is optional and will only be used for accommodation purposes if needed.
+                              </label>
+                            </div>
+                          )}
                         </div>
                 </div>
               </div>
@@ -2530,35 +2521,29 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
-                            Religion
+                            Religion <span className="text-gray-500 text-xs font-normal">(Optional)</span>
                           </label>
                           <input
                             type="text"
-                            value={editEmployee.Religion}
+                            value={editEmployee.Religion || ''}
                             onChange={(e) => setEditEmployee({...editEmployee, Religion: e.target.value})}
-                            placeholder="Religion"
+                            placeholder="Religion (optional)"
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Blood Type
-                          </label>
-                          <select
-                            value={editEmployee.BloodType}
-                            onChange={(e) => setEditEmployee({...editEmployee, BloodType: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                          >
-                            <option value="">Select blood type...</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                          </select>
+                          {editEmployee.Religion && (
+                            <div className="flex items-start mt-2">
+                              <input
+                                type="checkbox"
+                                id="editReligionConsent"
+                                checked={editReligionConsent}
+                                onChange={(e) => setEditReligionConsent(e.target.checked)}
+                                className="mt-1 rounded border-gray-300 text-[#800000] focus:ring-[#800000] mr-2"
+                              />
+                              <label htmlFor="editReligionConsent" className="text-xs text-gray-600">
+                                I consent to providing my religious affiliation. This information is optional and will only be used for accommodation purposes if needed.
+                              </label>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2874,14 +2859,14 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 <button
                   onClick={() => {
                     const csvHeaders = [
-                      'EmployeeID','LastName','FirstName','MiddleName','ExtensionName','Sex','Photo','DateOfBirth','PlaceOfBirth','CivilStatus','Nationality','Religion','BloodType','Email','Phone','Address','PresentAddress','PermanentAddress','SSSNumber','TINNumber','PhilHealthNumber','PagIbigNumber','GSISNumber','PRCLicenseNumber','PRCValidity','EmploymentStatus','HireDate','ResignationDate','Designation','Position','DepartmentID','ContractID','EmergencyContactName','EmergencyContactNumber','EmployeeType','SalaryGrade'
+                      'EmployeeID','LastName','FirstName','MiddleName','ExtensionName','Sex','Photo','DateOfBirth','PlaceOfBirth','CivilStatus','Nationality','Religion','Email','Phone','Address','PresentAddress','PermanentAddress','SSSNumber','TINNumber','PhilHealthNumber','PagIbigNumber','GSISNumber','PRCLicenseNumber','PRCValidity','EmploymentStatus','HireDate','ResignationDate','Designation','Position','DepartmentID','ContractID','EmergencyContactName','EmergencyContactNumber','EmployeeType','SalaryGrade'
                     ];
                     const csvRows = [
                       csvHeaders.join(','),
                       // 5 sample faculty rows with ISO date format
-                      '2024-0101,Garcia,Juan,Cruz,,Male,,1980-02-15,Manila,Single,Filipino,Catholic,A+,juan.sjsfi@gmail.com,09171234567,123 Main St.,123 Main St.,123 Main St.,12-3456789-0,123-456-789,12-345678901-2,1234-5678-9012,123456789,1234567,2024-12-31,Regular,2010-06-01,,Faculty,Teacher I,21,,Maria Garcia,09181234567,Regular,12',
-                      '2024-0102,Reyes,Ana,Lopez,,Female,,1985-07-20,Quezon City,Married,Filipino,Christian,B+,ana.sjsfi@gmail.com,09181239876,456 Second St.,456 Second St.,456 Second St.,22-3333333-3,333-444-555,22-333444555-6,3456-7890-1234,192837465,5647382,2024-09-23,Probationary,2015-08-15,,Faculty,Teacher II,22,,Pedro Reyes,09181239876,Probationary,13',
-                      '2024-0103,Santos,Mark,David,,Male,,1992-11-05,Makati,Single,Filipino,Christian,O+,mark.sjsfi@gmail.com,09183456789,789 Third Ave.,789 Third Ave.,789 Third Ave.,33-4444444-4,444-555-666,33-444555666-7,4567-8901-2345,564738291,8374652,2024-12-05,Regular,2018-11-20,,Faculty,Teacher III,23,,Julia Santos,09183456789,Regular,14'
+                      '2024-0101,Garcia,Juan,Cruz,,Male,,1980-02-15,Manila,Single,Filipino,Catholic,juan.sjsfi@gmail.com,09171234567,123 Main St.,123 Main St.,123 Main St.,12-3456789-0,123-456-789,12-345678901-2,1234-5678-9012,123456789,1234567,2024-12-31,Regular,2010-06-01,,Faculty,Teacher I,21,,Maria Garcia,09181234567,Regular,12',
+                      '2024-0102,Reyes,Ana,Lopez,,Female,,1985-07-20,Quezon City,Married,Filipino,Christian,ana.sjsfi@gmail.com,09181239876,456 Second St.,456 Second St.,456 Second St.,22-3333333-3,333-444-555,22-333444555-6,3456-7890-1234,192837465,5647382,2024-09-23,Probationary,2015-08-15,,Faculty,Teacher II,22,,Pedro Reyes,09181239876,Probationary,13',
+                      '2024-0103,Santos,Mark,David,,Male,,1992-11-05,Makati,Single,Filipino,Christian,mark.sjsfi@gmail.com,09183456789,789 Third Ave.,789 Third Ave.,789 Third Ave.,33-4444444-4,444-555-666,33-444555666-7,4567-8901-2345,564738291,8374652,2024-12-05,Regular,2018-11-20,,Faculty,Teacher III,23,,Julia Santos,09183456789,Regular,14'
                     ];
                     const csvContent = csvRows.join('\n');
                     const blob = new Blob([csvContent], { type: 'text/csv' });

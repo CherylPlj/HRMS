@@ -27,8 +27,6 @@ export const allExportColumns: ExportColumn[] = [
   { key: 'PlaceOfBirth', label: 'Place of Birth' },
   { key: 'CivilStatus', label: 'Civil Status' },
   { key: 'Nationality', label: 'Nationality' },
-  { key: 'Religion', label: 'Religion' },
-  { key: 'BloodType', label: 'Blood Type' },
   { key: 'Email', label: 'Email' },
   { key: 'Phone', label: 'Phone' },
   { key: 'PresentAddress', label: 'Present Address' },
@@ -59,7 +57,7 @@ export const exportColumnSections: ExportColumnSection[] = [
     title: 'Personal Information',
     keys: [
       'FirstName', 'LastName', 'MiddleName', 'ExtensionName',
-      'Sex', 'DateOfBirth', 'PlaceOfBirth', 'CivilStatus', 'Nationality', 'Religion', 'BloodType'
+      'Sex', 'DateOfBirth', 'PlaceOfBirth', 'CivilStatus', 'Nationality'
     ],
   },
   {
@@ -83,5 +81,5 @@ export const exportColumnSections: ExportColumnSection[] = [
   },
 ];
 
-export const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt'];
+export const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt', 'Religion', 'BloodType'];
 

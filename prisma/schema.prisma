@@ -91,7 +91,6 @@ model Employee {
   CivilStatus       String?
   Nationality       String?
   Religion          String?
-  BloodType         String?
   ContractID        Int?
   DepartmentID      Int?
   createdAt         DateTime            @default(now())
@@ -533,7 +532,6 @@ model Skill {
   employeeId        String
   name              String
   proficiencyLevel  String
-  yearsOfExperience Int
   description       String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime? @updatedAt
@@ -562,9 +560,7 @@ model MedicalInfo {
   communicationNeeds        String?
   workplaceModifications    String?
   emergencyProtocol         String?
-  bloodPressure             String?
-  height                    Float?
-  weight                    Float?
+  bloodType                 String?
   emergencyProcedures       String?
   primaryPhysician          String?
   physicianContact          String?

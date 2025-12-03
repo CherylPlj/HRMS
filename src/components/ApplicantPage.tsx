@@ -130,6 +130,7 @@ const ApplicantPage = () => {
     sex: '',
     dateOfBirth: '',
     resume: null as File | null,
+    consent: false,
   })
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -260,21 +261,35 @@ const ApplicantPage = () => {
       }
     }
 
+    // Consent validation
+    if (!formData.consent) {
+      newErrors.consent = 'You must provide consent to submit your application';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     
-    // Validate field in real-time
-    const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
+    if (type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [name]: checked }));
+      // Clear consent error when checked
+      if (name === 'consent' && checked) {
+        setErrors(prev => ({ ...prev, consent: '' }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+      // Validate field in real-time
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
 
-    // Special handling for email
-    if (name === 'email' && value.includes('@') && !error) {
-      checkExistingEmail(value);
+      // Special handling for email
+      if (name === 'email' && value.includes('@') && !error) {
+        checkExistingEmail(value);
+      }
     }
   };
 
@@ -359,6 +374,7 @@ const ApplicantPage = () => {
         sex: '',
         dateOfBirth: '',
         resume: null,
+        consent: false,
       });
       // Reset file input
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -570,6 +586,40 @@ const ApplicantPage = () => {
                 <p className="mt-1 text-sm text-red-500">{errors.resume}</p>
               )}
               <p className="mt-1 text-sm text-gray-500">Maximum file size: 5MB</p>
+            </div>
+            <div className="space-y-2 col-span-1 md:col-span-2">
+              <div className={`border ${errors.consent ? 'border-red-500' : 'border-gray-300'} rounded-md p-4 bg-gray-50`}>
+                <label className="flex items-start cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="consent"
+                    checked={formData.consent}
+                    onChange={handleChange}
+                    required
+                    className="mt-1 mr-3 h-4 w-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-700">
+                      I consent to the processing of my personal data <span className="text-red-500">*</span>
+                    </span>
+                    <p className="mt-2 text-sm text-gray-600">
+                      Your personal data will be retained for a period of 2 years from the date of application submission, 
+                      or until you request its deletion, whichever comes first. If you wish to request early deletion of your data, 
+                      please email us at{' '}
+                      <a 
+                        href="mailto:sjsfihrms@gmail.com" 
+                        className="text-[#800000] hover:underline font-medium"
+                      >
+                        sjsfihrms@gmail.com
+                      </a>
+                      .
+                    </p>
+                  </div>
+                </label>
+                {errors.consent && (
+                  <p className="mt-2 text-sm text-red-500">{errors.consent}</p>
+                )}
+              </div>
             </div>
           </div>
           <div className="text-right">

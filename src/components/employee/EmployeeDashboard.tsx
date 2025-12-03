@@ -26,6 +26,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   departments 
 }) => {
   const stats = useMemo(() => {
+    const now = new Date();
     const total = employees.length;
     
     // Employment status breakdown
@@ -55,6 +56,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     const recentHires = employees.filter(emp => {
       if (!emp.hireDate) return false;
       const hireDate = new Date(emp.hireDate);
+      if (isNaN(hireDate.getTime())) return false;
       return hireDate >= thirtyDaysAgo;
     }).length;
 
@@ -73,6 +75,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       const resignationDate = (emp as any).ResignationDate || (emp as any).EmploymentDetail?.ResignationDate;
       if (!resignationDate) return false;
       const resignDate = new Date(resignationDate);
+      if (isNaN(resignDate.getTime())) return false;
       const daysSinceResignation = Math.floor((now.getTime() - resignDate.getTime()) / (1000 * 60 * 60 * 24));
       const yearsSinceResignation = daysSinceResignation / 365;
       return yearsSinceResignation >= 2.5 && yearsSinceResignation < 3;
@@ -83,6 +86,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       const resignationDate = (emp as any).ResignationDate || (emp as any).EmploymentDetail?.ResignationDate;
       if (!resignationDate) return false;
       const resignDate = new Date(resignationDate);
+      if (isNaN(resignDate.getTime())) return false;
       const daysSinceResignation = Math.floor((now.getTime() - resignDate.getTime()) / (1000 * 60 * 60 * 24));
       const yearsSinceResignation = daysSinceResignation / 365;
       return yearsSinceResignation >= 3;
@@ -95,7 +99,6 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       .map(([name, count]) => ({ name, count }));
 
     // Monthly hiring trends (last 12 months)
-    const now = new Date();
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(now.getMonth() - 12);
     
@@ -105,7 +108,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     employees.forEach(emp => {
       if (emp.hireDate) {
         const hireDate = new Date(emp.hireDate);
-        if (hireDate >= twelveMonthsAgo) {
+        if (!isNaN(hireDate.getTime()) && hireDate >= twelveMonthsAgo) {
           const monthKey = `${hireDate.getFullYear()}-${String(hireDate.getMonth() + 1).padStart(2, '0')}`;
           monthlyHires[monthKey] = (monthlyHires[monthKey] || 0) + 1;
         }
@@ -113,7 +116,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       const resignationDate = (emp as any).ResignationDate || (emp as any).EmploymentDetail?.ResignationDate;
       if (resignationDate) {
         const resignDate = new Date(resignationDate);
-        if (resignDate >= twelveMonthsAgo) {
+        if (!isNaN(resignDate.getTime()) && resignDate >= twelveMonthsAgo) {
           const monthKey = `${resignDate.getFullYear()}-${String(resignDate.getMonth() + 1).padStart(2, '0')}`;
           monthlyResignations[monthKey] = (monthlyResignations[monthKey] || 0) + 1;
         }
@@ -137,7 +140,11 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     });
 
     // Average years of service
-    const employeesWithHireDate = employees.filter(e => e.hireDate);
+    const employeesWithHireDate = employees.filter(e => {
+      if (!e.hireDate) return false;
+      const hireDate = new Date(e.hireDate);
+      return !isNaN(hireDate.getTime());
+    });
     const avgYearsOfService = employeesWithHireDate.length > 0
       ? employeesWithHireDate.reduce((sum, emp) => {
           const hireDate = new Date(emp.hireDate!);
@@ -614,6 +621,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 {stats.expiredRetention.map((emp: Employee) => {
                   const resignationDate = (emp as any).ResignationDate || (emp as any).EmploymentDetail?.ResignationDate;
                   const resignDate = new Date(resignationDate);
+                  if (isNaN(resignDate.getTime())) return null;
                   const daysSinceResignation = Math.floor((stats.now.getTime() - resignDate.getTime()) / (1000 * 60 * 60 * 24));
                   const yearsSinceResignation = (daysSinceResignation / 365).toFixed(1);
 
@@ -647,6 +655,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 {stats.approachingRetentionExpiry.map((emp: Employee) => {
                   const resignationDate = (emp as any).ResignationDate || (emp as any).EmploymentDetail?.ResignationDate;
                   const resignDate = new Date(resignationDate);
+                  if (isNaN(resignDate.getTime())) return null;
                   const daysSinceResignation = Math.floor((stats.now.getTime() - resignDate.getTime()) / (1000 * 60 * 60 * 24));
                   const yearsSinceResignation = (daysSinceResignation / 365).toFixed(1);
                   const daysRemaining = Math.max(0, (3 * 365) - daysSinceResignation);

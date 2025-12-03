@@ -317,7 +317,9 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const [facultyDetails, setFacultyDetails] = useState<FacultyDetails | null>(null);
     const [overlappingLeave, setOverlappingLeave] = useState<LeaveRequest | null>(null);
     const [leaveTypes, setLeaveTypes] = useState<LeaveTypeItem[]>([]);
+    const [allLeaveTypes, setAllLeaveTypes] = useState<LeaveTypeItem[]>([]); // Store all leave types before filtering
     const [loadingLeaveTypes, setLoadingLeaveTypes] = useState(false);
+    const [employeeGender, setEmployeeGender] = useState<string | null>(null);
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -366,7 +368,59 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
         }
     }, [startDate, endDate]);
 
-    // Fetch leave types from API
+    // Helper function to filter leave types based on gender
+    const filterLeaveTypesByGender = (leaveTypes: LeaveTypeItem[], gender: string | null): LeaveTypeItem[] => {
+        if (!gender) {
+            // If gender is not available, show all leave types except gender-specific ones
+            // But allow gender-neutral leave types for everyone
+            return leaveTypes.filter((lt: LeaveTypeItem) => {
+                const leaveTypeName = lt.LeaveTypeName.toLowerCase();
+                // Allow transferred maternity leave for everyone
+                if (leaveTypeName.includes('transferred') && leaveTypeName.includes('maternity')) {
+                    return true;
+                }
+                // Allow Solo Parent Leave for everyone (RA 11861)
+                if (leaveTypeName.includes('solo') && leaveTypeName.includes('parent')) {
+                    return true;
+                }
+                // Check if name contains "maternity" or "paternity" (handles "Maternity Leave", "Maternity", etc.)
+                return !leaveTypeName.includes('maternity') && !leaveTypeName.includes('paternity');
+            });
+        }
+        
+        const genderLower = gender.toLowerCase();
+        return leaveTypes.filter((lt: LeaveTypeItem) => {
+            const leaveTypeName = lt.LeaveTypeName.toLowerCase();
+            
+            // Transferred Maternity Leave (RA 11210) - available to both males and females
+            // A mother can transfer up to 7 days of her 105-day maternity leave to the child's father
+            if (leaveTypeName.includes('transferred') && leaveTypeName.includes('maternity')) {
+                return true; // Available to everyone
+            }
+            
+            // Solo Parent Leave (RA 11861) - available to both males and females
+            // Available to any person, regardless of gender, who provides sole parental care
+            if (leaveTypeName.includes('solo') && leaveTypeName.includes('parent')) {
+                return true; // Available to everyone
+            }
+            
+            // Regular Maternity leave only for females (handles "Maternity Leave", "Maternity", etc.)
+            if (leaveTypeName.includes('maternity')) {
+                return genderLower === 'female' || genderLower === 'f';
+            }
+            
+            // Paternity Leave (RA 8187) only for males
+            // Strictly for legally married fathers (up to the first four deliveries)
+            if (leaveTypeName.includes('paternity')) {
+                return genderLower === 'male' || genderLower === 'm';
+            }
+            
+            // All other leave types are available to everyone
+            return true;
+        });
+    };
+
+    // Fetch leave types from API (only fetch once)
     useEffect(() => {
         const fetchLeaveTypes = async () => {
             setLoadingLeaveTypes(true);
@@ -381,27 +435,26 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 if (response.ok) {
                     const data = await response.json();
                     if (Array.isArray(data) && data.length > 0) {
-                        // Filter only active leave types
+                        // Filter only active leave types and store them
                         const activeLeaveTypes = data.filter((lt: LeaveTypeItem) => lt.IsActive !== false);
-                        setLeaveTypes(activeLeaveTypes);
-                        // Set default leave type to first active one
-                        if (activeLeaveTypes[0]) {
-                            setLeaveType(activeLeaveTypes[0].LeaveTypeName);
-                        }
+                        setAllLeaveTypes(activeLeaveTypes);
                     } else {
                         // No leave types available - show empty state
+                        setAllLeaveTypes([]);
                         setLeaveTypes([]);
                         setLeaveType('');
                     }
                 } else {
                     // Error fetching - show empty state
                     console.error('Failed to fetch leave types');
+                    setAllLeaveTypes([]);
                     setLeaveTypes([]);
                     setLeaveType('');
                 }
             } catch (err) {
                 console.error('Error fetching leave types:', err);
                 // Error - show empty state
+                setAllLeaveTypes([]);
                 setLeaveTypes([]);
                 setLeaveType('');
             } finally {
@@ -411,6 +464,27 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
 
         fetchLeaveTypes();
     }, []);
+
+    // Filter leave types based on gender whenever gender or allLeaveTypes changes
+    useEffect(() => {
+        if (allLeaveTypes.length > 0) {
+            const filteredLeaveTypes = filterLeaveTypesByGender(allLeaveTypes, employeeGender);
+            setLeaveTypes(filteredLeaveTypes);
+            // Set default leave type to first filtered one if current selection is not valid
+            // Use functional update to access current leaveType value
+            setLeaveType(currentLeaveType => {
+                const currentLeaveTypeValid = filteredLeaveTypes.some(lt => lt.LeaveTypeName === currentLeaveType);
+                if (!currentLeaveTypeValid) {
+                    if (filteredLeaveTypes[0]) {
+                        return filteredLeaveTypes[0].LeaveTypeName;
+                    } else {
+                        return '';
+                    }
+                }
+                return currentLeaveType;
+            });
+        }
+    }, [employeeGender, allLeaveTypes]);
 
     useEffect(() => {
         const fetchUserAndFacultyDetails = async () => {
@@ -440,12 +514,13 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                         .select(`
                             FacultyID,
                             EmploymentStatus,
+                            EmployeeID,
                             Department:DepartmentID (
                                 DepartmentName
                             )
                         `)
                         .eq('UserID', userData.UserID)
-                        .single() as { data: FacultyResponse | null; error: any };
+                        .single() as { data: FacultyResponse & { EmployeeID?: string } | null; error: any };
 
                     if (facultyError) {
                         console.error('Error fetching Faculty data:', facultyError);
@@ -460,6 +535,29 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             department: facultyData.Department?.DepartmentName || 'Unknown Department',
                             employmentStatus: facultyData.EmploymentStatus
                         });
+                        
+                        // Fetch employee gender if EmployeeID exists
+                        if (facultyData.EmployeeID) {
+                            const { data: employeeData, error: employeeError } = await supabase
+                                .from('Employee')
+                                .select('Sex')
+                                .eq('EmployeeID', facultyData.EmployeeID)
+                                .single();
+                            
+                            if (!employeeError && employeeData?.Sex) {
+                                console.log('Employee gender fetched:', employeeData.Sex);
+                                setEmployeeGender(employeeData.Sex);
+                            } else {
+                                console.warn('Could not fetch employee gender:', employeeError);
+                                // Set to null to hide gender-specific leave types
+                                setEmployeeGender(null);
+                            }
+                        } else {
+                            console.warn('Faculty has no EmployeeID, cannot fetch gender');
+                            // Set to null to hide gender-specific leave types
+                            setEmployeeGender(null);
+                        }
+                        
                         fetchLeaveRequests(facultyData.FacultyID);
                     } else {
                         setError('Faculty record not found. Please contact the administrator.');
@@ -673,6 +771,17 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
         if (type === 'Undertime' && startDate) {
             // When switching to undertime, set end date to match start date
             setEndDate(startDate);
+        } else if (type === 'Leave') {
+            // When switching to Leave, ensure the selected leave type is valid
+            // If current leave type is not in the filtered list, set to first available
+            if (leaveTypes.length > 0) {
+                const isValidLeaveType = leaveTypes.some(lt => lt.LeaveTypeName === leaveType);
+                if (!isValidLeaveType) {
+                    setLeaveType(leaveTypes[0].LeaveTypeName);
+                }
+            } else {
+                setLeaveType('');
+            }
         }
         // Clear any existing date errors
         setDateError(null);
@@ -794,7 +903,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     const handleEdit = (leave: LeaveRequest) => {
         // Only allow editing if the leave request has been returned by admin
         if (leave.Status !== 'Returned') {
-            setError('Only returned leave requests can be edited. Please wait for admin review or delete the pending request.');
+            setError('Only returned leave requests can be edited or deleted.');
             return;
         }
         setSelectedLeave(leave);
@@ -805,11 +914,20 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
         setStartTime(leave.TimeIn ? new Date(leave.TimeIn) : null);
         setEndTime(leave.TimeOut ? new Date(leave.TimeOut) : null);
         setReason(leave.Reason);
+        setShowDeleteConfirm(false);
+        setDeleteConfirmType('');
+        setDeleteError('');
         setShowEditModal(true);
     };
 
     const handleDelete = async () => {
         if (!selectedLeave) return;
+
+        // Only allow deletion of returned requests
+        if (selectedLeave.Status !== 'Returned') {
+            setDeleteError('Only returned leave requests can be deleted.');
+            return;
+        }
 
         if (deleteConfirmType.toLowerCase() !== selectedLeave.LeaveType.toLowerCase()) {
             setDeleteError('Please type the correct leave type to confirm deletion');
@@ -832,6 +950,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             }
 
             setShowDeleteConfirm(false);
+            setShowEditModal(false);
             setSelectedLeave(null);
             setDeleteConfirmType('');
             setShowDeleteSuccess(true);
@@ -847,7 +966,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
 
         } catch (err) {
             console.error('Error deleting request:', err);
-            setError(err instanceof Error ? err.message : 'Failed to delete request');
+            setDeleteError(err instanceof Error ? err.message : 'Failed to delete request');
         } finally {
             setIsLoading(false);
         }
@@ -1071,18 +1190,6 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                     <FaPen className="h-4 w-4" />
                                                 </button>
                                             )}
-                                            {request.Status === 'Pending' && (
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedLeave(request);
-                                                        setShowDeleteConfirm(true);
-                                                    }}
-                                                    className="text-red-600 hover:text-red-900 transition-colors duration-200"
-                                                    title="Delete Request"
-                                                >
-                                                    <FaTrash className="h-4 w-4" />
-                                                </button>
-                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -1234,13 +1341,11 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         {loadingLeaveTypes ? (
                                             <option>Loading leave types...</option>
                                         ) : leaveTypes.length > 0 ? (
-                                            leaveTypes
-                                                .filter(lt => lt.IsActive !== false)
-                                                .map((type) => (
-                                                    <option key={type.LeaveTypeID} value={type.LeaveTypeName}>
-                                                        {formatLeaveTypeName(type.LeaveTypeName)}
-                                                    </option>
-                                                ))
+                                            leaveTypes.map((type) => (
+                                                <option key={type.LeaveTypeID} value={type.LeaveTypeName}>
+                                                    {formatLeaveTypeName(type.LeaveTypeName)}
+                                                </option>
+                                            ))
                                         ) : (
                                             <option value="">No leave types available. Please contact administrator.</option>
                                         )}
@@ -1345,69 +1450,91 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             </div>
                         </div>
 
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button
-                                onClick={handleUpdate}
-                                disabled={isLoading}
-                                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#800000] hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] disabled:opacity-50"
-                            >
-                                {isLoading ? 'Updating...' : 'Update Request'}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowEditModal(false);
-                                    setSelectedLeave(null);
-                                }}
-                                className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
-                            >
-                                Cancel
-                            </button>
+                        {/* Delete Confirmation Section */}
+                        {showDeleteConfirm && (
+                            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                                <h3 className="text-lg font-medium text-red-900 mb-2">Delete Leave Request</h3>
+                                <p className="text-sm text-red-700 mb-4">
+                                    To confirm deletion, please type <span className="font-semibold">{selectedLeave?.LeaveType}</span> below:
+                                </p>
+                                <input
+                                    type="text"
+                                    value={deleteConfirmType}
+                                    onChange={(e) => setDeleteConfirmType(e.target.value)}
+                                    placeholder={`Type ${selectedLeave?.LeaveType} to confirm`}
+                                    className="w-full px-3 py-2 border border-red-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 mb-4"
+                                />
+                                {deleteError && (
+                                    <p className="text-sm text-red-600 mb-4">{deleteError}</p>
+                                )}
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={isLoading || deleteConfirmType.toLowerCase() !== selectedLeave?.LeaveType.toLowerCase()}
+                                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isLoading ? 'Deleting...' : 'Delete'}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowDeleteConfirm(false);
+                                            setDeleteConfirmType('');
+                                            setDeleteError('');
+                                        }}
+                                        className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-6 flex justify-between items-center">
+                            <div>
+                                {!showDeleteConfirm && selectedLeave?.Status === 'Returned' && (
+                                    <button
+                                        onClick={() => {
+                                            setShowDeleteConfirm(true);
+                                            setDeleteConfirmType('');
+                                            setDeleteError('');
+                                        }}
+                                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                    >
+                                        <FaTrash className="h-4 w-4 mr-2" />
+                                        Delete Request
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                {!showDeleteConfirm && (
+                                    <>
+                                        <button
+                                            onClick={handleUpdate}
+                                            disabled={isLoading}
+                                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#800000] hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] disabled:opacity-50"
+                                        >
+                                            {isLoading ? 'Updating...' : 'Update Request'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowEditModal(false);
+                                                setSelectedLeave(null);
+                                                setShowDeleteConfirm(false);
+                                                setDeleteConfirmType('');
+                                                setDeleteError('');
+                                            }}
+                                            className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Delete Confirmation Modal */}
-            {showDeleteConfirm && selectedLeave && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg w-full max-w-md mx-4 p-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Leave Request</h3>
-                        <p className="text-sm text-gray-500 mb-4">
-                            To confirm deletion, please type <span className="font-semibold">{selectedLeave.LeaveType}</span> below:
-                        </p>
-                        <input
-                            type="text"
-                            value={deleteConfirmType}
-                            onChange={(e) => setDeleteConfirmType(e.target.value)}
-                            placeholder={`Type ${selectedLeave.LeaveType} to confirm`}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#800000] focus:border-[#800000] mb-4"
-                        />
-                        {deleteError && (
-                            <p className="text-sm text-red-600 mb-4">{deleteError}</p>
-                        )}
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={handleDelete}
-                                disabled={isLoading || deleteConfirmType.toLowerCase() !== selectedLeave.LeaveType.toLowerCase()}
-                                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Deleting...' : 'Delete'}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowDeleteConfirm(false);
-                                    setSelectedLeave(null);
-                                    setDeleteConfirmType('');
-                                    setDeleteError('');
-                                }}
-                                className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1566,13 +1693,11 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             {loadingLeaveTypes ? (
                                                 <option>Loading leave types...</option>
                                             ) : leaveTypes.length > 0 ? (
-                                                leaveTypes
-                                                    .filter(lt => lt.IsActive !== false)
-                                                    .map((type) => (
-                                                        <option key={type.LeaveTypeID} value={type.LeaveTypeName}>
-                                                            {formatLeaveTypeName(type.LeaveTypeName)}
-                                                        </option>
-                                                    ))
+                                                leaveTypes.map((type) => (
+                                                    <option key={type.LeaveTypeID} value={type.LeaveTypeName}>
+                                                        {formatLeaveTypeName(type.LeaveTypeName)}
+                                                    </option>
+                                                ))
                                             ) : (
                                                 <option value="">No leave types available. Please contact administrator.</option>
                                             )}
