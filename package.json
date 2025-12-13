@@ -48,7 +48,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.487.0",
     "luxon": "^3.6.1",
-    "next": "^15.3.3",
+    "next": "15.3.8",
     "nodemailer": "^7.0.3",
     "papaparse": "^5.5.3",
     "pdfkit": "^0.17.1",
