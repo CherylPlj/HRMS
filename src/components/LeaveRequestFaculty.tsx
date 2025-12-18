@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { FaRegCalendarAlt, FaClock, FaEye, FaPen, FaTrash } from 'react-icons/fa';
+import { Calendar, Clock, Eye, Pen, Trash2 } from 'lucide-react';
 
 // Define leave types as string literals
 type RequestType = 'Leave' | 'Undertime';
@@ -1179,7 +1179,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                 className="text-blue-600 hover:text-blue-900 transition-colors duration-200"
                                                 title="View Details"
                                             >
-                                                <FaEye className="h-5 w-5" />
+                                                <Eye className="h-5 w-5" />
                                             </button>
                                             {request.Status === 'Returned' && (
                                                 <button
@@ -1187,7 +1187,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                     className="text-[#800000] hover:text-[#600000] transition-colors duration-200"
                                                     title="Edit Request"
                                                 >
-                                                    <FaPen className="h-4 w-4" />
+                                                    <Pen className="h-4 w-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -1366,7 +1366,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             placeholderText="Select start date"
                                         />
                                         <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                            <FaRegCalendarAlt className="h-5 w-5 text-gray-400" />
+                                            <Calendar className="h-5 w-5 text-gray-400" />
                                         </div>
                                     </div>
                                     {dateError && (
@@ -1386,7 +1386,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             placeholderText={requestType === 'Undertime' ? 'Same as start date' : 'Select end date'}
                                         />
                                         <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                            <FaRegCalendarAlt className="h-5 w-5 text-gray-400" />
+                                            <Calendar className="h-5 w-5 text-gray-400" />
                                         </div>
                                     </div>
                                 </div>
@@ -1409,7 +1409,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             maxTime={new Date(new Date().setHours(17, 0))}
                                         />
                                         <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                            <FaClock className="h-5 w-5 text-gray-400" />
+                                            <Clock className="h-5 w-5 text-gray-400" />
                                         </div>
                                     </div>
                                 </div>
@@ -1432,7 +1432,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                             maxTime={new Date(new Date().setHours(19, 0))}
                                         />
                                         <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                            <FaClock className="h-5 w-5 text-gray-400" />
+                                            <Clock className="h-5 w-5 text-gray-400" />
                                         </div>
                                     </div>
                                 </div>
@@ -1500,7 +1500,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                         }}
                                         className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                     >
-                                        <FaTrash className="h-4 w-4 mr-2" />
+                                        <Trash2 className="h-4 w-4 mr-2" />
                                         Delete Request
                                     </button>
                                 )}
@@ -1721,7 +1721,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                     placeholderText="Select start date"
                                                 />
                                                 <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                                    <FaRegCalendarAlt className="h-5 w-5 text-gray-400" />
+                                                    <Calendar className="h-5 w-5 text-gray-400" />
                                                 </div>
                                             </div>
                                         </div>
@@ -1744,7 +1744,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                     maxTime={new Date(new Date().setHours(17, 0))}
                                                 />
                                                 <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                                    <FaClock className="h-5 w-5 text-gray-400" />
+                                                    <Clock className="h-5 w-5 text-gray-400" />
                                                 </div>
                                             </div>
                                         </div>
@@ -1764,7 +1764,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                     placeholderText="Select end date"
                                                 />
                                                 <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                                    <FaRegCalendarAlt className="h-5 w-5 text-gray-400" />
+                                                    <Calendar className="h-5 w-5 text-gray-400" />
                                                 </div>
                                             </div>
                                         </div>
@@ -1787,7 +1787,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                     maxTime={new Date(new Date().setHours(19, 0))}
                                                 />
                                                 <div className="absolute inset-y-0 left-3 top-[9px] flex items-center pointer-events-none">
-                                                    <FaClock className="h-5 w-5 text-gray-400" />
+                                                    <Clock className="h-5 w-5 text-gray-400" />
                                                 </div>
                                             </div>
                                         </div>

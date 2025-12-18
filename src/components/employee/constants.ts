@@ -1,18 +1,18 @@
 // Constants for employee components
 
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaChartLine, FaHeartbeat, FaEllipsisH } from 'react-icons/fa';
+import { UserCircle, IdCard, Phone, Users, GraduationCap, Briefcase, TrendingUp, Heart, MoreHorizontal } from 'lucide-react';
 import { ExportColumn, ExportColumnSection } from './types';
 
 export const tabs = [
-  { id: 'personal', label: 'Personal Information', icon: FaUserCircle },
-  { id: 'government', label: 'Government IDs', icon: FaIdCard },
-  { id: 'contact', label: 'Contact Information', icon: FaPhone },
-  { id: 'family', label: 'Family Background', icon: FaUsers },
-  { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
-  { id: 'work', label: 'Employment History', icon: FaBriefcase },
-  { id: 'performance', label: 'Performance History', icon: FaChartLine },
-  { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
-  { id: 'other', label: 'Other Information', icon: FaEllipsisH },
+  { id: 'personal', label: 'Personal Information', icon: UserCircle },
+  { id: 'government', label: 'Government IDs', icon: IdCard },
+  { id: 'contact', label: 'Contact Information', icon: Phone },
+  { id: 'family', label: 'Family Background', icon: Users },
+  { id: 'education', label: 'Educational Background', icon: GraduationCap },
+  { id: 'work', label: 'Employment History', icon: Briefcase },
+  { id: 'performance', label: 'Performance History', icon: TrendingUp },
+  { id: 'medical', label: 'Medical Information', icon: Heart },
+  { id: 'other', label: 'Other Information', icon: MoreHorizontal },
 ];
 
 export const allExportColumns: ExportColumn[] = [

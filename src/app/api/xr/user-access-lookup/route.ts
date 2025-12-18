@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimiter } from '@/lib/limiter';
-import { getClientIp } from '@/lib/ip';
+import { getServerIp } from '@/lib/ip';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -27,7 +27,7 @@ function verifySignature(body: string, timestamp: string, signature: string): bo
 export async function POST(request: NextRequest) {
     console.log('POST /xr/user-access-lookup called');
 
-    const userIP = await getClientIp();
+    const userIP = getServerIp(request);
     console.log('Client IP:', userIP);
 
     try {

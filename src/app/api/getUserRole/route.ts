@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { rateLimiter } from '@/lib/limiter';
-import { getClientIp } from '@/lib/ip';
+import { getServerIp } from '@/lib/ip';
 
 const VALID_API_KEYS = {
     'sis': process.env.SJSFI_SIS_API_KEY,
@@ -12,8 +12,8 @@ const VALID_API_KEYS = {
 
 export async function GET(request: NextRequest) {
     console.log('GET /api/getUserRole called');
-    // Get client IP from headers
-    const userIP = await getClientIp();
+    // Get client IP from headers (server-side)
+    const userIP = getServerIp(request);
 
     try {
         // Check rate limit

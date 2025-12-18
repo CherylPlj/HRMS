@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Bar, Line, Pie } from 'react-chartjs-2';
+import { Bar, Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { 
   FileText, 
@@ -149,18 +149,6 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
     ],
   };
 
-  // Severity distribution chart data
-  const severityChartData = {
-    labels: ['Minor', 'Moderate', 'Major'],
-    datasets: [
-      {
-        data: [stats.minor, stats.moderate, stats.major],
-        backgroundColor: ['#eab308', '#f97316', '#ef4444'],
-        borderWidth: 1,
-      },
-    ],
-  };
-
   // Category distribution chart data
   const categoryChartData = {
     labels: Object.keys(stats.categoryCounts),
@@ -170,28 +158,6 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
         data: Object.values(stats.categoryCounts),
         backgroundColor: '#800000',
         borderRadius: 8,
-      },
-    ],
-  };
-
-  // Cases over time chart data
-  const monthlyLabels = Object.keys(stats.monthlyCases).sort();
-  const timelineChartData = {
-    labels: monthlyLabels.map((label) => {
-      const [year, month] = label.split('-');
-      return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric',
-      });
-    }),
-    datasets: [
-      {
-        label: 'Cases',
-        data: monthlyLabels.map((label) => stats.monthlyCases[label] ?? 0),
-        borderColor: '#800000',
-        backgroundColor: 'rgba(128, 0, 0, 0.1)',
-        tension: 0.4,
-        fill: true,
       },
     ],
   };
@@ -290,28 +256,6 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
           </div>
         </div>
 
-        {/* Severity Distribution */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Cases by Severity</h3>
-          <div className="h-64">
-            <Pie
-              data={severityChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                  },
-                },
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Category and Timeline Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cases by Category */}
         {Object.keys(stats.categoryCounts).length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -319,35 +263,6 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
             <div className="h-64">
               <Bar
                 data={categoryChartData}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false,
-                    },
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1,
-                      },
-                    },
-                  },
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Cases Over Time */}
-        {monthlyLabels.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cases Over Time (6 Months)</h3>
-            <div className="h-64">
-              <Line
-                data={timelineChartData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -442,7 +357,7 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
       </div>
 
       {/* Status Breakdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-100 rounded-lg">
@@ -487,7 +402,7 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

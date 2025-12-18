@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { FaUserCircle, FaIdCard, FaPhone, FaUsers, FaGraduationCap, FaBriefcase, FaHandsHelping, FaBook, FaInfoCircle, FaPlus, FaUpload, FaEdit, FaEye, FaCamera, FaHeartbeat, FaEllipsisH, FaTimes } from 'react-icons/fa';
+import { UserCircle, IdCard, Phone, Users, GraduationCap, Briefcase, HeartHandshake, BookOpen, Info, Plus, Upload, Pen, Eye, Camera, Heart, MoreHorizontal, X } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import jsPDF from 'jspdf';
@@ -1227,14 +1227,14 @@ const validateDateOfBirth = (dob: string): string | undefined => {
 
   // Define tabs configuration
   const tabs = [
-    { id: 'personal', label: 'Personal Information', icon: FaUserCircle },
-    { id: 'government', label: 'Government IDs', icon: FaIdCard },
-    { id: 'contact', label: 'Contact Information', icon: FaPhone },
-    { id: 'family', label: 'Family Background', icon: FaUsers },
-    { id: 'education', label: 'Educational Background', icon: FaGraduationCap },
-    { id: 'employment', label: 'Employment History', icon: FaBriefcase },
-    { id: 'medical', label: 'Medical Information', icon: FaHeartbeat },
-    { id: 'other', label: 'Other Information', icon: FaEllipsisH }
+    { id: 'personal', label: 'Personal Information', icon: UserCircle },
+    { id: 'government', label: 'Government IDs', icon: IdCard },
+    { id: 'contact', label: 'Contact Information', icon: Phone },
+    { id: 'family', label: 'Family Background', icon: Users },
+    { id: 'education', label: 'Educational Background', icon: GraduationCap },
+    { id: 'employment', label: 'Employment History', icon: Briefcase },
+    { id: 'medical', label: 'Medical Information', icon: Heart },
+    { id: 'other', label: 'Other Information', icon: MoreHorizontal }
   ];
 
   return (
@@ -1251,7 +1251,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
             onClick={() => setShowSuccessToast(false)}
             className="ml-2 hover:bg-green-600 rounded-full p-1 transition-colors"
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -1275,14 +1275,14 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                 />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 hover:border-[#800000] transition-colors">
-                  <FaUserCircle className="w-8 h-8 text-gray-400" />
+                  <UserCircle className="w-8 h-8 text-gray-400" />
                 </div>
               )}
               
               {/* Edit indicator */}
               {editingTabs.personal && (
                 <div className="absolute -bottom-1 -right-1 bg-[#800000] text-white rounded-full p-1">
-                  <FaCamera className="w-3 h-3" />
+                  <Camera className="w-3 h-3" />
                 </div>
               )}
             </div>
@@ -1317,7 +1317,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                 onClick={() => handleStartEditTab(activeTab as keyof typeof editingTabs)}
                 className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
               >
-                <FaEdit /> Edit
+                <Pen size={16} /> Edit
               </button>
             )
           ) : null}
@@ -1672,7 +1672,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                 onClick={() => setShowPhotoModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <FaTimes className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
             
@@ -1688,7 +1688,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                   />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-2 border-gray-300">
-                    <FaUserCircle className="w-12 h-12 text-gray-400" />
+                    <UserCircle className="w-12 h-12 text-gray-400" />
                   </div>
                 )}
               </div>
@@ -1713,7 +1713,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                 <div className="flex items-center justify-center w-full">
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <FaUpload className="w-8 h-8 mb-4 text-gray-500" />
+                      <Upload className="w-8 h-8 mb-4 text-gray-500" />
                       <p className="mb-2 text-sm text-gray-500">
                         <span className="font-semibold">Click to upload</span> or drag and drop
                       </p>

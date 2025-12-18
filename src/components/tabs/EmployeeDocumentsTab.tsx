@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { FaEye, FaDownload, FaLink, FaTimes, FaPlus, FaPen, FaTrash, FaFile } from 'react-icons/fa';
+import { Download, Eye, ExternalLink, X, Plus, Pen, Trash2, FileText, Search } from 'lucide-react';
 import ManageDocumentTypes from '../ManageDocumentTypes';
 
 interface Employee {
@@ -472,9 +472,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
               onChange={(e) => setDocumentSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
             />
-          <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
 
         {/* Filter Options for Documents */}
@@ -598,7 +596,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                                 className="text-gray-600 hover:text-gray-900"
                                 title="View Document"
                               >
-                                <FaEye className="w-5 h-5" />
+                                <Eye size={20} />
                               </button>
                               <a
                                 href={getViewUrl(doc.FileUrl)}
@@ -607,14 +605,14 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                                 className="text-gray-600 hover:text-gray-900"
                                 title="Open in New Tab"
                               >
-                                <FaLink className="w-5 h-5" />
+                                <ExternalLink size={20} />
                               </a>
                               <button
                                 onClick={() => handleDownload(doc.DownloadUrl || doc.FileUrl, doc.Title || doc.documentTypeName)}
                                 className="text-gray-600 hover:text-gray-900"
                                 title="Download Document"
                               >
-                                <FaDownload className="w-5 h-5" />
+                                <Download size={20} />
                               </button>
                               <button
                                 onClick={() => handleStatusChange(doc.DocumentID, doc.SubmissionStatus)}
@@ -622,7 +620,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                                 className="text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title={doc.SubmissionStatus === 'Submitted' ? 'Cannot edit submitted documents. Only returned documents can be edited.' : 'Edit Status'}
                               >
-                                <FaPen className="w-5 h-5" />
+                                <Pen size={20} />
                               </button>
                             </span>
                           )}
@@ -805,21 +803,21 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                   className="text-gray-600 hover:text-gray-900"
                   title="Open in New Tab"
                 >
-                  <FaLink className="w-5 h-5" />
+                  <ExternalLink size={20} />
                 </a>
                 <button
                   onClick={() => handleDownload(selectedDocument.DownloadUrl || selectedDocument.FileUrl, selectedDocument.Title || selectedDocument.documentTypeName)}
                   className="text-gray-600 hover:text-gray-900"
                   title="Download Document"
                 >
-                  <FaDownload className="w-5 h-5" />
+                  <Download size={20} />
                 </button>
                 <button
                   onClick={handleCloseViewer}
                   className="text-gray-500 hover:text-gray-700"
                   title="Close"
                 >
-                  <FaTimes className="w-5 h-5" />
+                  <X size={20} />
                 </button>
               </div>
             </div>
@@ -1004,7 +1002,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                     className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
                     disabled={isDeletingDocType}
                   >
-                    <FaTrash /> Delete Selected
+                    <Trash2 size={14} /> Delete Selected
                   </button>
                 </div>
               )}
@@ -1056,7 +1054,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                               openEditDocTypeModal(type);
                             }}
                           >
-                            <FaPen />
+                            <Pen size={14} />
                           </button>
                           <button
                             className="text-red-600 hover:text-red-900 ml-2"
@@ -1079,7 +1077,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                             }}
                             disabled={isDeletingDocType}
                           >
-                            <FaTrash />
+                            <Trash2 size={14} />
                           </button>
                         </span>
                       </li>
@@ -1256,7 +1254,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center justify-center gap-2"
                 disabled={importLoading}
               >
-                <FaFile />
+                <FileText size={16} />
                 {importLoading ? 'Importing...' : 'Choose CSV File'}
               </button>
 

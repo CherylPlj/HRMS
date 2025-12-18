@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { Plus, Pen, Trash2, Check, X } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { isAdmin } from '@/utils/roleUtils';
 
@@ -168,9 +168,9 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
         }`}>
           <div className="flex items-center">
             {notification.type === 'success' ? (
-              <FaCheck className="w-5 h-5 mr-2" />
+              <Check className="w-5 h-5 mr-2" />
             ) : (
-              <FaTimes className="w-5 h-5 mr-2" />
+              <X className="w-5 h-5 mr-2" />
             )}
             {notification.message}
           </div>
@@ -178,7 +178,7 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
             onClick={() => setNotification(null)}
             className="text-gray-400 hover:text-gray-600"
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -199,7 +199,7 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
             }}
             className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
           >
-            <FaPlus /> Add Skill
+            <Plus size={16} /> Add Skill
           </button>
         )}
       </div>
@@ -229,13 +229,13 @@ const SkillsTab: React.FC<SkillsTabProps> = ({ employeeId }) => {
                     }}
                     className="text-blue-600 hover:text-blue-800"
                   >
-                    <FaEdit />
+                    <Pen size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(skill.id)}
                     className="text-red-600 hover:text-red-800"
                   >
-                    <FaTrash />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               )}

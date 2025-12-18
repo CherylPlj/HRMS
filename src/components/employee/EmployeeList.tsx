@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FaPlus, FaUpload, FaDownload, FaEye, FaFileCsv, FaFilePdf } from 'react-icons/fa';
+import { Plus, Upload, Download, Eye, FileSpreadsheet, FileText } from 'lucide-react';
 import { Employee, Department, Pagination as PaginationType } from './types';
 import EmployeeFilters from './EmployeeFilters';
 import EmployeeTable from './EmployeeTable';
@@ -88,19 +88,19 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
             onClick={onAddEmployee}
             className="bg-[#800000] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
           >
-            <FaPlus /> Add Employee
+            <Plus size={16} /> Add Employee
           </button>
           <button
             onClick={onImportEmployees}
             className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
           >
-            <FaUpload /> Import Employees
+            <Upload size={16} /> Import Employees
           </button>
           <button
             onClick={onExportEmployees}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
           >
-            <FaDownload /> Export Employees
+            <Download size={16} /> Export Employees
           </button>
         </div>
         <div className="flex items-center gap-3">
@@ -116,11 +116,11 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
               </>
             ) : viewMode === 'paginated' ? (
               <>
-                <FaEye /> Show All ({pagination.totalCount})
+                <Eye size={16} /> Show All ({pagination.totalCount})
               </>
             ) : (
               <>
-                <FaEye /> Show Paginated
+                <Eye size={16} /> Show Paginated
               </>
             )}
           </button>
@@ -134,7 +134,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
               {isExporting ? (
                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
               ) : (
-                <FaFileCsv className="w-4 h-4" />
+                <FileSpreadsheet className="w-4 h-4" />
               )}
               CSV
             </button>
@@ -147,7 +147,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
               {isExporting ? (
                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
               ) : (
-                <FaFilePdf className="w-4 h-4" />
+                <FileText className="w-4 h-4" />
               )}
               PDF
             </button>

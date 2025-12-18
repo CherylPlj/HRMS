@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnected } from '@/lib/prisma';
 import type { DashboardInsights } from '@/types/aiAgent';
 
 export async function GET(req: NextRequest) {
@@ -10,6 +10,9 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Ensure Prisma connection is established
+    await ensurePrismaConnected();
 
     const now = new Date();
     const todayStart = new Date(now.setHours(0, 0, 0, 0));

@@ -1,31 +1,42 @@
 // lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
 
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === 'production') {
-  // In production (Vercel): create a new client per function execution
-  prisma = new PrismaClient({
-    log: ['error', 'warn'],
+// Create a new Prisma client with proper pooling settings
+const createPrismaClient = () => {
+  const client = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    // Disable prepared statements for PgBouncer compatibility
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
-} else {
-  // In dev: prevent multiple instances during hot reload
-  const globalWithPrisma = globalThis as typeof globalThis & {
-    prisma?: PrismaClient;
-  };
+  
+  // Eagerly connect to avoid "Engine is not yet connected" errors
+  client.$connect().catch((e) => {
+    console.error('Failed to connect to database:', e);
+  });
+  
+  return client;
+};
 
-  if (!globalWithPrisma.prisma) {
-    globalWithPrisma.prisma = new PrismaClient({
-      log: ['error', 'warn'],
-    });
-  }
+const globalForPrisma = globalThis as typeof globalThis & {
+  prisma?: PrismaClient;
+};
 
-  prisma = globalWithPrisma.prisma;
+// In development, reuse the client to avoid too many connections during hot reload
+// In production, create fresh clients but they'll be managed by serverless function lifecycle
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }
 
-// Handle connection errors and reconnect
-prisma.$connect().catch((err) => {
-  console.error('Prisma connection error:', err);
-});
-
-export { prisma };
+/**
+ * Helper to ensure prisma is connected before making queries.
+ * Use this at the start of API routes if you encounter connection issues.
+ */
+export async function ensurePrismaConnected() {
+  await prisma.$connect();
+}

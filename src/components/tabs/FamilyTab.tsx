@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { Plus, Pen, Trash2 } from 'lucide-react';
 import { getFamilyData, addFamilyMember, updateFamilyMember, deleteFamilyMember } from '@/lib/employeeService';
 
 interface Family {
@@ -238,7 +238,7 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
           }}
           className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
         >
-          <FaPlus /> Add Family Member
+          <Plus size={16} /> Add Family Member
         </button>
       </div>
 
@@ -283,14 +283,14 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
                   }}
                   className="text-blue-600 hover:text-blue-800"
                 >
-                  <FaEdit />
+                  <Pen size={16} />
                 </button>
                 <button
                   onClick={() => handleDelete(record.id)}
                   disabled={loading}
                   className={`${loading ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'}`}
                 >
-                  <FaTrash />
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>

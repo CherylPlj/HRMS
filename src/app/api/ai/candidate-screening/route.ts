@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { AIAgentService } from '@/services/aiAgentService';
 
-const aiService = new AIAgentService();
-
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
@@ -29,6 +27,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Instantiate service inside handler to ensure Prisma connection is ready
+    const aiService = new AIAgentService();
     const result = await aiService.screenCandidate(candidateId, vacancyId);
 
     return NextResponse.json(result);

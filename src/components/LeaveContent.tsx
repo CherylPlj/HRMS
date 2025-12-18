@@ -538,13 +538,15 @@ const LeaveContent: React.FC = () => {
                         leaveTypes={leaveTypes}
                         onUpdate={fetchLeaveTypes}
                     />
-                    <button
-                        onClick={handleDownloadPDF}
-                        className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-                    >
-                        <Download size={18} />
-                        Download
-                    </button>
+                    {activeTab !== 'dashboard' && (
+                        <button
+                            onClick={handleDownloadPDF}
+                            className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                            <Download size={18} />
+                            Download
+                        </button>
+                    )}
                 </div>
             </div>
 

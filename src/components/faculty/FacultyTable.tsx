@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaEye, FaLink, FaDownload } from 'react-icons/fa';
+import { Eye, Link, Download } from 'lucide-react';
 import { Faculty, DocumentFacultyRow, DocumentType } from './types';
 import { getViewUrl, getDownloadUrl, getStatusOrder } from './utils';
 import { useUser } from '@clerk/nextjs';
@@ -191,7 +191,7 @@ const FacultyTable: React.FC<FacultyTableProps> = ({
                         title="View Details" 
                         className="text-blue-600 hover:text-blue-900"
                       >
-                        <FaEye />
+                        <Eye size={16} />
                       </button>
                     </div>
                   </td>
@@ -248,7 +248,7 @@ const FacultyTable: React.FC<FacultyTableProps> = ({
                                               title="View Document"
                                               type="button"
                                             >
-                                              <FaEye />
+                                              <Eye size={16} />
                                             </button>
                                             {doc.FileUrl && (
                                               <>
@@ -259,7 +259,7 @@ const FacultyTable: React.FC<FacultyTableProps> = ({
                                                   className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
                                                   title="Open in New Tab"
                                                 >
-                                                  <FaLink />
+                                                  <Link size={16} />
                                                 </a>
                                                 <a
                                                   href={getDownloadUrl(doc.DownloadUrl || doc.FileUrl)}
@@ -267,7 +267,7 @@ const FacultyTable: React.FC<FacultyTableProps> = ({
                                                   className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
                                                   title="Download Document"
                                                 >
-                                                  <FaDownload />
+                                                  <Download size={16} />
                                                 </a>
                                               </>
                                             )}

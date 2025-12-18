@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaTimes, FaEye, FaPaperclip, FaFilter, FaTrash, FaUpload, FaCheck, FaDownload } from 'react-icons/fa';
+import { Plus, X, Eye, Paperclip, Filter, Trash2, Upload, Check, Download } from 'lucide-react';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
@@ -526,7 +526,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 rel="noopener noreferrer"
                 className="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#a83232] transition-colors flex items-center gap-2"
               >
-                <FaDownload />
+                <Download size={16} />
                 Download File
               </a>
             </div>
@@ -551,7 +551,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               <h3 className="text-2xl font-bold text-gray-700">{statusCounts.pending}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-              <FaUpload className="text-gray-500" />
+              <Upload className="text-gray-500" />
             </div>
           </div>
         </div>
@@ -563,7 +563,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               <h3 className="text-2xl font-bold text-blue-700">{statusCounts.submitted}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
-              <FaPaperclip className="text-blue-500" />
+              <Paperclip className="text-blue-500" />
             </div>
           </div>
         </div>
@@ -575,7 +575,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               <h3 className="text-2xl font-bold text-green-700">{statusCounts.approved}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center">
-              <FaCheck className="text-green-500" />
+              <Check className="text-green-500" />
             </div>
           </div>
         </div>
@@ -587,7 +587,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               <h3 className="text-2xl font-bold text-red-700">{statusCounts.rejected}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center">
-              <FaTimes className="text-red-500" />
+              <X className="text-red-500" />
             </div>
           </div>
         </div>
@@ -658,7 +658,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             aria-label="Upload Files"
             disabled={pendingDocs.length === 0 && documents.length > 0}
           >
-            <FaPlus /> Upload Files
+            <Plus size={16} /> Upload Files
           </button>
           <button
             className="bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-900 disabled:opacity-50"
@@ -669,7 +669,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               selectedDocs.includes(doc.DocumentID) && (doc.SubmissionStatus === 'Approved' || doc.SubmissionStatus === 'Submitted')
             )}
           >
-            <FaTrash /> Delete
+            <Trash2 size={16} /> Delete
           </button>
         </div>
       </div>
@@ -742,7 +742,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             title="View file"
                             aria-label="View file"
                           >
-                            <FaEye />
+                            <Eye size={16} />
                           </button>
                           <a
                             href={doc.DownloadUrl || doc.FileUrl}
@@ -751,7 +751,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             title="Download file"
                             aria-label="Download file"
                           >
-                            <FaDownload />
+                            <Download size={16} />
                           </a>
                         </React.Fragment>
                       ) : (
@@ -865,7 +865,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                 title="Close modal"
                 aria-label="Close modal"
               >
-                <FaTimes />
+                <X size={16} />
               </button>
               <div className="mt-2 text-sm text-gray-600">
                 Upload your required documents. Files will be reviewed by the administration.
@@ -934,7 +934,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                   className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
                                   title="View file"
                                 >
-                                  <FaEye />
+                                  <Eye size={16} />
                                 </button>
                                 <a
                                   href={existingDoc.DownloadUrl || existingDoc.FileUrl}
@@ -942,7 +942,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                   className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
                                   title="Download file"
                                 >
-                                  <FaDownload />
+                                  <Download size={16} />
                                 </a>
                               </div>
                             ) : (
@@ -982,7 +982,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     </>
                                   ) : (
                                     <>
-                                      <FaUpload className="text-gray-500" />
+                                      <Upload className="text-gray-500" />
                                       <span>Choose File</span>
                                     </>
                                   )}
@@ -1044,7 +1044,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               title="Close delete confirmation"
               aria-label="Close delete confirmation"
             >
-              <FaTimes />
+              <X size={16} />
             </button>
             <h2 className="text-xl font-bold mb-4 text-black">Confirm Remove Files</h2>
 
@@ -1123,7 +1123,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
               title="Close preview"
               aria-label="Close preview"
             >
-              <FaTimes />
+              <X size={16} />
             </button>
             <FilePreview
               url={previewFileUrl}
@@ -1136,7 +1136,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
       {showUploadInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => setShowUploadInfo(false)} title="Close info" aria-label="Close info"><FaTimes /></button>
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => setShowUploadInfo(false)} title="Close info" aria-label="Close info"><X size={16} /></button>
             <div className="flex flex-col items-center gap-4">
               <span className="text-lg text-center">You already submitted the required documents. Select a Document to Edit if you need to make changes.</span>
               <button className="bg-[#800000] text-white px-4 py-2 rounded" onClick={() => setShowUploadInfo(false)}>OK</button>

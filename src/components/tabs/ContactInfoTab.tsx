@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import { Check, X } from 'lucide-react';
 
 interface ContactInfo {
   Email?: string | null;
@@ -105,9 +105,9 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
         }`}>
           <div className="flex items-center">
             {notification.type === 'success' ? (
-              <FaCheck className="w-5 h-5 mr-2" />
+              <Check className="w-5 h-5 mr-2" />
             ) : (
-              <FaTimes className="w-5 h-5 mr-2" />
+              <X className="w-5 h-5 mr-2" />
             )}
             {notification.message}
           </div>
@@ -115,7 +115,7 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
             onClick={() => setNotification(null)}
             className="text-gray-400 hover:text-gray-600"
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}

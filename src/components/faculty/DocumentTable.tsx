@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaEye, FaLink, FaDownload, FaPen } from 'react-icons/fa';
+import { Eye, Link, Download, Pen } from 'lucide-react';
 import { DocumentFacultyRow } from './types';
 import { getViewUrl, getDownloadUrl, getStatusOrder } from './utils';
 
@@ -124,7 +124,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       className="text-gray-600 hover:text-gray-900"
                       title="View Document"
                     >
-                      <FaEye className="w-5 h-5" />
+                      <Eye className="w-5 h-5" />
                     </button>
                     <a
                       href={getViewUrl(doc.FileUrl)}
@@ -133,7 +133,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       className="text-gray-600 hover:text-gray-900"
                       title="Open in New Tab"
                     >
-                      <FaLink className="w-5 h-5" />
+                      <Link className="w-5 h-5" />
                     </a>
                     <a
                       href={getDownloadUrl(doc.DownloadUrl || doc.FileUrl)}
@@ -141,7 +141,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       className="text-gray-600 hover:text-gray-900"
                       title="Download Document"
                     >
-                      <FaDownload className="w-5 h-5" />
+                      <Download className="w-5 h-5" />
                     </a>
                     <button
                       onClick={() => onStatusChange(doc.DocumentID, doc.SubmissionStatus)}
@@ -149,7 +149,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
                       title="Edit Status"
                     >
-                      <FaPen className="w-5 h-5" />
+                      <Pen className="w-5 h-5" />
                     </button>
                   </span>
                 )}

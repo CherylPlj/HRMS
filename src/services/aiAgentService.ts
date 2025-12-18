@@ -33,12 +33,22 @@ export class AIAgentService {
   });
 
   /**
+   * Ensure Prisma is connected before making queries
+   */
+  private async ensureConnection() {
+    await prisma.$connect();
+  }
+
+  /**
    * Screen a candidate against a vacancy
    */
   async screenCandidate(
     candidateId: number,
     vacancyId: number
   ): Promise<CandidateScreeningResult> {
+    // Ensure Prisma connection is established
+    await this.ensureConnection();
+    
     // Fetch candidate and vacancy data
     const candidate = await prisma.candidate.findUnique({
       where: { CandidateID: candidateId },
@@ -253,6 +263,9 @@ Analyze and provide a JSON response with the following structure (no markdown, j
   async analyzePromotionEligibility(
     employeeId: string
   ): Promise<PromotionAnalysisResult> {
+    // Ensure Prisma connection is established
+    await this.ensureConnection();
+    
     const employee = await prisma.employee.findUnique({
       where: { EmployeeID: employeeId },
       include: {
@@ -380,6 +393,9 @@ Provide a JSON response (no markdown, just valid JSON):
    * Analyze training needs
    */
   async analyzeTrainingNeeds(employeeId: string): Promise<TrainingNeedsResult> {
+    // Ensure Prisma connection is established
+    await this.ensureConnection();
+    
     const employee = await prisma.employee.findUnique({
       where: { EmployeeID: employeeId },
       include: {
@@ -468,6 +484,9 @@ Identify skill gaps and recommend training. Provide JSON response (no markdown, 
    * Analyze disciplinary risk
    */
   async analyzeDisciplinaryRisk(employeeId: string): Promise<DisciplinaryRiskResult> {
+    // Ensure Prisma connection is established
+    await this.ensureConnection();
+    
     const employee = await prisma.employee.findUnique({
       where: { EmployeeID: employeeId },
       include: {

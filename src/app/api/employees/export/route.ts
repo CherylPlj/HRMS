@@ -60,6 +60,8 @@ export async function GET(request: Request) {
     const hireDateFrom = searchParams.get('hireDateFrom');
     const hireDateTo = searchParams.get('hireDateTo');
     const orientation = searchParams.get('orientation') || 'portrait';
+    const employeeIds = searchParams.get('employeeIds'); // Comma-separated employee IDs for filtering
+    const category = searchParams.get('category'); // 'active' or 'inactive' category
 
     // Parse columns - exclude EmployeeID, UserID, createdAt, updatedAt by default
     const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt'];
@@ -109,6 +111,25 @@ export async function GET(request: Request) {
 
     // Filter by designation in JavaScript since it's in a nested object
     let filteredEmployees = employees || [];
+    
+    // Filter by specific employee IDs if provided (for category-specific export)
+    if (employeeIds) {
+      const idsArray = employeeIds.split(',').map(id => id.trim());
+      filteredEmployees = filteredEmployees.filter((emp: any) => idsArray.includes(emp.EmployeeID));
+    }
+    
+    // Filter by category if provided (active = not resigned/retired, inactive = resigned/retired)
+    if (category === 'active') {
+      filteredEmployees = filteredEmployees.filter((emp: any) => {
+        const status = emp.EmploymentDetail?.[0]?.EmploymentStatus;
+        return status !== 'Resigned' && status !== 'Retired';
+      });
+    } else if (category === 'inactive') {
+      filteredEmployees = filteredEmployees.filter((emp: any) => {
+        const status = emp.EmploymentDetail?.[0]?.EmploymentStatus;
+        return status === 'Resigned' || status === 'Retired';
+      });
+    }
     if (designationFilter && designationFilter !== 'all') {
       filteredEmployees = filteredEmployees.filter((emp: any) => 
         emp.EmploymentDetail?.[0]?.Designation === designationFilter
@@ -152,7 +173,7 @@ export async function GET(request: Request) {
     if (format === 'csv') {
       return generateCSV(filteredEmployees, selectedColumns);
     } else if (format === 'pdf') {
-      const html = generatePDFHtml(filteredEmployees, selectedColumns, paperSize);
+      const html = generatePDFHtml(filteredEmployees, selectedColumns, paperSize, category);
       // Puppeteer PDF generation
       const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
       const page = await browser.newPage();
@@ -165,10 +186,12 @@ export async function GET(request: Request) {
         preferCSSPageSize: false,
       });
       await browser.close();
-      return new NextResponse(pdfBuffer, {
+      const buffer = Buffer.from(pdfBuffer);
+      const categoryName = category ? `_${category}` : '';
+      return new NextResponse(buffer, {
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="employees_report_${new Date().toISOString().split('T')[0]}.pdf"`
+          'Content-Disposition': `attachment; filename="employees${categoryName}_report_${new Date().toISOString().split('T')[0]}.pdf"`
         }
       });
     } else {
@@ -259,17 +282,26 @@ function getPaperSizeStyle(paperSize: string) {
   }
 }
 
-function generatePDFHtml(employees: any[], columns: string[], paperSize: string) {
+function generatePDFHtml(employees: any[], columns: string[], paperSize: string, category?: string | null) {
   const headers = columns.map(col => `<th>${COLUMN_LABELS[col] || col}</th>`).join('');
   const rows = employees.map(emp =>
     `<tr>${columns.map(col => `<td>${getColumnValue(emp, col)}</td>`).join('')}</tr>`
   ).join('');
+  
+  // Generate title based on category
+  let reportTitle = 'Employee Report';
+  if (category === 'active') {
+    reportTitle = 'Active Employees Report';
+  } else if (category === 'inactive') {
+    reportTitle = 'Retired/Resigned Employees Report';
+  }
+  
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Employee Report</title>
+      <title>${reportTitle}</title>
       <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
@@ -293,13 +325,14 @@ function generatePDFHtml(employees: any[], columns: string[], paperSize: string)
     <body>
       <div class="pdf-page">
         <div class="header">
-          <h1>Employee Report</h1>
+          <h1>${reportTitle}</h1>
           <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
           <p>Total Employees: ${employees.length}</p>
         </div>
         <div class="summary">
           <p><strong>Report Summary:</strong></p>
           <p>• Total Records: ${employees.length}</p>
+          <p>• Category: ${category === 'active' ? 'Active Employees' : category === 'inactive' ? 'Retired/Resigned Employees' : 'All Employees'}</p>
           <p>• Date Range: ${employees.length > 0 ? new Date(employees[employees.length - 1].createdAt).toLocaleDateString() : 'N/A'} to ${employees.length > 0 ? new Date(employees[0].createdAt).toLocaleDateString() : 'N/A'}</p>
         </div>
         <table>

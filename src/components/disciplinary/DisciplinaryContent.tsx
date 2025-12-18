@@ -493,108 +493,58 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
     return values;
   };
 
-  // Import from CSV
+  // Import from CSV using backend API
   const handleImport = async (file: File) => {
     setIsImporting(true);
     setImportError('');
     setImportSuccess('');
 
     try {
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        throw new Error('CSV file must have at least a header row and one data row');
+      // Create FormData and append file
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Call backend API
+      const response = await fetch('/api/disciplinary/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import records');
       }
 
-      // Parse headers
-      const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
-      
-      // Parse data rows
-      const importedRecords: DisciplinaryRecord[] = [];
-      const errors: string[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        try {
-          const values = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim());
-          
-          if (values.length !== headers.length) {
-            errors.push(`Row ${i + 1}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
-            continue;
-          }
-
-          const recordData: any = {};
-          headers.forEach((header, index) => {
-            const key = header.toLowerCase().replace(/\s+/g, '').replace(/\./g, '');
-            recordData[key] = values[index] || '';
-          });
-
-          // Map CSV columns to record fields (flexible mapping)
-          const getField = (keys: string[]) => {
-            for (const key of keys) {
-              if (recordData[key] !== undefined && recordData[key] !== '') {
-                return recordData[key];
-              }
-            }
-            return '';
-          };
-
-          const caseNo = getField(['caseno', 'caseno.', 'casenumber', 'case_no']);
-          const employee = getField(['employee', 'employeename', 'employee_name']);
-          const dateTime = getField(['date&time', 'datetime', 'date_time', 'date']);
-          const category = getField(['category']);
-          const violation = getField(['violationtype', 'violation_type', 'violation']);
-          const severity = getField(['severity']) || 'Minor';
-          const status = getField(['status']) || 'Ongoing';
-
-          const newRecord: DisciplinaryRecord = {
-            id: `record-${Date.now()}-${i}`,
-            caseNo: caseNo || '',
-            dateTime: dateTime ? (new Date(dateTime).toISOString() || new Date().toISOString()) : new Date().toISOString(),
-            category: category || '',
-            violation: violation || '',
-            employee: employee || '',
-            employeeId: getField(['employeeid', 'employee_id', 'employeeid']),
-            severity: (['Minor', 'Moderate', 'Major'].includes(severity) ? severity : 'Minor') as any,
-            status: (['Ongoing', 'For Review', 'Resolved', 'Closed'].includes(status) ? status : 'Ongoing') as any,
-            evidence: [],
-            resolution: getField(['resolution']),
-            resolutionDate: getField(['resolutiondate', 'resolution_date']),
-            remarks: getField(['remarks']),
-            interviewNotes: getField(['interviewnotes', 'interview_notes']),
-            hrRemarks: getField(['hrremarks', 'hr_remarks']),
-            recommendedPenalty: getField(['recommendedpenalty', 'recommended_penalty']),
-            supervisor: getField(['supervisor', 'supervisorname', 'supervisor_name']),
-            supervisorId: getField(['supervisorid', 'supervisor_id']),
-            offenseCount: parseInt(getField(['offensecount', 'offense_count']) || '0', 10) || 0,
-            digitalAcknowledgment: getField(['digitalacknowledgment', 'digital_acknowledgment'])?.toLowerCase() === 'yes',
-            acknowledgedAt: getField(['acknowledgedat', 'acknowledged_at']) || undefined,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-
-          // Validate required fields
-          if (!newRecord.caseNo || !newRecord.employee) {
-            errors.push(`Row ${i + 1}: Missing required fields (Case No. or Employee)`);
-            continue;
-          }
-
-          importedRecords.push(newRecord);
-        } catch (error) {
-          errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Invalid data'}`);
-        }
-      }
-
-      if (importedRecords.length > 0) {
-        setRecords((prev) => [...prev, ...importedRecords]);
-        setImportSuccess(`Successfully imported ${importedRecords.length} record(s).`);
-        if (errors.length > 0) {
-          setImportError(`${errors.length} row(s) had errors: ${errors.slice(0, 5).join('; ')}${errors.length > 5 ? '...' : ''}`);
+      // Handle success
+      if (result.success > 0) {
+        setImportSuccess(`Successfully imported ${result.success} record(s).`);
+        
+        // Refresh the records list
+        await fetchRecords();
+        
+        // Show errors if any
+        if (result.errors && result.errors.length > 0) {
+          const errorPreview = result.errors.slice(0, 5).join('; ');
+          const errorMessage = result.errors.length > 5 
+            ? `${errorPreview}... (${result.errors.length - 5} more)`
+            : errorPreview;
+          setImportError(`Some rows had errors: ${errorMessage}`);
         }
       } else {
-        throw new Error('No valid records found in CSV file');
+        throw new Error('No records were imported successfully');
+      }
+
+      // Handle failures
+      if (result.failed > 0 && result.errors && result.errors.length > 0) {
+        const errorPreview = result.errors.slice(0, 5).join('; ');
+        const errorMessage = result.errors.length > 5 
+          ? `${errorPreview}... (${result.errors.length - 5} more)`
+          : errorPreview;
+        setImportError(errorMessage);
       }
     } catch (error) {
+      console.error('Import error:', error);
       setImportError(error instanceof Error ? error.message : 'Failed to import CSV file');
     } finally {
       setIsImporting(false);

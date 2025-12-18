@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaTimes, FaCheck } from 'react-icons/fa';
+import { Plus, Pen, Trash2, X, Check } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 
 interface PromotionRecord {
@@ -261,7 +261,7 @@ const PromotionHistoryTab: React.FC<PromotionHistoryTabProps> = ({ employeeId })
             onClick={handleAddRecord}
             className="bg-[#800000] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
           >
-            <FaPlus className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
             Add Promotion Record
           </button>
         )}
@@ -274,9 +274,9 @@ const PromotionHistoryTab: React.FC<PromotionHistoryTabProps> = ({ employeeId })
         }`}>
           <div className="flex items-center">
             {notification.type === 'success' ? (
-              <FaCheck className="w-5 h-5 mr-2" />
+              <Check className="w-5 h-5 mr-2" />
             ) : (
-              <FaTimes className="w-5 h-5 mr-2" />
+              <X className="w-5 h-5 mr-2" />
             )}
             {notification.message}
           </div>
@@ -284,7 +284,7 @@ const PromotionHistoryTab: React.FC<PromotionHistoryTabProps> = ({ employeeId })
             onClick={() => setNotification(null)}
             className="text-gray-400 hover:text-gray-600"
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -348,14 +348,14 @@ const PromotionHistoryTab: React.FC<PromotionHistoryTabProps> = ({ employeeId })
                     onClick={() => handleEditRecord(record)}
                     className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
                   >
-                    <FaEdit className="w-4 h-4" />
+                    <Pen className="w-4 h-4" />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDeleteRecord(record.id)}
                     className="text-red-600 hover:text-red-800 flex items-center gap-1"
                   >
-                    <FaTrash className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                     Delete
                   </button>
                 </div>
@@ -377,7 +377,7 @@ const PromotionHistoryTab: React.FC<PromotionHistoryTabProps> = ({ employeeId })
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <FaTimes className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 

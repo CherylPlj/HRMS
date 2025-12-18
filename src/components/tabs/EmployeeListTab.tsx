@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTrash, FaPen, FaDownload, FaPlus, FaFile, FaEye, FaLink, FaTimes } from 'react-icons/fa';
-import { Search } from 'lucide-react';
+import { Search, Download, Trash2, Pen, Plus, FileText, Eye, ExternalLink, X } from 'lucide-react';
 
 interface Employee {
   EmployeeID: string;
@@ -190,7 +189,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
             className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800 ml-auto"
             disabled={selectedRows.length === 0}
           >
-            <FaDownload /> Download Selected ({selectedRows.length})
+            <Download size={18} /> Download Selected ({selectedRows.length})
           </button>
         </div>
       </div>
@@ -350,19 +349,19 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
                           title="View Details" 
                           className="text-blue-600 hover:text-blue-900"
                         >
-                          <FaEye />
+                          <Eye size={16} />
                         </button>
                         <button 
                           title="Edit" 
                           className="text-indigo-600 hover:text-indigo-900"
                         >
-                          <FaPen />
+                          <Pen size={16} />
                         </button>
                         <button 
                           title="Delete" 
                           className="text-red-600 hover:text-red-900"
                         >
-                          <FaTrash />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -418,7 +417,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
                                                 title="View Document"
                                                 type="button"
                                               >
-                                                <FaEye />
+                                                <Eye size={16} />
                                               </button>
                                               {doc.FileUrl && (
                                                 <a
@@ -428,7 +427,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
                                                   className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
                                                   title="Open in New Tab"
                                                 >
-                                                  <FaLink />
+                                                  <ExternalLink size={16} />
                                                 </a>
                                               )}
                                               {doc.DownloadUrl && (
@@ -439,7 +438,7 @@ const EmployeeListTab: React.FC<Props> = ({ employees, documents, documentTypes,
                                                   className="text-gray-500 hover:text-blue-700 transition-colors p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
                                                   title="Download Document"
                                                 >
-                                                  <FaDownload />
+                                                  <Download size={18} />
                                                 </a>
                                               )}
                                             </div>

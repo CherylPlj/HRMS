@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaEdit, FaCheck, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { Check, X, Eye, EyeOff } from 'lucide-react';
 import { maskGovtId } from '@/lib/formValidation';
 interface GovernmentIDs {
   SSSNumber?: string | null;
@@ -177,9 +177,9 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
           aria-label={isRevealed ? 'Hide ID' : 'Show ID'}
         >
           {isRevealed ? (
-            <FaEyeSlash className="w-4 h-4" />
+            <EyeOff className="w-4 h-4" />
           ) : (
-            <FaEye className="w-4 h-4" />
+            <Eye className="w-4 h-4" />
           )}
         </button>
       </label>
@@ -214,9 +214,9 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
         }`}>
           <div className="flex items-center">
             {notification.type === 'success' ? (
-              <FaCheck className="w-5 h-5 mr-2" />
+              <Check className="w-5 h-5 mr-2" />
             ) : (
-              <FaTimes className="w-5 h-5 mr-2" />
+              <X className="w-5 h-5 mr-2" />
             )}
             {notification.message}
           </div>
@@ -224,7 +224,7 @@ const GovernmentIDsTab: React.FC<GovernmentIDsTabProps> = ({
             onClick={() => setNotification(null)}
             className="text-gray-400 hover:text-gray-600"
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}

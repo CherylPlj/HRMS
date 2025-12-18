@@ -72,8 +72,8 @@ export function AIDashboard({ userId }: AIDashboardProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-[#800000]" />
-          <h2 className="text-2xl font-bold text-gray-900">AI Insights Dashboard</h2>
+          {/* <Sparkles className="w-6 h-6 text-[#800000]" /> */}
+          <h2 className="text-2xl font-bold text-gray-900"></h2>
         </div>
         <button
           onClick={fetchInsights}

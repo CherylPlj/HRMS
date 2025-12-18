@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaCog, FaPlus, FaPen, FaTrash, FaTimes, FaCheck, FaSave } from 'react-icons/fa';
+import { Settings, Plus, Pen, Trash2, X, Check, Save } from 'lucide-react';
 
 interface DocumentType {
   DocumentTypeID: number;
@@ -361,7 +361,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
         title="Manage Document Types"
         type="button"
       >
-        <FaCog /> Manage Document Types
+        <Settings size={16} /> Manage Document Types
       </button>
 
       {/* Main Modal */}
@@ -380,14 +380,14 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                       className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
                       title="Add Document Types"
                     >
-                      <FaPlus /> Add
+                      <Plus size={16} /> Add
                     </button>
                     <button
                       onClick={() => setMode('edit')}
                       className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
                       title="Edit Document Types"
                     >
-                      <FaPen /> Edit
+                      <Pen size={16} /> Edit
                     </button>
                     <button
                       onClick={handleDeleteClick}
@@ -395,7 +395,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                       className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Delete Selected Document Types"
                     >
-                      <FaTrash /> Delete ({selectedTypes.length})
+                      <Trash2 size={16} /> Delete ({selectedTypes.length})
                     </button>
                   </>
                 )}
@@ -406,7 +406,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                       disabled={isAdding || newTypes.every(v => !v.trim())}
                       className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
                     >
-                      <FaCheck /> Save
+                      <Check size={16} /> Save
                     </button>
                     <button
                       onClick={() => {
@@ -427,7 +427,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                       disabled={isSaving || !hasEdits}
                       className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
                     >
-                      <FaSave /> Save Changes
+                      <Save size={16} /> Save Changes
                     </button>
                     <button
                       onClick={handleCancelEdit}
@@ -445,7 +445,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                   className="text-gray-400 hover:text-gray-700 focus:outline-none"
                   aria-label="Close"
                 >
-                  <FaTimes className="w-6 h-6" />
+                  <X size={24} />
                 </button>
               </div>
             </div>
@@ -482,7 +482,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                           className="text-red-600 hover:text-red-800 p-2"
                           title="Remove"
                         >
-                          <FaTimes />
+                          <X size={16} />
                         </button>
                       )}
                     </div>
@@ -491,7 +491,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                     onClick={handleAddNewInput}
                     className="text-[#800000] hover:text-red-800 flex items-center gap-2 text-sm font-medium"
                   >
-                    <FaPlus /> Add Another
+                    <Plus size={16} /> Add Another
                   </button>
                 </div>
               )}
@@ -598,7 +598,7 @@ const ManageDocumentTypes: React.FC<ManageDocumentTypesProps> = ({ documentTypes
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
-                <FaTimes className="w-6 h-6" />
+                <X size={24} />
               </button>
             </div>
 

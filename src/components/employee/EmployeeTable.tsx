@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FaEye, FaEdit } from 'react-icons/fa';
+import { Eye, Pen } from 'lucide-react';
 import { Employee, Department } from './types';
 import { formatDesignation } from './utils';
 import DataRetentionInfo from './DataRetentionInfo';
@@ -116,7 +116,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       }}
                       className="text-blue-600 hover:text-blue-900"
                     >
-                      <FaEye className="w-4 h-4" />
+                      <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -125,7 +125,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       }}
                       className="text-[#800000] hover:text-red-800"
                     >
-                      <FaEdit className="w-4 h-4" />
+                      <Pen className="w-4 h-4" />
                     </button>
                   </div>
                 </td>

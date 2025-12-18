@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaDownload } from 'react-icons/fa';
+import { Download } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -335,24 +335,6 @@ const FacultyContent = () => {
       });
 
       doc.save('documents-list.pdf');
-    } else if (activeView === 'documentDashboard') {
-      doc.setFontSize(16);
-      doc.text('Documents Dashboard Report', 14, 15);
-      
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
-
-      const submitted = documents.filter(d => d.SubmissionStatus === 'Submitted').length;
-      const approved = documents.filter(d => d.SubmissionStatus === 'Approved').length;
-      const returned = documents.filter(d => d.SubmissionStatus === 'Returned').length;
-
-      doc.setFontSize(12);
-      doc.text(`Total Documents: ${documents.length}`, 14, 35);
-      doc.text(`Submitted: ${submitted}`, 14, 42);
-      doc.text(`Approved: ${approved}`, 14, 49);
-      doc.text(`Returned: ${returned}`, 14, 56);
-
-      doc.save('documents-dashboard.pdf');
     }
   };
 
@@ -557,18 +539,18 @@ const FacultyContent = () => {
             Faculty List
           </button>
         </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={handleDownloadPDF}
-            className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
-          >
-            <FaDownload /> Download {
-              activeView === 'facultyManagement' ? 'Faculty List' : 
-              activeView === 'documentDashboard' ? 'Dashboard Report' :
-              'Documents List'
-            }
-          </button>
-        </div>
+        {activeView !== 'documentDashboard' && (
+          <div className="flex space-x-2">
+            <button
+              onClick={handleDownloadPDF}
+              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+            >
+              <Download size={16} /> Download {
+                activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'
+              }
+            </button>
+          </div>
+        )}
       </div>
 
       {activeView === 'facultyManagement' && (

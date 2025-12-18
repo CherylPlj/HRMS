@@ -1,15 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
   experimental: {
     serverActions: {
       bodySizeLimit: '1mb',
     },
   },
+  // Transpile rate-limiter-flexible to resolve .d.ts parsing issues
+  transpilePackages: ['rate-limiter-flexible'],
+  // Add empty turbopack config to silence Next.js 16 warning
+  // Webpack config will be used for builds, Turbopack for dev (if compatible)
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -21,6 +21,13 @@ const nextConfig = {
         os: false,
       };
     }
+    
+    // Exclude .d.ts files from being parsed by webpack
+    // This prevents webpack from trying to parse TypeScript definition files
+    config.module.rules.push({
+      test: /\.d\.ts$/,
+      use: 'ignore-loader',
+    });
     
     // Handle react-pdf specific modules
     config.module.rules.push({

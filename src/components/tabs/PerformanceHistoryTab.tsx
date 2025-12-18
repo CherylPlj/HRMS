@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaEye, FaChartLine } from 'react-icons/fa';
+import { Eye, TrendingUp } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -157,14 +157,14 @@ const PerformanceHistoryTab: React.FC<PerformanceHistoryTabProps> = ({ employeeI
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FaChartLine className="text-[#800000]" />
+            <TrendingUp className="text-[#800000]" />
             Performance Review History
           </CardTitle>
         </CardHeader>
         <CardContent>
           {reviews.length === 0 ? (
             <div className="text-center py-12">
-              <FaChartLine className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <TrendingUp className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Performance Reviews</h3>
               <p className="text-gray-600">This employee has no performance reviews yet.</p>
             </div>
@@ -210,7 +210,7 @@ const PerformanceHistoryTab: React.FC<PerformanceHistoryTabProps> = ({ employeeI
                             size="sm"
                             onClick={() => handleViewReview(review)}
                           >
-                            <FaEye className="h-4 w-4 mr-2" />
+                            <Eye className="h-4 w-4 mr-2" />
                             View
                           </Button>
                         </TableCell>

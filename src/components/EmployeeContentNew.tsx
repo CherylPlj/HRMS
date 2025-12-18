@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { FaSync, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaUpload, FaEdit, FaEye } from 'react-icons/fa';
+import { RefreshCw, Download, FileSpreadsheet, FileText, Plus, Upload, Pen, Eye, AlertCircle } from 'lucide-react';
 import { EmployeeList, EmployeeDetail, EmployeeDashboard, PhotoModal, SuccessModal, ErrorModal } from './employee';
-import { AlertCircle } from 'lucide-react';
 import { Employee, EmployeeFormState, Department, Pagination as PaginationType } from './employee/types';
 import { allExportColumns, excludedColumns, exportColumnSections } from './employee/constants';
 import { calculateYearsOfService, formatDesignation } from './employee/utils';
@@ -297,6 +296,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
     hasNextPage: false,
     hasPrevPage: false
   });
+  // Separate pagination for active and inactive categories
+  const [activeCategoryPage, setActiveCategoryPage] = useState(1);
+  const [inactiveCategoryPage, setInactiveCategoryPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [viewMode, setViewMode] = useState<'paginated' | 'all'>('paginated');
@@ -378,6 +381,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   useEffect(() => {
     fetchDepartments();
     fetchEmployees(1);
+    fetchAllEmployees(); // Fetch all employees for dashboard statistics
   }, []);
 
   // Fetch employees from backend API with pagination
@@ -1320,76 +1324,276 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       )}
 
       {/* List View */}
-      {activeView === 'list' && (
-        <>
-          {/* Employee Category Tabs (Active/Inactive) */}
-          <div className="mb-6 flex space-x-4 border-b border-gray-200">
-            <button
-              onClick={() => setEmployeeCategory('active')}
-              className={`px-6 py-3 font-medium transition-colors border-b-2 ${
-                employeeCategory === 'active'
-                  ? 'border-[#800000] text-[#800000]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Active Employees
-            </button>
-            <button
-              onClick={() => setEmployeeCategory('inactive')}
-              className={`px-6 py-3 font-medium transition-colors border-b-2 ${
-                employeeCategory === 'inactive'
-                  ? 'border-[#800000] text-[#800000]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Retired/Resigned Employees
-            </button>
-            {employeeCategory === 'inactive' && (
-              <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <span>Data retention: 3 years per Data Privacy Act (Philippines) & DOLE requirements</span>
-              </div>
-            )}
-          </div>
+      {activeView === 'list' && (() => {
+        // Filter employees by category
+        const isActiveEmployee = (e: any) => e.status !== 'Resigned' && e.status !== 'Retired' && e.status !== 'resigned' && e.status !== 'retired';
+        const isInactiveEmployee = (e: any) => e.status === 'Resigned' || e.status === 'Retired' || e.status === 'resigned' || e.status === 'retired';
+        
+        // Get all employees for the current category
+        const categoryAllEmployees = employeeCategory === 'active' 
+          ? allEmployees.filter(isActiveEmployee)
+          : allEmployees.filter(isInactiveEmployee);
+        
+        // Calculate category-specific pagination
+        const currentCategoryPage = employeeCategory === 'active' ? activeCategoryPage : inactiveCategoryPage;
+        const categoryTotalCount = categoryAllEmployees.length;
+        const categoryTotalPages = Math.max(1, Math.ceil(categoryTotalCount / ITEMS_PER_PAGE));
+        
+        // Ensure current page is within bounds
+        const validCurrentPage = Math.min(currentCategoryPage, categoryTotalPages);
+        
+        // Paginate the category employees for display
+        const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const paginatedCategoryEmployees = categoryAllEmployees.slice(startIndex, endIndex);
+        
+        // Create category-specific pagination object
+        const categoryPagination = {
+          currentPage: validCurrentPage,
+          totalPages: categoryTotalPages,
+          totalCount: categoryTotalCount,
+          limit: ITEMS_PER_PAGE,
+          hasNextPage: validCurrentPage < categoryTotalPages,
+          hasPrevPage: validCurrentPage > 1
+        };
+        
+        // Handle page change for the current category
+        const handleCategoryPageChange = (newPage: number) => {
+          if (newPage >= 1 && newPage <= categoryTotalPages) {
+            if (employeeCategory === 'active') {
+              setActiveCategoryPage(newPage);
+            } else {
+              setInactiveCategoryPage(newPage);
+            }
+          }
+        };
 
-          <EmployeeList
-            employees={employeeCategory === 'active' 
-              ? employees.filter(e => e.status !== 'Resigned' && e.status !== 'Retired' && e.status !== 'resigned' && e.status !== 'retired')
-              : employees.filter(e => e.status === 'Resigned' || e.status === 'Retired' || e.status === 'resigned' || e.status === 'retired')
+        // Client-side export for current category - exports what's visible on screen
+        // Only includes columns visible in the table: Employee Name, Position, Designation, Department, Email
+        const handleCategoryQuickExport = async (format: 'csv' | 'pdf') => {
+          setIsExporting(true);
+          try {
+            // Use the filtered employees from the current category (respects search/filters too)
+            const employeesToExport = viewMode === 'all' ? categoryAllEmployees : paginatedCategoryEmployees;
+            
+            if (employeesToExport.length === 0) {
+              alert('No employees to export');
+              setIsExporting(false);
+              return;
             }
-            allEmployees={employeeCategory === 'active'
-              ? allEmployees.filter(e => e.status !== 'Resigned' && e.status !== 'Retired' && e.status !== 'resigned' && e.status !== 'retired')
-              : allEmployees.filter(e => e.status === 'Resigned' || e.status === 'Retired' || e.status === 'resigned' || e.status === 'retired')
+
+            // Helper function to format employee name
+            const formatEmployeeName = (emp: any) => {
+              const parts = [
+                emp.firstName || emp.FirstName || '',
+                emp.middleName || emp.MiddleName || '',
+                emp.surname || emp.LastName || '',
+                emp.nameExtension || emp.ExtensionName || ''
+              ].filter(Boolean);
+              return parts.join(' ');
+            };
+
+            // Helper function to format designation (replace underscores with spaces)
+            const formatDesignation = (designation: string) => {
+              return (designation || '').replace(/_/g, ' ');
+            };
+
+            if (format === 'csv') {
+              // Generate CSV client-side - only table columns
+              const headers = ['Employee Name', 'Position', 'Designation', 'Department', 'Email'];
+              
+              const csvRows = [headers.join(',')];
+              
+              employeesToExport.forEach((emp: any) => {
+                const row = [
+                  formatEmployeeName(emp),
+                  emp.position || emp.EmploymentDetail?.Position || '',
+                  formatDesignation(emp.designation || emp.EmploymentDetail?.Designation || ''),
+                  emp.departmentName || emp.Department?.DepartmentName || '',
+                  emp.email || emp.ContactInfo?.Email || ''
+                ].map(field => {
+                  // Escape commas and quotes in CSV
+                  const str = String(field || '');
+                  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                  }
+                  return str;
+                });
+                csvRows.push(row.join(','));
+              });
+              
+              const csvContent = csvRows.join('\n');
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              const categoryName = employeeCategory === 'active' ? 'active' : 'retired_resigned';
+              a.download = `employees_${categoryName}_${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              
+              setSuccessMessage(`Successfully exported ${employeesToExport.length} ${employeeCategory} employees to CSV`);
+              setShowSuccessModal(true);
+            } else {
+              // For PDF, generate client-side with only table columns
+              const categoryName = employeeCategory === 'active' ? 'active' : 'retired_resigned';
+              const reportTitle = employeeCategory === 'active' ? 'Active Employees Report' : 'Retired/Resigned Employees Report';
+              
+              // Build table rows
+              const tableRows = employeesToExport.map((emp: any) => `
+                <tr>
+                  <td>${formatEmployeeName(emp)}</td>
+                  <td>${emp.position || emp.EmploymentDetail?.Position || ''}</td>
+                  <td>${formatDesignation(emp.designation || emp.EmploymentDetail?.Designation || '')}</td>
+                  <td>${emp.departmentName || emp.Department?.DepartmentName || ''}</td>
+                  <td>${emp.email || emp.ContactInfo?.Email || ''}</td>
+                </tr>
+              `).join('');
+              
+              const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <title>${reportTitle}</title>
+                  <style>
+                    * { box-sizing: border-box; }
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; font-size: 12px; }
+                    th { background-color: #800000; color: white; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    tr:hover { background-color: #f5f5f5; }
+                    .header { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #800000; }
+                    .header h1 { color: #800000; margin: 0 0 10px 0; font-size: 24px; }
+                    .header p { color: #666; margin: 5px 0; font-size: 12px; }
+                    @media print {
+                      body { padding: 0; }
+                      table { page-break-inside: auto; }
+                      tr { page-break-inside: avoid; }
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="header">
+                    <h1>${reportTitle}</h1>
+                    <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+                    <p>Total Employees: ${employeesToExport.length}</p>
+                  </div>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee Name</th>
+                        <th>Position</th>
+                        <th>Designation</th>
+                        <th>Department</th>
+                        <th>Email</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${tableRows}
+                    </tbody>
+                  </table>
+                </body>
+                </html>
+              `;
+              
+              // Open print dialog for PDF
+              const printWindow = window.open('', '_blank');
+              if (printWindow) {
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                printWindow.focus();
+                // Give time for content to render, then trigger print
+                setTimeout(() => {
+                  printWindow.print();
+                }, 250);
+              }
+              
+              setSuccessMessage(`PDF ready for ${employeesToExport.length} ${employeeCategory} employees`);
+              setShowSuccessModal(true);
             }
-            departments={departments}
-            pagination={pagination}
-            viewMode={viewMode}
-            isLoading={isLoading}
-            isLoadingAll={isLoadingAll}
-            isExporting={isExporting}
-            searchTerm={searchTerm}
-            departmentFilter={departmentFilter}
-            designationFilter={designationFilter}
-            statusFilter={employeeCategory === 'active' ? statusFilter : (statusFilter === 'all' ? 'Resigned' : statusFilter)}
-            nameOrder={nameOrder}
-            onSearchChange={setSearchTerm}
-            onDepartmentFilterChange={setDepartmentFilter}
-            onDesignationFilterChange={setDesignationFilter}
-            onStatusFilterChange={setStatusFilter}
-            onNameOrderChange={setNameOrder}
-            onEmployeeSelect={handleEmployeeSelect}
-            onEmployeeEdit={handleEditEmployee}
-            onPhotoClick={handlePhotoClick}
-            onPageChange={handlePageChange}
-            onToggleView={handleToggleView}
-            onAddEmployee={() => setIsAddModalOpen(true)}
-            onImportEmployees={() => setIsImportModalOpen(true)}
-            onExportEmployees={() => setIsExportModalOpen(true)}
-            onQuickExport={handleQuickExport}
-            showDataRetention={employeeCategory === 'inactive'}
-          />
-        </>
-      )}
+          } catch (error) {
+            console.error('Error exporting employees:', error);
+            alert('Failed to export employees. Please try again.');
+          } finally {
+            setIsExporting(false);
+          }
+        };
+
+        return (
+          <>
+            {/* Employee Category Tabs (Active/Inactive) */}
+            <div className="mb-6 flex space-x-4 border-b border-gray-200">
+              <button
+                onClick={() => {
+                  setEmployeeCategory('active');
+                  setViewMode('paginated'); // Reset to paginated view when switching categories
+                }}
+                className={`px-6 py-3 font-medium transition-colors border-b-2 ${
+                  employeeCategory === 'active'
+                    ? 'border-[#800000] text-[#800000]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Active Employees ({allEmployees.filter(isActiveEmployee).length})
+              </button>
+              <button
+                onClick={() => {
+                  setEmployeeCategory('inactive');
+                  setViewMode('paginated'); // Reset to paginated view when switching categories
+                }}
+                className={`px-6 py-3 font-medium transition-colors border-b-2 ${
+                  employeeCategory === 'inactive'
+                    ? 'border-[#800000] text-[#800000]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Retired/Resigned Employees ({allEmployees.filter(isInactiveEmployee).length})
+              </button>
+              {employeeCategory === 'inactive' && (
+                <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <span>Data retention: 3 years per Data Privacy Act (Philippines) & DOLE requirements</span>
+                </div>
+              )}
+            </div>
+
+            <EmployeeList
+              employees={paginatedCategoryEmployees}
+              allEmployees={categoryAllEmployees}
+              departments={departments}
+              pagination={categoryPagination}
+              viewMode={viewMode}
+              isLoading={isLoading || isLoadingAll}
+              isLoadingAll={isLoadingAll}
+              isExporting={isExporting}
+              searchTerm={searchTerm}
+              departmentFilter={departmentFilter}
+              designationFilter={designationFilter}
+              statusFilter={employeeCategory === 'active' ? statusFilter : (statusFilter === 'all' ? 'all' : statusFilter)}
+              nameOrder={nameOrder}
+              onSearchChange={setSearchTerm}
+              onDepartmentFilterChange={setDepartmentFilter}
+              onDesignationFilterChange={setDesignationFilter}
+              onStatusFilterChange={setStatusFilter}
+              onNameOrderChange={setNameOrder}
+              onEmployeeSelect={handleEmployeeSelect}
+              onEmployeeEdit={handleEditEmployee}
+              onPhotoClick={handlePhotoClick}
+              onPageChange={handleCategoryPageChange}
+              onToggleView={handleToggleView}
+              onAddEmployee={() => setIsAddModalOpen(true)}
+              onImportEmployees={() => setIsImportModalOpen(true)}
+              onExportEmployees={() => setIsExportModalOpen(true)}
+              onQuickExport={handleCategoryQuickExport}
+              showDataRetention={employeeCategory === 'inactive'}
+            />
+          </>
+        );
+      })()}
 
       {/* Add Employee Modal - Modern & User-Friendly */}
       {isAddModalOpen && (
@@ -1454,12 +1658,12 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                                     : "Generate Employee ID"
                               }
                             >
-                              <FaSync className={`w-4 h-4 ${isGeneratingEmployeeId ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`w-4 h-4 ${isGeneratingEmployeeId ? 'animate-spin' : ''}`} />
                             </button>
                           </div>
                           {isGeneratingEmployeeId && (
                             <p className="text-sm text-blue-600 mt-1 flex items-center">
-                              <FaSync className="animate-spin w-3 h-3 mr-1" />
+                              <RefreshCw className="animate-spin w-3 h-3 mr-1" />
                               Generating Employee ID...
                             </p>
                           )}
@@ -1493,12 +1697,12 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                                     : "Generate User ID"
                               }
                             >
-                              <FaSync className={`w-4 h-4 ${isGeneratingUserId ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`w-4 h-4 ${isGeneratingUserId ? 'animate-spin' : ''}`} />
                             </button>
                   </div>
                           {isGeneratingUserId && (
                             <p className="text-sm text-blue-600 mt-1 flex items-center">
-                              <FaSync className="animate-spin w-3 h-3 mr-1" />
+                              <RefreshCw className="animate-spin w-3 h-3 mr-1" />
                               Generating User ID...
                             </p>
                           )}
@@ -2971,7 +3175,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                     </>
                   ) : (
                     <>
-                      <FaUpload /> Import Employees
+                      <Upload size={16} /> Import Employees
                     </>
                   )}
                 </button>
@@ -3038,7 +3242,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                           : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
                       }`}
                     >
-                      <FaFileCsv className={`w-6 h-6 ${exportFormat === 'csv' ? 'text-blue-600' : 'text-gray-400'}`} />
+                      <FileSpreadsheet className={`w-6 h-6 ${exportFormat === 'csv' ? 'text-blue-600' : 'text-gray-400'}`} />
                       <div className="text-left">
                         <div className="font-semibold">CSV Format</div>
                         <div className="text-sm opacity-75">Spreadsheet format for Excel/Google Sheets</div>
@@ -3053,7 +3257,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                           : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
                       }`}
                     >
-                      <FaFilePdf className={`w-6 h-6 ${exportFormat === 'pdf' ? 'text-blue-600' : 'text-gray-400'}`} />
+                      <FileText className={`w-6 h-6 ${exportFormat === 'pdf' ? 'text-blue-600' : 'text-gray-400'}`} />
                       <div className="text-left">
                         <div className="font-semibold">PDF Format</div>
                         <div className="text-sm opacity-75">Printable report format</div>
@@ -3330,7 +3534,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                       </>
                     ) : (
                       <>
-                        <FaDownload /> Export {exportFormat.toUpperCase()}
+                        <Download size={16} /> Export {exportFormat.toUpperCase()}
                       </>
                     )}
                   </button>

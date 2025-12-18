@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { Pen, Check, X } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import {
   maskHealthInsuranceNumber,
@@ -302,7 +302,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
             }}
             className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
           >
-            <FaEdit /> Edit Medical Info
+            <Pen size={16} /> Edit Medical Info
           </button>
         )}
       </div>
@@ -314,9 +314,9 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
         }`}>
           <div className="flex items-center">
             {notification.type === 'success' ? (
-              <FaCheck className="w-5 h-5 mr-2" />
+              <Check className="w-5 h-5 mr-2" />
             ) : (
-              <FaTimes className="w-5 h-5 mr-2" />
+              <X className="w-5 h-5 mr-2" />
             )}
             {notification.message}
           </div>
@@ -324,7 +324,7 @@ const MedicalTab: React.FC<MedicalTabProps> = ({ employeeId }) => {
             onClick={() => setNotification(null)}
             className="text-gray-400 hover:text-gray-600"
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}

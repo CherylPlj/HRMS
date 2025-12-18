@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaLink, FaDownload, FaTimes } from 'react-icons/fa';
+import { Link, Download, X } from 'lucide-react';
 import { DocumentFacultyRow } from './types';
 import { getViewUrl, getDownloadUrl, getPreviewUrl } from './utils';
 import FilePreview from './FilePreview';
@@ -37,7 +37,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               className="text-gray-600 hover:text-gray-900"
               title="Open in New Tab"
             >
-              <FaLink className="w-5 h-5" />
+              <Link className="w-5 h-5" />
             </a>
             <a
               href={getDownloadUrl(selectedDocument.DownloadUrl || selectedDocument.FileUrl)}
@@ -45,14 +45,14 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               className="text-gray-600 hover:text-gray-900"
               title="Download Document"
             >
-              <FaDownload className="w-5 h-5" />
+              <Download className="w-5 h-5" />
             </a>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
               title="Close"
             >
-              <FaTimes className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>

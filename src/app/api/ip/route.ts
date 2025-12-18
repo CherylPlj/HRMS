@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Skip auth for this endpoint
-export const config = {
-  api: {
-    auth: false
-  }
-};
-
 export async function GET(request: NextRequest) {
   try {
     // Get headers from the request

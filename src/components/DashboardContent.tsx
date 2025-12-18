@@ -4,20 +4,18 @@ import "chart.js/auto";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { 
-  FaCalendarAlt, 
-  FaUsers, 
-  FaUserTie, 
-  FaHistory,
-  FaUserCheck,
-  FaFile,
-  FaGraduationCap,
-  FaBriefcase,
-  FaUserPlus,
-  FaBuilding,
-  FaCalendarCheck,
-  FaUserClock,
-  FaClock
-} from "react-icons/fa";
+  Calendar, 
+  Users, 
+  UserCheck, 
+  History,
+  FileText,
+  GraduationCap,
+  Briefcase,
+  UserPlus,
+  Building,
+  CalendarCheck,
+  Clock
+} from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -587,7 +585,7 @@ export default function DashboardContent() {
                       className="flex items-center justify-between w-full min-w-[280px] bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:border-[#800000] hover:bg-gray-50 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
                     >
                       <div className="flex items-center">
-                        <FaCalendarAlt className="mr-2 text-[#800000]" />
+                        <Calendar className="mr-2 text-[#800000]" />
                         <span className="text-sm">
                           {startDate && endDate
                             ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
@@ -656,7 +654,7 @@ export default function DashboardContent() {
               <p className="text-gray-500 text-sm">Total Employees</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{facultyStats.total}</h3>
             </div>
-            <FaUsers className="text-4xl text-[#800000] opacity-50" />
+            <Users className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
@@ -669,7 +667,7 @@ export default function DashboardContent() {
               <p className="text-gray-500 text-sm">Total Applicants</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{recruitmentStats.totalCandidates}</h3>
             </div>
-            <FaUserPlus className="text-4xl text-[#800000] opacity-50" />
+            <UserPlus className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
@@ -682,7 +680,7 @@ export default function DashboardContent() {
               <p className="text-gray-500 text-sm">Documents Requiring Approval</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{documentStats.submitted}</h3>
             </div>
-            <FaFile className="text-4xl text-[#800000] opacity-50" />
+            <FileText className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
 
@@ -695,7 +693,7 @@ export default function DashboardContent() {
               <p className="text-gray-500 text-sm">Pending Leaves</p>
               <h3 className="text-3xl font-bold text-[#800000] mt-2">{leaveRequests.pending}</h3>
             </div>
-            <FaClock className="text-4xl text-[#800000] opacity-50" />
+            <Clock className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
       </div>
@@ -704,7 +702,7 @@ export default function DashboardContent() {
       <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <FaUserPlus className="text-[#800000] text-2xl mr-3" />
+            <UserPlus className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Recruitment Overview</h2>
           </div>
           {/* <button 
@@ -823,27 +821,27 @@ export default function DashboardContent() {
         {/* Quick Stats Row */}
         <div className="grid grid-cols-5 gap-4 mt-8">
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaBuilding className="text-[#800000] text-xl mx-auto mb-2" />
+            <Building className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.activeVacancies}</p>
             <p className="text-sm text-gray-600">Active Vacancies</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUsers className="text-[#800000] text-xl mx-auto mb-2" />
+            <Users className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.totalCandidates}</p>
             <p className="text-sm text-gray-600">Total Candidates</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUserCheck className="text-[#800000] text-xl mx-auto mb-2" />
+            <UserCheck className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.shortlisted}</p>
             <p className="text-sm text-gray-600">Shortlisted</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUserClock className="text-[#800000] text-xl mx-auto mb-2" />
+            <Clock className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.interviewed}</p>
             <p className="text-sm text-gray-600">Interviewed</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <FaUserTie className="text-[#800000] text-xl mx-auto mb-2" />
+            <UserCheck className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.hired}</p>
             <p className="text-sm text-gray-600">Hired</p>
           </div>
@@ -854,7 +852,7 @@ export default function DashboardContent() {
       <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <FaCalendarCheck className="text-[#800000] text-2xl mr-3" />
+            <CalendarCheck className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
           </div>
           {/* <button 
@@ -925,7 +923,7 @@ export default function DashboardContent() {
         {/* Employee Overview Section */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
-            <FaGraduationCap className="text-[#800000] text-2xl mr-3" />
+            <GraduationCap className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -987,7 +985,7 @@ export default function DashboardContent() {
         {/* Leave Requests Section */}
         <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
           <div className="flex items-center mb-6">
-            <FaBriefcase className="text-[#800000] text-2xl mr-3" />
+            <Briefcase className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
           </div>
           <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
@@ -1029,7 +1027,7 @@ export default function DashboardContent() {
       <div className="mt-8">
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <FaGraduationCap className="text-[#800000]" />
+            <GraduationCap className="text-[#800000]" />
             AI Insights & Recommendations
           </h2>
           <AIDashboard />
