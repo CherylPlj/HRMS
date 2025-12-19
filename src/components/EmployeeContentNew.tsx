@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { RefreshCw, Download, FileSpreadsheet, FileText, Plus, Upload, Pen, Eye, AlertCircle } from 'lucide-react';
 import { EmployeeList, EmployeeDetail, EmployeeDashboard, PhotoModal, SuccessModal, ErrorModal } from './employee';
@@ -21,10 +22,43 @@ interface ApiResponse {
 
 const EmployeeContentNew = () => {
   const { user } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isAdmin, setIsAdmin] = useState(false);
   
+  // Get initial view from URL query parameter, default to 'dashboard'
+  const urlView = searchParams.get('view');
+  const validViews = ['dashboard', 'list'];
+  const initialView = urlView && validViews.includes(urlView) 
+    ? urlView as 'dashboard' | 'list' 
+    : 'dashboard';
+  
   // State for active view (dashboard or list)
-  const [activeView, setActiveView] = useState<'dashboard' | 'list'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'list'>(initialView);
+  
+  // Set initial URL if no view parameter exists
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (!currentView) {
+      router.replace(`/dashboard/admin/employees?view=dashboard`, { scroll: false });
+    }
+  }, [router, searchParams]);
+  
+  // Sync activeView with URL parameter changes (e.g., back button)
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (currentView && validViews.includes(currentView)) {
+      setActiveView(currentView as 'dashboard' | 'list');
+    } else if (!currentView) {
+      setActiveView('dashboard');
+    }
+  }, [searchParams]);
+  
+  // Handler to change view and update URL
+  const handleViewChange = (viewId: 'dashboard' | 'list') => {
+    setActiveView(viewId);
+    router.push(`/dashboard/admin/employees?view=${viewId}`, { scroll: false });
+  };
   
   // State for employee category (active or inactive)
   const [employeeCategory, setEmployeeCategory] = useState<'active' | 'inactive'>('active');
@@ -1291,7 +1325,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       <div className="mb-6 flex justify-between items-center">
         <div className="flex space-x-4">
           <button
-            onClick={() => setActiveView('dashboard')}
+            onClick={() => handleViewChange('dashboard')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               activeView === 'dashboard'
                 ? 'bg-[#800000] text-white shadow-md'
@@ -1301,7 +1335,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
             Dashboard
           </button>
           <button
-            onClick={() => setActiveView('list')}
+            onClick={() => handleViewChange('list')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               activeView === 'list'
                 ? 'bg-[#800000] text-white shadow-md'

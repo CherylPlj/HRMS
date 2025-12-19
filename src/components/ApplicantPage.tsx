@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
 import debounce from 'lodash/debounce';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 interface Vacancy {
-  id: string;
+  id: string | number;
   title: string;
 }
 
@@ -117,6 +118,9 @@ const SuccessModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 };
 
 const ApplicantPage = () => {
+  const searchParams = useSearchParams();
+  const vacancyParam = searchParams?.get('vacancy');
+  
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -126,7 +130,7 @@ const ApplicantPage = () => {
     contactNumber: '',
     messengerName: '',
     fbLink: '',
-    vacancy: '',
+    vacancy: vacancyParam || '',
     sex: '',
     dateOfBirth: '',
     resume: null as File | null,
@@ -146,7 +150,20 @@ const ApplicantPage = () => {
           throw new Error('Failed to fetch vacancies');
         }
         const data = await response.json();
-        setVacancies(data);
+        // Convert IDs to strings for form compatibility
+        const formattedData = data.map((v: any) => ({
+          ...v,
+          id: String(v.id)
+        }));
+        setVacancies(formattedData);
+        
+        // If vacancy param exists and vacancies are loaded, ensure it's set
+        if (vacancyParam && formattedData.length > 0) {
+          const vacancyExists = formattedData.some((v: Vacancy) => String(v.id) === vacancyParam);
+          if (vacancyExists) {
+            setFormData(prev => ({ ...prev, vacancy: vacancyParam }));
+          }
+        }
       } catch (error) {
         console.error('Error fetching vacancies:', error);
         toast.error('Failed to load job vacancies');
@@ -154,7 +171,7 @@ const ApplicantPage = () => {
     };
 
     fetchVacancies();
-  }, []);
+  }, [vacancyParam]);
 
   const checkExistingEmail = debounce(async (email: string) => {
     try {
@@ -418,8 +435,8 @@ const ApplicantPage = () => {
       />
       <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-6">
         <div className="mb-6">
-          <a 
-            href="https://sjsfi.vercel.app/careers" 
+          <Link 
+            href="/careers" 
             className="inline-flex items-center text-[#800000] hover:text-[#600000] transition-colors"
           >
             <svg 
@@ -435,7 +452,7 @@ const ApplicantPage = () => {
               />
             </svg>
             Back to Careers
-          </a>
+          </Link>
         </div>
         <h1 className="text-2xl font-bold text-[#800000] mb-6">Application Form</h1>
         <form onSubmit={handleSubmit} className="space-y-4">

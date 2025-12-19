@@ -67,10 +67,7 @@ const KPIManagement: React.FC<KPIManagementProps> = ({
       </div>
 
       <Card>
-        <CardHeader>
-          {/* <CardTitle>Performance Metrics</CardTitle> */}
-        </CardHeader>
-        <CardContent>
+        <CardContent  className="pt-6">
           <div className="rounded-md border">
             <Table>
               <TableHeader>

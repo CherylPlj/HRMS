@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Trash2, Download, Plus, Pen } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LeaveStatus } from '@prisma/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -30,7 +30,37 @@ import ManageLeaveTypes from './ManageLeaveTypes';
 const LeaveContent: React.FC = () => {
     const { user, isLoaded: isUserLoaded } = useUser();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'management' | 'logs'>('dashboard');
+    const searchParams = useSearchParams();
+    
+    // Get initial tab from URL query parameter, default to 'dashboard'
+    const urlTab = searchParams.get('view');
+    const validTabs = ['dashboard', 'management', 'logs'];
+    const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab as 'dashboard' | 'management' | 'logs' : 'dashboard';
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'management' | 'logs'>(initialTab);
+    
+    // Set initial URL if no view parameter exists
+    useEffect(() => {
+        const currentView = searchParams.get('view');
+        if (!currentView) {
+            router.replace(`/dashboard/admin/leave?view=dashboard`, { scroll: false });
+        }
+    }, [router, searchParams]);
+    
+    // Sync activeTab with URL parameter changes (e.g., back button)
+    useEffect(() => {
+        const currentView = searchParams.get('view');
+        if (currentView && validTabs.includes(currentView)) {
+            setActiveTab(currentView as 'dashboard' | 'management' | 'logs');
+        } else if (!currentView) {
+            setActiveTab('dashboard');
+        }
+    }, [searchParams]);
+    
+    // Handler to change tab and update URL
+    const handleTabChange = (tabId: 'dashboard' | 'management' | 'logs') => {
+        setActiveTab(tabId);
+        router.push(`/dashboard/admin/leave?view=${tabId}`, { scroll: false });
+    };
     const [leaves, setLeaves] = useState<TransformedLeave[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -503,7 +533,7 @@ const LeaveContent: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
                 <div className="flex space-x-6">
                     <button
-                        onClick={() => setActiveTab('dashboard')}
+                        onClick={() => handleTabChange('dashboard')}
                         className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
                             activeTab === 'dashboard'
                                 ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
@@ -513,7 +543,7 @@ const LeaveContent: React.FC = () => {
                         Dashboard
                     </button>
                     <button
-                        onClick={() => setActiveTab('management')}
+                        onClick={() => handleTabChange('management')}
                         className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
                             activeTab === 'management'
                                 ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
@@ -523,7 +553,7 @@ const LeaveContent: React.FC = () => {
                         Leave Requests
                     </button>
                     <button
-                        onClick={() => setActiveTab('logs')}
+                        onClick={() => handleTabChange('logs')}
                         className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
                             activeTab === 'logs'
                                 ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'

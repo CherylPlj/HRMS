@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import {
@@ -49,8 +50,39 @@ import {
   transformKPI,
 } from '@/lib/performanceApi'
 
-export default function PerformanceDashboardPage() {
-  const [activeTab, setActiveTab] = useState('dashboard')
+function PerformanceDashboardPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Get initial tab from URL query parameter, default to 'dashboard'
+  const urlTab = searchParams.get('view')
+  const validTabs = ['dashboard', 'reviews', 'training', 'promotions', 'kpis']
+  const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab : 'dashboard'
+  const [activeTab, setActiveTab] = useState(initialTab)
+  
+  // Set initial URL if no view parameter exists
+  useEffect(() => {
+    const currentView = searchParams.get('view')
+    if (!currentView) {
+      router.replace(`/dashboard/admin/performance?view=dashboard`, { scroll: false })
+    }
+  }, [router, searchParams])
+  
+  // Sync activeTab with URL parameter changes (e.g., back button)
+  useEffect(() => {
+    const currentView = searchParams.get('view')
+    if (currentView && validTabs.includes(currentView)) {
+      setActiveTab(currentView)
+    } else if (!currentView) {
+      setActiveTab('dashboard')
+    }
+  }, [searchParams])
+  
+  // Handler to change tab and update URL
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId)
+    router.push(`/dashboard/admin/performance?view=${tabId}`, { scroll: false })
+  }
   const [reviews, setReviews] = useState<PerformanceReview[]>([])
   const [kpis, setKPIs] = useState<KPI[]>([])
   const [dashboardSummary, setDashboardSummary] = useState<any>(null)
@@ -165,6 +197,7 @@ export default function PerformanceDashboardPage() {
         const updated = await updatePerformanceReview(selectedReview.id, {
           ...data,
           period: `Q${Math.floor(new Date(data.startDate).getMonth() / 3) + 1} ${new Date(data.startDate).getFullYear()}`,
+          status: data.status || selectedReview.status,
         })
         setReviews(reviews.map((r) => (r.id === selectedReview.id ? updated : r)))
         toast.success('Performance review updated successfully!', {
@@ -175,7 +208,7 @@ export default function PerformanceDashboardPage() {
         const newReview = await createPerformanceReview({
           ...data,
           period: `Q${Math.floor(new Date(data.startDate).getMonth() / 3) + 1} ${new Date(data.startDate).getFullYear()}`,
-          status: 'draft',
+          status: data.status || 'draft',
         })
         setReviews([...reviews, newReview])
         toast.success('Performance review created successfully!', {
@@ -188,6 +221,32 @@ export default function PerformanceDashboardPage() {
       fetchDashboard()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save review'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleStatusChange = async (reviewId: string, newStatus: 'draft' | 'pending' | 'completed' | 'approved') => {
+    try {
+      const updated = await updatePerformanceReview(reviewId, {
+        status: newStatus,
+      })
+      setReviews(reviews.map((r) => (r.id === reviewId ? updated : r)))
+      
+      const statusMessages = {
+        draft: 'Review set to draft',
+        pending: 'Review submitted for review',
+        completed: 'Review marked as completed',
+        approved: 'Review approved',
+      }
+      
+      toast.success(statusMessages[newStatus], {
+        duration: 4000,
+        icon: '✅',
+      })
+      fetchReviews()
+      fetchDashboard()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update status'
       toast.error(errorMessage)
     }
   }
@@ -582,7 +641,7 @@ export default function PerformanceDashboardPage() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`py-2 px-4 flex items-center gap-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-b-2 border-[#800000] text-[#800000] font-semibold'
@@ -785,7 +844,12 @@ export default function PerformanceDashboardPage() {
               New Review
             </Button>
           </div>
-          <ReviewTable reviews={paginatedReviews} onView={handleViewReview} onEdit={handleEditReview} />
+          <ReviewTable 
+            reviews={paginatedReviews} 
+            onView={handleViewReview} 
+            onEdit={handleEditReview}
+            onStatusChange={handleStatusChange}
+          />
           {reviews.length > 0 && (
             <Pagination
               currentPage={reviewsCurrentPage}
@@ -1111,6 +1175,9 @@ export default function PerformanceDashboardPage() {
         open={viewModalOpen}
         onOpenChange={setViewModalOpen}
         review={selectedReview}
+        allReviews={reviews}
+        userRole="admin"
+        onStatusChange={handleStatusChange}
       />
 
       <ReviewFormModal
@@ -1242,7 +1309,7 @@ export default function PerformanceDashboardPage() {
                   setAnalysisResultModalOpen(false)
                   // Switch to promotions tab if not already there
                   if (activeTab !== 'promotions') {
-                    setActiveTab('promotions')
+                    handleTabChange('promotions')
                   }
                 }}
               >
@@ -1254,5 +1321,26 @@ export default function PerformanceDashboardPage() {
       </Dialog>
     </div>
   )
+}
+
+function PerformanceDashboardFallback() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading performance dashboard...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PerformanceDashboardPage() {
+  return (
+    <Suspense fallback={<PerformanceDashboardFallback />}>
+      <PerformanceDashboardPageContent />
+    </Suspense>
+  );
 }
 

@@ -24,11 +24,13 @@ const StatusTag: React.FC<StatusTagProps> = ({ status, className = '' }) => {
     }
   };
 
+  const displayStatus = status === 'For_Review' ? 'For Review' : status;
+
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyles(status)} ${className}`}
     >
-      {status}
+      {displayStatus}
     </span>
   );
 };

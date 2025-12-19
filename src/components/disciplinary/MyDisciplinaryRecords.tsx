@@ -11,7 +11,7 @@ import FileThumbnail from './FileThumbnail';
 import EvidencePreviewModal from './EvidencePreviewModal';
 import Pagination from './Pagination';
 import { EvidenceFile } from '@/types/disciplinary';
-import { mockDisciplinaryRecords } from './mockData';
+import { fetchDisciplinaryRecords, transformDisciplinaryRecord } from '@/lib/disciplinaryApi';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -71,11 +71,16 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
 
           if (!facultyError && facultyData?.EmployeeID) {
             setEmployeeId(facultyData.EmployeeID);
+          } else {
+            // No employee ID found for faculty
+            setLoading(false);
           }
+        } else {
+          // No employee ID found for regular employee
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error in fetchEmployeeId:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -87,24 +92,35 @@ const MyDisciplinaryRecords: React.FC<MyDisciplinaryRecordsProps> = ({ userRole 
   useEffect(() => {
     if (!employeeId) {
       setRecords([]);
-      setLoading(false);
       return;
     }
 
-    // TODO: Replace with actual API call
-    // For now, filter mock data by employeeId
-    // In real implementation, the employeeId from User table should match the employeeId in disciplinary records
-    const filteredRecords = mockDisciplinaryRecords.filter(
-      (record) => record.employeeId === employeeId
-    );
-    setRecords(filteredRecords);
-    setLoading(false);
-    setCurrentPage(1); // Reset to first page when records change
+    const fetchRecords = async () => {
+      try {
+        setLoading(true);
+        // Fetch all records for this employee (pagination handled on frontend)
+        const response = await fetchDisciplinaryRecords({
+          employeeId: employeeId,
+          page: 1,
+          limit: 1000, // Fetch a large number to get all records
+        });
 
-    // Future implementation:
-    // const response = await fetch(`/api/disciplinary/my-records?employeeId=${employeeId}`);
-    // const data = await response.json();
-    // setRecords(data);
+        const transformedRecords = response.records.map(transformDisciplinaryRecord).map((record) => ({
+          ...record,
+          // Normalize status: transform function returns 'For Review' but type expects 'For_Review'
+          status: record.status === 'For Review' ? 'For_Review' : record.status as DisciplinaryRecord['status'],
+        }));
+        setRecords(transformedRecords as DisciplinaryRecord[]);
+        setCurrentPage(1); // Reset to first page when records change
+      } catch (error) {
+        console.error('Error fetching disciplinary records:', error);
+        setRecords([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
   }, [employeeId]);
 
   const formatDateTime = (dateTime: string) => {

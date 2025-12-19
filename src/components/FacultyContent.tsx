@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Download } from 'lucide-react';
 import { fetchFacultyDocuments } from '../api/faculty-documents';
 import jsPDF from 'jspdf';
@@ -32,10 +33,42 @@ import StatusUpdateModal from './faculty/StatusUpdateModal';
 
 const FacultyContent = () => {
   const { user } = useUser();
-
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get initial view from URL query parameter, default to 'documentDashboard'
+  const urlView = searchParams.get('view');
+  const validViews = ['facultyManagement', 'documentManagement', 'documentDashboard'];
+  const initialView = urlView && validViews.includes(urlView) 
+    ? urlView as 'facultyManagement' | 'documentManagement' | 'documentDashboard' 
+    : 'documentDashboard';
+  
   // View and loading state
-
-  const [activeView, setActiveView] = useState<'facultyManagement' | 'documentManagement' | 'documentDashboard'>('documentDashboard');
+  const [activeView, setActiveView] = useState<'facultyManagement' | 'documentManagement' | 'documentDashboard'>(initialView);
+  
+  // Set initial URL if no view parameter exists
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (!currentView) {
+      router.replace(`/dashboard/admin/documents?view=documentDashboard`, { scroll: false });
+    }
+  }, [router, searchParams]);
+  
+  // Sync activeView with URL parameter changes (e.g., back button)
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (currentView && validViews.includes(currentView)) {
+      setActiveView(currentView as 'facultyManagement' | 'documentManagement' | 'documentDashboard');
+    } else if (!currentView) {
+      setActiveView('documentDashboard');
+    }
+  }, [searchParams]);
+  
+  // Handler to change view and update URL
+  const handleViewChange = (viewId: 'facultyManagement' | 'documentManagement' | 'documentDashboard') => {
+    setActiveView(viewId);
+    router.push(`/dashboard/admin/documents?view=${viewId}`, { scroll: false });
+  };
   const [loading, setLoading] = useState(true);
 
   // Faculty list and filters
@@ -509,7 +542,7 @@ const FacultyContent = () => {
       <div className="flex justify-between items-center mb-6">
         <div className="flex space-x-4">
           <button
-            onClick={() => setActiveView('documentDashboard')}
+            onClick={() => handleViewChange('documentDashboard')}
             className={`px-4 py-2 rounded ${
               activeView === 'documentDashboard'
                 ? 'bg-[#800000] text-white'
@@ -519,7 +552,7 @@ const FacultyContent = () => {
             Dashboard
           </button>
           <button
-            onClick={() => setActiveView('documentManagement')}
+            onClick={() => handleViewChange('documentManagement')}
             className={`px-4 py-2 rounded ${
               activeView === 'documentManagement'
                 ? 'bg-[#800000] text-white'
@@ -529,7 +562,7 @@ const FacultyContent = () => {
             Document Requirements
           </button>
           <button
-            onClick={() => setActiveView('facultyManagement')}
+            onClick={() => handleViewChange('facultyManagement')}
             className={`px-4 py-2 rounded ${
               activeView === 'facultyManagement'
                 ? 'bg-[#800000] text-white'

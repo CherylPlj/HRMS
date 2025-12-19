@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Eye, Edit } from 'lucide-react'
+import { Eye, Edit, Send, CheckCircle, CheckCheck } from 'lucide-react'
 import { PerformanceReview } from '@/types/performance'
 import ScoreBadge from './ScoreBadge'
 
@@ -19,9 +19,64 @@ interface ReviewTableProps {
   reviews: PerformanceReview[]
   onView?: (review: PerformanceReview) => void
   onEdit?: (review: PerformanceReview) => void
+  onStatusChange?: (reviewId: string, newStatus: 'draft' | 'pending' | 'completed' | 'approved') => void
 }
 
-const ReviewTable: React.FC<ReviewTableProps> = ({ reviews, onView, onEdit }) => {
+const ReviewTable: React.FC<ReviewTableProps> = ({ reviews, onView, onEdit, onStatusChange }) => {
+  
+  const getStatusActions = (review: PerformanceReview) => {
+    const actions = []
+    
+    if (review.status === 'draft' && onStatusChange) {
+      actions.push(
+        <Button
+          key="submit"
+          variant="outline"
+          size="sm"
+          onClick={() => onStatusChange(review.id, 'pending')}
+          className="text-xs"
+          title="Submit for Review"
+        >
+          <Send className="h-3 w-3 mr-1" />
+          Submit
+        </Button>
+      )
+    }
+    
+    if (review.status === 'pending' && onStatusChange) {
+      actions.push(
+        <Button
+          key="complete"
+          variant="outline"
+          size="sm"
+          onClick={() => onStatusChange(review.id, 'completed')}
+          className="text-xs"
+          title="Mark as Completed"
+        >
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Complete
+        </Button>
+      )
+    }
+    
+    if (review.status === 'completed' && onStatusChange) {
+      actions.push(
+        <Button
+          key="approve"
+          variant="outline"
+          size="sm"
+          onClick={() => onStatusChange(review.id, 'approved')}
+          className="text-xs"
+          title="Approve Review"
+        >
+          <CheckCheck className="h-3 w-3 mr-1" />
+          Approve
+        </Button>
+      )
+    }
+    
+    return actions
+  }
   const getStatusBadge = (status: PerformanceReview['status']) => {
     const variants = {
       draft: 'bg-gray-500 text-white',
@@ -78,7 +133,8 @@ const ReviewTable: React.FC<ReviewTableProps> = ({ reviews, onView, onEdit }) =>
                 </TableCell>
                 <TableCell>{getStatusBadge(review.status)}</TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2 flex-wrap">
+                    {getStatusActions(review)}
                     {onView && (
                       <Button
                         variant="ghost"

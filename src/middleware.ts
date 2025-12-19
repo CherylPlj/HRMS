@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 // Public routes that don't require authentication
 const publicRoutes = [
     "/",
+    "/careers",
     "/applicant",
     "/sign-in(.*)",
     "/sign-up(.*)",
@@ -33,6 +34,7 @@ const publicRoutes = [
 // Routes that can be accessed while signed out
 const ignoredRoutes = [
     "/",
+    "/careers",
     "/applicant",
     "/sign-in(.*)",
     "/sign-up(.*)",

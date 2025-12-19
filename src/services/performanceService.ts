@@ -535,6 +535,27 @@ export class PerformanceService {
   async updatePerformanceReview(id: string, input: UpdatePerformanceReviewInput) {
     const updateData: any = {};
 
+    // Get current review data once for status transitions and score calculations
+    let currentReview: any = null;
+    const needsCurrentReview = input.status !== undefined || 
+                                input.kpiScore !== undefined || 
+                                input.behaviorScore !== undefined || 
+                                input.attendanceScore !== undefined;
+    
+    if (needsCurrentReview) {
+      currentReview = await prisma.performanceReview.findUnique({
+        where: { id },
+        select: { 
+          status: true, 
+          reviewedAt: true, 
+          approvedAt: true,
+          kpiScore: true, 
+          behaviorScore: true, 
+          attendanceScore: true 
+        },
+      });
+    }
+
     // Handle reviewerId - can be null to clear it, or a string value
     if (input.reviewerId !== undefined) {
       updateData.reviewerId = input.reviewerId || null;
@@ -545,7 +566,27 @@ export class PerformanceService {
     if (input.kpiScore !== undefined) updateData.kpiScore = input.kpiScore ? new Decimal(input.kpiScore) : null;
     if (input.behaviorScore !== undefined) updateData.behaviorScore = input.behaviorScore ? new Decimal(input.behaviorScore) : null;
     if (input.attendanceScore !== undefined) updateData.attendanceScore = input.attendanceScore ? new Decimal(input.attendanceScore) : null;
-    if (input.status !== undefined) updateData.status = input.status;
+    
+    // Handle status changes with automatic timestamp updates
+    if (input.status !== undefined) {
+      updateData.status = input.status;
+      
+      if (currentReview) {
+        const previousStatus = currentReview.status;
+        const newStatus = input.status;
+        
+        // Set reviewedAt when transitioning to 'completed' (if not already set)
+        if (newStatus === 'completed' && previousStatus !== 'completed' && !currentReview.reviewedAt) {
+          updateData.reviewedAt = new Date();
+        }
+        
+        // Set approvedAt when transitioning to 'approved' (if not already set)
+        if (newStatus === 'approved' && previousStatus !== 'approved' && !currentReview.approvedAt) {
+          updateData.approvedAt = new Date();
+        }
+      }
+    }
+    
     if (input.remarks !== undefined) updateData.remarks = input.remarks;
     if (input.employeeComments !== undefined) updateData.employeeComments = input.employeeComments;
     if (input.goals !== undefined) updateData.goals = input.goals;
@@ -557,14 +598,10 @@ export class PerformanceService {
 
     // Recalculate total score if any score changed
     if (input.kpiScore !== undefined || input.behaviorScore !== undefined || input.attendanceScore !== undefined) {
-      const currentReview = await prisma.performanceReview.findUnique({
-        where: { id },
-        select: { kpiScore: true, behaviorScore: true, attendanceScore: true },
-      });
 
-      const kpiScore = input.kpiScore ?? (currentReview?.kpiScore ? Number(currentReview.kpiScore) : undefined);
-      const behaviorScore = input.behaviorScore ?? (currentReview?.behaviorScore ? Number(currentReview.behaviorScore) : undefined);
-      const attendanceScore = input.attendanceScore ?? (currentReview?.attendanceScore ? Number(currentReview.attendanceScore) : undefined);
+      const kpiScore = input.kpiScore ?? (currentReview && currentReview.kpiScore ? Number(currentReview.kpiScore) : undefined);
+      const behaviorScore = input.behaviorScore ?? (currentReview && currentReview.behaviorScore ? Number(currentReview.behaviorScore) : undefined);
+      const attendanceScore = input.attendanceScore ?? (currentReview && currentReview.attendanceScore ? Number(currentReview.attendanceScore) : undefined);
 
       const totalScore = input.totalScore ?? this.calculateTotalScore(kpiScore, behaviorScore, attendanceScore);
       updateData.totalScore = totalScore ? new Decimal(totalScore) : null;

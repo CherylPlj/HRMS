@@ -1,9 +1,20 @@
 "use client";
 
+import { Suspense, useState, useEffect } from 'react';
 import DisciplinaryContent from '@/components/disciplinary/DisciplinaryContent';
-import { useState, useEffect } from 'react';
 
-export default function DisciplinaryPage() {
+function DisciplinaryContentFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000] mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading disciplinary management...</p>
+      </div>
+    </div>
+  );
+}
+
+function DisciplinaryContentWrapper() {
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [supervisors, setSupervisors] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,5 +60,13 @@ export default function DisciplinaryPage() {
   }
 
   return <DisciplinaryContent employees={employees} supervisors={supervisors} />;
+}
+
+export default function DisciplinaryPage() {
+  return (
+    <Suspense fallback={<DisciplinaryContentFallback />}>
+      <DisciplinaryContentWrapper />
+    </Suspense>
+  );
 }
 

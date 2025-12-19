@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Search, Download, Upload, X, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DisciplinaryRecord, DisciplinaryFilters as FilterType } from '@/types/disciplinary';
@@ -34,6 +35,16 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   employees: initialEmployees = [],
   supervisors: initialSupervisors = [],
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get initial tab from URL query parameter, default to 'dashboard'
+  const urlTab = searchParams.get('view');
+  const validTabs = ['dashboard', 'records', 'history', 'settings'];
+  const initialTab = urlTab && validTabs.includes(urlTab) 
+    ? urlTab as 'dashboard' | 'records' | 'history' | 'settings' 
+    : 'dashboard';
+  
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>(initialEmployees);
   const [adminEmployees, setAdminEmployees] = useState<{ id: string; name: string }[]>([]);
   const [records, setRecords] = useState<DisciplinaryRecord[]>([]);
@@ -44,7 +55,31 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'history' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'history' | 'settings'>(initialTab);
+  
+  // Set initial URL if no view parameter exists
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (!currentView) {
+      router.replace(`/dashboard/admin/disciplinary?view=dashboard`, { scroll: false });
+    }
+  }, [router, searchParams]);
+  
+  // Sync activeTab with URL parameter changes (e.g., back button)
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (currentView && validTabs.includes(currentView)) {
+      setActiveTab(currentView as 'dashboard' | 'records' | 'history' | 'settings');
+    } else if (!currentView) {
+      setActiveTab('dashboard');
+    }
+  }, [searchParams]);
+  
+  // Handler to change tab and update URL
+  const handleTabChange = (tabId: 'dashboard' | 'records' | 'history' | 'settings') => {
+    setActiveTab(tabId);
+    router.push(`/dashboard/admin/disciplinary?view=${tabId}`, { scroll: false });
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -716,7 +751,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
       {/* Tabs */}
       <div className="flex space-x-4 mb-4 border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => handleTabChange('dashboard')}
           className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
             activeTab === 'dashboard'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'
@@ -726,7 +761,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
           Dashboard
         </button>
         <button
-          onClick={() => setActiveTab('records')}
+          onClick={() => handleTabChange('records')}
           className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
             activeTab === 'records'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'
@@ -736,7 +771,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
           Disciplinary Records
         </button>
         <button
-          onClick={() => setActiveTab('history')}
+          onClick={() => handleTabChange('history')}
           className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
             activeTab === 'history'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'
@@ -746,7 +781,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
           History
         </button>
         <button
-          onClick={() => setActiveTab('settings')}
+          onClick={() => handleTabChange('settings')}
           className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
             activeTab === 'settings'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'

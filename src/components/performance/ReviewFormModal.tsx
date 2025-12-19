@@ -34,6 +34,7 @@ export interface ReviewFormData {
   attendanceScore: number
   remarks: string
   totalScore: number
+  status?: 'draft' | 'pending' | 'completed' | 'approved'
 }
 
 const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
@@ -56,6 +57,7 @@ const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
     attendanceScore: review?.attendanceScore || 0,
     remarks: review?.remarks || '',
     totalScore: 0,
+    status: review?.status || 'draft',
   })
 
   const [totalScore, setTotalScore] = useState(0)
@@ -80,6 +82,7 @@ const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
         attendanceScore: review.attendanceScore,
         remarks: review.remarks,
         totalScore: review.totalScore,
+        status: review.status || 'draft',
       })
       setTotalScore(review.totalScore)
       setUseCalculatedScores(false) // Don't auto-calculate for existing reviews
@@ -94,6 +97,7 @@ const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
         attendanceScore: 0,
         remarks: '',
         totalScore: 0,
+        status: 'draft',
       })
       setTotalScore(0)
       setUseCalculatedScores(true)
@@ -410,6 +414,29 @@ const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               placeholder="Enter review remarks..."
               className="min-h-[120px]"
             />
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="status" className="text-base font-medium">Status <span className="text-[#800000]">*</span></Label>
+            <Select
+              id="status"
+              name="status"
+              value={formData.status || 'draft'}
+              onChange={handleChange}
+              className="w-full h-10"
+              required
+            >
+              <option value="draft">Draft</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="approved">Approved</option>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {formData.status === 'draft' && 'Review is still being prepared'}
+              {formData.status === 'pending' && 'Review is submitted and awaiting completion'}
+              {formData.status === 'completed' && 'Review has been completed by reviewer'}
+              {formData.status === 'approved' && 'Review has been approved'}
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-6 border-t">

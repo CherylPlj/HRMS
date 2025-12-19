@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ChevronDown, ChevronUp, Eye, History, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, History, X, Send, CheckCircle, CheckCheck } from 'lucide-react'
 import ScoreBadge from './ScoreBadge'
 import { PerformanceReview } from '@/types/performance'
 import { mockPerformanceReviews } from './mockData'
@@ -28,6 +28,7 @@ interface ReviewViewModalProps {
   review: PerformanceReview | null
   allReviews?: PerformanceReview[] // Optional: all reviews to find previous ones
   userRole?: 'employee' | 'faculty' | 'admin' // Optional: user role to determine view behavior
+  onStatusChange?: (reviewId: string, newStatus: 'draft' | 'pending' | 'completed' | 'approved') => void
 }
 
 const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
@@ -36,6 +37,7 @@ const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
   review,
   allReviews = [],
   userRole = 'employee',
+  onStatusChange,
 }) => {
   const [showPreviousReviews, setShowPreviousReviews] = useState(false)
 
@@ -99,14 +101,65 @@ const ReviewViewModal: React.FC<ReviewViewModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="relative mb-4">
-          <DialogTitle>Performance Review Details</DialogTitle>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute right-0 top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-          >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </button>
+          <div className="flex justify-between items-center">
+            <DialogTitle>Performance Review Details</DialogTitle>
+            <div className="flex gap-2">
+              {/* Status Action Buttons - Only show for admin users */}
+              {userRole === 'admin' && onStatusChange && (
+                <>
+                  {review.status === 'draft' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onStatusChange(review.id, 'pending')
+                        onOpenChange(false)
+                      }}
+                      className="text-xs"
+                    >
+                      <Send className="h-3 w-3 mr-1" />
+                      Submit for Review
+                    </Button>
+                  )}
+                  {review.status === 'pending' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onStatusChange(review.id, 'completed')
+                        onOpenChange(false)
+                      }}
+                      className="text-xs"
+                    >
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Mark as Completed
+                    </Button>
+                  )}
+                  {review.status === 'completed' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onStatusChange(review.id, 'approved')
+                        onOpenChange(false)
+                      }}
+                      className="text-xs"
+                    >
+                      <CheckCheck className="h-3 w-3 mr-1" />
+                      Approve Review
+                    </Button>
+                  )}
+                </>
+              )}
+              <button
+                onClick={() => onOpenChange(false)}
+                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">

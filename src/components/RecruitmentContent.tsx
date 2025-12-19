@@ -1,9 +1,43 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { CandidatesTab, VacanciesTab, RecruitmentDashboard, ResumePreviewModal, SubmittedInformationTab, Candidate, Vacancy } from './recruitment';
 
 const RecruitmentContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'candidates' | 'submitted' | 'hired' | 'vacancies'>('dashboard');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get initial tab from URL query parameter, default to 'dashboard'
+  const urlTab = searchParams.get('view');
+  const validTabs = ['dashboard', 'candidates', 'submitted', 'hired', 'vacancies'];
+  const initialTab = urlTab && validTabs.includes(urlTab) 
+    ? urlTab as 'dashboard' | 'candidates' | 'submitted' | 'hired' | 'vacancies' 
+    : 'dashboard';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'candidates' | 'submitted' | 'hired' | 'vacancies'>(initialTab);
+  
+  // Set initial URL if no view parameter exists
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (!currentView) {
+      router.replace(`/dashboard/admin/recruitment?view=dashboard`, { scroll: false });
+    }
+  }, [router, searchParams]);
+  
+  // Sync activeTab with URL parameter changes (e.g., back button)
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    if (currentView && validTabs.includes(currentView)) {
+      setActiveTab(currentView as 'dashboard' | 'candidates' | 'submitted' | 'hired' | 'vacancies');
+    } else if (!currentView) {
+      setActiveTab('dashboard');
+    }
+  }, [searchParams]);
+  
+  // Handler to change tab and update URL
+  const handleTabChange = (tabId: 'dashboard' | 'candidates' | 'submitted' | 'hired' | 'vacancies') => {
+    setActiveTab(tabId);
+    router.push(`/dashboard/admin/recruitment?view=${tabId}`, { scroll: false });
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -117,15 +151,9 @@ const RecruitmentContent: React.FC = () => {
     refreshData();
   }, []);
 
+  // Remove localStorage tab handling - now using URL params
   useEffect(() => {
-    const storedTab = localStorage.getItem('recruitmentTab') as 'dashboard' | 'candidates' | 'submitted' | 'hired' | 'vacancies' | null;
     const storedFilter = localStorage.getItem('recruitmentFilter');
-
-    if (storedTab) {
-      setActiveTab(storedTab);
-      localStorage.removeItem('recruitmentTab');
-    }
-
     if (storedFilter) {
       localStorage.removeItem('recruitmentFilter');
     }
@@ -149,31 +177,31 @@ const RecruitmentContent: React.FC = () => {
       <div className="flex space-x-4 mb-6">
         <button
           className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'dashboard' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => handleTabChange('dashboard')}
         >
           Dashboard
         </button>
         <button
           className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'candidates' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => setActiveTab('candidates')}
+          onClick={() => handleTabChange('candidates')}
         >
           Active Candidates
         </button>
         <button
           className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'submitted' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => setActiveTab('submitted')}
+          onClick={() => handleTabChange('submitted')}
         >
           Submitted Information
         </button>
         <button
           className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'hired' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => setActiveTab('hired')}
+          onClick={() => handleTabChange('hired')}
         >
           Hired Candidates
         </button>
         <button
           className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'vacancies' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => setActiveTab('vacancies')}
+          onClick={() => handleTabChange('vacancies')}
         >
           Vacancies
         </button>
@@ -204,7 +232,7 @@ const RecruitmentContent: React.FC = () => {
       {activeTab === 'submitted' && (
         <SubmittedInformationTab
           onRefresh={refreshData}
-          onNavigateToHired={() => setActiveTab('hired')}
+          onNavigateToHired={() => handleTabChange('hired')}
         />
       )}
 
