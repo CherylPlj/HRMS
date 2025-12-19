@@ -257,10 +257,10 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
         </div>
 
         {/* Cases by Category */}
-        {Object.keys(stats.categoryCounts).length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cases by Category</h3>
-            <div className="h-64">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Cases by Category</h3>
+          <div className="h-64">
+            {Object.keys(stats.categoryCounts).length > 0 ? (
               <Bar
                 data={categoryChartData}
                 options={{
@@ -281,9 +281,13 @@ const DisciplinaryDashboard: React.FC<DisciplinaryDashboardProps> = ({ records, 
                   },
                 }}
               />
-            </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-gray-500">No category data available</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Bottom Row: Top Employees and Recent Cases */}

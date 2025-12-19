@@ -11,7 +11,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
 
 export class AIAgentService {
   private model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     safetySettings: [
       {
         category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -37,6 +37,30 @@ export class AIAgentService {
    */
   private async ensureConnection() {
     await prisma.$connect();
+  }
+
+  /**
+   * Check if error indicates quota limit is 0 (no retries should be attempted)
+   */
+  private isQuotaZeroError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    const message = error.message;
+    return (
+      message.includes('limit: 0') ||
+      message.includes('quota: 0') ||
+      (message.includes('Quota exceeded') && message.includes('limit: 0'))
+    );
+  }
+
+  /**
+   * Handle AI API errors with quota detection
+   */
+  private handleAIError(error: unknown, context: string): never {
+    if (this.isQuotaZeroError(error)) {
+      throw new Error(`AI service quota exhausted. ${context} is temporarily unavailable. Please contact support or try again later.`);
+    }
+    // Re-throw original error
+    throw error;
   }
 
   /**
@@ -244,6 +268,12 @@ Analyze and provide a JSON response with the following structure (no markdown, j
       return analysis;
     } catch (error) {
       console.error('Error screening candidate:', error);
+      
+      // Check for quota=0 error
+      if (this.isQuotaZeroError(error)) {
+        this.handleAIError(error, 'Candidate screening');
+      }
+      
       // Update status to Failed if it exists
       try {
         await prisma.candidateScreening.updateMany({
@@ -385,6 +415,12 @@ Provide a JSON response (no markdown, just valid JSON):
       return JSON.parse(jsonMatch[0]) as PromotionAnalysisResult;
     } catch (error) {
       console.error('Error analyzing promotion:', error);
+      
+      // Check for quota=0 error
+      if (this.isQuotaZeroError(error)) {
+        this.handleAIError(error, 'Promotion analysis');
+      }
+      
       throw error;
     }
   }
@@ -476,6 +512,12 @@ Identify skill gaps and recommend training. Provide JSON response (no markdown, 
       return JSON.parse(jsonMatch[0]) as TrainingNeedsResult;
     } catch (error) {
       console.error('Error analyzing training needs:', error);
+      
+      // Check for quota=0 error
+      if (this.isQuotaZeroError(error)) {
+        this.handleAIError(error, 'Training needs analysis');
+      }
+      
       throw error;
     }
   }
@@ -606,6 +648,12 @@ Provide JSON response (no markdown, just valid JSON):
       return analysis;
     } catch (error) {
       console.error('Error analyzing disciplinary risk:', error);
+      
+      // Check for quota=0 error
+      if (this.isQuotaZeroError(error)) {
+        this.handleAIError(error, 'Disciplinary risk analysis');
+      }
+      
       throw error;
     }
   }

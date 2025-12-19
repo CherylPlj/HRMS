@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Sparkles, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import type { CandidateScreeningResult } from '@/types/aiAgent';
 
 interface AICandidateScreeningProps {
@@ -19,11 +19,49 @@ export function AICandidateScreening({
   onComplete,
 }: AICandidateScreeningProps) {
   const [loading, setLoading] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
   const [result, setResult] = useState<CandidateScreeningResult | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [isExistingScreening, setIsExistingScreening] = useState(false);
+  const hasFetchedRef = useRef(false);
 
-  const handleScreen = async () => {
+  // Check for existing screening on mount (only once)
+  useEffect(() => {
+    // Prevent duplicate calls in React Strict Mode
+    if (hasFetchedRef.current) {
+      return;
+    }
+
+    const fetchExistingScreening = async () => {
+      hasFetchedRef.current = true;
+      try {
+        const response = await fetch(
+          `/api/ai/candidate-screening?candidateId=${candidateId}&vacancyId=${vacancyId}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setResult(data);
+          setIsExistingScreening(true);
+          toast.success('Loaded existing screening results');
+        } else if (response.status !== 404) {
+          // 404 is expected if no screening exists, other errors should be logged
+          console.error('Error fetching existing screening:', response.statusText);
+        }
+        // 404 is silently handled - it means no screening exists yet
+      } catch (error) {
+        console.error('Error fetching existing screening:', error);
+      } finally {
+        setCheckingExisting(false);
+      }
+    };
+
+    fetchExistingScreening();
+  }, [candidateId, vacancyId]);
+
+  const handleScreen = async (isReScreen = false) => {
     setLoading(true);
+    setIsExistingScreening(false);
     try {
       const response = await fetch('/api/ai/candidate-screening', {
         method: 'POST',
@@ -38,8 +76,9 @@ export function AICandidateScreening({
 
       const data = await response.json();
       setResult(data);
+      setIsExistingScreening(false);
       onComplete?.(data);
-      toast.success('Candidate screened successfully');
+      toast.success(isReScreen ? 'Candidate re-screened successfully' : 'Candidate screened successfully');
     } catch (error) {
       console.error('Screening error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to screen candidate');
@@ -87,6 +126,17 @@ export function AICandidateScreening({
       .replace(/^./, (str) => str.toUpperCase());
   };
 
+  if (checkingExisting) {
+    return (
+      <div className="border rounded-lg p-4 bg-white">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-[#800000]" />
+          <span className="ml-2 text-gray-600">Checking for existing screening...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="border rounded-lg p-4 bg-white">
       <div className="flex items-center justify-between mb-4">
@@ -96,28 +146,65 @@ export function AICandidateScreening({
           {candidateName && (
             <span className="text-sm text-gray-500">- {candidateName}</span>
           )}
-        </div>
-        <button
-          onClick={handleScreen}
-          disabled={loading}
-          className="px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#600000] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Screening...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              Run AI Screening
-            </>
+          {isExistingScreening && (
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              Existing Results
+            </span>
           )}
-        </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {result && isExistingScreening && (
+            <button
+              onClick={() => handleScreen(true)}
+              disabled={loading}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+              title="Re-screen candidate"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Re-screening...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Re-screen
+                </>
+              )}
+            </button>
+          )}
+          {!result && (
+            <button
+              onClick={() => handleScreen(false)}
+              disabled={loading}
+              className="px-4 py-2 bg-[#800000] text-white rounded hover:bg-[#600000] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Screening...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Run AI Screening
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {result && (
         <div className="mt-4 space-y-4">
+          {/* Screening timestamp for existing screenings */}
+          {isExistingScreening && (result as any).screenedAt && (
+            <div className="text-xs text-gray-500 bg-blue-50 px-3 py-2 rounded border border-blue-200">
+              <span className="font-medium">Screened on:</span>{' '}
+              {new Date((result as any).screenedAt).toLocaleString()}
+            </div>
+          )}
+          
           {/* Overall Score and Recommendation */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">

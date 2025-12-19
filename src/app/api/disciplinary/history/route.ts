@@ -10,12 +10,15 @@ export async function GET(request: NextRequest) {
     }
 
     const histories = await disciplinaryService.getAllEmployeesWithDisciplinaryRecords();
+    
+    // Log for debugging
+    console.log(`Fetched ${histories.length} employee disciplinary histories`);
 
     return NextResponse.json(histories);
   } catch (error) {
     console.error('Error fetching disciplinary histories:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch disciplinary histories' },
+      { error: 'Failed to fetch disciplinary histories', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

@@ -76,6 +76,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [successRecordInfo, setSuccessRecordInfo] = useState<{ caseNo?: string; employee?: string } | null>(null);
+  const [successChanges, setSuccessChanges] = useState<Array<{ field: string; oldValue: string | null | undefined; newValue: string | null | undefined }>>([]);
 
   // Fetch data from API
   const fetchRecords = useCallback(async () => {
@@ -244,13 +245,68 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
       let recordId: string;
       
       if (editingRecord) {
+        // Track changes
+        const changes: Array<{ field: string; oldValue: string | null | undefined; newValue: string | null | undefined }> = [];
+        
+        const normalizedStatus = recordData.status && (recordData.status.includes('Review') || recordData.status === 'For_Review') ? 'For_Review' : (recordData.status as any);
+        const oldStatus = editingRecord.status;
+        
+        // Compare and track changes
+        if (recordData.category && recordData.category !== editingRecord.category) {
+          changes.push({ field: 'category', oldValue: editingRecord.category, newValue: recordData.category });
+        }
+        if (recordData.violation && recordData.violation !== editingRecord.violation) {
+          changes.push({ field: 'violation', oldValue: editingRecord.violation, newValue: recordData.violation });
+        }
+        if (recordData.severity && recordData.severity !== editingRecord.severity) {
+          changes.push({ field: 'severity', oldValue: editingRecord.severity, newValue: recordData.severity });
+        }
+        if (normalizedStatus && normalizedStatus !== oldStatus) {
+          const displayOldStatus = oldStatus === 'For_Review' ? 'For Review' : oldStatus;
+          const displayNewStatus = normalizedStatus === 'For_Review' ? 'For Review' : normalizedStatus;
+          changes.push({ field: 'status', oldValue: displayOldStatus, newValue: displayNewStatus });
+        }
+        if (recordData.resolution !== undefined && recordData.resolution !== editingRecord.resolution) {
+          changes.push({ field: 'resolution', oldValue: editingRecord.resolution || null, newValue: recordData.resolution || null });
+        }
+        if (recordData.remarks !== undefined && recordData.remarks !== editingRecord.remarks) {
+          changes.push({ field: 'remarks', oldValue: editingRecord.remarks || null, newValue: recordData.remarks || null });
+        }
+        if (recordData.interviewNotes !== undefined && recordData.interviewNotes !== editingRecord.interviewNotes) {
+          changes.push({ field: 'interviewNotes', oldValue: editingRecord.interviewNotes || null, newValue: recordData.interviewNotes || null });
+        }
+        if (recordData.hrRemarks !== undefined && recordData.hrRemarks !== editingRecord.hrRemarks) {
+          changes.push({ field: 'hrRemarks', oldValue: editingRecord.hrRemarks || null, newValue: recordData.hrRemarks || null });
+        }
+        if (recordData.recommendedPenalty !== undefined && recordData.recommendedPenalty !== editingRecord.recommendedPenalty) {
+          changes.push({ field: 'recommendedPenalty', oldValue: editingRecord.recommendedPenalty || null, newValue: recordData.recommendedPenalty || null });
+        }
+        if (recordData.offenseCount !== undefined && recordData.offenseCount !== editingRecord.offenseCount) {
+          changes.push({ field: 'offenseCount', oldValue: editingRecord.offenseCount?.toString() || null, newValue: recordData.offenseCount?.toString() || null });
+        }
+        if (recordData.dateTime && recordData.dateTime !== editingRecord.dateTime) {
+          changes.push({ field: 'dateTime', oldValue: editingRecord.dateTime, newValue: recordData.dateTime });
+        }
+        if (recordData.resolutionDate !== undefined) {
+          const oldDate = editingRecord.resolutionDate || null;
+          const newDate = recordData.resolutionDate || null;
+          if (oldDate !== newDate) {
+            changes.push({ field: 'resolutionDate', oldValue: oldDate, newValue: newDate });
+          }
+        }
+        if (recordData.supervisorId !== undefined && recordData.supervisorId !== editingRecord.supervisorId) {
+          const oldSupervisor = editingRecord.supervisor || null;
+          const newSupervisor = adminEmployees.find(emp => emp.id === recordData.supervisorId)?.name || null;
+          changes.push({ field: 'supervisor', oldValue: oldSupervisor, newValue: newSupervisor });
+        }
+        
         // Update existing record
         const updated = await updateDisciplinaryRecord(editingRecord.id, {
           supervisorId: recordData.supervisorId,
           category: recordData.category,
           violation: recordData.violation,
           severity: recordData.severity,
-          status: recordData.status && (recordData.status.includes('Review') || recordData.status === 'For_Review') ? 'For_Review' : (recordData.status as any),
+          status: normalizedStatus,
           dateTime: recordData.dateTime,
           resolution: recordData.resolution,
           resolutionDate: recordData.resolutionDate,
@@ -268,6 +324,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
           caseNo: editingRecord.caseNo,
           employee: editingRecord.employee,
         });
+        setSuccessChanges(changes);
         setIsSuccessModalOpen(true);
       } else {
         // Create new record
@@ -860,10 +917,12 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
               setIsSuccessModalOpen(false);
               setSuccessMessage('');
               setSuccessRecordInfo(null);
+              setSuccessChanges([]);
             }}
             title="Record Updated Successfully!"
             message={successMessage}
             recordInfo={successRecordInfo || undefined}
+            changes={successChanges}
           />
 
           {/* Import Modal */}

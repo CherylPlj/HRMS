@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnected } from '@/lib/prisma';
+import { PromotionRecommendationStatus } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
+    // Ensure Prisma is connected before making queries
+    await ensurePrismaConnected();
+    
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Fetch promotion recommendations from the PromotionRecommendation table
     // Filter for pending/under review recommendations
     const where: any = {
-      status: { in: ['Pending', 'UnderReview'] },
+      status: { in: [PromotionRecommendationStatus.Pending, PromotionRecommendationStatus.UnderReview] },
     };
 
     // Helper function to calculate years in service from hire date

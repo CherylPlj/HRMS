@@ -35,6 +35,8 @@ export default function Chatbot({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatbotRef = useRef<HTMLDivElement>(null);
+  const lastRequestTimeRef = useRef<number>(0);
+  const MIN_REQUEST_INTERVAL = 1000; // Minimum 1 second between requests
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -85,6 +87,16 @@ export default function Chatbot({
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isLoading) return;
 
+    // Rate limiting: prevent rapid successive requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+      const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+      console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    lastRequestTimeRef.current = Date.now();
+
     const userMessage: ChatMessage = {
       type: 'user',
       content: message.trim(),
@@ -108,6 +120,10 @@ export default function Chatbot({
       const data = await response.json();
       
       if (!response.ok) {
+        // Handle 429 (quota exceeded) errors with specific message
+        if (response.status === 429) {
+          throw new Error('QUOTA_EXCEEDED');
+        }
         throw new Error(data.details || data.error || `HTTP error! status: ${response.status}`);
       }
 
@@ -115,7 +131,7 @@ export default function Chatbot({
       setTimeout(() => {
         const aiMessage: ChatMessage = {
           type: 'ai',
-          content: data.response,
+          content: data.response || data.error || 'I received your message, but I\'m having trouble responding right now.',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, aiMessage]);
@@ -126,9 +142,19 @@ export default function Chatbot({
     } catch (error: unknown) {
       console.error('Error sending message:', error);
       setTimeout(() => {
+        let errorContent = `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`;
+        
+        if (error instanceof Error) {
+          if (error.message === 'QUOTA_EXCEEDED') {
+            errorContent = `I'm currently unavailable due to service limits. Please try again later or contact support for assistance.`;
+          } else if (error.message.includes('quota') || error.message.includes('429')) {
+            errorContent = `The AI service is temporarily unavailable. Please try again in a few minutes.`;
+          }
+        }
+        
         const errorMessage: ChatMessage = {
           type: 'ai',
-          content: `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`,
+          content: errorContent,
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);

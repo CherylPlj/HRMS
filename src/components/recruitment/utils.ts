@@ -83,9 +83,23 @@ export function getPreviewUrl(url: string): string {
       const urlMatch = url.match(/\/resumes\/(.+)$/);
       if (urlMatch && urlMatch[1] && urlMatch[1].trim() !== '') {
         const filePath = urlMatch[1];
+        // Decode the path first in case it's already encoded, then re-encode to ensure proper handling
+        let decodedPath: string;
+        try {
+          decodedPath = decodeURIComponent(filePath);
+        } catch {
+          decodedPath = filePath;
+        }
+        
+        // Validate that we have a non-empty path after decoding
+        if (!decodedPath || decodedPath.trim() === '') {
+          console.warn('getPreviewUrl: Empty file path after decoding:', url);
+          return url; // Return original URL as fallback
+        }
+        
         // URL encode the path to handle special characters and spaces
         // Use proxy endpoint that sets Content-Disposition: inline
-        const proxyUrl = `/api/candidates/resume/${encodeURIComponent(filePath)}`;
+        const proxyUrl = `/api/candidates/resume/${encodeURIComponent(decodedPath)}`;
         console.log('Generated proxy URL:', proxyUrl, 'from original URL:', url);
         return proxyUrl;
       } else {

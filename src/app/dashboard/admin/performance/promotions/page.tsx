@@ -77,7 +77,7 @@ export default function PromotionRecommendationsPage() {
                 {paginatedPromotionRecommendations.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground">
-                      No promotion recommendations found
+                      No promotion recommendations yet
                     </TableCell>
                   </TableRow>
                 ) : (

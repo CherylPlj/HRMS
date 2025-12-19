@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -15,14 +15,18 @@ import { Badge } from '@/components/ui/badge'
 import { Eye } from 'lucide-react'
 import Pagination from '@/components/disciplinary/Pagination'
 import { mockTrainingRecommendations } from '@/components/performance/mockData'
+import TrainingDetailsModal from '@/components/performance/TrainingDetailsModal'
+import { TrainingRecommendation } from '@/types/performance'
 
 export default function TrainingRecommendationsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [selectedTraining, setSelectedTraining] = useState<TrainingRecommendation | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const handleViewDetails = (training: any) => {
-    console.log('View details clicked (static):', training)
-    // In a real app, this would open a modal or navigate to details page
+  const handleViewDetails = (training: TrainingRecommendation) => {
+    setSelectedTraining(training)
+    setIsModalOpen(true)
   }
 
   // Calculate pagination
@@ -65,9 +69,6 @@ export default function TrainingRecommendationsPage() {
       </div> */}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Training Recommendations</CardTitle>
-        </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
@@ -136,6 +137,12 @@ export default function TrainingRecommendationsPage() {
           onItemsPerPageChange={handleItemsPerPageChange}
         />
       )}
+
+      <TrainingDetailsModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        training={selectedTraining}
+      />
     </div>
   )
 }

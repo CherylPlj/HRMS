@@ -195,16 +195,37 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
         const data = await response.json();
         
         if (!response.ok) {
+          // Handle 429 (quota exceeded) errors with specific message
+          if (response.status === 429) {
+            setChatMessages(prev => [...prev, { 
+              type: 'ai', 
+              content: `I'm currently unavailable due to service limits. Please try again later or contact support for assistance.`
+            }]);
+            return;
+          }
           throw new Error(data.details || data.error || `HTTP error! status: ${response.status}`);
         }
 
-        // Add AI response to chat
-        setChatMessages(prev => [...prev, { type: 'ai', content: data.response }]);
-      } catch (error: unknown) {
-        console.error('Error sending message:', error);
+        // Add AI response to chat (handle fallback responses)
         setChatMessages(prev => [...prev, { 
           type: 'ai', 
-          content: `Error: ${error instanceof Error ? error.message : 'Failed to get response. Please try again.'}`
+          content: data.response || data.error || 'I received your message, but I\'m having trouble responding right now.'
+        }]);
+      } catch (error: unknown) {
+        console.error('Error sending message:', error);
+        let errorMessage = 'Failed to get response. Please try again.';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('quota') || error.message.includes('429')) {
+            errorMessage = 'The AI service is temporarily unavailable. Please try again in a few minutes.';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
+        setChatMessages(prev => [...prev, { 
+          type: 'ai', 
+          content: errorMessage
         }]);
       }
     }

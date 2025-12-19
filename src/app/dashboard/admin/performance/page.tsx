@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select } from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -12,6 +13,13 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { toast } from 'react-hot-toast'
 import PerformanceSummaryCard from '@/components/performance/PerformanceSummaryCard'
 import ScoreBadge from '@/components/performance/ScoreBadge'
@@ -20,8 +28,9 @@ import ReviewViewModal from '@/components/performance/ReviewViewModal'
 import ReviewFormModal, { ReviewFormData } from '@/components/performance/ReviewFormModal'
 import KPIManagement from '@/components/performance/KPIManagement'
 import KPIFormModal, { KPIFormData } from '@/components/performance/KPIFormModal'
+import TrainingDetailsModal from '@/components/performance/TrainingDetailsModal'
 import Pagination from '@/components/disciplinary/Pagination'
-import { TrendingUp, Users, BookOpen, FileText, ClipboardList, GraduationCap, TrendingUp as TrendingUpIcon, Plus, Eye, Target } from 'lucide-react'
+import { TrendingUp, Users, BookOpen, FileText, ClipboardList, GraduationCap, TrendingUp as TrendingUpIcon, Plus, Eye, Target, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 import {
   mockEmployees,
   mockReviewers,
@@ -59,6 +68,14 @@ export default function PerformanceDashboardPage() {
   const [trainingLoading, setTrainingLoading] = useState(false)
   const [trainingTotalPages, setTrainingTotalPages] = useState(1)
   const [trainingTotalItems, setTrainingTotalItems] = useState(0)
+  // Filter states for Training tab
+  const [trainingDepartmentFilter, setTrainingDepartmentFilter] = useState<string>('')
+  const [trainingPositionFilter, setTrainingPositionFilter] = useState<string>('')
+  const [trainingPriorityFilter, setTrainingPriorityFilter] = useState<string>('')
+  const [trainingFilterOptions, setTrainingFilterOptions] = useState<{
+    departments: string[]
+    positions: string[]
+  }>({ departments: [], positions: [] })
   
   // Pagination states for Promotions tab
   const [promotionsCurrentPage, setPromotionsCurrentPage] = useState(1)
@@ -67,6 +84,17 @@ export default function PerformanceDashboardPage() {
   const [promotionsLoading, setPromotionsLoading] = useState(false)
   const [promotionsTotalPages, setPromotionsTotalPages] = useState(1)
   const [promotionsTotalItems, setPromotionsTotalItems] = useState(0)
+  const [analyzingPromotions, setAnalyzingPromotions] = useState(false)
+  const [analysisResultModalOpen, setAnalysisResultModalOpen] = useState(false)
+  const [analysisResult, setAnalysisResult] = useState<{
+    success: boolean
+    message: string
+    analyzed?: number
+    skippedRecent?: number
+    skipped?: number
+    recommendations?: number
+    errors?: string[]
+  } | null>(null)
   
   // Pagination states for KPIs tab
   const [kpisCurrentPage, setKpisCurrentPage] = useState(1)
@@ -88,6 +116,8 @@ export default function PerformanceDashboardPage() {
   const [kpiFormModalOpen, setKpiFormModalOpen] = useState(false)
   const [selectedKPI, setSelectedKPI] = useState<KPI | null>(null)
   const [isKPIEditMode, setIsKPIEditMode] = useState(false)
+  const [trainingModalOpen, setTrainingModalOpen] = useState(false)
+  const [selectedTraining, setSelectedTraining] = useState<TrainingRecommendation | null>(null)
 
   const tabs = [
     {
@@ -207,8 +237,9 @@ export default function PerformanceDashboardPage() {
     }
   }
 
-  const handleViewTrainingDetails = (training: any) => {
-    console.log('View details clicked (static):', training)
+  const handleViewTrainingDetails = (training: TrainingRecommendation) => {
+    setSelectedTraining(training)
+    setTrainingModalOpen(true)
   }
 
   const handleApprovePromotion = (promotion: any) => {
@@ -221,7 +252,7 @@ export default function PerformanceDashboardPage() {
       const confirmMessage = 'This will analyze employees using AI. To avoid exceeding quota, only 50 employees will be analyzed per run, and employees analyzed in the last 7 days will be skipped. Continue?'
       if (!confirm(confirmMessage)) return
 
-      toast.loading('Starting promotion analysis... This may take several minutes.', { id: 'analyze-promotions' })
+      setAnalyzingPromotions(true)
       
       const response = await fetch('/api/performance/analyze-promotions', {
         method: 'POST',
@@ -232,15 +263,89 @@ export default function PerformanceDashboardPage() {
         }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Failed to analyze')
       
-      toast.success(data.message || 'Promotion analysis completed', { id: 'analyze-promotions' })
-      // Refresh promotion recommendations
-      if (activeTab === 'promotions') {
-        fetchPromotionRecommendations()
+      if (!response.ok) {
+        // Sanitize error message - show user-friendly message instead of technical details
+        let errorMessage = data.error || 'Failed to analyze promotions'
+        
+        // Filter out long technical error messages
+        if (errorMessage.length > 200 || 
+            errorMessage.includes('Backtrace') || 
+            errorMessage.includes('napi_register_module') ||
+            errorMessage.includes('at async') ||
+            errorMessage.includes('Engine is not yet connected')) {
+          // Replace with user-friendly message
+          if (errorMessage.includes('Engine is not yet connected') || errorMessage.includes('not yet connected')) {
+            errorMessage = 'Database connection error. Please try again.'
+          } else {
+            errorMessage = 'An error occurred during the analysis. Please try again or contact support if the problem persists.'
+          }
+        }
+        
+        throw new Error(errorMessage)
+      }
+      
+      // Set success result
+      setAnalysisResult({
+        success: true,
+        message: data.message || 'Promotion analysis completed successfully',
+        analyzed: data.analyzed,
+        skippedRecent: data.skippedRecent,
+        skipped: data.skipped,
+        recommendations: data.recommendations,
+        errors: data.errors,
+      })
+      setAnalysisResultModalOpen(true)
+      
+      // Reset to first page and refresh promotion recommendations
+      // Always refresh, even if not on promotions tab (user might switch to it)
+      setPromotionsCurrentPage(1)
+      // Force refresh by calling fetch directly with page 1
+      try {
+        setPromotionsLoading(true)
+        const fetchResponse = await fetch(
+          `/api/performance/promotion-recommendations?page=1&limit=${promotionsItemsPerPage}`
+        )
+        if (!fetchResponse.ok) throw new Error('Failed to fetch promotion recommendations')
+        const fetchData = await fetchResponse.json()
+        setPromotionRecommendations(fetchData.recommendations || [])
+        setPromotionsTotalPages(fetchData.pagination?.totalPages || 1)
+        setPromotionsTotalItems(fetchData.pagination?.total || 0)
+      } catch (error) {
+        console.error('Error fetching promotion recommendations:', error)
+        // Don't show error toast here as the analysis succeeded
+        // Just log it - user can manually refresh if needed
+      } finally {
+        setPromotionsLoading(false)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to analyze promotions', { id: 'analyze-promotions' })
+      // Set error result with sanitized message
+      let errorMessage = 'Failed to analyze promotions'
+      
+      if (error instanceof Error) {
+        errorMessage = error.message
+        
+        // Additional sanitization for any remaining technical details
+        if (errorMessage.length > 200 || 
+            errorMessage.includes('Backtrace') || 
+            errorMessage.includes('napi_register_module') ||
+            errorMessage.includes('at async') ||
+            errorMessage.includes('Engine is not yet connected')) {
+          if (errorMessage.includes('Engine is not yet connected') || errorMessage.includes('not yet connected')) {
+            errorMessage = 'Database connection error. Please try again.'
+          } else {
+            errorMessage = 'An error occurred during the analysis. Please try again or contact support if the problem persists.'
+          }
+        }
+      }
+      
+      setAnalysisResult({
+        success: false,
+        message: errorMessage,
+      })
+      setAnalysisResultModalOpen(true)
+    } finally {
+      setAnalyzingPromotions(false)
     }
   }
 
@@ -366,21 +471,32 @@ export default function PerformanceDashboardPage() {
   const fetchTrainingRecommendations = useCallback(async () => {
     try {
       setTrainingLoading(true)
+      const params = new URLSearchParams({
+        page: trainingCurrentPage.toString(),
+        limit: trainingItemsPerPage.toString(),
+      })
+      if (trainingDepartmentFilter) params.append('department', trainingDepartmentFilter)
+      if (trainingPositionFilter) params.append('position', trainingPositionFilter)
+      if (trainingPriorityFilter) params.append('priority', trainingPriorityFilter)
+      
       const response = await fetch(
-        `/api/performance/training-recommendations?page=${trainingCurrentPage}&limit=${trainingItemsPerPage}`
+        `/api/performance/training-recommendations?${params.toString()}`
       )
       if (!response.ok) throw new Error('Failed to fetch training recommendations')
       const data = await response.json()
       setTrainingRecommendations(data.recommendations)
       setTrainingTotalPages(data.pagination.totalPages)
       setTrainingTotalItems(data.pagination.total)
+      if (data.filters) {
+        setTrainingFilterOptions(data.filters)
+      }
     } catch (error) {
       console.error('Error fetching training recommendations:', error)
       toast.error('Failed to load training recommendations')
     } finally {
       setTrainingLoading(false)
     }
-  }, [trainingCurrentPage, trainingItemsPerPage])
+  }, [trainingCurrentPage, trainingItemsPerPage, trainingDepartmentFilter, trainingPositionFilter, trainingPriorityFilter])
 
   const fetchPromotionRecommendations = useCallback(async () => {
     try {
@@ -700,11 +816,75 @@ export default function PerformanceDashboardPage() {
               Run AI Analysis
             </Button>
           </div>
+          
+          {/* Filters */}
+          <div className="mb-4 flex gap-4 items-end">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Department</label>
+              <Select
+                value={trainingDepartmentFilter}
+                onChange={(e) => {
+                  setTrainingDepartmentFilter(e.target.value)
+                  setTrainingCurrentPage(1)
+                }}
+              >
+                <option value="">All Departments</option>
+                {trainingFilterOptions.departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Position</label>
+              <Select
+                value={trainingPositionFilter}
+                onChange={(e) => {
+                  setTrainingPositionFilter(e.target.value)
+                  setTrainingCurrentPage(1)
+                }}
+              >
+                <option value="">All Positions</option>
+                {trainingFilterOptions.positions.map((pos) => (
+                  <option key={pos} value={pos}>
+                    {pos}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Priority</label>
+              <Select
+                value={trainingPriorityFilter}
+                onChange={(e) => {
+                  setTrainingPriorityFilter(e.target.value)
+                  setTrainingCurrentPage(1)
+                }}
+              >
+                <option value="">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </Select>
+            </div>
+            {(trainingDepartmentFilter || trainingPositionFilter || trainingPriorityFilter) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTrainingDepartmentFilter('')
+                  setTrainingPositionFilter('')
+                  setTrainingPriorityFilter('')
+                  setTrainingCurrentPage(1)
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+          
           <Card>
-            <CardHeader>
-              <CardTitle>Training Recommendations</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -793,16 +973,26 @@ export default function PerformanceDashboardPage() {
                 AI-powered promotion recommendations based on performance and years in service
               </p>
             </div>
-            <Button onClick={handleAnalyzePromotions} variant="outline">
-              <TrendingUpIcon className="h-4 w-4 mr-2" />
-              Run AI Analysis
+            <Button 
+              onClick={handleAnalyzePromotions} 
+              variant="outline"
+              disabled={analyzingPromotions}
+            >
+              {analyzingPromotions ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <TrendingUpIcon className="h-4 w-4 mr-2" />
+                  Run AI Analysis
+                </>
+              )}
             </Button>
           </div>
           <Card>
-            <CardHeader>
-              <CardTitle>Promotion Recommendations</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -829,7 +1019,7 @@ export default function PerformanceDashboardPage() {
                     ) : paginatedPromotionRecommendations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center text-muted-foreground">
-                          No promotion recommendations found
+                          No promotion recommendations yet
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -938,6 +1128,130 @@ export default function PerformanceDashboardPage() {
         onSubmit={handleSubmitKPI}
         kpi={isKPIEditMode ? selectedKPI : null}
       />
+
+      <TrainingDetailsModal
+        open={trainingModalOpen}
+        onOpenChange={setTrainingModalOpen}
+        training={selectedTraining}
+      />
+
+      {/* Promotion Analysis Result Modal */}
+      <Dialog open={analysisResultModalOpen} onOpenChange={setAnalysisResultModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {analysisResult?.success ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  Analysis Complete
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  Analysis Failed
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {analysisResult?.success 
+                ? 'The promotion analysis has completed successfully.'
+                : 'An error occurred during the promotion analysis.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="p-4 rounded-lg bg-muted">
+              <p className="text-sm font-medium mb-2">Message:</p>
+              <p className="text-sm">{analysisResult?.message}</p>
+            </div>
+
+            {analysisResult?.success && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg border">
+                    <p className="text-xs text-muted-foreground mb-1">Employees Analyzed</p>
+                    <p className="text-2xl font-bold">{analysisResult.analyzed || 0}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border">
+                    <p className="text-xs text-muted-foreground mb-1">Recommendations Found</p>
+                    <p className="text-2xl font-bold text-green-600">{analysisResult.recommendations || 0}</p>
+                  </div>
+                </div>
+                
+                {(analysisResult.skippedRecent || analysisResult.skipped) && (
+                  <div className="p-3 rounded-lg border border-yellow-200 bg-yellow-50">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-yellow-800 mb-1">Skipped Employees</p>
+                        <div className="text-xs text-yellow-700 space-y-1">
+                          {analysisResult.skippedRecent && (
+                            <p>• {analysisResult.skippedRecent} employees skipped (analyzed in last 7 days)</p>
+                          )}
+                          {analysisResult.skipped && (
+                            <p>• {analysisResult.skipped} employees not processed (limit reached)</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {analysisResult.errors && analysisResult.errors.length > 0 && (
+                  <div className="p-3 rounded-lg border border-red-200 bg-red-50">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-red-800 mb-2">Errors Encountered</p>
+                        <div className="text-xs text-red-700 space-y-1 max-h-32 overflow-y-auto">
+                          {analysisResult.errors.slice(0, 5).map((error, idx) => (
+                            <p key={idx}>• {error}</p>
+                          ))}
+                          {analysisResult.errors.length > 5 && (
+                            <p className="text-muted-foreground italic">
+                              ... and {analysisResult.errors.length - 5} more errors
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!analysisResult?.success && (
+              <div className="p-4 rounded-lg border border-red-200 bg-red-50">
+                <p className="text-sm text-red-800">
+                  Please try again. If the problem persists, contact support.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setAnalysisResultModalOpen(false)}
+            >
+              Close
+            </Button>
+            {analysisResult?.success && (
+              <Button
+                onClick={() => {
+                  setAnalysisResultModalOpen(false)
+                  // Switch to promotions tab if not already there
+                  if (activeTab !== 'promotions') {
+                    setActiveTab('promotions')
+                  }
+                }}
+              >
+                View Recommendations
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

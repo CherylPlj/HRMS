@@ -1,14 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnected } from '@/lib/prisma';
 import { AIAgentService } from '@/services/aiAgentService';
 import { Decimal } from '@prisma/client/runtime/library';
-import { PromotionPriority } from '@prisma/client';
+import { PromotionPriority, PromotionRecommendationStatus } from '@prisma/client';
 
 const aiService = new AIAgentService();
 
+// Helper function to retry database operations with connection handling
+async function retryDatabaseOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Ensure connection before each attempt
+      await ensurePrismaConnected();
+      return await operation();
+    } catch (error: any) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Check if it's a connection error
+      const isConnectionError = 
+        error?.message?.includes('Engine is not yet connected') ||
+        error?.message?.includes('not yet connected') ||
+        error?.code === 'P1001' ||
+        error?.code === 'P1000';
+      
+      if (isConnectionError && attempt < maxRetries - 1) {
+        // Try to reconnect
+        try {
+          await prisma.$disconnect();
+        } catch (disconnectError) {
+          // Ignore disconnect errors
+        }
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1))); // Exponential backoff
+        continue;
+      }
+      
+      // If not a connection error or out of retries, throw
+      throw error;
+    }
+  }
+  
+  throw lastError || new Error('Database operation failed after retries');
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Ensure Prisma is connected before making queries
+    await ensurePrismaConnected();
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,16 +79,19 @@ export async function POST(request: NextRequest) {
       ? { EmployeeID: { in: employeeIds }, isDeleted: false }
       : { isDeleted: false };
 
-    const employees = await prisma.employee.findMany({
-      where,
-      select: {
-        EmployeeID: true,
-        FirstName: true,
-        LastName: true,
-        HireDate: true,
-        Position: true,
-        DepartmentID: true,
-      },
+    // Use retry logic for the database query
+    const employees = await retryDatabaseOperation(async () => {
+      return await prisma.employee.findMany({
+        where,
+        select: {
+          EmployeeID: true,
+          FirstName: true,
+          LastName: true,
+          HireDate: true,
+          Position: true,
+          DepartmentID: true,
+        },
+      });
     });
 
     if (employees.length === 0) {
@@ -71,9 +117,11 @@ export async function POST(request: NextRequest) {
       try {
         // Check if employee was recently analyzed (within last 7 days)
         if (skipRecent) {
-          const existingModule = await prisma.performanceModule.findUnique({
-            where: { employeeId: employee.EmployeeID },
-            select: { updatedAt: true, promotionEligibilityScore: true },
+          const existingModule = await retryDatabaseOperation(async () => {
+            return await prisma.performanceModule.findUnique({
+              where: { employeeId: employee.EmployeeID },
+              select: { updatedAt: true, promotionEligibilityScore: true },
+            });
           });
 
           if (existingModule?.updatedAt) {
@@ -124,14 +172,18 @@ export async function POST(request: NextRequest) {
           : 0;
 
         // Get or create PerformanceModule
-        let performanceModule = await prisma.performanceModule.findUnique({
-          where: { employeeId: employee.EmployeeID },
+        let performanceModule = await retryDatabaseOperation(async () => {
+          return await prisma.performanceModule.findUnique({
+            where: { employeeId: employee.EmployeeID },
+          });
         });
 
         // Get current position from employee or employment details
-        const employmentDetail = await prisma.employmentDetail.findFirst({
-          where: { employeeId: employee.EmployeeID },
-          select: { Position: true, SalaryGrade: true },
+        const employmentDetail = await retryDatabaseOperation(async () => {
+          return await prisma.employmentDetail.findFirst({
+            where: { employeeId: employee.EmployeeID },
+            select: { Position: true, SalaryGrade: true },
+          });
         });
 
         const currentPosition = employmentDetail?.Position || employee.Position;
@@ -148,18 +200,28 @@ export async function POST(request: NextRequest) {
 
         if (performanceModule) {
           // Update existing module
-          performanceModule = await prisma.performanceModule.update({
-            where: { id: performanceModule.id },
-            data: moduleData,
+          const moduleId = performanceModule.id;
+          performanceModule = await retryDatabaseOperation(async () => {
+            return await prisma.performanceModule.update({
+              where: { id: moduleId },
+              data: moduleData,
+            });
           });
         } else {
           // Create new module
-          performanceModule = await prisma.performanceModule.create({
-            data: {
-              employeeId: employee.EmployeeID,
-              ...moduleData,
-            },
+          performanceModule = await retryDatabaseOperation(async () => {
+            return await prisma.performanceModule.create({
+              data: {
+                employeeId: employee.EmployeeID,
+                ...moduleData,
+              },
+            });
           });
+        }
+
+        // Ensure performanceModule is defined (should always be after if/else above)
+        if (!performanceModule) {
+          throw new Error('Failed to create or update performance module');
         }
 
         // Determine priority based on eligibility score
@@ -176,17 +238,19 @@ export async function POST(request: NextRequest) {
           // Determine recommended position (could be enhanced with AI suggestion)
           const recommendedPosition = currentPosition ? `${currentPosition} (Senior)` : 'Promotion Recommended';
           
-          await prisma.promotionRecommendation.create({
-            data: {
-              performanceModuleId: performanceModule.id,
-              recommendedPosition,
-              recommendedSalaryGrade: currentSalaryGrade ? `Grade ${parseInt(currentSalaryGrade) + 1}` : null,
-              promotionReason: aiResult.analysis || `AI Analysis: ${aiResult.recommendation}. ${aiResult.strengths?.join(', ') || ''}`,
-              eligibilityScore: new Decimal(aiResult.eligibilityScore),
-              priority,
-              status: 'Pending',
-              aiGenerated: true,
-            },
+          await retryDatabaseOperation(async () => {
+            return await prisma.promotionRecommendation.create({
+              data: {
+                performanceModuleId: performanceModule.id,
+                recommendedPosition,
+                recommendedSalaryGrade: currentSalaryGrade ? `Grade ${parseInt(currentSalaryGrade) + 1}` : null,
+                promotionReason: aiResult.analysis || `AI Analysis: ${aiResult.recommendation}. ${aiResult.strengths?.join(', ') || ''}`,
+                eligibilityScore: new Decimal(aiResult.eligibilityScore),
+                priority,
+                status: PromotionRecommendationStatus.Pending,
+                aiGenerated: true,
+              },
+            });
           });
           recommendations++;
         }
@@ -210,7 +274,21 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in batch promotion analysis:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to analyze promotions';
+    
+    // Provide user-friendly error messages
+    let errorMessage = 'Failed to analyze promotions';
+    if (error instanceof Error) {
+      if (error.message.includes('Engine is not yet connected') || 
+          error.message.includes('not yet connected')) {
+        errorMessage = 'Database connection error. Please try again.';
+      } else if (error.message.includes('Unauthorized')) {
+        errorMessage = 'You are not authorized to perform this action.';
+      } else if (error.message.length < 200) {
+        // Only use the error message if it's short and user-friendly
+        errorMessage = error.message;
+      }
+    }
+    
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }

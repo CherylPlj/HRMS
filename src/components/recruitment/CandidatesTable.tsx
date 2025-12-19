@@ -109,7 +109,7 @@ export const CandidatesTable: React.FC<CandidatesTableProps> = ({
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {c.ResumeUrl ? (
+                  {c.ResumeUrl && c.ResumeUrl.trim() ? (
                     <button
                       onClick={() => onPreviewResume(c.ResumeUrl || '', c.FullName)}
                       className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"

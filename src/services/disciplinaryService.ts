@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnected } from '@/lib/prisma';
 import { DisciplinarySeverity, DisciplinaryStatus } from '@prisma/client';
 
 export interface CreateDisciplinaryRecordInput {
@@ -551,6 +551,9 @@ export class DisciplinaryService {
    * Get employee's disciplinary history
    */
   async getEmployeeDisciplinaryHistory(employeeId: string) {
+    // Ensure Prisma is connected before making queries
+    await ensurePrismaConnected();
+    
     let records;
     try {
       records = await prisma.disciplinaryRecord.findMany({
@@ -625,6 +628,7 @@ export class DisciplinaryService {
           },
         });
       } else {
+        console.error(`Error fetching records for employee ${employeeId}:`, error);
         throw error;
       }
     }
@@ -636,16 +640,22 @@ export class DisciplinaryService {
     const resolvedCount = records.filter((r) => r.status === DisciplinaryStatus.Resolved).length;
     const closedCount = records.filter((r) => r.status === DisciplinaryStatus.Closed).length;
 
-    // Get employee info
-    const employee = await prisma.employee.findUnique({
-      where: { EmployeeID: employeeId },
-      select: {
-        EmployeeID: true,
-        FirstName: true,
-        LastName: true,
-        MiddleName: true,
-      },
-    });
+    // Get employee info - handle case where employee might not exist
+    let employee = null;
+    try {
+      employee = await prisma.employee.findUnique({
+        where: { EmployeeID: employeeId },
+        select: {
+          EmployeeID: true,
+          FirstName: true,
+          LastName: true,
+          MiddleName: true,
+        },
+      });
+    } catch (error) {
+      console.warn(`Employee ${employeeId} not found, using 'Unknown' as name:`, error);
+      // Continue with employee as null, will use 'Unknown' in the return
+    }
 
     // Transform records to match frontend format
     const transformedOffenses = records.map((record) => ({
@@ -702,29 +712,62 @@ export class DisciplinaryService {
    * Get all employees with disciplinary records (grouped by employee)
    */
   async getAllEmployeesWithDisciplinaryRecords() {
-    // Get all unique employee IDs that have disciplinary records
-    const records = await prisma.disciplinaryRecord.findMany({
-      select: {
-        employeeId: true,
-      },
-      distinct: ['employeeId'],
-    });
+    // Ensure Prisma is connected before making queries
+    try {
+      await ensurePrismaConnected();
+    } catch (error) {
+      console.error('Failed to connect to Prisma:', error);
+      // Try to reconnect
+      try {
+        await prisma.$disconnect();
+        await prisma.$connect();
+      } catch (reconnectError) {
+        console.error('Failed to reconnect to Prisma:', reconnectError);
+        throw new Error('Database connection failed');
+      }
+    }
+    
+    try {
+      // Get all unique employee IDs that have disciplinary records
+      // Using groupBy for better compatibility
+      const records = await prisma.disciplinaryRecord.groupBy({
+        by: ['employeeId'],
+        _count: {
+          employeeId: true,
+        },
+      });
 
-    const employeeIds = records.map((r) => r.employeeId);
+      const employeeIds = records.map((r) => r.employeeId);
 
-    // For each employee, get their disciplinary history
-    const employeeHistories = await Promise.all(
-      employeeIds.map((employeeId) => this.getEmployeeDisciplinaryHistory(employeeId))
-    );
+      if (employeeIds.length === 0) {
+        return [];
+      }
 
-    // Sort by last updated date (most recent first)
-    employeeHistories.sort((a, b) => {
-      const dateA = new Date(a.lastUpdated).getTime();
-      const dateB = new Date(b.lastUpdated).getTime();
-      return dateB - dateA;
-    });
+      // For each employee, get their disciplinary history
+      // Use Promise.allSettled to handle individual failures gracefully
+      const results = await Promise.allSettled(
+        employeeIds.map((employeeId) => this.getEmployeeDisciplinaryHistory(employeeId))
+      );
 
-    return employeeHistories;
+      // Filter out failed promises and extract successful results
+      const employeeHistories = results
+        .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof this.getEmployeeDisciplinaryHistory>>> => 
+          result.status === 'fulfilled'
+        )
+        .map((result) => result.value);
+
+      // Sort by last updated date (most recent first)
+      employeeHistories.sort((a, b) => {
+        const dateA = new Date(a.lastUpdated).getTime();
+        const dateB = new Date(b.lastUpdated).getTime();
+        return dateB - dateA;
+      });
+
+      return employeeHistories;
+    } catch (error) {
+      console.error('Error in getAllEmployeesWithDisciplinaryRecords:', error);
+      throw error;
+    }
   }
 
   /**

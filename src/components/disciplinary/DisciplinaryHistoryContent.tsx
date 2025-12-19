@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Loader2 } from 'lucide-react';
 import { EmployeeDisciplinaryHistory, DisciplinaryRecord } from '@/types/disciplinary';
 import HistoryTable from './HistoryTable';
 import CaseViewModal from './CaseViewModal';
@@ -38,13 +38,28 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
       try {
         setLoading(true);
         const response = await fetch('/api/disciplinary/history');
-        if (!response.ok) throw new Error('Failed to fetch disciplinary histories');
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('API error response:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch disciplinary histories');
+        }
         
         const data = await response.json();
-        setHistories(data);
+        console.log('Fetched disciplinary histories:', data);
+        
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setHistories(data);
+        } else {
+          console.error('Invalid data format received:', data);
+          setHistories([]);
+          toast.error('Invalid data format received from server');
+        }
       } catch (err) {
         console.error('Error fetching disciplinary histories:', err);
-        toast.error('Failed to load disciplinary histories');
+        toast.error(err instanceof Error ? err.message : 'Failed to load disciplinary histories');
+        setHistories([]);
       } finally {
         setLoading(false);
       }
@@ -151,7 +166,8 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
               placeholder="Search by employee name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              disabled={loading}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -160,7 +176,8 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              disabled={loading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="all">All Statuses</option>
               <option value="ongoing">Has Ongoing Cases</option>
@@ -174,7 +191,8 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              disabled={loading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="all">All Departments</option>
               {/* Add department options here */}
@@ -188,7 +206,8 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               placeholder="Filter by date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              disabled={loading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -208,26 +227,39 @@ const DisciplinaryHistoryContent: React.FC<DisciplinaryHistoryContentProps> = ({
         )}
       </div>
 
-      {/* Table */}
-      <HistoryTable 
-        histories={paginatedHistories} 
-        onViewCase={handleViewCase}
-        startIndex={(currentPage - 1) * itemsPerPage}
-      />
+      {/* Loading State */}
+      {loading ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
+          <div className="flex flex-col items-center justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-[#800000] mb-4" />
+            <p className="text-gray-600 text-lg font-medium">Loading disciplinary histories...</p>
+            <p className="text-gray-500 text-sm mt-2">Please wait while we fetch the records</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Table */}
+          <HistoryTable 
+            histories={paginatedHistories} 
+            onViewCase={handleViewCase}
+            startIndex={(currentPage - 1) * itemsPerPage}
+          />
 
-      {/* Pagination */}
-      {filteredHistories.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredHistories.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={(newItemsPerPage) => {
-            setItemsPerPage(newItemsPerPage);
-            setCurrentPage(1);
-          }}
-        />
+          {/* Pagination */}
+          {filteredHistories.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredHistories.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={(newItemsPerPage) => {
+                setItemsPerPage(newItemsPerPage);
+                setCurrentPage(1);
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* View Case Modal */}

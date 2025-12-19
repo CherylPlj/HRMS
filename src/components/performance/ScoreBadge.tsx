@@ -16,23 +16,16 @@ const ScoreBadge: React.FC<ScoreBadgeProps> = ({
 }) => {
   const percentage = (score / maxScore) * 100
 
-  const getVariant = () => {
-    if (percentage >= 90) return 'default'
-    if (percentage >= 75) return 'secondary'
-    if (percentage >= 60) return 'outline'
-    return 'destructive'
-  }
-
   const getColorClass = () => {
-    if (percentage >= 90) return 'bg-green-500 hover:bg-green-600 text-white'
-    if (percentage >= 75) return 'bg-blue-500 hover:bg-blue-600 text-white'
-    if (percentage >= 60) return 'bg-yellow-500 hover:bg-yellow-600 text-white'
-    return 'bg-red-500 hover:bg-red-600 text-white'
+    if (percentage >= 90) return 'border-transparent bg-green-500 hover:bg-green-600 text-white'
+    if (percentage >= 75) return 'border-transparent bg-blue-600 hover:bg-blue-700 text-white'
+    if (percentage >= 60) return 'border-transparent bg-yellow-500 hover:bg-yellow-600 text-white'
+    return 'border-transparent bg-red-500 hover:bg-red-600 text-white'
   }
 
   return (
     <Badge
-      variant={getVariant()}
+      variant="outline"
       className={`${getColorClass()} ${className || ''}`}
     >
       {score.toFixed(1)} / {maxScore}

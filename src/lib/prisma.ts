@@ -38,5 +38,21 @@ if (process.env.NODE_ENV !== 'production') {
  * Use this at the start of API routes if you encounter connection issues.
  */
 export async function ensurePrismaConnected() {
-  await prisma.$connect();
+  try {
+    await prisma.$connect();
+  } catch (error: any) {
+    // If already connected, the error will be about that - we can ignore it
+    if (error?.message?.includes('already connected') || error?.code === 'P1000') {
+      // Already connected, that's fine
+      return;
+    }
+    // If connection fails, try to disconnect and reconnect
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      // Ignore disconnect errors
+    }
+    // Retry connection
+    await prisma.$connect();
+  }
 }

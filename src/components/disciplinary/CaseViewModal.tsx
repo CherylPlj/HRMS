@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { DisciplinaryRecord, SeverityLevel, DisciplinaryStatus, EvidenceFile } from '@/types/disciplinary';
 import SeverityTag from './SeverityTag';
 import StatusTag from './StatusTag';
 import SearchableEmployeeSelect from './SearchableEmployeeSelect';
+import { deleteEvidence } from '@/lib/disciplinaryApi';
 
 interface CaseViewModalProps {
   isOpen: boolean;
@@ -58,6 +60,7 @@ const CaseViewModal: React.FC<CaseViewModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [repeatViolationWarning, setRepeatViolationWarning] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = !!record && !viewMode;
@@ -189,16 +192,38 @@ const CaseViewModal: React.FC<CaseViewModalProps> = ({
     }
   };
 
-  const handleRemoveFile = (fileId: string) => {
+  const handleRemoveFile = async (fileId: string) => {
+    const fileToRemove = uploadedFiles.find(f => f.id === fileId);
+    if (!fileToRemove) return;
+
+    // Check if this is an existing evidence file (saved to database) or a new file (blob URL)
+    const isExistingFile = fileToRemove.url && !fileToRemove.url.startsWith('blob:');
+    
+    if (isExistingFile) {
+      // For existing files, delete from database
+      setDeletingEvidenceId(fileId);
+      try {
+        await deleteEvidence(fileId);
+        toast.success('Evidence deleted successfully');
+      } catch (error) {
+        console.error('Error deleting evidence:', error);
+        toast.error('Failed to delete evidence. Please try again.');
+        setDeletingEvidenceId(null);
+        return; // Don't remove from UI if deletion failed
+      } finally {
+        setDeletingEvidenceId(null);
+      }
+    } else {
+      // For new files (blob URLs), just revoke the blob URL
+      if (fileToRemove.url && fileToRemove.url.startsWith('blob:')) {
+        URL.revokeObjectURL(fileToRemove.url);
+      }
+    }
+    
+    // Remove from local state
     const updatedFiles = uploadedFiles.filter((f) => f.id !== fileId);
     const updatedFileObjects = new Map(fileObjects);
     updatedFileObjects.delete(fileId);
-    
-    // Revoke blob URL to free memory
-    const fileToRemove = uploadedFiles.find(f => f.id === fileId);
-    if (fileToRemove?.url && fileToRemove.url.startsWith('blob:')) {
-      URL.revokeObjectURL(fileToRemove.url);
-    }
     
     setUploadedFiles(updatedFiles);
     setFileObjects(updatedFileObjects);
@@ -778,9 +803,15 @@ const CaseViewModal: React.FC<CaseViewModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveFile(file.id)}
-                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          disabled={deletingEvidenceId === file.id}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={deletingEvidenceId === file.id ? 'Deleting...' : 'Delete evidence'}
                         >
-                          <X className="w-3 h-3" />
+                          {deletingEvidenceId === file.id ? (
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
                         </button>
                       )}
                     </div>
