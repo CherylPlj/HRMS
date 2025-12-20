@@ -134,7 +134,7 @@ const SearchableEmployeeSelect: React.FC<SearchableEmployeeSelectProps> = ({
             error ? 'border-red-500' : 'border-gray-300'
           } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
         />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
           {selectedEmployee && !disabled && (
             <button
               type="button"

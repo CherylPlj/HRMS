@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
+import { ChevronDown } from 'lucide-react';
 
 interface Employee {
   EmployeeID: string;
@@ -560,16 +561,19 @@ const Directory = () => {
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Job Title
                 </label>
-                <select
-                  value={filters.position}
-                  onChange={(e) => handleFilterChange('position', e.target.value)}
-                  className="w-full px-3 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                >
-                  <option value="">-- Select --</option>
-                  {positions.map(position => (
-                    <option key={position} value={position}>{position}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={filters.position}
+                    onChange={(e) => handleFilterChange('position', e.target.value)}
+                    className="w-full pl-3 pr-10 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+                  >
+                    <option value="">-- Select --</option>
+                    {positions.map(position => (
+                      <option key={position} value={position}>{position}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
               </div>
 
               {/* Location/Department */}
@@ -577,16 +581,19 @@ const Directory = () => {
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Department
                 </label>
-                <select
-                  value={filters.department}
-                  onChange={(e) => handleFilterChange('department', e.target.value)}
-                  className="w-full px-3 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                >
-                  <option value="">-- Select --</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={filters.department}
+                    onChange={(e) => handleFilterChange('department', e.target.value)}
+                    className="w-full pl-3 pr-10 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+                  >
+                    <option value="">-- Select --</option>
+                    {departments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
               </div>
 
               {/* Years of Service */}
@@ -594,18 +601,21 @@ const Directory = () => {
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Years of Service
                 </label>
-                <select
-                  value={filters.yearsOfService}
-                  onChange={(e) => handleFilterChange('yearsOfService', e.target.value)}
-                  className="w-full px-3 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                >
-                  <option value="">-- Select --</option>
-                  <option value="0-5">0-5 years</option>
-                  <option value="5-10">5-10 years</option>
-                  <option value="10-15">10-15 years</option>
-                  <option value="15-20">15-20 years</option>
-                  <option value="20+">20+ years</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={filters.yearsOfService}
+                    onChange={(e) => handleFilterChange('yearsOfService', e.target.value)}
+                    className="w-full pl-3 pr-10 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+                  >
+                    <option value="">-- Select --</option>
+                    <option value="0-5">0-5 years</option>
+                    <option value="5-10">5-10 years</option>
+                    <option value="10-15">10-15 years</option>
+                    <option value="15-20">15-20 years</option>
+                    <option value="20+">20+ years</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
               </div>
             </div>
 

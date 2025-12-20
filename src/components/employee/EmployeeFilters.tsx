@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import { Department } from './types';
 
 interface EmployeeFiltersProps {
@@ -45,53 +45,65 @@ const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
           />
         </div>
       </div>
-      <select
-        value={departmentFilter}
-        onChange={(e) => onDepartmentFilterChange(e.target.value)}
-        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-      >
-        <option value="all">All Departments</option>
-        {departments.map((dept) => (
-          <option key={dept.id} value={dept.id.toString()}>
-            {dept.name}
-          </option>
-        ))}
-      </select>
-      <select
-        value={designationFilter}
-        onChange={(e) => onDesignationFilterChange(e.target.value)}
-        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-      >
-        <option value="all">All Designations</option>
-        <option value="president">President</option>
-        <option value="admin_officer">Admin Officer</option>
-        <option value="vice_president">Vice President</option>
-        <option value="registrar">Registrar</option>
-        <option value="faculty">Faculty</option>
-        <option value="principal">Principal</option>
-        <option value="cashier">Cashier</option>
-      </select>
-      <select
-        value={statusFilter}
-        onChange={(e) => onStatusFilterChange(e.target.value)}
-        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-      >
-        <option value="all">All Statuses</option>
-        <option value="Regular">Regular</option>
-        <option value="Probationary">Probationary</option>
-        <option value="Hired">Hired</option>
-        <option value="Resigned">Resigned</option>
-        <option value="Retired">Retired</option>
-      </select>
-      <select
-        value={nameOrder}
-        onChange={e => onNameOrderChange(e.target.value as 'asc' | 'desc')}
-        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-        title="Order by Name"
-      >
-        <option value="desc">Latest Added</option>
-        <option value="asc">Name A-Z</option>
-      </select>
+      <div className="relative">
+        <select
+          value={departmentFilter}
+          onChange={(e) => onDepartmentFilterChange(e.target.value)}
+          className="pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+        >
+          <option value="all">All Departments</option>
+          {departments.map((dept) => (
+            <option key={dept.id} value={dept.id.toString()}>
+              {dept.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+      </div>
+      <div className="relative">
+        <select
+          value={designationFilter}
+          onChange={(e) => onDesignationFilterChange(e.target.value)}
+          className="pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+        >
+          <option value="all">All Designations</option>
+          <option value="president">President</option>
+          <option value="admin_officer">Admin Officer</option>
+          <option value="vice_president">Vice President</option>
+          <option value="registrar">Registrar</option>
+          <option value="faculty">Faculty</option>
+          <option value="principal">Principal</option>
+          <option value="cashier">Cashier</option>
+        </select>
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+      </div>
+      <div className="relative">
+        <select
+          value={statusFilter}
+          onChange={(e) => onStatusFilterChange(e.target.value)}
+          className="pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+        >
+          <option value="all">All Statuses</option>
+          <option value="Regular">Regular</option>
+          <option value="Probationary">Probationary</option>
+          <option value="Hired">Hired</option>
+          <option value="Resigned">Resigned</option>
+          <option value="Retired">Retired</option>
+        </select>
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+      </div>
+      <div className="relative">
+        <select
+          value={nameOrder}
+          onChange={e => onNameOrderChange(e.target.value as 'asc' | 'desc')}
+          className="pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
+          title="Order by Name"
+        >
+          <option value="desc">Latest Added</option>
+          <option value="asc">Name A-Z</option>
+        </select>
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+      </div>
     </div>
   );
 };

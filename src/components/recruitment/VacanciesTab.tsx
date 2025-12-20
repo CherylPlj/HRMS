@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { DateTime } from 'luxon';
-import { Download, Upload, Plus } from 'lucide-react';
+import { Download, Upload, Plus, ChevronDown } from 'lucide-react';
 import { Vacancy } from './types';
 import { formatDate } from './utils';
 import { jobTitles } from './constants';
@@ -533,11 +533,14 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
             <form onSubmit={handleEditVacancy}>
               <div className="mb-4">
                 <RequiredLabel text="Job Title" />
-                <select title="job title" className="w-full border rounded px-3 py-2" value={editVacancyData.JobTitle} onChange={e => setEditVacancyData({ ...editVacancyData, JobTitle: e.target.value as 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other' })}>
-                  {jobTitles.map((title) => (
-                    <option key={title} value={title}>{title}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select title="job title" className="w-full border rounded pl-3 pr-10 py-2 appearance-none bg-white" value={editVacancyData.JobTitle} onChange={e => setEditVacancyData({ ...editVacancyData, JobTitle: e.target.value as 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other' })}>
+                    {jobTitles.map((title) => (
+                      <option key={title} value={title}>{title}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
               </div>
               <div className="mb-4">
                 <RequiredLabel text="Vacancy Name" />
@@ -588,12 +591,15 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
               </div>
               <div className="mb-4">
                 <RequiredLabel text="Status" />
-                <select title="vacancy status select" className="w-full border rounded px-3 py-2" value={editVacancyData.Status} onChange={e => setEditVacancyData({ ...editVacancyData, Status: e.target.value as 'Active' | 'Inactive' | 'Filled' | 'Cancelled' })} required>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Filled">Filled</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
+                <div className="relative">
+                  <select title="vacancy status select" className="w-full border rounded pl-3 pr-10 py-2 appearance-none bg-white" value={editVacancyData.Status} onChange={e => setEditVacancyData({ ...editVacancyData, Status: e.target.value as 'Active' | 'Inactive' | 'Filled' | 'Cancelled' })} required>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Filled">Filled</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
               </div>
               <div className="flex justify-end space-x-2 mt-6">
                 <button 

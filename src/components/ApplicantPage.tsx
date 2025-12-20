@@ -5,6 +5,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import debounce from 'lodash/debounce';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { ChevronDown } from 'lucide-react';
 
 interface Vacancy {
   id: string | number;
@@ -518,17 +519,20 @@ const ApplicantPage = () => {
               <label className="text-sm font-medium text-gray-700">
                 Sex <span className="text-red-500">*</span>
               </label>
-              <select
-                name="sex"
-                required
-                value={formData.sex}
-                onChange={handleChange}
-                className={`w-full border ${errors.sex ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
-              >
-                <option value="">-- Select Sex --</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
+              <div className="relative">
+                <select
+                  name="sex"
+                  required
+                  value={formData.sex}
+                  onChange={handleChange}
+                  className={`w-full border ${errors.sex ? 'border-red-500' : 'border-gray-300'} rounded-md pl-3 pr-10 py-2 appearance-none focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white`}
+                >
+                  <option value="">-- Select Sex --</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
               {errors.sex && (
                 <p className="mt-1 text-sm text-red-500">{errors.sex}</p>
               )}
@@ -576,20 +580,23 @@ const ApplicantPage = () => {
               <label className="text-sm font-medium text-gray-700">
                 Vacancy <span className="text-red-500">*</span>
               </label>
-              <select
-                name="vacancy"
-                required
-                value={formData.vacancy}
-                onChange={handleChange}
-                className={`w-full border ${errors.vacancy ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
-              >
-                <option value="">Select Job Title</option>
-                {vacancies.map((vacancy) => (
-                  <option key={vacancy.id} value={vacancy.id}>
-                    {vacancy.title}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  name="vacancy"
+                  required
+                  value={formData.vacancy}
+                  onChange={handleChange}
+                  className={`w-full border ${errors.vacancy ? 'border-red-500' : 'border-gray-300'} rounded-md pl-3 pr-10 py-2 appearance-none focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white`}
+                >
+                  <option value="">Select Job Title</option>
+                  {vacancies.map((vacancy) => (
+                    <option key={vacancy.id} value={vacancy.id}>
+                      {vacancy.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
               {errors.vacancy && (
                 <p className="mt-1 text-sm text-red-500">{errors.vacancy}</p>
               )}
