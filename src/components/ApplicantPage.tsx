@@ -217,8 +217,8 @@ const ApplicantPage = () => {
         return !emailRegex.test(value) ? 'Please enter a valid email address' : '';
       
       case 'contactNumber':
-        const phoneRegex = /^(\+63|0)[0-9]{10}$/;
-        return !phoneRegex.test(value) ? 'Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)' : '';
+        const phoneRegex = /^09[0-9]{9}$/;
+        return !phoneRegex.test(value) ? 'Please enter a valid Philippine phone number (e.g., 09123456789)' : '';
       
       case 'fbLink':
         if (value && value.trim()) {
@@ -413,13 +413,13 @@ const ApplicantPage = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 overflow-auto p-6" style={{ backgroundColor: '#FFFACD' }}>
       <Toaster 
         position="top-right"
         toastOptions={{
           error: {
             style: {
-              background: '#ef4444',
+              background: '#FFFACD',
               color: 'white',
             },
             iconTheme: {
@@ -433,7 +433,13 @@ const ApplicantPage = () => {
         isOpen={showSuccessModal} 
         onClose={() => setShowSuccessModal(false)} 
       />
-      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-6">
+      <div 
+        className="max-w-3xl mx-auto rounded-lg shadow p-6"
+        style={{ 
+          border: '2px solid #DAA520',
+          backgroundColor: 'white'
+        }}
+      >
         <div className="mb-6">
           <Link 
             href="/careers" 
@@ -505,7 +511,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.contactNumber}
-              placeholder="+639123456789 or 09123456789"
+              placeholder="09123456789"
               showErrorMessage={true}
             />
             <div className="space-y-1">

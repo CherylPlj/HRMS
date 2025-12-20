@@ -1,16 +1,28 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowUp, Search, Briefcase, Calendar } from 'lucide-react';
 
-export default function Home() {
+interface Vacancy {
+  id: number;
+  title: string;
+  position: string;
+  description: string;
+  postedDate: string;
+}
+
+export default function AllVacanciesPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [filteredVacancies, setFilteredVacancies] = useState<Vacancy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
@@ -21,6 +33,41 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const fetchVacancies = async () => {
+      try {
+        const response = await fetch('/api/vacancies/public');
+        if (!response.ok) {
+          throw new Error('Failed to fetch vacancies');
+        }
+        const data = await response.json();
+        setVacancies(data);
+        setFilteredVacancies(data);
+      } catch (error) {
+        console.error('Error fetching vacancies:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVacancies();
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredVacancies(vacancies);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = vacancies.filter(
+        (vacancy) =>
+          vacancy.title.toLowerCase().includes(query) ||
+          vacancy.position.toLowerCase().includes(query) ||
+          vacancy.description.toLowerCase().includes(query)
+      );
+      setFilteredVacancies(filtered);
+    }
+  }, [searchQuery, vacancies]);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -29,10 +76,8 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
       <header className="shadow-sm sticky top-0 z-50" style={{ backgroundColor: '#8B0000' }}>
-        {/* Main Header - Maroon background */}
         <div className="min-h-[80px] md:min-h-[90px]" style={{ backgroundColor: '#8B0000' }}>
           <div className="container mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
-            {/* Left Section - Logo and School Name */}
             <div className="flex items-center gap-3 md:gap-4">
               <Link href="/careers" className="flex-shrink-0 cursor-pointer hover:opacity-90 transition-all duration-300 hover:scale-105">
                 <Image
@@ -49,7 +94,6 @@ export default function Home() {
               </h1>
             </div>
 
-            {/* Right Section - Navigation and Login */}
             <div className="flex items-center gap-4 lg:gap-6">
               <nav className="hidden md:flex gap-4 lg:gap-6 text-white">
                 <Link 
@@ -96,109 +140,102 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content - Careers */}
+      {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-bold mb-6" style={{ color: '#8B0000' }}>
-            Careers at SJSFI
+            All Vacancies
           </h1>
 
-          <div className="prose max-w-none mb-8">
-            <p className="text-base mb-4 text-black">
-              Saint Joseph School of Fairview Inc. is always seeking passionate educators and dedicated professionals who share our commitment to excellence in education. We offer a supportive work environment where you can grow professionally while making a meaningful impact on young lives.
-            </p>
-            <p className="text-base text-black">
-              As part of the SJSFI family, you'll join a community of educators who are devoted to nurturing students' academic, spiritual, and personal development. We value innovation, collaboration, and continuous learning in our pursuit of educational excellence.
-            </p>
-          </div>
-
-          <h2 className="text-2xl md:text-3xl font-bold mb-6 mt-12" style={{ color: '#8B0000' }}>
-            Current Job Openings
-          </h2>
-
-          <p className="text-base text-black mb-8">
-            We are currently looking for qualified and passionate individuals to join our team. Explore the available positions below and find the opportunity that matches your skills and career aspirations.
-          </p>
-
-          <div className="text-center mb-8">
-            <Link
-              href="/careers"
-              className="px-8 py-4 rounded-lg font-semibold transition-all duration-200 inline-block shadow-md hover:shadow-lg transform hover:-translate-y-1 text-base text-white"
-              style={{ backgroundColor: '#8B0000' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7a0000'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8B0000'}
-            >
-              View All Job Openings
-            </Link>
-          </div>
-
-          {/* Why Work at SJSFI Section */}
-          <div className="mt-12 mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#8B0000' }}>
-              Why Work at SJSFI?
-            </h2>
-            <p className="text-base text-black mb-8">
-              SJSFI offers more than just a job - we provide a fulfilling career where you can make a lasting difference in the lives of young people. Our school values work-life balance, professional growth, and creating a positive impact in education.
-            </p>
-
-            <div className="space-y-4">
-              <div className="bg-gray-100 rounded-lg p-6 flex items-start gap-4">
-                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#8B0000' }}>
-                  <span className="text-white text-sm font-bold">•</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-black mb-1">Competitive Compensation</h3>
-                  <p className="text-black text-sm">
-                    We offer competitive salaries and comprehensive benefits package including health insurance and performance incentives.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-100 rounded-lg p-6 flex items-start gap-4">
-                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#8B0000' }}>
-                  <span className="text-white text-sm font-bold">•</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-black mb-1">Professional Development</h3>
-                  <p className="text-black text-sm">
-                    Access to continuous learning opportunities, workshops, seminars, and educational advancement programs.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-100 rounded-lg p-6 flex items-start gap-4">
-                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#8B0000' }}>
-                  <span className="text-white text-sm font-bold">•</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-black mb-1">Supportive Environment</h3>
-                  <p className="text-black text-sm">
-                    Collaborative workplace culture with supportive colleagues and administration committed to your success.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-100 rounded-lg p-6 flex items-start gap-4">
-                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#8B0000' }}>
-                  <span className="text-white text-sm font-bold">•</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-black mb-1">Meaningful Impact</h3>
-                  <p className="text-black text-sm">
-                    Opportunity to shape young minds and contribute to building future leaders with strong values and character.
-                  </p>
-                </div>
-              </div>
+          {/* Search Bar */}
+          <div className="mb-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by job title, position, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000]"
+                style={{ borderColor: '#F0E68C' }}
+              />
             </div>
+            {searchQuery && (
+              <p className="mt-2 text-sm text-gray-600">
+                Found {filteredVacancies.length} {filteredVacancies.length === 1 ? 'result' : 'results'}
+              </p>
+            )}
           </div>
+
+          {/* Vacancies List */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto" style={{ borderColor: '#8B0000' }}></div>
+              <p className="mt-4" style={{ color: '#8B0000' }}>Loading job openings...</p>
+            </div>
+          ) : filteredVacancies.length === 0 ? (
+            <div className="bg-white border rounded-lg p-8 text-center shadow-sm" style={{ borderColor: '#F0E68C' }}>
+              <Briefcase className="w-16 h-16 mx-auto mb-4" style={{ color: '#DAA520' }} />
+              <h3 className="text-xl font-semibold mb-2" style={{ color: '#8B0000' }}>
+                {searchQuery ? 'No Results Found' : 'No Current Openings'}
+              </h3>
+              <p style={{ color: '#8B0000' }}>
+                {searchQuery 
+                  ? 'Try adjusting your search terms.'
+                  : "We don't have any job openings at the moment. Please check back later."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {filteredVacancies.map((vacancy) => (
+                <div
+                  key={vacancy.id}
+                  className="rounded-lg p-6 relative"
+                  style={{ 
+                    backgroundColor: '#FFE4E1',
+                    borderLeft: '4px solid #8B0000',
+                    borderTop: '4px solid #8B0000'
+                  }}
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-xl font-bold" style={{ color: '#8B0000' }}>
+                        {vacancy.title}
+                      </h3>
+                    </div>
+                    <span 
+                      className="inline-block px-3 py-1 rounded-full text-sm font-medium mb-3 w-fit"
+                      style={{ backgroundColor: '#8B0000', color: 'white' }}
+                    >
+                      {vacancy.position}
+                    </span>
+                    <p className="text-black mb-3 text-sm">
+                      {vacancy.description}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Posted: {vacancy.postedDate}
+                    </p>
+                    <Link
+                      href={`/applicant?vacancy=${vacancy.id}`}
+                      className="text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 inline-block w-fit text-sm shadow-md hover:shadow-lg"
+                      style={{ backgroundColor: '#8B0000' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7a0000'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8B0000'}
+                    >
+                      Apply Now
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
-      {/* Footer - Matching header style */}
-      <footer className="text-white mt-auto shadow-sm" style={{ backgroundColor: '#800000' }}>
+      {/* Footer */}
+      <footer className="text-white mt-auto shadow-sm" style={{ backgroundColor: '#8B0000' }}>
         <div className="container mx-auto px-4 md:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            {/* Quick Links */}
             <div>
               <h3 className="text-lg font-bold mb-4 text-white">Quick Links</h3>
               <ul className="space-y-2.5">
@@ -216,8 +253,6 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-
-            {/* Important Links */}
             <div>
               <h3 className="text-lg font-bold mb-4 text-white">Important Links</h3>
               <ul className="space-y-2.5">
@@ -235,8 +270,6 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-
-            {/* Important Notices */}
             <div>
               <h3 className="text-lg font-bold mb-4 text-white">Important Notices</h3>
               <ul className="space-y-2.5">
@@ -261,8 +294,6 @@ export default function Home() {
               </ul>
             </div>
           </div>
-
-          {/* Separator */}
           <div className="border-t pt-8" style={{ borderColor: '#DAA520' }}>
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm text-center md:text-left text-white">
@@ -290,3 +321,4 @@ export default function Home() {
     </div>
   );
 }
+

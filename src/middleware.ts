@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 const publicRoutes = [
     "/",
     "/careers",
+    "/careers/all-vacancies",
     "/applicant",
     "/sign-in(.*)",
     "/sign-up(.*)",
@@ -35,6 +36,7 @@ const publicRoutes = [
 const ignoredRoutes = [
     "/",
     "/careers",
+    "/careers/all-vacancies",
     "/applicant",
     "/sign-in(.*)",
     "/sign-up(.*)",

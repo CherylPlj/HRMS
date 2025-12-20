@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { Eye, ArrowLeft, AlertCircle, X } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, AlertCircle, X } from 'lucide-react';
 import { validatePassword, sanitizePassword, loginRateLimiter, unknownIPRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
 import { getClientIp } from '@/lib/ip';
 import { validateEmailCharacters } from '@/lib/validation';
@@ -106,10 +106,6 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
       error = 'Email must not exceed 50 characters';
     }
     
-    if (value.length < 6 && value.length > 0) {
-      error = 'Email must be at least 6 characters';
-    }
-    
     // Check email format if there's input
     if (value.length > 0 && !error) {
       const emailRegex = /^[a-zA-Z0-9._\-]+@[a-zA-Z0-9._\-]+\.[a-zA-Z]{2,}$/;
@@ -143,46 +139,50 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setEmailError(null);
+    
+    // Validate empty field
+    if (!email || !email.trim()) {
+      setEmailError('Email is required');
+      return;
+    }
+
+    // Use the same inline validation as handleEmailChange
+    let emailError = null;
+    
+    // Check for invalid characters
+    const validEmailRegex = /^[a-zA-Z0-9._\-@ ]*$/;
+    if (!validEmailRegex.test(email)) {
+      emailError = 'Only letters, numbers, dots, underscores, hyphens, and @ are allowed';
+    }
+    
+    // Check length
+    if (email.length > 50) {
+      emailError = 'Email must not exceed 50 characters';
+    }
+    
+    // Check email format
+    if (email.length > 0 && !emailError) {
+      const emailRegex = /^[a-zA-Z0-9._\-]+@[a-zA-Z0-9._\-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        if (!email.includes('@')) {
+          emailError = 'Please include @ in the email address';
+        } else if (!email.includes('.')) {
+          emailError = 'Please include a domain (e.g., .com, .edu)';
+        } else {
+          emailError = 'Please enter a valid email address (e.g., example@domain.com)';
+        }
+      }
+    }
+    
+    if (emailError) {
+      setEmailError(emailError);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Use the same inline validation as handleEmailChange
-      let emailError = null;
-      
-      // Check for invalid characters
-      const validEmailRegex = /^[a-zA-Z0-9._\-@ ]*$/;
-      if (!validEmailRegex.test(email)) {
-        emailError = 'Only letters, numbers, dots, underscores, hyphens, and @ are allowed';
-      }
-      
-      // Check length
-      if (email.length > 50) {
-        emailError = 'Email must not exceed 50 characters';
-      }
-      
-      if (email.length < 6) {
-        emailError = 'Email must be at least 6 characters';
-      }
-      
-      // Check email format
-      if (email.length > 0 && !emailError) {
-        const emailRegex = /^[a-zA-Z0-9._\-]+@[a-zA-Z0-9._\-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(email)) {
-          if (!email.includes('@')) {
-            emailError = 'Please include @ in the email address';
-          } else if (!email.includes('.')) {
-            emailError = 'Please include a domain (e.g., .com, .edu)';
-          } else {
-            emailError = 'Please enter a valid email address (e.g., example@domain.com)';
-          }
-        }
-      }
-      
-      if (emailError) {
-        setError(emailError);
-        setIsLoading(false);
-        return;
-      }
 
       console.log('Submitting password reset for email:', email);
 
@@ -380,6 +380,14 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
           {step === 'success' && 'Password Reset Complete'}
         </h2>
 
+        {/* Helpful explanation for non-tech savvy users */}
+        {step === 'email' && (
+          <p className="text-sm text-gray-600 mb-4">
+            If you've forgotten your password, we'll help you create a new one. 
+            Enter your email address and we'll send you a verification code to confirm it's really you.
+          </p>
+        )}
+
         {step === 'success' ? (
           <div className="text-center">
             <p className="text-green-600 mb-4">Your password has been successfully reset.</p>
@@ -446,6 +454,9 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
 
             {step === 'pin' && (
               <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  We've sent a verification code to your email. This code helps us make sure it's really you trying to reset your password.
+                </p>
                 <label htmlFor="reset-pin" className="block text-sm font-medium text-gray-700 mb-1">
                   Verification Code
                 </label>
@@ -474,6 +485,9 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
 
             {step === 'newPassword' && (
               <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  Now create a new password for your account. Make sure it's something you'll remember, but keep it secure.
+                </p>
                 <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
                   New Password
                 </label>
@@ -501,7 +515,11 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none"
                     disabled={isLoading}
                   >
-                    <Eye className="h-[18px] w-[18px]" />
+                    {showNewPassword ? (
+                      <Eye className="h-[18px] w-[18px]" />
+                    ) : (
+                      <EyeOff className="h-[18px] w-[18px]" />
+                    )}
                   </button>
                 </div>
                 {/* Password validation errors are not displayed to prevent information disclosure */}
@@ -522,20 +540,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
               </button>
               <button
                 type="submit"
-                disabled={isLoading || (
-                  step === 'email' ? !email || !!emailError :
-                  step === 'pin' ? !pin || pin.length !== 6 :
-                  !newPassword || !!passwordError
-                )}
-                className={`px-4 py-2 text-sm text-white rounded ${
-                  isLoading || (
-                    step === 'email' ? !email || !!emailError :
-                    step === 'pin' ? !pin || pin.length !== 6 :
-                    !newPassword || !!passwordError
-                  )
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-[#800000] hover:bg-[#800000]/80'
-                }`}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm text-white rounded bg-[#800000] hover:bg-[#800000]/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
@@ -566,6 +572,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -847,7 +854,8 @@ export default function SignInPage() {
       
       // Update password state with sanitized value
       setPassword(sanitized);
-       // Clear any previous password errors silently
+       // Clear any previous password errors when user types
+       setPasswordError(null);
        if (isValid) {
         setError(null);
       }
@@ -860,9 +868,27 @@ export default function SignInPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
+    setEmailError(null);
+    setPasswordError(null);
     setHasAttemptedSignIn(true);
+
+    // Validate empty fields
+    let hasErrors = false;
+    if (!email || !email.trim()) {
+      setEmailError('Email is required');
+      hasErrors = true;
+    }
+    if (!password || !password.trim()) {
+      setPasswordError('Password is required');
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       // Get client IP for rate limiting with fallback and timeout
@@ -901,28 +927,16 @@ export default function SignInPage() {
         return;
       }
 
-      if (!email || !password) {
-        setIsLoading(false);
-        showErrorPopup('Please fill in all fields');
-        return;
-      }
-
-      if (email.length < 6) {
-        setIsLoading(false);
-        showErrorPopup('Email must be at least 6 characters');
-        return;
-      }
-
       if (email.length > 50) {
         setIsLoading(false);
-        showErrorPopup('Email must not exceed 50 characters');
+        setEmailError('Email must not exceed 50 characters');
         return;
       }
 
-      const emailError = validateEmailCharacters(email);
-      if (emailError) {
+      const emailValidationError = validateEmailCharacters(email);
+      if (emailValidationError) {
         setIsLoading(false);
-        showErrorPopup(emailError);
+        setEmailError(emailValidationError);
         return;
       }
 
@@ -932,7 +946,7 @@ export default function SignInPage() {
      // Validate password silently (no descriptive messages)
       if (!validatePassword(sanitizedPassword)) {
         setIsLoading(false);
-        showErrorPopup('Invalid Credentials');
+        setPasswordError('Invalid password format');
         return;
       }
 
@@ -1234,7 +1248,7 @@ export default function SignInPage() {
                       autoComplete="off"
                       placeholder="Email Address"
                       className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 ${
-                        emailError ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
+                        emailError ? 'focus:ring-red-500 border-red-500' : 'focus:ring-[#800000]'
                       }`}
                       type="text"
                       name="email"
@@ -1262,7 +1276,7 @@ export default function SignInPage() {
                       autoComplete="off"
                       placeholder="Password"
                       className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 ${
-                        error ? 'focus:ring-red-500' : 'focus:ring-[#800000]'
+                        passwordError ? 'focus:ring-red-500 border-red-500' : 'focus:ring-[#800000]'
                       }`}
                       type={showPassword ? "text" : "password"}
                       name="password"
@@ -1285,22 +1299,25 @@ export default function SignInPage() {
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none"
                       disabled={isLoading}
                     >
-                      <Eye className="h-[18px] w-[18px]" />
+                      {showPassword ? (
+                        <Eye className="h-[18px] w-[18px]" />
+                      ) : (
+                        <EyeOff className="h-[18px] w-[18px]" />
+                      )}
                     </button>
                   </div>
-                  {error && (
+                  {passwordError && (
+                    <p className="mt-1 text-xs text-red-600">{passwordError}</p>
+                  )}
+                  {error && !passwordError && (
                     <p className="mt-1 text-xs text-red-600">{error}</p>
                   )}
                 </div>
                 <div className="mb-4 w-full">
                   <button
                     type="submit"
-                    className={`text-sm rounded-sm px-4 py-2 w-full transition duration-200 ease-in-out ${
-                      isLoading || !!emailError || !!error || !email.trim() || !password.trim()
-                        ? 'bg-white text-red-600 cursor-not-allowed opacity-75'
-                        : 'bg-[#800000] hover:bg-[#800000]/80 text-white'
-                    }`}
-                    disabled={isLoading || !!emailError || !!error || !email.trim() || !password.trim()}
+                    className="text-sm rounded-sm px-4 py-2 w-full transition duration-200 ease-in-out bg-[#800000] hover:bg-[#800000]/80 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading}
                   >
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </button>
