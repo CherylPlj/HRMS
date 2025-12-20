@@ -61,15 +61,15 @@ model Faculty {
   EmploymentStatus EmploymentStatus @default(Regular)
   HireDate         DateTime         @db.Date
   ResignationDate  DateTime?        @db.Date
-  Position         String
-  DepartmentID     Int
+  Position         String?
+  DepartmentID     Int?
   ContractID       Int?
   EmergencyContact String?
   EmployeeType     EmployeeType     @default(Regular)
   Attendance       Attendance[]
   Documents        Document[]
   Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
-  Department       Department       @relation(fields: [DepartmentID], references: [DepartmentID])
+  Department       Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
   Employee         Employee?        @relation(fields: [EmployeeID], references: [EmployeeID])
   User             User             @relation("UserFaculty", fields: [UserID], references: [UserID])
   Leaves           Leave[]

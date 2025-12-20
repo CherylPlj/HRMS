@@ -106,6 +106,9 @@ export const SubmittedInformationTab: React.FC<SubmittedInformationTabProps> = (
         dateOfBirth = new Date(dateOfBirth).toISOString();
       }
       
+      // Check if this is a Faculty position
+      const isFacultyPosition = selectedCandidate.Vacancy?.JobTitle === 'Faculty';
+      
       const employeeData = {
         FirstName: selectedCandidate.FirstName,
         LastName: selectedCandidate.LastName,
@@ -133,7 +136,13 @@ export const SubmittedInformationTab: React.FC<SubmittedInformationTabProps> = (
         PRCLicenseNumber: submittedInfo.PRCLicenseNumber || null,
         PRCValidity: submittedInfo.PRCValidity || null,
         EmergencyContactName: submittedInfo.EmergencyContactName || null,
-        EmergencyContactNumber: submittedInfo.EmergencyContactNumber || null
+        EmergencyContactNumber: submittedInfo.EmergencyContactNumber || null,
+        // Add faculty-specific fields if this is a faculty position
+        ...(isFacultyPosition && {
+          createFacultyRecord: true,
+          DepartmentID: submittedInfo.DepartmentID || null,
+          Position: submittedInfo.Position || 'Faculty'
+        })
       };
 
       // Create employee

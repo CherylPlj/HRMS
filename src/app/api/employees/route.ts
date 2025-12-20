@@ -269,6 +269,121 @@ export async function POST(request: Request) {
       }
     }
 
+    // Create Faculty record if requested
+    if (data.createFacultyRecord) {
+      try {
+        // Get employment detail to get Position
+        const { data: employmentDetail } = await supabaseAdmin
+          .from('EmploymentDetail')
+          .select('Position')
+          .eq('employeeId', newEmployee.EmployeeID)
+          .single();
+
+        const position = employmentDetail?.Position || data.Position || 'Faculty';
+
+        // Get DepartmentID - use from employee or from data (optional)
+        const departmentId = newEmployee.DepartmentID || data.DepartmentID;
+
+        // Check if User exists, if not create one with "No Account" status
+        let userId = newEmployee.UserID;
+        
+        if (!userId) {
+          const email = data.Email || `${newEmployee.FirstName.toLowerCase()}.${newEmployee.LastName.toLowerCase()}@sjf.edu.ph`;
+          
+          // Check if user with this email already exists
+          const { data: existingUser } = await supabaseAdmin
+            .from('User')
+            .select('UserID, Status, isDeleted')
+            .eq('Email', email)
+            .eq('isDeleted', false)
+            .single();
+
+          if (existingUser) {
+            // Use existing user
+            userId = existingUser.UserID;
+          } else {
+            // Import generateUserId function
+            const { generateUserId } = await import('@/lib/generateUserId');
+            userId = await generateUserId(hireDate);
+
+            // Create User record with "Inactive" status (will be activated when they set up their account)
+            const { data: newUser, error: userError } = await supabaseAdmin
+              .from('User')
+              .insert({
+                UserID: userId,
+                FirstName: newEmployee.FirstName,
+                LastName: newEmployee.LastName,
+                Email: email,
+                Status: 'Inactive',
+                Photo: newEmployee.Photo || '',
+                PasswordHash: 'PENDING',
+                DateCreated: new Date().toISOString(),
+                DateModified: new Date().toISOString()
+              })
+              .select()
+              .single();
+
+            if (userError) {
+              console.error('Error creating user for faculty:', userError);
+              // If user creation fails, we can't create Faculty record
+              throw new Error(`Failed to create user for faculty: ${userError.message}`);
+            }
+          }
+
+          // Update Employee with UserID
+          await supabaseAdmin
+            .from('Employee')
+            .update({ UserID: userId })
+            .eq('EmployeeID', newEmployee.EmployeeID);
+          
+          newEmployee.UserID = userId;
+        }
+
+        // Generate unique FacultyID
+        const { randomUUID } = await import('crypto');
+        const facultyId = parseInt(randomUUID().split('-')[0], 16) % 1000000;
+
+        // Format DateOfBirth for Faculty (YYYY-MM-DD)
+        const dateOfBirth = new Date(newEmployee.DateOfBirth);
+        const formattedDateOfBirth = dateOfBirth.toISOString().split('T')[0];
+
+        // Format HireDate for Faculty (YYYY-MM-DD)
+        const formattedHireDate = hireDate.toISOString().split('T')[0];
+
+        // Create Faculty record
+        const { error: facultyError } = await supabaseAdmin
+          .from('Faculty')
+          .insert({
+            FacultyID: facultyId,
+            UserID: userId,
+            EmployeeID: newEmployee.EmployeeID,
+            DateOfBirth: formattedDateOfBirth,
+            Phone: data.Phone || null,
+            Address: data.Address || data.PresentAddress || data.PermanentAddress || null,
+            EmploymentStatus: employmentStatus === 'Regular' ? 'Regular' : 'Regular', // Map to Faculty EmploymentStatus
+            HireDate: formattedHireDate,
+            Position: position,
+            DepartmentID: departmentId || null,
+            EmergencyContact: data.EmergencyContactName 
+              ? `${data.EmergencyContactName}${data.EmergencyContactNumber ? ` - ${data.EmergencyContactNumber}` : ''}`
+              : null,
+            EmployeeType: 'Regular'
+          });
+
+        if (facultyError) {
+          console.error('Error creating faculty record:', facultyError);
+          // Don't fail the entire request, just log the error
+          console.warn('Faculty record creation failed, but employee was created successfully');
+        } else {
+          console.log('Faculty record created successfully for employee:', newEmployee.EmployeeID);
+        }
+      } catch (facultyCreationError) {
+        console.error('Error in faculty creation process:', facultyCreationError);
+        // Don't fail the entire request, just log the error
+        console.warn('Faculty record creation failed, but employee was created successfully');
+      }
+    }
+
     return NextResponse.json(newEmployee);
     
   } catch (error) {
