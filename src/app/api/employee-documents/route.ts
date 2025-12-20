@@ -2,6 +2,48 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
 
+// Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
+function sanitizeInteger(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+// Helper function to parse required integer (throws error if invalid)
+function parseRequiredInteger(value: any, fieldName: string): number {
+  if (value === undefined || value === null || value === '') {
+    throw new Error(`Missing required field: ${fieldName}`);
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    throw new Error(`Invalid value for ${fieldName}: cannot be undefined`);
+  }
+  if (typeof value === 'number') {
+    if (isNaN(value)) {
+      throw new Error(`Invalid value for ${fieldName}: not a valid number`);
+    }
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid value for ${fieldName}: not a valid integer`);
+    }
+    return parsed;
+  }
+  throw new Error(`Invalid value for ${fieldName}: must be a number`);
+}
+
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
@@ -126,7 +168,7 @@ export async function POST(request: Request) {
       .insert([
         {
           EmployeeID: data.EmployeeID,
-          DocumentTypeID: data.DocumentTypeID,
+          DocumentTypeID: parseRequiredInteger(data.DocumentTypeID, 'DocumentTypeID'),
           FileURL: data.FileURL,
           FileName: data.FileName,
           FileSize: data.FileSize,

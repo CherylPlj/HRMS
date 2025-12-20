@@ -2,6 +2,24 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
 
+// Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
+function sanitizeInteger(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 export async function GET(
   request: Request,
   context: { params: { documentId: string } }
@@ -115,16 +133,38 @@ export async function PUT(
     const documentId = parseInt((await params).documentId);
     const data = await request.json();
 
+    // Build update object - only include fields that are provided
+    const updateData: any = {
+      LastModifiedBy: user.id,
+      LastModifiedDate: new Date().toISOString()
+    };
+
+    // Only update DocumentTypeID if provided and valid
+    if (data.DocumentTypeID !== undefined) {
+      const sanitized = sanitizeInteger(data.DocumentTypeID);
+      if (sanitized === null) {
+        return NextResponse.json(
+          { error: 'Invalid DocumentTypeID: must be a valid integer' },
+          { status: 400 }
+        );
+      }
+      updateData.DocumentTypeID = sanitized;
+    }
+
+    // Only update Status if provided
+    if (data.Status !== undefined) {
+      updateData.Status = data.Status;
+    }
+
+    // Only update Notes if provided
+    if (data.Notes !== undefined) {
+      updateData.Notes = data.Notes;
+    }
+
     // Update document in Supabase
     const { data: updatedDocument, error } = await supabaseAdmin
       .from('Document')
-      .update({
-        DocumentTypeID: data.DocumentTypeID,
-        Status: data.Status,
-        Notes: data.Notes,
-        LastModifiedBy: user.id,
-        LastModifiedDate: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('DocumentID', documentId)
       .select()
       .single();

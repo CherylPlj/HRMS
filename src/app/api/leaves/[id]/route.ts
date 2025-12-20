@@ -4,6 +4,24 @@ import { auth } from '@clerk/nextjs/server';
 import { LeaveStatus, LeaveType } from '@prisma/client';
 import { sendEmail, generateLeaveStatusUpdateEmail, generateLeaveUpdateAdminNotificationEmail } from '@/lib/email';
 
+// Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
+function sanitizeInteger(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 // Define CORS headers
 const corsHeaders = {
     'Content-Type': 'application/json',
@@ -44,6 +62,18 @@ export async function PATCH(
         }
 
         const body = await request.json();
+        
+        // Sanitize any integer fields that might be in the body to prevent "undefined" string errors
+        if (body.FacultyID !== undefined) {
+            const sanitized = sanitizeInteger(body.FacultyID);
+            if (sanitized === null && body.FacultyID !== null && body.FacultyID !== undefined) {
+                return NextResponse.json(
+                    { error: 'Invalid FacultyID: must be a valid integer' },
+                    { status: 400, headers: corsHeaders }
+                );
+            }
+        }
+        
         const { status } = body;
 
         if (!status || !['Approved', 'Returned'].includes(status)) {
@@ -256,14 +286,35 @@ export async function PUT(
             return NextResponse.json({ error: 'Leave request not found' }, { status: 404, headers: corsHeaders });
         }
 
-        if (existingLeave.Status !== 'Pending') {
+        // Allow updating of both Pending and Returned requests (frontend allows editing Returned requests)
+        if (existingLeave.Status !== 'Pending' && existingLeave.Status !== 'Returned') {
             return NextResponse.json(
-                { error: 'Only pending requests can be updated' },
+                { error: 'Only pending or returned requests can be updated' },
                 { status: 400, headers: corsHeaders }
             );
         }
 
         const body = await request.json();
+        
+        // Validate required fields
+        if (!body.StartDate || !body.EndDate) {
+            return NextResponse.json(
+                { error: 'StartDate and EndDate are required' },
+                { status: 400, headers: corsHeaders }
+            );
+        }
+        
+        // Sanitize any integer fields that might be in the body to prevent "undefined" string errors
+        if (body.FacultyID !== undefined) {
+            const sanitized = sanitizeInteger(body.FacultyID);
+            if (sanitized === null && body.FacultyID !== null && body.FacultyID !== undefined) {
+                return NextResponse.json(
+                    { error: 'Invalid FacultyID: must be a valid integer' },
+                    { status: 400, headers: corsHeaders }
+                );
+            }
+        }
+        
         const start = new Date(body.StartDate);
         const end = new Date(body.EndDate);
         start.setHours(0, 0, 0, 0);
@@ -426,18 +477,44 @@ export async function PUT(
             }
         }
 
+        // Build update data object, only including fields that are provided and valid
+        const updateData: any = {
+            UpdatedAt: new Date()
+        };
+        
+        // Only update fields that are provided
+        if (body.RequestType !== undefined) {
+            updateData.RequestType = body.RequestType;
+        }
+        
+        // Handle LeaveType - if it's undefined, set it to null (for Undertime requests)
+        if (body.LeaveType !== undefined) {
+            updateData.LeaveType = body.LeaveType || null;
+        }
+        
+        if (body.StartDate !== undefined) {
+            updateData.StartDate = new Date(body.StartDate);
+        }
+        
+        if (body.EndDate !== undefined) {
+            updateData.EndDate = new Date(body.EndDate);
+        }
+        
+        if (body.TimeIn !== undefined) {
+            updateData.TimeIn = body.TimeIn ? new Date(body.TimeIn) : null;
+        }
+        
+        if (body.TimeOut !== undefined) {
+            updateData.TimeOut = body.TimeOut ? new Date(body.TimeOut) : null;
+        }
+        
+        if (body.Reason !== undefined) {
+            updateData.Reason = body.Reason;
+        }
+        
         const updatedLeave = await prisma.leave.update({
             where: { LeaveID: leaveId },
-            data: {
-                RequestType: body.RequestType,
-                LeaveType: body.LeaveType,
-                StartDate: new Date(body.StartDate),
-                EndDate: new Date(body.EndDate),
-                TimeIn: body.TimeIn ? new Date(body.TimeIn) : null,
-                TimeOut: body.TimeOut ? new Date(body.TimeOut) : null,
-                Reason: body.Reason,
-                UpdatedAt: new Date()
-            },
+            data: updateData,
             include: {
                 Faculty: {
                     include: {
@@ -529,9 +606,10 @@ export async function DELETE(
             return NextResponse.json({ error: 'Leave request not found' }, { status: 404, headers: corsHeaders });
         }
 
-        if (existingLeave.Status !== 'Pending') {
+        // Allow deletion of both Pending and Returned requests (frontend checks for Returned, but we allow both for safety)
+        if (existingLeave.Status !== 'Pending' && existingLeave.Status !== 'Returned') {
             return NextResponse.json(
-                { error: 'Only pending requests can be deleted' },
+                { error: 'Only pending or returned requests can be deleted' },
                 { status: 400, headers: corsHeaders }
             );
         }

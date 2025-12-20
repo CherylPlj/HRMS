@@ -3,6 +3,48 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { LeaveStatus, LeaveType, RequestType, Leave, User, Department, Faculty } from '@prisma/client';
 import { sendEmail, generateLeaveRequestAdminNotificationEmail } from '@/lib/email';
+
+// Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
+function sanitizeInteger(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+// Helper function to parse required integer (throws error if invalid)
+function parseRequiredInteger(value: any, fieldName: string): number {
+  if (value === undefined || value === null || value === '') {
+    throw new Error(`Missing required field: ${fieldName}`);
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    throw new Error(`Invalid value for ${fieldName}: cannot be undefined`);
+  }
+  if (typeof value === 'number') {
+    if (isNaN(value)) {
+      throw new Error(`Invalid value for ${fieldName}: not a valid number`);
+    }
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid value for ${fieldName}: not a valid integer`);
+    }
+    return parsed;
+  }
+  throw new Error(`Invalid value for ${fieldName}: must be a number`);
+}
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Define a type for the transformed leave record
@@ -121,10 +163,12 @@ export async function POST(request: NextRequest) {
             departmentHeadSignature 
         } = body;
 
+        // Validate and sanitize FacultyID
+        const sanitizedFacultyID = parseRequiredInteger(FacultyID, 'FacultyID');
+        
         // Validate required fields
-        if (!FacultyID || !LeaveType || !StartDate || !EndDate || !Reason) {
+        if (!LeaveType || !StartDate || !EndDate || !Reason) {
             const missingFields = [];
-            if (!FacultyID) missingFields.push('FacultyID');
             if (!LeaveType) missingFields.push('LeaveType');
             if (!StartDate) missingFields.push('StartDate');
             if (!EndDate) missingFields.push('EndDate');
@@ -199,7 +243,7 @@ export async function POST(request: NextRequest) {
             try {
                 // Fetch faculty and employee data to get gender
                 const faculty = await prisma.faculty.findUnique({
-                    where: { FacultyID: Number(FacultyID) },
+                    where: { FacultyID: sanitizedFacultyID },
                     include: {
                         Employee: {
                             select: {
@@ -288,7 +332,7 @@ export async function POST(request: NextRequest) {
             const currentYear = new Date().getFullYear();
             const existingMaternityLeave = await prisma.leave.findFirst({
                 where: {
-                    FacultyID: Number(FacultyID),
+                    FacultyID: sanitizedFacultyID,
                     LeaveType: LeaveType.Maternity,
                     StartDate: {
                         gte: new Date(currentYear, 0, 1)
@@ -320,7 +364,7 @@ export async function POST(request: NextRequest) {
                 // Get all approved leaves for this faculty in the current month
                 const approvedLeaves = await prisma.leave.findMany({
                     where: {
-                        FacultyID: Number(FacultyID),
+                        FacultyID: sanitizedFacultyID,
                         Status: 'Approved',
                         RequestType: 'Leave',
                         LeaveType: {
@@ -373,7 +417,7 @@ export async function POST(request: NextRequest) {
 
         // Log the data we're about to insert
         const leaveData = {
-            FacultyID: Number(FacultyID),
+            FacultyID: sanitizedFacultyID,
             RequestType: RequestType as RequestType,
             LeaveType: LeaveType as LeaveType,
             StartDate: start,

@@ -190,6 +190,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate and parse DocumentTypeID
+    const documentTypeIdStr = DocumentTypeID as string;
+    if (documentTypeIdStr === 'undefined' || documentTypeIdStr === 'null' || documentTypeIdStr === '') {
+      return NextResponse.json(
+        { error: 'Invalid DocumentTypeID' },
+        { status: 400 }
+      );
+    }
+    const documentTypeId = parseInt(documentTypeIdStr, 10);
+    if (isNaN(documentTypeId)) {
+      return NextResponse.json(
+        { error: 'DocumentTypeID must be a valid integer' },
+        { status: 400 }
+      );
+    }
+
     console.log('Processing document upload:', {
       DocumentTypeID,
       fileName: file.name,
@@ -219,7 +235,7 @@ export async function POST(request: Request) {
       .from('Document')
       .select('DocumentID, FilePath')
       .eq('FacultyID', facultyData.FacultyID)
-      .eq('DocumentTypeID', parseInt(DocumentTypeID as string))
+      .eq('DocumentTypeID', documentTypeId)
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -247,7 +263,7 @@ export async function POST(request: Request) {
       .upsert([{
         ...(existingDoc?.DocumentID ? { DocumentID: existingDoc.DocumentID } : {}), // Only include DocumentID if it exists
         FacultyID: facultyData.FacultyID,
-        DocumentTypeID: parseInt(DocumentTypeID as string),
+        DocumentTypeID: documentTypeId,
         UploadDate: new Date().toISOString(),
         SubmissionStatus: 'Submitted',
         FilePath: uploadResult.fileId,
