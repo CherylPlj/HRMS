@@ -4,9 +4,10 @@ import { getAuth } from '@clerk/nextjs/server';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { data: vacancy, error } = await supabaseAdmin
       .from('Vacancy')
       .select(`
@@ -19,7 +20,7 @@ export async function GET(
           DateApplied
         )
       `)
-      .eq('VacancyID', parseInt(params.id))
+      .eq('VacancyID', parseInt(id))
       .eq('isDeleted', false)
       .single();
 
@@ -43,7 +44,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = getAuth(req) || {};
@@ -54,8 +55,9 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
     const data = await req.json();
-    const { JobTitle, VacancyName, HiringManager, Status, NumberOfPositions } = data;
+    const { JobTitle, VacancyName, HiringManager, Status, NumberOfPositions, Description, DatePosted } = data;
 
     // Validate required fields
     if (!JobTitle || !VacancyName || !HiringManager) {
@@ -65,18 +67,30 @@ export async function PATCH(
       );
     }
 
+    const updateData: any = {
+      JobTitle,
+      VacancyName,
+      HiringManager,
+      Status,
+      NumberOfPositions: NumberOfPositions || 1,
+      DateModified: new Date().toISOString(),
+      updatedBy: userId
+    };
+
+    // Include Description if provided
+    if (Description !== undefined) {
+      updateData.Description = Description;
+    }
+
+    // Include DatePosted if provided
+    if (DatePosted !== undefined) {
+      updateData.DatePosted = DatePosted;
+    }
+
     const { data: vacancy, error } = await supabaseAdmin
       .from('Vacancy')
-      .update({
-        JobTitle,
-        VacancyName,
-        HiringManager,
-        Status,
-        NumberOfPositions: NumberOfPositions || 1,
-        DateModified: new Date().toISOString(),
-        updatedBy: userId
-      })
-      .eq('VacancyID', parseInt(params.id))
+      .update(updateData)
+      .eq('VacancyID', parseInt(id))
       .select()
       .single();
 
@@ -100,7 +114,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = getAuth(req) || {};
@@ -111,6 +125,7 @@ export async function DELETE(
       );
     }
 
+    const { id } = await params;
     // Soft delete the vacancy
     const { data: vacancy, error } = await supabaseAdmin
       .from('Vacancy')
@@ -118,7 +133,7 @@ export async function DELETE(
         isDeleted: true,
         updatedBy: userId
       })
-      .eq('VacancyID', parseInt(params.id))
+      .eq('VacancyID', parseInt(id))
       .select()
       .single();
 
