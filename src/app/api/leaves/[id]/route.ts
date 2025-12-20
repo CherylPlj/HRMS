@@ -296,14 +296,6 @@ export async function PUT(
 
         const body = await request.json();
         
-        // Validate required fields
-        if (!body.StartDate || !body.EndDate) {
-            return NextResponse.json(
-                { error: 'StartDate and EndDate are required' },
-                { status: 400, headers: corsHeaders }
-            );
-        }
-        
         // Sanitize any integer fields that might be in the body to prevent "undefined" string errors
         if (body.FacultyID !== undefined) {
             const sanitized = sanitizeInteger(body.FacultyID);
@@ -315,22 +307,48 @@ export async function PUT(
             }
         }
         
-        const start = new Date(body.StartDate);
-        const end = new Date(body.EndDate);
+        // Use provided dates or fall back to existing leave dates
+        const startDateStr = body.StartDate || existingLeave.StartDate?.toISOString();
+        const endDateStr = body.EndDate || existingLeave.EndDate?.toISOString();
+        
+        if (!startDateStr || !endDateStr) {
+            return NextResponse.json(
+                { error: 'StartDate and EndDate are required' },
+                { status: 400, headers: corsHeaders }
+            );
+        }
+        
+        const start = new Date(startDateStr);
+        const end = new Date(endDateStr);
+        
+        // Validate that dates are valid
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return NextResponse.json(
+                { error: 'Invalid date format for StartDate or EndDate' },
+                { status: 400, headers: corsHeaders }
+            );
+        }
+        
         start.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
 
         // Calculate days for this request
         const requestDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
-        // Validate gender-specific leave types
-        const leaveTypeLower = body.LeaveType?.toLowerCase() || '';
-        // Check if it's a gender-neutral leave type (available to both genders)
-        const isTransferredMaternity = leaveTypeLower.includes('transferred') && leaveTypeLower.includes('maternity');
-        const isSoloParent = leaveTypeLower.includes('solo') && leaveTypeLower.includes('parent');
-        const isGenderNeutral = isTransferredMaternity || isSoloParent;
+        // Get the LeaveType from body or existing leave (for validation purposes)
+        const leaveTypeForValidation = body.LeaveType !== undefined ? body.LeaveType : existingLeave.LeaveType;
+        const requestTypeForValidation = body.RequestType !== undefined ? body.RequestType : existingLeave.RequestType;
         
-        if ((leaveTypeLower.includes('maternity') || leaveTypeLower.includes('paternity')) && !isGenderNeutral) {
+        // Only validate leave types if this is a Leave request (not Undertime)
+        if (requestTypeForValidation === 'Leave' && leaveTypeForValidation) {
+            // Validate gender-specific leave types
+            const leaveTypeLower = leaveTypeForValidation.toLowerCase() || '';
+            // Check if it's a gender-neutral leave type (available to both genders)
+            const isTransferredMaternity = leaveTypeLower.includes('transferred') && leaveTypeLower.includes('maternity');
+            const isSoloParent = leaveTypeLower.includes('solo') && leaveTypeLower.includes('parent');
+            const isGenderNeutral = isTransferredMaternity || isSoloParent;
+            
+            if ((leaveTypeLower.includes('maternity') || leaveTypeLower.includes('paternity')) && !isGenderNeutral) {
             try {
                 // Fetch faculty and employee data to get gender
                 const faculty = await prisma.faculty.findUnique({
@@ -381,8 +399,8 @@ export async function PUT(
             }
         }
 
-        // Special validation for maternity leave
-        if (body.LeaveType === LeaveType.Maternity) {
+        // Special validation for maternity leave (only if this is a Leave request)
+        if (requestTypeForValidation === 'Leave' && leaveTypeForValidation === LeaveType.Maternity) {
             // Check if the request is at least 60 days (minimum maternity leave)
             if (requestDays < 60) {
                 return NextResponse.json(
@@ -413,7 +431,7 @@ export async function PUT(
                     { status: 400, headers: corsHeaders }
                 );
             }
-        } else {
+        } else if (requestTypeForValidation === 'Leave') {
             // For non-maternity leaves, check against the monthly limit
             let currentDate = new Date(start);
             while (currentDate <= end) {
@@ -573,6 +591,29 @@ export async function PUT(
         return NextResponse.json(updatedLeave, { headers: corsHeaders });
     } catch (error) {
         console.error('Error updating leave request:', error);
+        
+        // Log more details for debugging
+        if (error instanceof Error) {
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+        }
+        
+        // Check for specific Prisma errors
+        if (error instanceof Error) {
+            if (error.message.includes('foreign key constraint')) {
+                return NextResponse.json(
+                    { error: 'Invalid faculty information', details: error.message },
+                    { status: 400, headers: corsHeaders }
+                );
+            }
+            if (error.message.includes('unique constraint')) {
+                return NextResponse.json(
+                    { error: 'A leave request already exists for this period', details: error.message },
+                    { status: 400, headers: corsHeaders }
+                );
+            }
+        }
+        
         return NextResponse.json(
             { error: 'Failed to update leave request', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500, headers: corsHeaders }
