@@ -178,8 +178,8 @@ export async function POST(request: Request) {
         CivilStatus: data.CivilStatus || null,
         Nationality: data.Nationality || null,
         Religion: data.Religion || null,
-        DepartmentID: data.DepartmentID || null,
-        ContractID: data.ContractID || null,
+        DepartmentID: sanitizeInteger(data.DepartmentID),
+        ContractID: sanitizeInteger(data.ContractID),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })
@@ -282,7 +282,7 @@ export async function POST(request: Request) {
         const position = employmentDetail?.Position || data.Position || 'Faculty';
 
         // Get DepartmentID - use from employee or from data (optional)
-        const departmentId = newEmployee.DepartmentID || data.DepartmentID;
+        const departmentId = sanitizeInteger(newEmployee.DepartmentID || data.DepartmentID);
 
         // Check if User exists, if not create one with "No Account" status
         let userId = newEmployee.UserID;
@@ -363,7 +363,7 @@ export async function POST(request: Request) {
             EmploymentStatus: employmentStatus === 'Regular' ? 'Regular' : 'Regular', // Map to Faculty EmploymentStatus
             HireDate: formattedHireDate,
             Position: position,
-            DepartmentID: departmentId || null,
+            DepartmentID: departmentId,
             EmergencyContact: data.EmergencyContactName 
               ? `${data.EmergencyContactName}${data.EmergencyContactNumber ? ` - ${data.EmergencyContactNumber}` : ''}`
               : null,
@@ -399,6 +399,24 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
+function sanitizeInteger(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
 }
 
 // Helper function to generate a unique Employee ID
@@ -486,8 +504,8 @@ export async function PATCH(request: Request) {
         CivilStatus: data.CivilStatus || null,
         Nationality: data.Nationality || null,
         Religion: data.Religion || null,
-        DepartmentID: data.DepartmentID || null,
-        ContractID: data.ContractID || null,
+        DepartmentID: sanitizeInteger(data.DepartmentID),
+        ContractID: sanitizeInteger(data.ContractID),
         updatedAt: new Date().toISOString()
       })
       .eq('EmployeeID', data.EmployeeID)

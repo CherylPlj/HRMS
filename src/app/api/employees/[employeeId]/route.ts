@@ -4,6 +4,24 @@ import { currentUser } from '@clerk/nextjs/server';
 import { clerkClient } from '@clerk/nextjs/server';
 import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
 
+// Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
+function sanitizeInteger(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string' && (value === 'undefined' || value === 'null')) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 // Add helper function to log activities
 async function logActivity(
   userId: string,
@@ -210,8 +228,8 @@ export async function PATCH(
     if (data.CivilStatus !== undefined) updateFields.CivilStatus = data.CivilStatus || null;
     if (data.Nationality !== undefined) updateFields.Nationality = data.Nationality || null;
     if (data.Religion !== undefined) updateFields.Religion = data.Religion || null;
-    if (data.DepartmentID !== undefined) updateFields.DepartmentID = data.DepartmentID || null;
-    if (data.ContractID !== undefined) updateFields.ContractID = data.ContractID || null;
+    if (data.DepartmentID !== undefined) updateFields.DepartmentID = sanitizeInteger(data.DepartmentID);
+    if (data.ContractID !== undefined) updateFields.ContractID = sanitizeInteger(data.ContractID);
 
     const { data: updatedEmployee, error: employeeError } = await supabaseAdmin
       .from('Employee')
