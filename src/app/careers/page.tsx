@@ -349,7 +349,7 @@ export default function CareersPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/sign-in?portal=admin" className="hover:text-yellow-300 transition-colors">
+                  <Link href="https://sjsfi-sis.vercel.app/" className="hover:text-yellow-300 transition-colors">
                     SIS Portal
                   </Link>
                 </li>
