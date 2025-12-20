@@ -349,52 +349,53 @@ export async function PUT(
             const isGenderNeutral = isTransferredMaternity || isSoloParent;
             
             if ((leaveTypeLower.includes('maternity') || leaveTypeLower.includes('paternity')) && !isGenderNeutral) {
-            try {
-                // Fetch faculty and employee data to get gender
-                const faculty = await prisma.faculty.findUnique({
-                    where: { FacultyID: existingLeave.FacultyID },
-                    include: {
-                        Employee: {
-                            select: {
-                                Sex: true
+                try {
+                    // Fetch faculty and employee data to get gender
+                    const faculty = await prisma.faculty.findUnique({
+                        where: { FacultyID: existingLeave.FacultyID },
+                        include: {
+                            Employee: {
+                                select: {
+                                    Sex: true
+                                }
+                            }
+                        }
+                    });
+
+                    if (faculty) {
+                        const employeeGender = faculty.Employee?.Sex?.toLowerCase() || '';
+                        
+                        // Regular Maternity leave only for females (excludes transferred maternity)
+                        if (leaveTypeLower.includes('maternity') && !isTransferredMaternity) {
+                            if (employeeGender !== 'female' && employeeGender !== 'f') {
+                                return NextResponse.json(
+                                    { error: 'Maternity leave is only available for female employees' },
+                                    { status: 400, headers: corsHeaders }
+                                );
+                            }
+                        }
+                        
+                        // Paternity Leave (RA 8187) only for males
+                        // Strictly for legally married fathers (up to the first four deliveries)
+                        if (leaveTypeLower.includes('paternity')) {
+                            if (employeeGender !== 'male' && employeeGender !== 'm') {
+                                return NextResponse.json(
+                                    { error: 'Paternity leave is only available for male employees' },
+                                    { status: 400, headers: corsHeaders }
+                                );
                             }
                         }
                     }
-                });
-
-                if (faculty) {
-                    const employeeGender = faculty.Employee?.Sex?.toLowerCase() || '';
-                    
-                    // Regular Maternity leave only for females (excludes transferred maternity)
-                    if (leaveTypeLower.includes('maternity') && !isTransferredMaternity) {
-                        if (employeeGender !== 'female' && employeeGender !== 'f') {
-                            return NextResponse.json(
-                                { error: 'Maternity leave is only available for female employees' },
-                                { status: 400, headers: corsHeaders }
-                            );
-                        }
+                } catch (error) {
+                    console.error('Error validating gender for leave type:', error);
+                    // If we can't verify gender, reject gender-specific leave types for safety
+                    // But allow gender-neutral leave types (transferred maternity, solo parent)
+                    if ((leaveTypeLower.includes('maternity') || leaveTypeLower.includes('paternity')) && !isGenderNeutral) {
+                        return NextResponse.json(
+                            { error: 'Unable to verify eligibility for this leave type. Please contact administrator.' },
+                            { status: 400, headers: corsHeaders }
+                        );
                     }
-                    
-                    // Paternity Leave (RA 8187) only for males
-                    // Strictly for legally married fathers (up to the first four deliveries)
-                    if (leaveTypeLower.includes('paternity')) {
-                        if (employeeGender !== 'male' && employeeGender !== 'm') {
-                            return NextResponse.json(
-                                { error: 'Paternity leave is only available for male employees' },
-                                { status: 400, headers: corsHeaders }
-                            );
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error validating gender for leave type:', error);
-                // If we can't verify gender, reject gender-specific leave types for safety
-                // But allow gender-neutral leave types (transferred maternity, solo parent)
-                if ((leaveTypeLower.includes('maternity') || leaveTypeLower.includes('paternity')) && !isGenderNeutral) {
-                    return NextResponse.json(
-                        { error: 'Unable to verify eligibility for this leave type. Please contact administrator.' },
-                        { status: 400, headers: corsHeaders }
-                    );
                 }
             }
         }

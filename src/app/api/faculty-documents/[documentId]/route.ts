@@ -6,19 +6,28 @@ import { currentUser } from '@clerk/nextjs/server';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
-  const { documentId } = params;
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
+    const { documentId } = await params;
+    const user = await currentUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const body = await request.json();
     const { SubmissionStatus } = body;
 
     if (!SubmissionStatus || !['Submitted', 'Approved', 'Returned'].includes(SubmissionStatus)) {
       return NextResponse.json(
         { error: 'Invalid status. Must be Submitted, Approved, or Returned' },
+        { status: 400 }
+      );
+    }
+
+    // Parse documentId to integer if needed
+    const docId = parseInt(documentId, 10);
+    if (isNaN(docId)) {
+      return NextResponse.json(
+        { error: 'Invalid document ID' },
         { status: 400 }
       );
     }
@@ -30,13 +39,17 @@ export async function PATCH(
         SubmissionStatus,
         UploadDate: new Date().toISOString()
       })
-      .eq('DocumentID', documentId)
+      .eq('DocumentID', docId)
       .select()
       .single();
 
     if (error) {
       console.error('Error updating document:', error);
-      return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      return NextResponse.json(
+        { error: 'Update failed', details: error.message },
+        { status: 500 }
+      );
     }
     if (!data) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
 
