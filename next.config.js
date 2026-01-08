@@ -6,7 +6,8 @@ const nextConfig = {
     },
   },
   // Transpile rate-limiter-flexible to resolve .d.ts parsing issues
-  transpilePackages: ['rate-limiter-flexible'],
+  // Also transpile Clerk to fix Server Actions compatibility
+  transpilePackages: ['rate-limiter-flexible', '@clerk/nextjs'],
   // Add empty turbopack config to silence Next.js 16 warning
   // Webpack config will be used for builds, Turbopack for dev (if compatible)
   turbopack: {},

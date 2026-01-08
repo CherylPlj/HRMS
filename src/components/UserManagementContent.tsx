@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
-import { Search, ChevronUp, ChevronDown, Plus, Trash2, UserPlus, RefreshCw, Lock, UserCheck } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Plus, Trash2, UserPlus, RefreshCw, Lock, UserCheck, Shield } from 'lucide-react';
+import ManageUserRoles from './ManageUserRoles';
 
 interface UserRecord {
   EmployeeID: string | null;
@@ -73,6 +74,12 @@ const UserManagementContent: React.FC = () => {
   const [isRefreshingHash, setIsRefreshingHash] = useState<string | null>(null);
   const [isActivating, setIsActivating] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState('All Roles');
+  const [showSuperAdminModal, setShowSuperAdminModal] = useState(false);
+  const [selectedAdminForUpgrade, setSelectedAdminForUpgrade] = useState<UserRecord | null>(null);
+  const [deactivateCurrent, setDeactivateCurrent] = useState(false);
+  const [currentSuperAdmins, setCurrentSuperAdmins] = useState<UserRecord[]>([]);
+  const [isCreatingSuperAdmin, setIsCreatingSuperAdmin] = useState(false);
+  const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
 
   const fetchData = async () => {
     try {
@@ -518,7 +525,29 @@ const UserManagementContent: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    fetchRoles();
   }, [viewType]);
+
+  // Fetch roles for ManageUserRoles component
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch('/api/roles', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRoles(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+    }
+  };
 
   const handleCreateAccount = async (userRecord: UserRecord, selectedRole?: string) => {
     try {
@@ -962,6 +991,135 @@ const UserManagementContent: React.FC = () => {
     }
   };
 
+  // Get admin users only (users with Admin role, excluding Super Admin)
+  const getAdminUsers = () => {
+    return userRecords.filter((userRecord) => {
+      if (userRecord.User.length === 0) return false; // Must have an account
+      const userRoles = userRecord.User[0].Role || [];
+      const roleNames = userRoles.map((r: any) => r.role.name);
+      return roleNames.includes('Admin') && !roleNames.includes('Super Admin');
+    });
+  };
+
+  // Get current super admins
+  const fetchCurrentSuperAdmins = async () => {
+    try {
+      // Fetch all user roles to find Super Admin users
+      const { data: allRoleData, error: roleError } = await supabase
+        .from('UserRole')
+        .select(`
+          userId,
+          role:Role (
+            name
+          )
+        `);
+
+      if (roleError) {
+        console.error('Error fetching roles:', roleError);
+        return [];
+      }
+
+      // Find Super Admin role ID
+      const { data: superAdminRole, error: roleIdError } = await supabase
+        .from('Role')
+        .select('id')
+        .eq('name', 'Super Admin')
+        .single();
+
+      if (roleIdError || !superAdminRole) {
+        return [];
+      }
+
+      // Get all users with Super Admin role
+      const superAdminUserIds = allRoleData
+        ?.filter((ur: any) => ur.role?.name === 'Super Admin')
+        .map((ur: any) => ur.userId) || [];
+
+      if (superAdminUserIds.length === 0) {
+        return [];
+      }
+
+      // Fetch user records for super admins
+      const superAdminRecords = userRecords.filter((userRecord) => {
+        if (userRecord.User.length === 0) return false;
+        return superAdminUserIds.includes(userRecord.User[0].UserID);
+      });
+
+      return superAdminRecords;
+    } catch (error) {
+      console.error('Error fetching current super admins:', error);
+      return [];
+    }
+  };
+
+  // Handler to open super admin modal
+  const handleOpenSuperAdminModal = async () => {
+    setShowSuperAdminModal(true);
+    setSelectedAdminForUpgrade(null);
+    setDeactivateCurrent(false);
+    const superAdmins = await fetchCurrentSuperAdmins();
+    setCurrentSuperAdmins(superAdmins);
+  };
+
+  // Handler to create super admin
+  const handleCreateSuperAdmin = async () => {
+    if (!selectedAdminForUpgrade || !selectedAdminForUpgrade.User?.[0]?.UserID) {
+      setNotification({
+        type: 'error',
+        message: 'Please select an admin user to upgrade'
+      });
+      return;
+    }
+
+    if (!user) {
+      setNotification({
+        type: 'error',
+        message: 'Not authenticated. Please sign in again.'
+      });
+      return;
+    }
+
+    setIsCreatingSuperAdmin(true);
+
+    try {
+      const response = await fetch('/api/createSuperAdmin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedAdminForUpgrade.User[0].UserID,
+          deactivateCurrent: deactivateCurrent,
+          createdBy: user.id
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create super admin');
+      }
+
+      setNotification({
+        type: 'success',
+        message: result.message || 'Admin successfully upgraded to Super Admin'
+      });
+
+      setShowSuperAdminModal(false);
+      setSelectedAdminForUpgrade(null);
+      setDeactivateCurrent(false);
+      await fetchData(); // Refresh the data
+    } catch (error) {
+      console.error('Error creating super admin:', error);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to create super admin'
+      });
+    } finally {
+      setIsCreatingSuperAdmin(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -990,13 +1148,13 @@ const UserManagementContent: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           {viewType === 'faculty' ? 'Faculty Management' : 
            viewType === 'employees' ? 'Employee Management' :
-           viewType === 'students' ? 'Student Management' : 
+          //  viewType === 'students' ? 'Student Management' : 
            'User Management'}
         </h2>
         <p className="text-gray-600">
           {viewType === 'faculty' ? 'View all faculty members and their account status. Manage teaching staff access.' :
            viewType === 'employees' ? 'View all employees and their account status. Manage employee system access.' :
-           viewType === 'students' ? 'View all students and their account status. Manage student portal access.' :
+          //  viewType === 'students' ? 'View all students and their account status. Manage student portal access.' :
            'View all users with their account status. Manage system access for all user types.'}
         </p>
       </div>
@@ -1038,6 +1196,17 @@ const UserManagementContent: React.FC = () => {
             <option key={role} value={role}>{role}</option>
           ))}
         </select>
+        <ManageUserRoles
+          roles={roles}
+          onUpdate={fetchRoles}
+        />
+        <button
+          onClick={handleOpenSuperAdminModal}
+          className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors flex items-center gap-2"
+        >
+          <Shield className="h-5 w-5" />
+          Create Super Admin
+        </button>
       </div>
 
       {/* Results Count */}
@@ -1070,7 +1239,7 @@ const UserManagementContent: React.FC = () => {
                     </th>
                     <th className="w-80 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="w-64 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="w-48 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">User Roles</th>
+                    <th className="w-48 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">User Role</th>
                     <th className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Status</th>
                     <th className="w-32 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -1306,6 +1475,113 @@ const UserManagementContent: React.FC = () => {
                   'Delete'
                 )}
             </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Super Admin Modal */}
+      {showSuperAdminModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Super Admin</h3>
+            
+            {/* Current Super Admins Section */}
+            {currentSuperAdmins.length > 0 && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800 mb-2">Current Super Admins:</p>
+                <ul className="list-disc list-inside text-sm text-yellow-700">
+                  {currentSuperAdmins.map((superAdmin) => {
+                    const fullName = [superAdmin.FirstName, superAdmin.LastName].filter(Boolean).join(' ');
+                    return (
+                      <li key={superAdmin.User?.[0]?.UserID}>
+                        {fullName} ({superAdmin.Email})
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* Admin User Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Admin User to Upgrade:
+              </label>
+              <select
+                value={selectedAdminForUpgrade?.User?.[0]?.UserID || ''}
+                onChange={(e) => {
+                  const adminUsers = getAdminUsers();
+                  const selected = adminUsers.find(
+                    (u) => u.User[0].UserID === e.target.value
+                  );
+                  setSelectedAdminForUpgrade(selected || null);
+                }}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              >
+                <option value="">Select an admin user...</option>
+                {getAdminUsers().map((adminUser) => {
+                  const fullName = [adminUser.FirstName, adminUser.LastName].filter(Boolean).join(' ');
+                  return (
+                    <option key={adminUser.User[0].UserID} value={adminUser.User[0].UserID}>
+                      {fullName} ({adminUser.Email})
+                    </option>
+                  );
+                })}
+              </select>
+              {getAdminUsers().length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No admin users available to upgrade.</p>
+              )}
+            </div>
+
+            {/* Deactivate Current Super Admins Checkbox */}
+            {currentSuperAdmins.length > 0 && (
+              <div className="mb-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={deactivateCurrent}
+                    onChange={(e) => setDeactivateCurrent(e.target.checked)}
+                    className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Deactivate current Super Admin(s) ({currentSuperAdmins.length})
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex justify-end space-x-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowSuperAdminModal(false);
+                  setSelectedAdminForUpgrade(null);
+                  setDeactivateCurrent(false);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={isCreatingSuperAdmin}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSuperAdmin}
+                disabled={!selectedAdminForUpgrade || isCreatingSuperAdmin}
+                className={`px-4 py-2 rounded flex items-center ${
+                  selectedAdminForUpgrade && !isCreatingSuperAdmin
+                    ? 'bg-[#800000] text-white hover:bg-[#600000]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isCreatingSuperAdmin ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Super Admin'
+                )}
+              </button>
             </div>
           </div>
         </div>

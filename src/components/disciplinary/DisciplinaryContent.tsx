@@ -9,7 +9,7 @@ import DisciplinaryTable from './DisciplinaryTable';
 import DisciplinaryFilters from './DisciplinaryFilters';
 import DisciplinaryHistoryContent from './DisciplinaryHistoryContent';
 import DisciplinaryDashboard from './DisciplinaryDashboard';
-import DisciplinarySettings from './DisciplinarySettings';
+import ManageCategoriesModal from './ManageCategoriesModal';
 import CaseViewModal from './CaseViewModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import SuccessModal from './SuccessModal';
@@ -40,9 +40,9 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   
   // Get initial tab from URL query parameter, default to 'dashboard'
   const urlTab = searchParams.get('view');
-  const validTabs = ['dashboard', 'records', 'history', 'settings'];
+  const validTabs = ['dashboard', 'records', 'history'];
   const initialTab = urlTab && validTabs.includes(urlTab) 
-    ? urlTab as 'dashboard' | 'records' | 'history' | 'settings' 
+    ? urlTab as 'dashboard' | 'records' | 'history' 
     : 'dashboard';
   
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>(initialEmployees);
@@ -55,7 +55,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'history' | 'settings'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'history'>(initialTab);
   
   // Set initial URL if no view parameter exists
   useEffect(() => {
@@ -69,14 +69,14 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   useEffect(() => {
     const currentView = searchParams.get('view');
     if (currentView && validTabs.includes(currentView)) {
-      setActiveTab(currentView as 'dashboard' | 'records' | 'history' | 'settings');
+      setActiveTab(currentView as 'dashboard' | 'records' | 'history');
     } else if (!currentView) {
       setActiveTab('dashboard');
     }
   }, [searchParams]);
   
   // Handler to change tab and update URL
-  const handleTabChange = (tabId: 'dashboard' | 'records' | 'history' | 'settings') => {
+  const handleTabChange = (tabId: 'dashboard' | 'records' | 'history') => {
     setActiveTab(tabId);
     router.push(`/dashboard/admin/disciplinary?view=${tabId}`, { scroll: false });
   };
@@ -780,16 +780,6 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
         >
           History
         </button>
-        <button
-          onClick={() => handleTabChange('settings')}
-          className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
-            activeTab === 'settings'
-              ? 'bg-white border-[#800000] text-[#800000] font-semibold'
-              : 'bg-gray-50 border-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-          }`}
-        >
-          Settings
-        </button>
       </div>
 
       {activeTab === 'dashboard' ? (
@@ -800,17 +790,6 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
           supervisors={supervisorsList}
           categories={categoriesList}
           violationTypes={violationTypesList}
-        />
-      ) : activeTab === 'settings' ? (
-        <DisciplinarySettings
-          categories={categoriesList}
-          violationTypes={violationTypesList}
-          supervisors={supervisorsList}
-          employees={employees}
-          records={records}
-          onCategoriesChange={setCategoriesList}
-          onViolationTypesChange={setViolationTypesList}
-          onSupervisorsChange={setSupervisorsList}
         />
       ) : (
         <>
@@ -833,6 +812,13 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
                 <Upload className="w-5 h-5" />
                 Import
               </button>
+              <ManageCategoriesModal
+                categories={categoriesList}
+                violationTypes={violationTypesList}
+                records={records}
+                onCategoriesChange={setCategoriesList}
+                onViolationTypesChange={setViolationTypesList}
+              />
               <button
                 onClick={handleAddRecord}
                 className="flex items-center gap-2 px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors"

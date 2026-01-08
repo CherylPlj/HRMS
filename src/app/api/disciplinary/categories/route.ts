@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnected } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,25 +9,51 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Ensure Prisma is connected
+    await ensurePrismaConnected();
+
     const { searchParams } = new URL(request.url);
     const full = searchParams.get('full') === 'true';
 
     // Get all active categories from DisciplinaryCategory table
     let categories;
     try {
-      categories = await (prisma as any).disciplinaryCategory.findMany({
-        where: {
-          isActive: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-        },
-        orderBy: {
-          name: 'asc',
-        },
-      });
+      // Retry logic for transient connection errors
+      let retries = 2;
+      while (retries >= 0) {
+        try {
+          categories = await (prisma as any).disciplinaryCategory.findMany({
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+            orderBy: {
+              name: 'asc',
+            },
+          });
+          break; // Success, exit retry loop
+        } catch (queryError: any) {
+          // Check if it's a prepared statement error (transient)
+          if (
+            queryError?.code === '26000' ||
+            queryError?.message?.includes('prepared statement') ||
+            queryError?.message?.includes('does not exist')
+          ) {
+            if (retries > 0) {
+              // Retry after reconnecting
+              await ensurePrismaConnected();
+              retries--;
+              continue;
+            }
+          }
+          // If not a transient error or out of retries, throw
+          throw queryError;
+        }
+      }
     } catch (dbError: any) {
       // Handle case where table doesn't exist or schema issue
       console.error('Database error fetching categories:', dbError);
@@ -62,6 +88,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Ensure Prisma is connected
+    await ensurePrismaConnected();
+
     const body = await request.json();
 
     if (!body.name) {
@@ -72,9 +101,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if category already exists
-    const existing = await (prisma as any).disciplinaryCategory.findUnique({
-      where: { name: body.name },
-    });
+    let existing;
+    try {
+      existing = await (prisma as any).disciplinaryCategory.findUnique({
+        where: { name: body.name },
+      });
+    } catch (queryError: any) {
+      // Retry on connection errors
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        existing = await (prisma as any).disciplinaryCategory.findUnique({
+          where: { name: body.name },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     if (existing) {
       return NextResponse.json(
@@ -83,14 +125,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const category = await (prisma as any).disciplinaryCategory.create({
-      data: {
-        name: body.name,
-        description: body.description,
-        isActive: body.isActive !== undefined ? body.isActive : true,
-        createdBy: user.id,
-      },
-    });
+    let category;
+    try {
+      category = await (prisma as any).disciplinaryCategory.create({
+        data: {
+          name: body.name,
+          description: body.description,
+          isActive: body.isActive !== undefined ? body.isActive : true,
+          createdBy: user.id,
+        },
+      });
+    } catch (queryError: any) {
+      // Retry on connection errors
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        category = await (prisma as any).disciplinaryCategory.create({
+          data: {
+            name: body.name,
+            description: body.description,
+            isActive: body.isActive !== undefined ? body.isActive : true,
+            createdBy: user.id,
+          },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     return NextResponse.json(category, { status: 201 });
   } catch (error) {

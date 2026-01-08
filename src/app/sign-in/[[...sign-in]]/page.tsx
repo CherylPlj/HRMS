@@ -11,6 +11,8 @@ import { Eye, EyeOff, ArrowLeft, AlertCircle, X } from 'lucide-react';
 import { validatePassword, sanitizePassword, loginRateLimiter, unknownIPRateLimiter, checkLoginAttempts, recordFailedLoginAttempt, resetLoginAttempts } from '@/lib/security';
 import { getClientIp } from '@/lib/ip';
 import { validateEmailCharacters } from '@/lib/validation';
+import RoleSelection from '@/components/RoleSelection';
+import { getUserRoles, setSelectedRole, getDashboardPath } from '@/lib/userRoles';
 
 // Initialize Supabase client with proper error handling
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -581,6 +583,8 @@ export default function SignInPage() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
   const [isProcessingPasswordReset, setIsProcessingPasswordReset] = useState(false);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [userRolesList, setUserRolesList] = useState<string[]>([]);
 
   // Function to show error popup
   const showErrorPopup = (message: string) => {
@@ -1076,19 +1080,20 @@ export default function SignInPage() {
       // If we get here, both Clerk authentication and database verification passed
       resetLoginAttempts(userIP); // Reset attempts on successful login
       
-      // Get user role for validation
-      const userRole = (userRoles[0].role as any).name.toLowerCase();
+      // Get all user roles
+      const allRoles = userRoles.map((ur: any) => ur.role.name.toLowerCase());
+      setUserRolesList(allRoles);
       
-      // Role-based login validation
+      // Role-based login validation (check if user has any of the required roles for portal)
       if (portal) {
-        if (portal === 'admin' && userRole !== 'admin' && userRole !== 'super admin') {
+        if (portal === 'admin' && !allRoles.some(r => r === 'admin' || r === 'super admin')) {
           recordFailedLoginAttempt(userIP);
           setIsLoading(false);
           showErrorPopup('Invalid Credentials');
           return;
         }
         
-        if (portal === 'faculty' && userRole !== 'faculty') {
+        if (portal === 'faculty' && !allRoles.includes('faculty')) {
           recordFailedLoginAttempt(userIP);
           setIsLoading(false);
           showErrorPopup('Invalid Credentials');
@@ -1098,22 +1103,17 @@ export default function SignInPage() {
       
       // Force a small delay to ensure session is fully established
       await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Handle redirect - use replace to prevent going back to sign-in/portal
-        // Remove sign-in and portal pages from history before redirecting
-        if (typeof window !== 'undefined') {
-          // Clear any history entries that might allow going back to sign-in or portal
-          const redirectPath = redirectUrl || 
-            (userRole === 'admin' || userRole === 'super admin' ? '/dashboard/admin' :
-             userRole === 'faculty' ? '/dashboard/faculty' : '/dashboard');
-          
-          // Replace current history entry to remove sign-in page (and portal if it was there)
-          // This removes both portal and sign-in from browser history
-          window.history.replaceState(null, '', redirectPath);
-          
-          // Use replace to completely remove sign-in/portal pages from history
-          window.location.replace(redirectPath);
-        }
+      
+      // If user has multiple roles, show role selection
+      if (allRoles.length > 1) {
+        setIsLoading(false);
+        setShowRoleSelection(true);
+        return;
+      }
+      
+      // Single role - proceed with redirect
+      const userRole = allRoles[0];
+      handleRoleSelected(userRole);
     } catch (err: any) {
       setIsLoading(false);
       console.error('Login error:', err);
@@ -1124,6 +1124,20 @@ export default function SignInPage() {
 
   const handleBack = () => {
     router.push('/');
+  };
+
+  const handleRoleSelected = async (role: string) => {
+    // Store selected role
+    setSelectedRole(role);
+    
+    // Determine redirect path
+    const redirectPath = redirectUrl || getDashboardPath(role);
+    
+    // Handle redirect
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', redirectPath);
+      window.location.replace(redirectPath);
+    }
   };
 
   const handleForgotPassword = async (email: string) => {
@@ -1190,6 +1204,11 @@ export default function SignInPage() {
       setIsProcessingPasswordReset(false);
     }
   };
+
+  // Show role selection if user has multiple roles
+  if (showRoleSelection) {
+    return <RoleSelection onRoleSelected={handleRoleSelected} />;
+  }
 
   return (
     <>

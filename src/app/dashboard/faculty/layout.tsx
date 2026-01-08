@@ -8,6 +8,8 @@ import { UserProfile, UserButton } from '@clerk/nextjs';
 import Chatbot from '@/components/Chatbot';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import RoleSwitcher from '@/components/RoleSwitcher';
+import { getSelectedRole, getUserRoles } from '@/lib/userRoles';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -53,28 +55,41 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
       }
 
       try {
-        const { data: userData, error } = await supabase
-          .from('User')
-          .select(`
-            UserRole!inner (
-              role:Role (
-                name
-              )
-            )
-          `)
-          .eq('Email', user.emailAddresses[0].emailAddress.toLowerCase().trim())
-          .single() as { data: UserRoleData | null; error: unknown };
+        const userEmail = user.emailAddresses[0]?.emailAddress;
+        if (!userEmail) return;
 
-        if (error) {
-          console.error("Error fetching user role:", error);
-          return;
+        // First check if there's a selected role in sessionStorage
+        const selectedRole = getSelectedRole();
+        let activeRole = selectedRole;
+
+        // If no selected role, get all roles and use the first one
+        if (!activeRole) {
+          const userRoles = await getUserRoles(undefined, userEmail);
+          if (userRoles.length > 0) {
+            activeRole = userRoles[0];
+          }
+        } else {
+          // Verify the selected role is still valid
+          const userRoles = await getUserRoles(undefined, userEmail);
+          if (!userRoles.includes(activeRole)) {
+            // Selected role is invalid, use first role
+            activeRole = userRoles.length > 0 ? userRoles[0] : null;
+          }
         }
 
-        const role = (userData as UserRoleData)?.UserRole?.[0]?.role?.name?.toLowerCase();
+        if (!activeRole) {
+          console.error("No roles found for user");
+          return;
+        }
         
-        if (role !== 'faculty') {
-          if (role === 'admin') {
+        // Check if user should be on faculty dashboard
+        if (activeRole !== 'faculty') {
+          if (activeRole === 'admin' || activeRole.includes('admin')) {
             router.push('/dashboard/admin');
+          } else if (activeRole === 'cashier') {
+            router.push('/dashboard/cashier');
+          } else if (activeRole === 'registrar') {
+            router.push('/dashboard/registrar');
           } else {
             router.push('/dashboard');
           }
@@ -85,7 +100,7 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
     };
 
     checkUserRole();
-  }, [isLoaded, isSignedIn, user, router]);
+  }, [isLoaded, isSignedIn, user, router, pathname]);
 
   // Function to position chatbot on the right side of the chat icon
   const positionChatbot = () => {
@@ -343,6 +358,9 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
 
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
+                {/* Role Switcher */}
+                <RoleSwitcher />
+
                 {/* Chat Icon */}
                 <a
                   ref={chatButtonRef}

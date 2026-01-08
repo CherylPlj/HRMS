@@ -96,6 +96,62 @@ NODE_ENV=development npm run seed:supabase
 - The seed script uses the same password hashing as your application for consistency.
 - Consider changing the default passwords after the initial setup for production use.
 
+## Faculty Records Backfill Migration
+
+If you have existing employees with `Designation: "Faculty"` but no Faculty records, run this one-time migration:
+
+### Running the Backfill Script
+
+**Option 1: Using npm script (Recommended)**
+```bash
+npm run migrate:faculty
+```
+
+**Option 2: Direct execution**
+```bash
+npx ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/backfill-faculty-records.ts
+```
+
+### What It Does
+
+The backfill script will:
+- Find all employees with `Designation = "Faculty"` in their EmploymentDetail
+- Check if they already have a Faculty record (skips if exists)
+- Create User records for faculty without one (if needed)
+- Generate unique sequential FacultyIDs
+- Create Faculty records with all required information
+- Provide a detailed summary of the migration
+
+### Expected Output
+
+```
+🔍 Starting Faculty Records Backfill Migration...
+
+📊 Found 15 employees with Designation = 'Faculty'
+
+✅ Created Faculty record for John Doe (2024-0001) - FacultyID: 1
+✅ Created Faculty record for Jane Smith (2024-0002) - FacultyID: 2
+⏭️  Skipping Mike Johnson (2024-0003) - Faculty record already exists
+
+============================================================
+📊 Migration Summary
+============================================================
+Total Employees Processed: 15
+✅ Faculty Records Created: 12
+⏭️  Skipped (Already Exists): 3
+❌ Failed: 0
+============================================================
+
+✅ Migration completed!
+```
+
+### Important Notes
+
+- **Run this script ONCE** after updating your employee creation logic
+- The script is idempotent - safe to run multiple times (skips existing records)
+- Creates User records for faculty who don't have one
+- Generates sequential FacultyIDs starting from the highest existing ID
+
 ## Customization
 
 To add more users or modify the seeding logic:

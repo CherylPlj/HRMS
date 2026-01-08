@@ -128,17 +128,21 @@ export default clerkMiddleware(async (auth, req) => {
             // Only redirect from sign-in/sign-up if we're not in a redirect loop
             if ((url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) && !isRedirectLoop) {
                 try {
-                    // Get user's role
-                    const role = await getUserRole(userId ? userId : undefined);
+                    // Get user's active role (highest priority if multiple)
+                    const role = await getActiveRole(userId ? userId : undefined);
 
                     // Redirect to appropriate dashboard based on role
-                    if (role === 'admin' || role === 'super admin') {
-                        return NextResponse.redirect(new URL('/dashboard/admin', req.url));
-                    } else if (role === 'faculty') {
-                        return NextResponse.redirect(new URL('/dashboard/faculty', req.url));
-                    } else {
-                        return NextResponse.redirect(new URL('/dashboard', req.url));
-                    }
+                    const dashboardPath = role === 'admin' || role === 'super admin' 
+                        ? '/dashboard/admin'
+                        : role === 'faculty'
+                        ? '/dashboard/faculty'
+                        : role === 'cashier'
+                        ? '/dashboard/cashier'
+                        : role === 'registrar'
+                        ? '/dashboard/registrar'
+                        : '/dashboard';
+                    
+                    return NextResponse.redirect(new URL(dashboardPath, req.url));
                 } catch (error) {
                     console.error("Error during role-based redirect:", error);
                     // Fallback to general dashboard if role lookup fails
@@ -225,6 +229,58 @@ async function getUserRole(userId?: string): Promise<string> {
     } catch (error) {
         console.error("Error getting user role:", error);
         // Return default role to prevent redirect loops
+        return 'user';
+    }
+}
+
+/**
+ * Get the active role for a user, checking session storage for selected role
+ * Note: In middleware, we can't access sessionStorage, so we use the first/highest priority role
+ */
+async function getActiveRole(userId?: string): Promise<string> {
+    if (!userId) return 'user';
+
+    try {
+        const { data, error } = await supabase
+            .from('User')
+            .select(`
+                UserRole (
+                    role:Role (
+                        name
+                    )
+                )
+            `)
+            .eq('UserID', userId)
+            .single();
+
+        if (error || !data) {
+            return 'user';
+        }
+
+        const roles = (data.UserRole || []).map((ur: any) => 
+            ur.role?.name?.toLowerCase()
+        ).filter(Boolean);
+
+        if (roles.length === 0) {
+            return 'user';
+        }
+
+        // Get role priority - higher number = higher priority
+        const getPriority = (role: string): number => {
+            if (role.includes('super admin')) return 100;
+            if (role.includes('admin')) return 90;
+            if (role.includes('registrar')) return 80;
+            if (role.includes('cashier')) return 70;
+            if (role.includes('faculty')) return 60;
+            return 50;
+        };
+
+        // Return highest priority role
+        return roles.reduce((highest: string, current: string) => {
+            return getPriority(current) > getPriority(highest) ? current : highest;
+        }, roles[0]);
+    } catch (error) {
+        console.error("Error getting active role:", error);
         return 'user';
     }
 }

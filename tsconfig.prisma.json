@@ -23,7 +23,8 @@
     },
     "include": [
         "prisma/**/*",
-        "src/**/*"
+        "src/**/*",
+        "scripts/**/*"
     ],
     "ts-node": {
         "require": [

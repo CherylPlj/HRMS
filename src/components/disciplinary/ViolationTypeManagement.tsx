@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { SeverityLevel } from '@/types/disciplinary';
 import { toast } from 'react-hot-toast';
 import Pagination from './Pagination';
+import SuccessModal from './SuccessModal';
 
 interface ViolationType {
   id: string;
@@ -40,6 +41,9 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [successTitle, setSuccessTitle] = useState('');
 
   const filteredViolations = useMemo(() => 
     violationTypes.filter((vt) => {
@@ -86,7 +90,7 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleDelete = (violation: ViolationType) => {
+  const handleDelete = async (violation: ViolationType) => {
     const count = violationCounts[violation.name] || 0;
     if (count > 0) {
       if (
@@ -102,9 +106,26 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
       }
     }
 
-    const updated = violationTypes.filter((vt) => vt.id !== violation.id);
-    setViolationTypes(updated);
-    onViolationTypesChange(updated);
+    try {
+      const response = await fetch(`/api/disciplinary/violation-types/${violation.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete violation type');
+      }
+
+      setSuccessTitle('Violation Type Deleted Successfully!');
+      setSuccessMessage(`The violation type "${violation.name}" has been deleted successfully.`);
+      setIsSuccessModalOpen(true);
+      
+      // Refresh violation types list
+      await fetchViolationTypes();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete violation type';
+      toast.error(errorMessage);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,7 +184,9 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
           throw new Error(error.error || 'Failed to update violation type');
         }
 
-        toast.success('Violation type updated successfully');
+        setSuccessTitle('Violation Type Updated Successfully!');
+        setSuccessMessage(`The violation type "${trimmedName}" has been updated successfully.`);
+        setIsSuccessModalOpen(true);
       } else {
         // Create new violation type
         const response = await fetch('/api/disciplinary/violation-types', {
@@ -184,7 +207,9 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
           throw new Error(error.error || 'Failed to create violation type');
         }
 
-        toast.success('Violation type created successfully');
+        setSuccessTitle('Violation Type Created Successfully!');
+        setSuccessMessage(`The violation type "${trimmedName}" has been created successfully.`);
+        setIsSuccessModalOpen(true);
       }
 
       // Refresh violation types list
@@ -484,6 +509,18 @@ const ViolationTypeManagement: React.FC<ViolationTypeManagementProps> = ({
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => {
+          setIsSuccessModalOpen(false);
+          setSuccessMessage('');
+          setSuccessTitle('');
+        }}
+        title={successTitle}
+        message={successMessage}
+      />
     </>
   );
 };

@@ -1,11 +1,45 @@
+import { getActiveRole, getSelectedRole } from './userRoles';
+
 export async function getUserRoleFlexible(user: any): Promise<string | null> {
-  // 1. Check Clerk metadata
+  // 1. Check for selected role in session storage (client-side only)
+  if (typeof window !== 'undefined') {
+    const selectedRole = getSelectedRole();
+    if (selectedRole) {
+      // Verify it's still valid by checking with the database
+      try {
+        const email = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
+        if (email) {
+          const activeRole = await getActiveRole(undefined, email);
+          if (activeRole === selectedRole) {
+            return selectedRole;
+          }
+        }
+      } catch (e) {
+        // Fall through to other methods
+      }
+    }
+  }
+
+  // 2. Check Clerk metadata (backward compatibility)
   const metaRole = user?.publicMetadata?.role;
   if (metaRole && typeof metaRole === 'string') {
     return metaRole.toLowerCase();
   }
 
-  // 2. Fallback to DB via API
+  // 3. Get active role from database (uses selected role or first/highest priority role)
+  try {
+    const email = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
+    if (email) {
+      const activeRole = await getActiveRole(undefined, email);
+      if (activeRole) {
+        return activeRole;
+      }
+    }
+  } catch (e) {
+    console.error('Error getting active role:', e);
+  }
+
+  // 4. Fallback to DB via API (legacy support)
   try {
     // Get the base URL dynamically - handle server-side better
     let baseUrl: string;

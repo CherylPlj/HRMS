@@ -36,7 +36,19 @@ export async function GET(request: Request) {
         EmploymentDetail(EmploymentStatus, HireDate, ResignationDate, RetirementDate),
         ContactInfo(Phone, Email, MessengerName, FBLink),
         Department(DepartmentName),
-        User(Status)
+        User(
+          Status,
+          UserID,
+          FirstName,
+          LastName,
+          Email,
+          Photo,
+          UserRole(
+            role:Role(
+              name
+            )
+          )
+        )
       `)
       .order('createdAt', { ascending: false });
 

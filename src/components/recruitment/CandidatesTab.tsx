@@ -1026,7 +1026,7 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
                 <input 
                   title="file import"
                   type="file" 
-                  accept=".xlsx,.xls,.csv" 
+                  accept=".csv" 
                   onChange={handleImportFileChange}
                   required 
                 />

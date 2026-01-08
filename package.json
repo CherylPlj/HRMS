@@ -13,14 +13,15 @@
     "seed:vacancies": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-vacancies.ts",
     "seed:users": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-users.ts",
     "seed:academic": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-academic.ts",
-    "sync:clerk": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/sync-clerk-ids.ts"
+    "sync:clerk": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/sync-clerk-ids.ts",
+    "migrate:faculty": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/backfill-faculty-records.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed.ts"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",
-    "@clerk/nextjs": "^6.21.0",
+    "@clerk/nextjs": "^6.36.5",
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@google/generative-ai": "^0.24.1",
     "@next/font": "^14.2.15",
@@ -48,7 +49,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.487.0",
     "luxon": "^3.6.1",
-    "next": "^16.0.7",
+    "next": "^16.1.1",
     "nodemailer": "^7.0.3",
     "papaparse": "^5.5.3",
     "pdfkit": "^0.17.1",
@@ -68,7 +69,6 @@
     "resend": "^4.5.2",
     "svix": "^1.65.0",
     "uuid": "^9.0.1",
-    "xlsx": "^0.18.5",
     "zod": "^3.25.51"
   },
   "devDependencies": {
@@ -104,5 +104,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "overrides": {
+    "qs": ">=6.14.1"
   }
 }

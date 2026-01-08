@@ -114,7 +114,7 @@ const LeaveContent: React.FC = () => {
     const [logsPage, setLogsPage] = useState(1);
     const itemsPerPage = 10;
 
-    // Fetch leaves
+    // Fetch leaves - non-blocking, loads in background
     const fetchLeaves = useCallback(async () => {
         if (fetchLeavesRef.current) {
             return;
@@ -154,10 +154,11 @@ const LeaveContent: React.FC = () => {
                 throw new Error('Invalid response format from server');
             }
             
+            // Update leaves immediately - UI is already visible
             setLeaves(data);
             setError(null);
 
-            // Deduplicate UserIDs to avoid fetching same photo multiple times
+            // Fetch photos asynchronously in background - don't block UI
             const uniqueUserIds = new Set<string>();
             data.forEach((leave: TransformedLeave) => {
                 if (leave.Faculty?.UserID) {
@@ -165,13 +166,15 @@ const LeaveContent: React.FC = () => {
                 }
             });
 
-            // Fetch photos for users we don't already have
+            // Fetch photos in background without blocking
+            // Use functional update to avoid dependency on profilePhotos
             setProfilePhotos(prevPhotos => {
                 const userIdsToFetch = Array.from(uniqueUserIds).filter(
                     userId => !prevPhotos[userId]
                 );
 
                 if (userIdsToFetch.length > 0) {
+                    // Don't await - let this run in background
                     Promise.all(
                         userIdsToFetch.map(async (userId) => {
                             try {
@@ -184,6 +187,9 @@ const LeaveContent: React.FC = () => {
                     ).then((photoResults) => {
                         const newPhotos = Object.fromEntries(photoResults);
                         setProfilePhotos(prev => ({ ...prev, ...newPhotos }));
+                    }).catch((err) => {
+                        console.error('Error loading profile photos:', err);
+                        // Non-critical error, don't show to user
                     });
                 }
 
@@ -192,7 +198,7 @@ const LeaveContent: React.FC = () => {
         } catch (err) {
             console.error('Error fetching leaves:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch leaves');
-            setLeaves([]);
+            // Don't clear leaves on error - keep previous data visible
         } finally {
             setLoading(false);
             fetchLeavesRef.current = false;
@@ -471,6 +477,7 @@ const LeaveContent: React.FC = () => {
         }
     };
 
+    // Show minimal loading only for user authentication, not for data
     if (!isUserLoaded) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -481,29 +488,6 @@ const LeaveContent: React.FC = () => {
 
     if (!user) {
         return null;
-    }
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-maroon"></div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="text-center p-4 bg-red-50 text-red-600 rounded-lg">
-                <p className="font-semibold">Error Loading Leave Requests</p>
-                <p className="mt-2">{error}</p>
-                <button 
-                    onClick={() => fetchLeaves()}
-                    className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-red-800"
-                >
-                    Retry
-                </button>
-            </div>
-        );
     }
 
     // Filter leaves based on active tab
@@ -580,15 +564,30 @@ const LeaveContent: React.FC = () => {
                 </div>
             </div>
 
+            {/* Error Banner - Non-blocking */}
+            {error && (
+                <div className="mb-4 text-center p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                    <p className="font-semibold">Error Loading Leave Requests</p>
+                    <p className="mt-2 text-sm">{error}</p>
+                    <button 
+                        onClick={() => fetchLeaves()}
+                        className="mt-4 px-4 py-2 bg-[#800000] text-white rounded hover:bg-red-800 transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+
             {/* Main Content */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
                 {activeTab === 'dashboard' ? (
-                    <LeaveDashboard leaves={leaves} />
+                    <LeaveDashboard leaves={leaves} isLoading={loading} />
                 ) : activeTab === 'management' ? (
                     <>
                         <LeaveManagementTable
                             leaves={paginatedPendingLeaves}
                             profilePhotos={profilePhotos}
+                            isLoading={loading}
                             onView={(leave) => {
                                 setSelectedLeave(leave);
                                 setViewModalOpen(true);
@@ -615,7 +614,7 @@ const LeaveContent: React.FC = () => {
                             }}
                         />
                         {/* Pagination */}
-                        {pendingLeaves.length > itemsPerPage && (
+                        {!loading && pendingLeaves.length > itemsPerPage && (
                             <Pagination
                                 currentPage={managementPage}
                                 totalPages={managementTotalPages}
@@ -630,13 +629,14 @@ const LeaveContent: React.FC = () => {
                         <LeaveLogsTable
                             leaves={paginatedApprovedRejectedLeaves}
                             profilePhotos={profilePhotos}
+                            isLoading={loading}
                             onView={(leave) => {
                                 setSelectedLeave(leave);
                                 setViewModalOpen(true);
                             }}
                         />
                         {/* Pagination */}
-                        {approvedRejectedLeaves.length > itemsPerPage && (
+                        {!loading && approvedRejectedLeaves.length > itemsPerPage && (
                             <Pagination
                                 currentPage={logsPage}
                                 totalPages={logsTotalPages}

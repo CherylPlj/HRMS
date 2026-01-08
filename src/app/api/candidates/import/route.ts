@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
-import * as XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
 import { prisma } from '@/lib/prisma';
 

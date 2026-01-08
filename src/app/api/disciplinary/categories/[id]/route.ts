@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnected } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
@@ -12,10 +12,24 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await ensurePrismaConnected();
+
     const { id } = await params;
-    const category = await (prisma as any).disciplinaryCategory.findUnique({
-      where: { id: parseInt(id, 10) },
-    });
+    let category;
+    try {
+      category = await (prisma as any).disciplinaryCategory.findUnique({
+        where: { id: parseInt(id, 10) },
+      });
+    } catch (queryError: any) {
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        category = await (prisma as any).disciplinaryCategory.findUnique({
+          where: { id: parseInt(id, 10) },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     if (!category) {
       return NextResponse.json(
@@ -44,14 +58,28 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await ensurePrismaConnected();
+
     const { id } = await params;
     const body = await request.json();
 
     // Check if name is being changed and if it conflicts with existing
     if (body.name) {
-      const existing = await (prisma as any).disciplinaryCategory.findUnique({
-        where: { name: body.name },
-      });
+      let existing;
+      try {
+        existing = await (prisma as any).disciplinaryCategory.findUnique({
+          where: { name: body.name },
+        });
+      } catch (queryError: any) {
+        if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+          await ensurePrismaConnected();
+          existing = await (prisma as any).disciplinaryCategory.findUnique({
+            where: { name: body.name },
+          });
+        } else {
+          throw queryError;
+        }
+      }
 
       if (existing && existing.id !== parseInt(id, 10)) {
         return NextResponse.json(
@@ -67,10 +95,23 @@ export async function PATCH(
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
     updateData.updatedBy = user.id;
 
-    const category = await (prisma as any).disciplinaryCategory.update({
-      where: { id: parseInt(id, 10) },
-      data: updateData,
-    });
+    let category;
+    try {
+      category = await (prisma as any).disciplinaryCategory.update({
+        where: { id: parseInt(id, 10) },
+        data: updateData,
+      });
+    } catch (queryError: any) {
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        category = await (prisma as any).disciplinaryCategory.update({
+          where: { id: parseInt(id, 10) },
+          data: updateData,
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     return NextResponse.json(category);
   } catch (error) {
@@ -93,12 +134,26 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await ensurePrismaConnected();
+
     const { id } = await params;
 
     // Check if category is used in any violation types
-    const violationTypesCount = await prisma.violationType.count({
-      where: { categoryId: parseInt(id, 10) },
-    });
+    let violationTypesCount;
+    try {
+      violationTypesCount = await prisma.violationType.count({
+        where: { categoryId: parseInt(id, 10) },
+      });
+    } catch (queryError: any) {
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        violationTypesCount = await prisma.violationType.count({
+          where: { categoryId: parseInt(id, 10) },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     if (violationTypesCount > 0) {
       return NextResponse.json(
@@ -108,9 +163,21 @@ export async function DELETE(
     }
 
     // Get category name first
-    const categoryToDelete = await (prisma as any).disciplinaryCategory.findUnique({
-      where: { id: parseInt(id, 10) },
-    });
+    let categoryToDelete;
+    try {
+      categoryToDelete = await (prisma as any).disciplinaryCategory.findUnique({
+        where: { id: parseInt(id, 10) },
+      });
+    } catch (queryError: any) {
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        categoryToDelete = await (prisma as any).disciplinaryCategory.findUnique({
+          where: { id: parseInt(id, 10) },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     if (!categoryToDelete) {
       return NextResponse.json(
@@ -120,26 +187,65 @@ export async function DELETE(
     }
 
     // Check if category is used in any disciplinary records
-    const recordsCount = await prisma.disciplinaryRecord.count({
-      where: { category: categoryToDelete.name },
-    });
+    let recordsCount;
+    try {
+      recordsCount = await prisma.disciplinaryRecord.count({
+        where: { category: categoryToDelete.name },
+      });
+    } catch (queryError: any) {
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        recordsCount = await prisma.disciplinaryRecord.count({
+          where: { category: categoryToDelete.name },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     if (recordsCount > 0) {
       // Soft delete by setting isActive to false
-      const category = await (prisma as any).disciplinaryCategory.update({
-        where: { id: parseInt(id, 10) },
-        data: {
-          isActive: false,
-          updatedBy: user.id,
-        },
-      });
+      let category;
+      try {
+        category = await (prisma as any).disciplinaryCategory.update({
+          where: { id: parseInt(id, 10) },
+          data: {
+            isActive: false,
+            updatedBy: user.id,
+          },
+        });
+      } catch (queryError: any) {
+        if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+          await ensurePrismaConnected();
+          category = await (prisma as any).disciplinaryCategory.update({
+            where: { id: parseInt(id, 10) },
+            data: {
+              isActive: false,
+              updatedBy: user.id,
+            },
+          });
+        } else {
+          throw queryError;
+        }
+      }
       return NextResponse.json({ success: true, category, softDeleted: true });
     }
 
     // Hard delete if not used in any records
-    await (prisma as any).disciplinaryCategory.delete({
-      where: { id: parseInt(id, 10) },
-    });
+    try {
+      await (prisma as any).disciplinaryCategory.delete({
+        where: { id: parseInt(id, 10) },
+      });
+    } catch (queryError: any) {
+      if (queryError?.code === '26000' || queryError?.message?.includes('prepared statement')) {
+        await ensurePrismaConnected();
+        await (prisma as any).disciplinaryCategory.delete({
+          where: { id: parseInt(id, 10) },
+        });
+      } else {
+        throw queryError;
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

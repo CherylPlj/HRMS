@@ -16,9 +16,10 @@ import { formatDate } from './utils';
 
 interface LeaveDashboardProps {
     leaves: TransformedLeave[];
+    isLoading?: boolean;
 }
 
-const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ leaves }) => {
+const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ leaves, isLoading = false }) => {
     const stats = useMemo(() => {
         const total = leaves.length;
         const pending = leaves.filter((l) => l.Status === LeaveStatus.Pending).length;
@@ -184,6 +185,52 @@ const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ leaves }) => {
             },
         ],
     };
+
+    // Skeleton loader for stat cards
+    const StatCardSkeleton = () => (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+            <div className="flex items-center justify-between">
+                <div className="flex-1">
+                    <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-8 w-16 bg-gray-200 rounded"></div>
+                </div>
+                <div className="bg-gray-100 rounded-full p-3">
+                    <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                {/* Statistics Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                </div>
+                {/* Additional Stats Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                </div>
+                {/* Charts Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                        <div className="h-6 w-40 bg-gray-200 rounded mb-4"></div>
+                        <div className="h-[250px] bg-gray-100 rounded"></div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                        <div className="h-6 w-40 bg-gray-200 rounded mb-4"></div>
+                        <div className="h-[250px] bg-gray-100 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

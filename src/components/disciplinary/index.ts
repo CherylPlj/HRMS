@@ -4,7 +4,7 @@ export { default as DisciplinaryFilters } from './DisciplinaryFilters';
 export { default as DisciplinaryContent } from './DisciplinaryContent';
 export { default as DisciplinaryHistoryContent } from './DisciplinaryHistoryContent';
 export { default as DisciplinaryDashboard } from './DisciplinaryDashboard';
-export { default as DisciplinarySettings } from './DisciplinarySettings';
+export { default as ManageCategoriesModal } from './ManageCategoriesModal';
 export { default as CategoryManagement } from './CategoryManagement';
 export { default as ViolationTypeManagement } from './ViolationTypeManagement';
 export { default as SupervisorManagement } from './SupervisorManagement';

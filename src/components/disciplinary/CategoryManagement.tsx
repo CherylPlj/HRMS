@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Pagination from './Pagination';
+import SuccessModal from './SuccessModal';
 
 interface Category {
   id: string;
@@ -34,6 +35,9 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [successTitle, setSuccessTitle] = useState('');
 
   // Fetch categories from API on mount and when initialCategories change
   useEffect(() => {
@@ -139,7 +143,9 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
         throw new Error(error.error || 'Failed to delete category');
       }
 
-      toast.success('Category deleted successfully');
+      setSuccessTitle('Category Deleted Successfully!');
+      setSuccessMessage(`The category "${category}" has been deleted successfully.`);
+      setIsSuccessModalOpen(true);
       await fetchCategories(); // Refresh categories list
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete category';
@@ -182,7 +188,9 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
           throw new Error(error.error || 'Failed to update category');
         }
 
-        toast.success('Category updated successfully');
+        setSuccessTitle('Category Updated Successfully!');
+        setSuccessMessage(`The category has been updated to "${trimmedName}" successfully.`);
+        setIsSuccessModalOpen(true);
       } else {
         // Create new category
         const response = await fetch('/api/disciplinary/categories', {
@@ -202,7 +210,9 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
           throw new Error(error.error || 'Failed to create category');
         }
 
-        toast.success('Category created successfully');
+        setSuccessTitle('Category Created Successfully!');
+        setSuccessMessage(`The category "${trimmedName}" has been created successfully.`);
+        setIsSuccessModalOpen(true);
       }
 
       // Refresh categories list
@@ -398,6 +408,18 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => {
+          setIsSuccessModalOpen(false);
+          setSuccessMessage('');
+          setSuccessTitle('');
+        }}
+        title={successTitle}
+        message={successMessage}
+      />
     </>
   );
 };

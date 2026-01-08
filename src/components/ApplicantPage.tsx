@@ -142,6 +142,7 @@ const ApplicantPage = () => {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showAllErrors, setShowAllErrors] = useState(false);
 
   useEffect(() => {
     const fetchVacancies = async () => {
@@ -309,6 +310,11 @@ const ApplicantPage = () => {
         checkExistingEmail(value);
       }
     }
+    
+    // Clear showAllErrors flag when user starts typing after validation attempt
+    if (showAllErrors) {
+      setShowAllErrors(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,14 +324,26 @@ const ApplicantPage = () => {
       if (errors.resume) {
         setErrors((prev) => ({ ...prev, resume: '' }));
       }
+      // Clear showAllErrors flag when user selects a file
+      if (showAllErrors) {
+        setShowAllErrors(false);
+      }
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Set flag to show all error messages
+    setShowAllErrors(true);
 
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
+      // Scroll to first error field
+      const firstErrorField = document.querySelector('.border-red-500');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -400,6 +418,10 @@ const ApplicantPage = () => {
         fileInput.value = '';
       }
       
+      // Reset errors and show all errors flag
+      setErrors({});
+      setShowAllErrors(false);
+      
       // Show success modal instead of toast
       setShowSuccessModal(true);
     } catch (error) {
@@ -421,10 +443,10 @@ const ApplicantPage = () => {
           error: {
             style: {
               background: '#FFFACD',
-              color: 'white',
+              color: '#800000',
             },
             iconTheme: {
-              primary: 'white',
+              primary: '#800000',
               secondary: '#ef4444',
             },
           },
@@ -462,7 +484,7 @@ const ApplicantPage = () => {
           </Link>
         </div>
         <h1 className="text-2xl font-bold text-[#800000] mb-6">Application Form</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField 
               label="First Name" 
@@ -471,7 +493,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.firstName}
-              showErrorMessage={true}
+              showErrorMessage={showAllErrors || !!errors.firstName}
             />
             <InputField 
               label="Middle Name" 
@@ -486,7 +508,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.lastName}
-              showErrorMessage={true}
+              showErrorMessage={showAllErrors || !!errors.lastName}
             />
             <InputField 
               label="Extension Name" 
@@ -503,7 +525,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               required 
               error={errors.email}
-              showErrorMessage={true}
+              showErrorMessage={showAllErrors || !!errors.email}
             />
             <InputField 
               label="Contact Number" 
@@ -513,7 +535,7 @@ const ApplicantPage = () => {
               required 
               error={errors.contactNumber}
               placeholder="09123456789"
-              showErrorMessage={true}
+              showErrorMessage={showAllErrors || !!errors.contactNumber}
             />
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
@@ -574,7 +596,7 @@ const ApplicantPage = () => {
               onChange={handleChange} 
               placeholder="https://facebook.com/yourprofile"
               error={errors.fbLink}
-              showErrorMessage={true}
+              showErrorMessage={showAllErrors || !!errors.fbLink}
             />
             <div className="space-y-1 col-span-1 md:col-span-2">
               <label className="text-sm font-medium text-gray-700">

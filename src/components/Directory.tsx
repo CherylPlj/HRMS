@@ -38,28 +38,11 @@ interface Employee {
     LastName?: string;
     Email?: string;
     Photo?: string;
-  };
-}
-
-interface Faculty {
-  FacultyID: number;
-  FirstName: string;
-  LastName: string;
-  Position: string;
-  Phone?: string;
-  Address?: string;
-  EmploymentStatus: string;
-  HireDate: string;
-  Department: {
-    DepartmentName: string;
-  };
-  User: {
-    UserID: string;
-    FirstName: string;
-    LastName: string;
-    Email: string;
-    Status: string;
-    Photo?: string;
+    UserRole?: Array<{
+      role: {
+        name: string;
+      };
+    }>;
   };
 }
 
@@ -73,7 +56,6 @@ interface DirectoryFilters {
 const Directory = () => {
   const { user } = useUser();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [showEmailPopup, setShowEmailPopup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +129,6 @@ const Directory = () => {
       const employeesData = data.records as Employee[];
       
       setEmployees(employeesData);
-      setFaculty([]); // No faculty data anymore
     } catch (error) {
       console.error('Error fetching directory data:', error);
       setError('Failed to load directory data');
@@ -240,6 +221,44 @@ const Directory = () => {
     return matchesName && matchesDept && matchesPosition && matchesYearsOfService;
   });
 
+  // Helper function to get employee roles
+  const getEmployeeRoles = (record: Employee): string[] => {
+    if (!record.User?.UserRole) return [];
+    return record.User.UserRole.map(ur => ur.role.name.toLowerCase());
+  };
+
+  // Helper function to determine if employee is admin
+  const isEmployeeAdmin = (record: Employee): boolean => {
+    // Check User roles first
+    const roles = getEmployeeRoles(record);
+    if (roles.some(role => role.includes('admin') || role.includes('super admin'))) {
+      return true;
+    }
+    
+    // Fallback: Check Position field if no User roles
+    const position = (record.Position || '').toLowerCase();
+    return position.includes('admin') || 
+           position.includes('principal') || 
+           position.includes('director') ||
+           position.includes('head');
+  };
+
+  // Helper function to determine if employee is faculty
+  const isEmployeeFaculty = (record: Employee): boolean => {
+    // Check User roles first
+    const roles = getEmployeeRoles(record);
+    if (roles.some(role => role.includes('faculty'))) {
+      return true;
+    }
+    
+    // Fallback: Check Position field if no User roles
+    const position = (record.Position || '').toLowerCase();
+    return position.includes('faculty') || 
+           position.includes('teacher') || 
+           position.includes('instructor') ||
+           position.includes('professor');
+  };
+
   const allFilteredRecords = filteredEmployees;
   const totalRecords = allFilteredRecords.length;
 
@@ -324,6 +343,80 @@ const Directory = () => {
     } catch {
       return ' ';
     }
+  };
+
+  // Categorize employees by division
+  const categorizeEmployees = (employees: Employee[]) => {
+    const admins: Employee[] = [];
+    const faculty: Employee[] = [];
+    const otherStaff: Employee[] = [];
+
+    employees.forEach(emp => {
+      // Priority: Admin > Faculty > Other
+      if (isEmployeeAdmin(emp)) {
+        admins.push(emp);
+      } else if (isEmployeeFaculty(emp)) {
+        faculty.push(emp);
+      } else {
+        otherStaff.push(emp);
+      }
+    });
+
+    // Sort each category alphabetically by name
+    const sortByName = (a: Employee, b: Employee) => {
+      const nameA = getEmployeeName(a).toLowerCase();
+      const nameB = getEmployeeName(b).toLowerCase();
+      return nameA.localeCompare(nameB);
+    };
+
+    admins.sort(sortByName);
+    faculty.sort(sortByName);
+    otherStaff.sort(sortByName);
+
+    return { admins, faculty, otherStaff };
+  };
+
+  // Group faculty by department
+  const groupFacultyByDepartment = (faculty: Employee[]) => {
+    const departmentOrder = ['pre-school', 'primary', 'intermediate', 'jhs'];
+    const departments: { [key: string]: Employee[] } = {};
+
+    faculty.forEach(emp => {
+      const deptName = emp.Department?.DepartmentName || 'Other';
+      if (!departments[deptName]) {
+        departments[deptName] = [];
+      }
+      departments[deptName].push(emp);
+    });
+
+    // Sort departments according to the specified order
+    const sortedDepartments: { name: string; employees: Employee[] }[] = [];
+    
+    // First add departments in the specified order
+    departmentOrder.forEach(deptKey => {
+      const deptEntry = Object.keys(departments).find(
+        key => key.toLowerCase() === deptKey
+      );
+      if (deptEntry && departments[deptEntry].length > 0) {
+        sortedDepartments.push({
+          name: deptEntry,
+          employees: departments[deptEntry]
+        });
+        delete departments[deptEntry];
+      }
+    });
+
+    // Add any remaining departments alphabetically
+    Object.keys(departments)
+      .sort()
+      .forEach(deptName => {
+        sortedDepartments.push({
+          name: deptName,
+          employees: departments[deptName]
+        });
+      });
+
+    return sortedDepartments;
   };
 
   const handleAdminAction = async (action: string, employeeId: string, newStatus?: string) => {
@@ -478,6 +571,10 @@ const Directory = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Categorize filtered employees
+  const { admins, faculty, otherStaff } = categorizeEmployees(allFilteredRecords);
+  const facultyByDepartment = groupFacultyByDepartment(faculty);
 
   if (loading) {
     return (
@@ -655,55 +752,204 @@ const Directory = () => {
           </button>
         </div>
 
-        {/* Employee Cards Grid */}
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-5 md:gap-6">
-          {allFilteredRecords.map((record, index) => (
-            <div
-              key={`${record.EmployeeID}-${index}`}
-              onClick={() => handleEmployeeClick(record)}
-              className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-gray-100 shadow-sm hover:shadow-lg active:shadow-sm transition-all cursor-pointer group touch-manipulation"
-            >
-              <div className="text-center">
-                {/* Employee Photo */}
-                <div className="mb-3 sm:mb-4">
-                  {getEmployeePhoto(record) ? (
-                    <img
-                      src={getEmployeePhoto(record)!}
-                      alt={getEmployeeName(record)}
-                      className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto object-cover border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors">
-                      <i className="fas fa-user text-xl sm:text-2xl md:text-3xl text-gray-400"></i>
+        {/* Employee Cards Grid - Organized by Divisions */}
+        <div className="space-y-8">
+          {/* ADMINS SECTION */}
+          {admins.length > 0 && (
+            <div>
+              <div className="bg-[#800000] text-white px-4 py-3 rounded-lg mb-4 shadow-sm">
+                <h2 className="text-base sm:text-lg font-semibold flex items-center">
+                  <i className="fas fa-user-shield mr-2 text-sm sm:text-base"></i>
+                  ADMINS ({admins.length})
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-5 md:gap-6">
+                {admins.map((record, index) => (
+                  <div
+                    key={`admin-${record.EmployeeID}-${index}`}
+                    onClick={() => handleEmployeeClick(record)}
+                    className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-gray-100 shadow-sm hover:shadow-lg active:shadow-sm transition-all cursor-pointer group touch-manipulation"
+                  >
+                    <div className="text-center">
+                      {/* Employee Photo */}
+                      <div className="mb-3 sm:mb-4">
+                        {getEmployeePhoto(record) ? (
+                          <img
+                            src={getEmployeePhoto(record)!}
+                            alt={getEmployeeName(record)}
+                            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto object-cover border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors">
+                            <i className="fas fa-user text-xl sm:text-2xl md:text-3xl text-gray-400"></i>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Employee Name */}
+                      <h3 className="text-sm sm:text-base md:text-lg font-semibold text-[#800000] mb-1 sm:mb-2 group-hover:text-[#600000] transition-colors line-clamp-2 leading-tight">
+                        {getEmployeeName(record)}
+                      </h3>
+
+                      {/* Position */}
+                      <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeePosition(record)}>
+                        <i className="fas fa-briefcase mr-1"></i>
+                        {getEmployeePosition(record)}
+                      </p>
+
+                      {/* Department */}
+                      <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeeDepartment(record)}>
+                        <i className="fas fa-building mr-1"></i>
+                        {getEmployeeDepartment(record)}
+                      </p>
+
+                      {/* Years of Service */}
+                      <p className="text-xs sm:text-sm text-gray-600 truncate" title={calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}>
+                        <i className="fas fa-calendar-alt mr-1"></i>
+                        {calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}
+                      </p>
                     </div>
-                  )}
-                </div>
-
-                {/* Employee Name */}
-                <h3 className="text-sm sm:text-base md:text-lg font-semibold text-[#800000] mb-1 sm:mb-2 group-hover:text-[#600000] transition-colors line-clamp-2 leading-tight">
-                  {getEmployeeName(record)}
-                </h3>
-
-                {/* Position */}
-                <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeePosition(record)}>
-                  <i className="fas fa-briefcase mr-1"></i>
-                  {getEmployeePosition(record)}
-                </p>
-
-                {/* Department */}
-                <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeeDepartment(record)}>
-                  <i className="fas fa-building mr-1"></i>
-                  {getEmployeeDepartment(record)}
-                </p>
-
-                {/* Years of Service */}
-                <p className="text-xs sm:text-sm text-gray-600 truncate" title={calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}>
-                  <i className="fas fa-calendar-alt mr-1"></i>
-                  {calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}
-                </p>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* FACULTY SECTION */}
+          {faculty.length > 0 && (
+            <div>
+              <div className="bg-[#800000] text-white px-4 py-3 rounded-lg mb-4 shadow-sm">
+                <h2 className="text-base sm:text-lg font-semibold flex items-center">
+                  <i className="fas fa-chalkboard-teacher mr-2 text-sm sm:text-base"></i>
+                  FACULTY ({faculty.length})
+                </h2>
+              </div>
+
+              {/* Faculty grouped by department */}
+              <div className="space-y-8">
+                {facultyByDepartment.map((dept, deptIndex) => (
+                  <div key={`dept-${deptIndex}`}>
+                    <div className="bg-gray-100 border-l-4 border-[#800000] px-4 py-2 mb-3 rounded">
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center">
+                        <i className="fas fa-school mr-2 text-xs sm:text-sm text-[#800000]"></i>
+                        {dept.name} ({dept.employees.length})
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-5 md:gap-6">
+                      {dept.employees.map((record, index) => (
+                        <div
+                          key={`faculty-${record.EmployeeID}-${index}`}
+                          onClick={() => handleEmployeeClick(record)}
+                          className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-gray-100 shadow-sm hover:shadow-lg active:shadow-sm transition-all cursor-pointer group touch-manipulation"
+                        >
+                          <div className="text-center">
+                            {/* Employee Photo */}
+                            <div className="mb-3 sm:mb-4">
+                              {getEmployeePhoto(record) ? (
+                                <img
+                                  src={getEmployeePhoto(record)!}
+                                  alt={getEmployeeName(record)}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto object-cover border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors">
+                                  <i className="fas fa-user text-xl sm:text-2xl md:text-3xl text-gray-400"></i>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Employee Name */}
+                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-[#800000] mb-1 sm:mb-2 group-hover:text-[#600000] transition-colors line-clamp-2 leading-tight">
+                              {getEmployeeName(record)}
+                            </h3>
+
+                            {/* Position */}
+                            <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeePosition(record)}>
+                              <i className="fas fa-briefcase mr-1"></i>
+                              {getEmployeePosition(record)}
+                            </p>
+
+                            {/* Department */}
+                            <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeeDepartment(record)}>
+                              <i className="fas fa-building mr-1"></i>
+                              {getEmployeeDepartment(record)}
+                            </p>
+
+                            {/* Years of Service */}
+                            <p className="text-xs sm:text-sm text-gray-600 truncate" title={calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}>
+                              <i className="fas fa-calendar-alt mr-1"></i>
+                              {calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* OTHER STAFF SECTION */}
+          {otherStaff.length > 0 && (
+            <div>
+              <div className="bg-[#800000] text-white px-4 py-3 rounded-lg mb-4 shadow-sm">
+                <h2 className="text-base sm:text-lg font-semibold flex items-center">
+                  <i className="fas fa-users mr-2 text-sm sm:text-base"></i>
+                  OTHER STAFF ({otherStaff.length})
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-5 md:gap-6">
+                {otherStaff.map((record, index) => (
+                  <div
+                    key={`other-${record.EmployeeID}-${index}`}
+                    onClick={() => handleEmployeeClick(record)}
+                    className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-gray-100 shadow-sm hover:shadow-lg active:shadow-sm transition-all cursor-pointer group touch-manipulation"
+                  >
+                    <div className="text-center">
+                      {/* Employee Photo */}
+                      <div className="mb-3 sm:mb-4">
+                        {getEmployeePhoto(record) ? (
+                          <img
+                            src={getEmployeePhoto(record)!}
+                            alt={getEmployeeName(record)}
+                            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto object-cover border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-3 sm:border-4 border-gray-100 group-hover:border-[#800000] transition-colors">
+                            <i className="fas fa-user text-xl sm:text-2xl md:text-3xl text-gray-400"></i>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Employee Name */}
+                      <h3 className="text-sm sm:text-base md:text-lg font-semibold text-[#800000] mb-1 sm:mb-2 group-hover:text-[#600000] transition-colors line-clamp-2 leading-tight">
+                        {getEmployeeName(record)}
+                      </h3>
+
+                      {/* Position */}
+                      <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeePosition(record)}>
+                        <i className="fas fa-briefcase mr-1"></i>
+                        {getEmployeePosition(record)}
+                      </p>
+
+                      {/* Department */}
+                      <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1 truncate" title={getEmployeeDepartment(record)}>
+                        <i className="fas fa-building mr-1"></i>
+                        {getEmployeeDepartment(record)}
+                      </p>
+
+                      {/* Years of Service */}
+                      <p className="text-xs sm:text-sm text-gray-600 truncate" title={calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}>
+                        <i className="fas fa-calendar-alt mr-1"></i>
+                        {calculateYearsOfService(getEmploymentDetail(record)?.HireDate)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* No Results */}
