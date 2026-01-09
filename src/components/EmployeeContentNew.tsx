@@ -133,6 +133,7 @@ const EmployeeContentNew = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importData, setImportData] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
 
   // State for Export Employee modal
@@ -810,16 +811,17 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         try {
           const csv = e.target?.result as string;
           const lines = csv.split('\n').filter(line => line.trim() !== '');
-          const headers = lines[0].split(',');
+          const headers = lines[0].split(',').map(h => h.trim());
           const data = lines.slice(1).map(line => {
             const values = line.split(',');
             const row: any = {};
             headers.forEach((header, index) => {
-              row[header.trim()] = values[index]?.trim() || '';
+              row[header] = values[index]?.trim() || '';
             });
             return row;
           });
-          setImportPreview(data.slice(0, 5));
+          setImportData(data); // Store all data
+          setImportPreview(data.slice(0, 5)); // Show preview of first 5
         } catch (error) {
           console.error('Error parsing CSV:', error);
         }
@@ -831,25 +833,44 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleImportEmployees = async () => {
-    if (!importFile) return;
+    if (!importFile || importData.length === 0) return;
     setIsImporting(true);
     setErrorMessage('');
     try {
-      for (const row of importPreview) {
-        const response = await fetch('/api/employees/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(row),
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to import employee');
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Import ALL rows from importData, not just preview
+      for (const row of importData) {
+        try {
+          const response = await fetch('/api/employees/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(row),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error(`Failed to import row:`, row, errorData.error);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (rowError) {
+          console.error(`Error importing row:`, row, rowError);
+          errorCount++;
         }
       }
+      
       setIsImportModalOpen(false);
       setImportFile(null);
       setImportPreview([]);
-      setSuccessMessage('Employees imported successfully!');
+      setImportData([]);
+      
+      if (errorCount > 0) {
+        setSuccessMessage(`Import completed: ${successCount} succeeded, ${errorCount} failed. Check console for details.`);
+      } else {
+        setSuccessMessage(`Successfully imported ${successCount} employee(s)!`);
+      }
       setShowSuccessModal(true);
       await fetchEmployees();
     } catch (error) {

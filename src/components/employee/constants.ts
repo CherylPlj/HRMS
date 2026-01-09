@@ -10,7 +10,7 @@ export const tabs = [
   { id: 'family', label: 'Family Background', icon: Users },
   { id: 'education', label: 'Educational Background', icon: GraduationCap },
   { id: 'work', label: 'Employment History', icon: Briefcase },
-  { id: 'performance', label: 'Performance History', icon: TrendingUp },
+  // { id: 'performance', label: 'Performance History', icon: TrendingUp },
   { id: 'medical', label: 'Medical Information', icon: Heart },
   { id: 'other', label: 'Other Information', icon: MoreHorizontal },
 ];

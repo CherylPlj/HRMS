@@ -11,7 +11,7 @@ import WorkExperienceTab from '../tabs/WorkExperienceTab';
 import PromotionHistoryTab from '../tabs/PromotionHistoryTab';
 import ContactInfoTab from '../tabs/ContactInfoTab';
 import GovernmentIDsTab from '../tabs/GovernmentIDsTab';
-import PerformanceHistoryTab from '../tabs/PerformanceHistoryTab';
+// import PerformanceHistoryTab from '../tabs/PerformanceHistoryTab';
 import { maskSalaryAmount } from '@/utils/salaryMasking';
 
 interface EmployeeDetailProps {
@@ -375,11 +375,11 @@ const EmployeeDetail: React.FC<EmployeeDetailProps> = ({
             </div>
           )}
 
-          {activeTab === 'performance' && (
+          {/* {activeTab === 'performance' && (
             <div className="space-y-6">
               <PerformanceHistoryTab employeeId={employee?.employeeId || ''} />
             </div>
-          )}
+          )} */}
 
           {activeTab === 'medical' && (
             <div className="space-y-6">
