@@ -15,10 +15,20 @@ export const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
   const [iframeError, setIframeError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  if (!previewResumeUrl) return null;
+  // Process URL and handle errors
+  let fileType: 'pdf' | 'image' | 'other' = 'other';
+  let previewUrl = '';
+  let renderError: string | null = null;
 
-  const fileType = getFileType(previewResumeUrl);
-  const previewUrl = getPreviewUrl(previewResumeUrl);
+  if (previewResumeUrl) {
+    try {
+      fileType = getFileType(previewResumeUrl);
+      previewUrl = getPreviewUrl(previewResumeUrl);
+    } catch (error) {
+      console.error('Error processing resume URL:', error);
+      renderError = 'Unable to process resume URL. Please try downloading the file instead.';
+    }
+  }
   
   // Check if previewUrl is invalid (empty or just the base path without file)
   // A valid proxy URL should be: /api/candidates/resume/[encoded-file-path]
@@ -30,9 +40,13 @@ export const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
   );
 
   // Reset error state when previewUrl changes
+  // This hook must be called before any conditional returns
   useEffect(() => {
     setIframeError(false);
   }, [previewUrl]);
+
+  // Early return after all hooks have been called
+  if (!previewResumeUrl) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
@@ -64,7 +78,23 @@ export const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
           </div>
         </div>
         <div className="flex-1 overflow-auto p-4">
-          {!previewUrl || isInvalidProxyUrl ? (
+          {renderError ? (
+            <div className="flex flex-col items-center justify-center h-full">
+              <i className="fas fa-exclamation-triangle text-6xl text-red-400 mb-4"></i>
+              <p className="text-gray-600 mb-4">{renderError}</p>
+              {previewResumeUrl && (
+                <a
+                  href={previewResumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  <i className="fas fa-external-link-alt mr-2"></i>
+                  Open Original URL
+                </a>
+              )}
+            </div>
+          ) : !previewUrl || isInvalidProxyUrl ? (
             <div className="flex flex-col items-center justify-center h-full">
               <p className="text-gray-600 mb-4">
                 {!previewUrl 

@@ -1643,7 +1643,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       {/* Add Employee Modal - Modern & User-Friendly */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
+          <div className="bg-white dark:bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden" style={{ backgroundColor: 'white' }}>
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-[#800000] to-red-700 px-8 py-6 text-white">
               <div className="flex justify-between items-center">
@@ -2055,7 +2055,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       {/* Edit Employee Modal - Modern & User-Friendly */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
+          <div className="bg-white dark:bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden" style={{ backgroundColor: 'white' }}>
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
               <div className="flex justify-between items-center">
@@ -2732,7 +2732,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       {/* Import Employee Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'white' }}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Import Employees</h2>
               <button
@@ -2935,7 +2935,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
       {/* Export Employee Modal */}
       {isExportModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white dark:bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden" style={{ backgroundColor: 'white' }}>
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
               <div className="flex justify-between items-center">

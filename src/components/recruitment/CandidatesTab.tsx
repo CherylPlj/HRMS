@@ -413,7 +413,7 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
         <h2 className="text-lg font-bold">{isHiredTab ? 'Hired Candidates' : 'Active Candidates'}</h2>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
             onClick={handleExportCandidates}
           >
             <Download className="w-4 h-4" />
@@ -422,14 +422,14 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
           {!isHiredTab && (
             <>
               <button
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                 onClick={() => setShowImportCandidates(true)}
               >
                 <Upload className="w-4 h-4" />
                 Import
               </button>
               <button
-                className="flex items-center gap-2 bg-[#800000] hover:bg-[#600000] text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                className="flex items-center gap-2 bg-[#800000] hover:bg-[#600000] text-white px-4 py-2 rounded-lg transition-colors"
                 onClick={() => setShowAddCandidate(true)}
               >
                 <Plus className="w-4 h-4" />

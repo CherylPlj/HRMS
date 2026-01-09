@@ -16,10 +16,12 @@ export async function OPTIONS() {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const pathArray = await params.path;
+    const resolvedParams = await params;
+    const pathArray = resolvedParams.path;
+    
     if (!pathArray || pathArray.length === 0) {
       return NextResponse.json(
         { error: 'File path is required' },

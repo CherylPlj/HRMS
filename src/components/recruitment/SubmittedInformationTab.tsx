@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
-import { Check, X, Eye, Download } from 'lucide-react';
+import { Check, X, Eye, Download, RefreshCw } from 'lucide-react';
 import { formatDate } from './utils';
 
 interface SubmittedCandidate {
@@ -259,8 +259,9 @@ export const SubmittedInformationTab: React.FC<SubmittedInformationTabProps> = (
         <div className="flex items-center gap-2">
           <button
             onClick={fetchSubmittedCandidates}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
+            <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
         </div>

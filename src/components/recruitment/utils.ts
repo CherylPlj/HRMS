@@ -70,52 +70,57 @@ export function getFileType(url: string): 'pdf' | 'image' | 'other' {
 
 // Helper function to get preview URL
 export function getPreviewUrl(url: string): string {
-  if (!url || url.trim() === '') {
-    console.error('getPreviewUrl: Empty URL provided');
-    return '';
-  }
-  
-  // For Supabase storage URLs, use proxy endpoint to force inline display
-  if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
-    try {
-      // Extract the file path from the Supabase URL
-      // Supabase URLs are typically: https://[project].supabase.co/storage/v1/object/public/resumes/[path]
-      const urlMatch = url.match(/\/resumes\/(.+)$/);
-      if (urlMatch && urlMatch[1] && urlMatch[1].trim() !== '') {
-        const filePath = urlMatch[1];
-        // Decode the path first in case it's already encoded, then re-encode to ensure proper handling
-        let decodedPath: string;
-        try {
-          decodedPath = decodeURIComponent(filePath);
-        } catch {
-          decodedPath = filePath;
+  try {
+    if (!url || url.trim() === '') {
+      console.error('getPreviewUrl: Empty URL provided');
+      return '';
+    }
+    
+    // For Supabase storage URLs, use proxy endpoint to force inline display
+    if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+      try {
+        // Extract the file path from the Supabase URL
+        // Supabase URLs are typically: https://[project].supabase.co/storage/v1/object/public/resumes/[path]
+        const urlMatch = url.match(/\/resumes\/(.+)$/);
+        if (urlMatch && urlMatch[1] && urlMatch[1].trim() !== '') {
+          const filePath = urlMatch[1];
+          // Decode the path first in case it's already encoded, then re-encode to ensure proper handling
+          let decodedPath: string;
+          try {
+            decodedPath = decodeURIComponent(filePath);
+          } catch {
+            decodedPath = filePath;
+          }
+          
+          // Validate that we have a non-empty path after decoding
+          if (!decodedPath || decodedPath.trim() === '') {
+            console.warn('getPreviewUrl: Empty file path after decoding:', url);
+            return url; // Return original URL as fallback
+          }
+          
+          // URL encode the path to handle special characters and spaces
+          // Use proxy endpoint that sets Content-Disposition: inline
+          const proxyUrl = `/api/candidates/resume/${encodeURIComponent(decodedPath)}`;
+          console.log('Generated proxy URL:', proxyUrl, 'from original URL:', url);
+          return proxyUrl;
+        } else {
+          console.warn('getPreviewUrl: Could not extract file path from URL:', url);
+          // Return original URL as fallback
+          return url;
         }
-        
-        // Validate that we have a non-empty path after decoding
-        if (!decodedPath || decodedPath.trim() === '') {
-          console.warn('getPreviewUrl: Empty file path after decoding:', url);
-          return url; // Return original URL as fallback
-        }
-        
-        // URL encode the path to handle special characters and spaces
-        // Use proxy endpoint that sets Content-Disposition: inline
-        const proxyUrl = `/api/candidates/resume/${encodeURIComponent(decodedPath)}`;
-        console.log('Generated proxy URL:', proxyUrl, 'from original URL:', url);
-        return proxyUrl;
-      } else {
-        console.warn('getPreviewUrl: Could not extract file path from URL:', url);
+      } catch (e) {
+        console.error('Error parsing Supabase URL:', e, 'URL:', url);
         // Return original URL as fallback
         return url;
       }
-    } catch (e) {
-      console.error('Error parsing Supabase URL:', e, 'URL:', url);
-      // Return original URL as fallback
-      return url;
     }
+    
+    // For non-Supabase URLs, return as-is
+    console.log('getPreviewUrl: Returning original URL (not Supabase):', url);
+    return url;
+  } catch (error) {
+    console.error('Unexpected error in getPreviewUrl:', error);
+    return url || '';
   }
-  
-  // For non-Supabase URLs, return as-is
-  console.log('getPreviewUrl: Returning original URL (not Supabase):', url);
-  return url;
 }
 

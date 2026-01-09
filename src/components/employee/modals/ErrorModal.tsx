@@ -17,7 +17,8 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, message, onClose }) => 
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl border border-red-400 transform transition-all"
+        className="bg-white dark:bg-white rounded-lg p-6 max-w-sm w-full shadow-xl border border-red-400 transform transition-all"
+        style={{ backgroundColor: 'white' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="text-center">
