@@ -99,15 +99,15 @@ export function AIDashboard({ userId }: AIDashboardProps) {
           </div>
         </div>
 
-        {/* Promotion Ready */}
-        <div className="bg-white border rounded-lg p-6">
+        {/* Promotion Ready - Hidden for now */}
+        {/* <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between mb-2">
             <TrendingUp className="w-5 h-5 text-green-600" />
             <CheckCircle className="w-4 h-4 text-green-600" />
           </div>
           <p className="text-2xl font-bold text-gray-900">{insights.promotionReady.count}</p>
           <p className="text-sm text-gray-600 mt-1">Promotion Ready Employees</p>
-        </div>
+        </div> */}
 
         {/* Training Needs */}
         <div className="bg-white border rounded-lg p-6">
@@ -121,19 +121,19 @@ export function AIDashboard({ userId }: AIDashboardProps) {
           <p className="text-sm text-gray-600 mt-1">Training Needs Identified</p>
         </div>
 
-        {/* High Risk Employees */}
-        <div className="bg-white border rounded-lg p-6">
+        {/* High Risk Employees - Hidden for now */}
+        {/* <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between mb-2">
             <AlertTriangle className="w-5 h-5 text-red-600" />
             <span className="text-xs text-red-600 font-semibold">Alert</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{insights.highRiskEmployees.count}</p>
           <p className="text-sm text-gray-600 mt-1">High Risk Employees</p>
-        </div>
+        </div> */}
       </div>
 
-      {/* Promotion Ready Employees */}
-      {insights.promotionReady.employees.length > 0 && (
+      {/* Promotion Ready Employees - Hidden for now */}
+      {/* {insights.promotionReady.employees.length > 0 && (
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-[#800000]" />
@@ -157,10 +157,10 @@ export function AIDashboard({ userId }: AIDashboardProps) {
             ))}
           </div>
         </div>
-      )}
+      )} */}
 
-      {/* High Risk Employees */}
-      {insights.highRiskEmployees.employees.length > 0 && (
+      {/* High Risk Employees - Hidden for now */}
+      {/* {insights.highRiskEmployees.employees.length > 0 && (
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -194,7 +194,7 @@ export function AIDashboard({ userId }: AIDashboardProps) {
             ))}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Training Needs by Department */}
       {Object.keys(insights.trainingNeeds.byDepartment).length > 0 && (

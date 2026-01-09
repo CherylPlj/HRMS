@@ -1,16 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { currentUser } from '@clerk/nextjs/server';
 
 const REQUIRED_FIELDS = [
-  'EmployeeID',
   'FirstName',
   'LastName',
-  'HireDate',
   'DateOfBirth',
+  'Email',
+  'Phone',
+  'HireDate',
+  'Sex',
 ];
+
+// Helper function to generate unique employee ID
+async function generateUniqueEmployeeId(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `${year}-`;
+
+  // Find the latest employee ID for current year using Supabase
+  const { data: employees, error } = await supabaseAdmin
+    .from('Employee')
+    .select('EmployeeID')
+    .like('EmployeeID', `${prefix}%`)
+    .order('EmployeeID', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error('Error fetching latest employee:', error);
+    throw new Error('Failed to generate Employee ID');
+  }
+
+  let nextNumber = 1;
+  if (employees && employees.length > 0 && employees[0].EmployeeID) {
+    const currentNumber = parseInt(employees[0].EmployeeID.split('-')[1]);
+    nextNumber = currentNumber + 1;
+  }
+
+  return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+}
 
 export async function POST(req: NextRequest) {
   try {
+    // Check authentication
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Authentication required. Please sign in and try again.' 
+      }, { status: 401 });
+    }
+
     const data = await req.json();
     console.log('IMPORT EMPLOYEE DATA:', data);
 
@@ -19,78 +58,94 @@ export async function POST(req: NextRequest) {
     if (missingFields.length > 0) {
       const errorMsg = `Missing required field(s): ${missingFields.join(', ')}`;
       console.error(errorMsg);
-      return NextResponse.json({ success: false, error: errorMsg, data }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        error: errorMsg 
+      }, { status: 400 });
     }
 
-    // Create Employee
-    const employee = await prisma.employee.create({
-      data: {
-        EmployeeID: data.EmployeeID,
-        UserID: data.UserID || undefined,
+    // Auto-generate Employee ID
+    const employeeId = await generateUniqueEmployeeId();
+
+    // Create Employee using Supabase
+    const { data: employee, error: employeeError } = await supabaseAdmin
+      .from('Employee')
+      .insert({
+        EmployeeID: employeeId,
+        UserID: null,
         LastName: data.LastName,
         FirstName: data.FirstName,
-        MiddleName: data.MiddleName,
-        ExtensionName: data.ExtensionName,
+        MiddleName: data.MiddleName || null,
+        ExtensionName: data.ExtensionName || null,
         Sex: data.Sex,
-        Photo: data.Photo,
-        DateOfBirth: new Date(data.DateOfBirth),
-        PlaceOfBirth: data.PlaceOfBirth,
-        CivilStatus: data.CivilStatus,
-        Nationality: data.Nationality,
-        Religion: data.Religion,
-        ContractID: data.ContractID && data.ContractID.trim() !== '' ? Number(data.ContractID) : null,
-        DepartmentID: data.DepartmentID ? Number(data.DepartmentID) : undefined,
-        Email: data.Email,
-        HireDate: new Date(data.HireDate),
-        Position: data.Position,
-      },
-    });
+        Photo: data.Photo || null,
+        DateOfBirth: data.DateOfBirth,
+        PlaceOfBirth: null,
+        CivilStatus: null,
+        Nationality: null,
+        Religion: null,
+        ContractID: null,
+        DepartmentID: data.DepartmentID ? Number(data.DepartmentID) : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-    // Create ContactInfo
-    await prisma.contactInfo.create({
-      data: {
-        employeeId: data.EmployeeID,
+    if (employeeError) {
+      console.error('Error creating employee:', employeeError);
+      throw new Error('Failed to create employee record');
+    }
+
+    // Create ContactInfo (only Email and Phone)
+    const { error: contactError } = await supabaseAdmin
+      .from('ContactInfo')
+      .insert({
+        employeeId: employeeId,
+        Email: data.Email,
         Phone: data.Phone,
-        PresentAddress: data.PresentAddress,
-        PermanentAddress: data.PermanentAddress,
-        EmergencyContactName: data.EmergencyContactName,
-        EmergencyContactNumber: data.EmergencyContactNumber,
-        Email: data.Email,
-      },
-    });
+        PresentAddress: null,
+        PermanentAddress: null,
+        EmergencyContactName: null,
+        EmergencyContactNumber: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
 
-    // Create GovernmentID
-    await prisma.governmentID.create({
-      data: {
-        employeeId: data.EmployeeID,
-        SSSNumber: data.SSSNumber,
-        TINNumber: data.TINNumber,
-        PhilHealthNumber: data.PhilHealthNumber,
-        PagIbigNumber: data.PagIbigNumber,
-        GSISNumber: data.GSISNumber,
-        PRCLicenseNumber: data.PRCLicenseNumber,
-        PRCValidity: data.PRCValidity ? new Date(data.PRCValidity) : undefined,
-      },
-    });
+    if (contactError) {
+      console.error('Error creating contact info:', contactError);
+      // Don't fail completely, just log
+    }
 
     // Create EmploymentDetail
-    await prisma.employmentDetail.create({
-      data: {
-        employeeId: data.EmployeeID,
-        EmploymentStatus: data.EmploymentStatus,
-        ResignationDate: data.ResignationDate ? new Date(data.ResignationDate) : undefined,
-        Designation: data.Designation,
-        Position: data.Position,
-        SalaryGrade: data.SalaryGrade,
-        HireDate: data.HireDate ? new Date(data.HireDate) : undefined,
-      },
-    });
+    const { error: employmentError } = await supabaseAdmin
+      .from('EmploymentDetail')
+      .insert({
+        employeeId: employeeId,
+        EmploymentStatus: data.EmploymentStatus || 'Regular',
+        ResignationDate: data.ResignationDate || null,
+        Designation: data.Designation || null,
+        Position: data.Position || null,
+        SalaryGrade: data.SalaryGrade || null,
+        SalaryAmount: data.SalaryAmount ? Number(data.SalaryAmount) : null,
+        HireDate: data.HireDate || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
 
-    return NextResponse.json({ success: true, employee });
+    if (employmentError) {
+      console.error('Error creating employment detail:', employmentError);
+      // Don't fail completely, just log
+    }
+
+    return NextResponse.json({ success: true, employee, employeeId });
   } catch (error: any) {
     console.error('IMPORT ERROR:', error);
-    let errorMsg = error.message || 'Unknown error';
-    if (error.code) errorMsg += ` (code: ${error.code})`;
-    return NextResponse.json({ success: false, error: errorMsg, stack: error.stack }, { status: 400 });
+    
+    // Return generic error message to user
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to import employee. Please check your data and try again.' 
+    }, { status: 500 });
   }
 } 

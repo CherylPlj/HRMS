@@ -625,10 +625,10 @@ export default function DashboardFaculty() {
             </div>
           </div>
 
-          {/* Third Row: Disciplinary Action, Performance */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Third Row: Disciplinary Action, Performance - Hidden for now */}
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"> */}
             {/* Disciplinary Action Card */}
-            <div 
+            {/* <div 
               className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
             >
               <div className="flex justify-between items-center mb-4">
@@ -664,10 +664,10 @@ export default function DashboardFaculty() {
                 <i className="fas fa-clipboard-list mr-2"></i>
                 Total Cases: {disciplinaryData.total}
               </div>
-            </div>
+            </div> */}
 
             {/* Performance Card */}
-            <div 
+            {/* <div 
               className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
             >
               <div className="flex justify-between items-center mb-4">
@@ -710,8 +710,8 @@ export default function DashboardFaculty() {
                   <p className="text-xs text-blue-700">Metrics</p>
                 </div>
               </div>
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}
         </div>
       </div>
     </>

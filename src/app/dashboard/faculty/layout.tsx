@@ -303,8 +303,8 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
               { name: 'Personal Data', icon: 'fa-user', key: 'personal-data', route: 'personal-data' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
               { name: 'Leave Request', icon: 'fa-envelope', key: 'leave', route: 'leave' },
-              { name: 'Performance', icon: 'fa-chart-line', key: 'performance', route: 'performance' },
-              { name: 'Disciplinary Records', icon: 'fa-gavel', key: 'disciplinary-records', route: 'disciplinary-records' },
+              // { name: 'Performance', icon: 'fa-chart-line', key: 'performance', route: 'performance' },
+              // { name: 'Disciplinary Records', icon: 'fa-gavel', key: 'disciplinary-records', route: 'disciplinary-records' },
               { name: 'Directory', icon: 'fa-address-book', key: 'directory', route: 'directory' },
               // { name: 'Reports', icon: 'fa-print', key: 'reports', route: 'reports' },
             ].map((item) => {

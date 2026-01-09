@@ -77,7 +77,7 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
 
   // Initialize editing roles when entering edit mode
   useEffect(() => {
-    if (mode === 'edit') {
+    if (mode === 'edit' && !isSaving) {
       const initialEdits: { [key: number]: { name: string } } = {};
       filteredRoles.forEach(r => {
         initialEdits[r.id] = {
@@ -88,7 +88,7 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
       setEditErrors({});
       setHasEdits(false);
     }
-  }, [mode, filteredRoles]);
+  }, [mode, filteredRoles, isSaving]);
 
   // Check if there are edits
   useEffect(() => {
@@ -269,48 +269,59 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
 
     setIsSaving(true);
     try {
-      const promises = rolesToUpdate.map(r => {
+      const promises = rolesToUpdate.map(async r => {
         const edited = editingRoles[r.id];
-        return fetch(`/api/roles/${r.id}`, {
+        const response = await fetch(`/api/roles/${r.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: edited.name.trim()
           }),
         });
+        
+        // Verify the response
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Role updated successfully:', data);
+          return { ok: true, data };
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          return { ok: false, error: errorData.error || errorData.details || response.statusText, response };
+        }
       });
 
       const results = await Promise.all(promises);
       const failed = results.filter(r => !r.ok);
       
       if (failed.length > 0) {
-        const errorMessages = await Promise.all(
-          failed.map(async r => {
-            try {
-              const data = await r.json();
-              return data.error || data.details || r.statusText;
-            } catch {
-              return r.statusText;
-            }
-          })
-        );
+        const errorMessages = failed.map(r => r.error || 'Unknown error');
         const errorMessage = `Failed to update ${failed.length} role(s): ${errorMessages.join(', ')}`;
         console.error('Error updating roles:', errorMessages);
         throw new Error(errorMessage);
       }
 
-      // Reset and refresh
+      // Get the updated role names before resetting state
+      const updatedRoleNames = rolesToUpdate.map(r => editingRoles[r.id]?.name || r.name);
+      
+      // Verify all updates succeeded
+      const successfulUpdates = results.filter(r => r.ok);
+      console.log('Successfully updated roles:', successfulUpdates.map(r => r.data));
+      
+      // Reset state first
       setMode('view');
       setEditingRoles({});
       setEditErrors({});
       setHasEdits(false);
-      onUpdate();
+      
+      // Small delay to ensure database commit completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Wait for the refresh to complete before showing success
+      await onUpdate();
       
       // Show success notification
       const count = rolesToUpdate.length;
-      const updatedRoleName = rolesToUpdate.length === 1 
-        ? editingRoles[rolesToUpdate[0].id]?.name || rolesToUpdate[0].name
-        : null;
+      const updatedRoleName = updatedRoleNames[0];
       toast.success(
         count === 1 
           ? `Role "${updatedRoleName}" updated successfully!`

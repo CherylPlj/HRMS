@@ -538,10 +538,12 @@ const UserManagementContent: React.FC = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
+        cache: 'no-store', // Ensure fresh data
       });
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched roles:', data);
         setRoles(Array.isArray(data) ? data : []);
       }
     } catch (err) {

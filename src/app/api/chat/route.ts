@@ -206,8 +206,6 @@ Key Responsibilities:
 - Document management and approval
 - Leave request processing and approval
 - Recruitment and hiring processes with AI-powered screening
-- Performance management and reviews
-- Disciplinary actions and risk management
 - Training needs analysis and recommendations
 - Attendance tracking and management
 - Employee directory management
@@ -220,20 +218,16 @@ Available Features:
 3. Documents - Upload, review, and approve employee documents (certificates, IDs, etc.)
 4. Leave - Process leave requests, approve/reject applications, and manage leave records
 5. Recruitment - Manage job postings (vacancies), candidate applications, AI-powered candidate screening, interviews, and hiring process. AI provides candidate scoring, recommendations, and interview questions
-6. Performance - Manage performance reviews, goals, KPIs, metrics, Performance Improvement Plans (PIPs), and AI-powered promotion analysis. Track employee performance over time and generate promotion recommendations
-7. Disciplinary - Manage disciplinary records, actions, appeals, evidence, and AI-powered risk analysis. Identify high-risk employees and patterns in behavior
-8. Training - Manage training programs, track employee training history, and use AI to analyze training needs and recommend courses
-9. Attendance - Track and manage employee attendance records, view attendance patterns and statistics
-10. Directory - Search and view employee directory with filtering by name, department, position, and years of service. View employee profiles and contact information
-11. AI Dashboard - View AI-powered insights including candidate screening statistics, promotion-ready employees, training needs, and disciplinary risk alerts
-12. User Management - Create, edit, and manage user accounts and permissions (Super Admin only)
+6. Training - Manage training programs, track employee training history, and use AI to analyze training needs and recommend courses
+7. Attendance - Track and manage employee attendance records, view attendance patterns and statistics
+8. Directory - Search and view employee directory with filtering by name, department, position, and years of service. View employee profiles and contact information
+9. AI Dashboard - View AI-powered insights including candidate screening statistics and training needs
+10. User Management - Create, edit, and manage user accounts and permissions (Super Admin only)
 
 AI Agent Capabilities:
 - Candidate Screening: Automatically screens candidates against job requirements, provides multi-dimensional scoring (resume, qualifications, experience, skills), and generates interview questions
-- Promotion Analysis: Analyzes employee performance, tenure, goals, and training to provide promotion eligibility scores and recommendations
 - Training Needs Analysis: Identifies skill gaps, recommends specific training programs, and prioritizes training needs based on employee performance and position requirements
-- Disciplinary Risk Analysis: Detects patterns in attendance and behavior, calculates risk scores, and provides early intervention recommendations
-- Dashboard Insights: Provides comprehensive analytics on recruitment quality, promotion readiness, training needs, and disciplinary risks
+- Dashboard Insights: Provides comprehensive analytics on recruitment quality and training needs
 
 Guidelines:
 - Provide clear, step-by-step instructions with proper spacing
@@ -255,7 +249,6 @@ Key Features for Faculty:
 - Document Upload and Management
 - Leave Request Submission and Tracking
 - Employee Directory Access
-- Performance Reviews and Goals
 - Attendance Records
 - Training Recommendations
 
@@ -264,10 +257,9 @@ Available Sections:
 2. Personal Data - Update personal information, contact details, and emergency contacts
 3. Documents - Upload and manage personal documents (certificates, IDs, etc.)
 4. Leave Request - Submit leave applications and view request status
-5. Performance - View your performance reviews, goals, KPIs, and metrics. See AI-generated training recommendations and promotion analysis
-6. Attendance - View your attendance records and statistics
-7. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
-8. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
+5. Attendance - View your attendance records and statistics
+6. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
+7. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
 
 Guidelines:
 - Provide friendly, helpful guidance with clear formatting
@@ -280,7 +272,7 @@ Guidelines:
 - Format responses for easy reading with proper spacing
 - Stay focused on SJSFI HRMS topics only
 - If asked about unrelated topics, politely redirect to HRMS features
-- When discussing performance or training, explain how AI recommendations can help with career development`,
+- When discussing training, explain how AI recommendations can help with career development`,
 
   employee: `You are an AI assistant for the SJSFI (San Jose School of Future Innovation) HRMS (Human Resource Management System). You help employees navigate the system and manage their information.
 
@@ -289,7 +281,6 @@ Key Features for Employees:
 - Document Management
 - Leave Request Submission and Tracking
 - Employee Directory Access
-- Performance Reviews and Goals
 - Attendance Records
 - Training Recommendations
 
@@ -298,10 +289,9 @@ Available Sections:
 2. Personal Data - Update personal information and contact details
 3. Documents - Upload and manage personal documents
 4. Leave Request - Submit and track leave applications
-5. Performance - View your performance reviews, goals, KPIs, and metrics. See AI-generated training recommendations and promotion analysis
-6. Attendance - View your attendance records and statistics
-7. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
-8. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
+5. Attendance - View your attendance records and statistics
+6. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
+7. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
 
 Guidelines:
 - Provide clear, simple instructions with proper formatting
@@ -314,7 +304,7 @@ Guidelines:
 - Format responses for easy reading with proper line breaks
 - Stay focused on SJSFI HRMS topics only
 - If asked about unrelated topics, politely redirect to HRMS features
-- When discussing performance or training, explain how AI recommendations can help with career development`
+- When discussing training, explain how AI recommendations can help with career development`
 };
 
 // Training data with common questions and answers
@@ -334,17 +324,19 @@ const TRAINING_DATA = {
     
     "How do I use AI candidate screening?": "To use AI candidate screening:\n\n1. Go to the Recruitment section\n2. Select a candidate and vacancy\n3. Click 'Screen Candidate' or use the AI screening feature\n4. The AI will automatically analyze:\n   - Resume quality and content\n   - Qualifications match\n   - Experience level\n   - Skill alignment\n5. Review the AI-generated scores and recommendation\n6. Check suggested interview questions\n7. Review strengths, weaknesses, and risk factors\n8. Use the recommendation (StrongRecommend, Recommend, Consider, Reject, NeedsReview) to make hiring decisions",
     
-    "How do I manage performance reviews?": "To manage performance reviews:\n\n1. Go to the Performance section\n2. Click 'Create Review' to start a new performance review\n3. Select the employee and review period\n4. Enter KPI scores, behavior scores, and attendance scores\n5. Add remarks, achievements, and improvement areas\n6. Set performance goals for the next period\n7. Save as draft or submit for approval\n8. Employees can view and comment on their reviews\n9. Use AI promotion analysis to identify promotion-ready employees",
+    // Performance module hidden for now
+    // "How do I manage performance reviews?": "To manage performance reviews:\n\n1. Go to the Performance section\n2. Click 'Create Review' to start a new performance review\n3. Select the employee and review period\n4. Enter KPI scores, behavior scores, and attendance scores\n5. Add remarks, achievements, and improvement areas\n6. Set performance goals for the next period\n7. Save as draft or submit for approval\n8. Employees can view and comment on their reviews\n9. Use AI promotion analysis to identify promotion-ready employees",
     
-    "How do I analyze promotion eligibility?": "To analyze promotion eligibility:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. Select an employee to analyze\n4. The AI will evaluate:\n   - Performance review scores\n   - Goal completion rates\n   - Training history\n   - Years in position\n   - Disciplinary records\n5. Review the AI-generated eligibility score and recommendation\n6. Check strengths, development areas, and next steps\n7. Use the recommendation (Ready, Consider, NeedsDevelopment, NotReady) for promotion decisions",
+    // "How do I analyze promotion eligibility?": "To analyze promotion eligibility:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. Select an employee to analyze\n4. The AI will evaluate:\n   - Performance review scores\n   - Goal completion rates\n   - Training history\n   - Years in position\n   - Disciplinary records\n5. Review the AI-generated eligibility score and recommendation\n6. Check strengths, development areas, and next steps\n7. Use the recommendation (Ready, Consider, NeedsDevelopment, NotReady) for promotion decisions",
     
     "How do I analyze training needs?": "To analyze training needs:\n\n1. Go to the Performance or Training section\n2. Navigate to Training Needs Analysis\n3. Select an employee to analyze\n4. The AI will identify:\n   - Skill gaps based on position requirements\n   - Current skill levels vs required levels\n   - Training recommendations with priorities\n5. Review the AI-generated training recommendations\n6. Assign training programs based on AI suggestions\n7. Track training completion and impact on performance",
     
-    "How do I manage disciplinary actions?": "To manage disciplinary actions:\n\n1. Go to the Disciplinary section\n2. Create a new disciplinary record by clicking 'Add Record'\n3. Select the employee and enter violation details\n4. Set severity level (Minor, Moderate, Major)\n5. Upload evidence if available\n6. Assign disciplinary actions (warnings, suspension, etc.)\n7. Track action status and employee acknowledgment\n8. Use AI risk analysis to identify high-risk employees\n9. Review AI-generated risk scores and recommendations\n10. Monitor patterns and trends for early intervention",
+    // Disciplinary module hidden for now
+    // "How do I manage disciplinary actions?": "To manage disciplinary actions:\n\n1. Go to the Disciplinary section\n2. Create a new disciplinary record by clicking 'Add Record'\n3. Select the employee and enter violation details\n4. Set severity level (Minor, Moderate, Major)\n5. Upload evidence if available\n6. Assign disciplinary actions (warnings, suspension, etc.)\n7. Track action status and employee acknowledgment\n8. Use AI risk analysis to identify high-risk employees\n9. Review AI-generated risk scores and recommendations\n10. Monitor patterns and trends for early intervention",
     
-    "How do I use AI disciplinary risk analysis?": "To use AI disciplinary risk analysis:\n\n1. Go to the Disciplinary section or AI Dashboard\n2. Navigate to Disciplinary Risk Analysis\n3. Select an employee to analyze\n4. The AI will evaluate:\n   - Disciplinary record history\n   - Recent violations (last 6 months)\n   - Attendance issues and patterns\n   - Performance trends\n5. Review the AI-generated risk score and level (Low, Medium, High, Critical)\n6. Check risk factors and pattern analysis\n7. Follow recommended actions for intervention\n8. Monitor high-risk employees regularly",
+    // "How do I use AI disciplinary risk analysis?": "To use AI disciplinary risk analysis:\n\n1. Go to the Disciplinary section or AI Dashboard\n2. Navigate to Disciplinary Risk Analysis\n3. Select an employee to analyze\n4. The AI will evaluate:\n   - Disciplinary record history\n   - Recent violations (last 6 months)\n   - Attendance issues and patterns\n   - Performance trends\n5. Review the AI-generated risk score and level (Low, Medium, High, Critical)\n6. Check risk factors and pattern analysis\n7. Follow recommended actions for intervention\n8. Monitor high-risk employees regularly",
     
-    "How do I view AI dashboard insights?": "To view AI dashboard insights:\n\n1. Go to the Dashboard or AI Dashboard section\n2. View comprehensive AI-powered analytics:\n   - Candidate screening statistics (today, this week, this month)\n   - Promotion-ready employees with scores\n   - Training needs by department and priority\n   - High-risk employees with risk levels\n   - Recent AI recommendations\n3. Click on any insight to view detailed information\n4. Use insights to make data-driven HR decisions\n5. Refresh to get the latest AI analysis",
+    "How do I view AI dashboard insights?": "To view AI dashboard insights:\n\n1. Go to the Dashboard or AI Dashboard section\n2. View comprehensive AI-powered analytics:\n   - Candidate screening statistics (today, this week, this month)\n   - Training needs by department and priority\n   - Recent AI recommendations\n3. Click on any insight to view detailed information\n4. Use insights to make data-driven HR decisions\n5. Refresh to get the latest AI analysis",
     
     "How do I manage attendance?": "To manage attendance:\n\n1. Go to the Attendance section (if available)\n2. View employee attendance records\n3. Track attendance patterns and statistics\n4. Identify attendance issues\n5. Attendance data is also used in:\n   - Performance reviews (attendance scores)\n   - Disciplinary risk analysis\n   - Employee evaluations\n6. Export attendance reports if needed"
   },
@@ -366,13 +358,14 @@ const TRAINING_DATA = {
     
     "How do I view training recommendations?": "To view AI training recommendations:\n\n1. Go to the Performance or Training section\n2. Navigate to Training Recommendations\n3. View AI-generated recommendations based on:\n   - Your current skills vs position requirements\n   - Skill gaps identified\n   - Performance improvement areas\n4. Each recommendation includes:\n   - Training title and description\n   - Estimated hours\n   - Priority level (Low, Medium, High, Critical)\n5. Review your training history and completed courses\n6. Enroll in recommended training programs",
     
-    "How do I check my attendance?": "To check your attendance:\n\n1. Go to the Attendance section (if available)\n2. View your attendance records and statistics\n3. See your attendance history with dates and status\n4. Check attendance patterns and trends\n5. Your attendance score is also included in performance reviews",
+    "How do I check my attendance?": "To check your attendance:\n\n1. Go to the Attendance section (if available)\n2. View your attendance records and statistics\n3. See your attendance history with dates and status\n4. Check attendance patterns and trends"
     
-    "How do I view promotion analysis?": "To view your promotion analysis:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. View AI-generated promotion eligibility analysis:\n   - Eligibility score\n   - Recommendation (Ready, Consider, NeedsDevelopment, NotReady)\n   - Strengths and development areas\n   - Next steps for promotion readiness\n4. This analysis considers your performance, goals, training, and tenure"
+    // Performance module hidden for now
+    // "How do I view promotion analysis?": "To view your promotion analysis:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. View AI-generated promotion eligibility analysis:\n   - Eligibility score\n   - Recommendation (Ready, Consider, NeedsDevelopment, NotReady)\n   - Strengths and development areas\n   - Next steps for promotion readiness\n4. This analysis considers your performance, goals, training, and tenure"
   },
   
   employee: {
-    "How do I update my personal information?": "To update your personal information:\n\n1. Go to the Personal Data section\n2. Click 'Edit' or the pencil icon\n3. Update the information you need to change\n4. Click 'Save' to apply changes\n\nMake sure to keep your contact information current for important notifications.",
+    "How do I update my personal information?": "To update my personal information:\n\n1. Go to the Personal Data section\n2. Click 'Edit' or the pencil icon\n3. Update the information you need to change\n4. Click 'Save' to apply changes\n\nMake sure to keep your contact information current for important notifications.",
     
     "How do I submit a leave request?": "To submit a leave request:\n\n1. Go to the Leave Request section\n2. Click 'New Request' or the '+' button\n3. Fill in the leave details (dates, type, reason)\n4. Upload any required documents\n5. Submit the request\n\nYou'll be notified when your request is approved or rejected.",
     
@@ -380,15 +373,17 @@ const TRAINING_DATA = {
     
     "How do I upload documents?": "To upload documents:\n\n1. Go to the Documents section\n2. Click 'Upload Document' or the '+' button\n3. Select the document type\n4. Choose the file from your computer\n5. Add a description if needed\n6. Click 'Upload'\n7. Wait for admin approval\n\nMake sure documents are in supported formats (PDF, JPG, PNG).",
     
-    "How do I view my performance reviews?": "To view your performance reviews:\n\n1. Go to the Performance section\n2. You'll see a list of your performance reviews\n3. Click on a review to view details:\n   - KPI scores\n   - Behavior scores\n   - Attendance scores\n   - Total score\n   - Remarks and feedback\n   - Goals and achievements\n4. You can add comments on your reviews\n5. View your performance goals and track progress",
+    // Performance module hidden for now
+    // "How do I view my performance reviews?": "To view your performance reviews:\n\n1. Go to the Performance section\n2. You'll see a list of your performance reviews\n3. Click on a review to view details:\n   - KPI scores\n   - Behavior scores\n   - Attendance scores\n   - Total score\n   - Remarks and feedback\n   - Goals and achievements\n4. You can add comments on your reviews\n5. View your performance goals and track progress",
     
-    "How do I view my performance goals?": "To view your performance goals:\n\n1. Go to the Performance section\n2. Navigate to Goals or Performance Goals\n3. View all your assigned goals with:\n   - Goal title and description\n   - Status (NotStarted, InProgress, OnTrack, Completed, etc.)\n   - Progress percentage\n   - Due dates\n4. Track your progress and update goal status\n5. Goals are linked to your performance reviews",
+    // "How do I view my performance goals?": "To view your performance goals:\n\n1. Go to the Performance section\n2. Navigate to Goals or Performance Goals\n3. View all your assigned goals with:\n   - Goal title and description\n   - Status (NotStarted, InProgress, OnTrack, Completed, etc.)\n   - Progress percentage\n   - Due dates\n4. Track your progress and update goal status\n5. Goals are linked to your performance reviews",
     
-    "How do I view training recommendations?": "To view AI training recommendations:\n\n1. Go to the Performance or Training section\n2. Navigate to Training Recommendations\n3. View AI-generated recommendations based on:\n   - Your current skills vs position requirements\n   - Skill gaps identified\n   - Performance improvement areas\n4. Each recommendation includes:\n   - Training title and description\n   - Estimated hours\n   - Priority level (Low, Medium, High, Critical)\n5. Review your training history and completed courses\n6. Enroll in recommended training programs",
+    "How do I view training recommendations?": "To view AI training recommendations:\n\n1. Go to the Training section\n2. Navigate to Training Recommendations\n3. View AI-generated recommendations based on:\n   - Your current skills vs position requirements\n   - Skill gaps identified\n4. Each recommendation includes:\n   - Training title and description\n   - Estimated hours\n   - Priority level (Low, Medium, High, Critical)\n5. Review your training history and completed courses\n6. Enroll in recommended training programs",
     
-    "How do I check my attendance?": "To check your attendance:\n\n1. Go to the Attendance section (if available)\n2. View your attendance records and statistics\n3. See your attendance history with dates and status\n4. Check attendance patterns and trends\n5. Your attendance score is also included in performance reviews",
+    "How do I check my attendance?": "To check your attendance:\n\n1. Go to the Attendance section (if available)\n2. View your attendance records and statistics\n3. See your attendance history with dates and status\n4. Check attendance patterns and trends"
     
-    "How do I view promotion analysis?": "To view your promotion analysis:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. View AI-generated promotion eligibility analysis:\n   - Eligibility score\n   - Recommendation (Ready, Consider, NeedsDevelopment, NotReady)\n   - Strengths and development areas\n   - Next steps for promotion readiness\n4. This analysis considers your performance, goals, training, and tenure"
+    // Performance module hidden for now
+    // "How do I view promotion analysis?": "To view your promotion analysis:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. View AI-generated promotion eligibility analysis:\n   - Eligibility score\n   - Recommendation (Ready, Consider, NeedsDevelopment, NotReady)\n   - Strengths and development areas\n   - Next steps for promotion readiness\n4. This analysis considers your performance, goals, training, and tenure"
   }
 };
 

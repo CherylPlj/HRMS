@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       .from('Employee')
       .select(`
         *,
-        EmploymentDetail(EmploymentStatus, HireDate, ResignationDate, Designation, Position, SalaryGrade),
+        EmploymentDetail(EmploymentStatus, HireDate, ResignationDate, Designation, Position, SalaryGrade, SalaryAmount),
         ContactInfo(Email, Phone, PresentAddress, PermanentAddress, EmergencyContactName, EmergencyContactNumber),
         GovernmentID(SSSNumber, TINNumber, PhilHealthNumber, PagIbigNumber, GSISNumber, PRCLicenseNumber, PRCValidity),
         Department(DepartmentName),
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
         Nationality: data.Nationality || null,
         Religion: data.Religion || null,
         DepartmentID: sanitizeInteger(data.DepartmentID),
-        ContractID: sanitizeInteger(data.ContractID),
+        ContractID: null, // Contract ID removed from form
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })
@@ -206,6 +206,7 @@ export async function POST(request: Request) {
         Designation: data.Designation || null,
         Position: data.Position || null,
         SalaryGrade: data.SalaryGrade || null,
+        SalaryAmount: data.SalaryAmount || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
@@ -375,6 +376,8 @@ export async function POST(request: Request) {
           console.warn('Faculty record creation failed, but employee was created successfully');
         } else {
           console.log('Faculty record created successfully for employee:', newEmployee.EmployeeID);
+          // Add FacultyID to the response
+          (newEmployee as any).FacultyID = facultyId;
         }
       } catch (facultyCreationError) {
         console.error('Error in faculty creation process:', facultyCreationError);
@@ -545,7 +548,7 @@ export async function PATCH(request: Request) {
         Nationality: data.Nationality || null,
         Religion: data.Religion || null,
         DepartmentID: sanitizeInteger(data.DepartmentID),
-        ContractID: sanitizeInteger(data.ContractID),
+        ContractID: null, // Contract ID removed from form
         updatedAt: new Date().toISOString()
       })
       .eq('EmployeeID', data.EmployeeID)
@@ -573,7 +576,7 @@ export async function PATCH(request: Request) {
     }
 
     // Update or create EmploymentDetail record
-    if (data.HireDate !== undefined || data.EmploymentStatus !== undefined || data.Designation !== undefined || data.Position !== undefined || data.SalaryGrade !== undefined) {
+    if (data.HireDate !== undefined || data.EmploymentStatus !== undefined || data.Designation !== undefined || data.Position !== undefined || data.SalaryGrade !== undefined || data.SalaryAmount !== undefined) {
       const { error: employmentError } = await supabaseAdmin
         .from('EmploymentDetail')
         .upsert({
@@ -584,6 +587,7 @@ export async function PATCH(request: Request) {
           Designation: data.Designation || null,
           Position: data.Position || null,
           SalaryGrade: data.SalaryGrade || null,
+          SalaryAmount: data.SalaryAmount || null,
           updatedAt: new Date().toISOString()
         }, {
           onConflict: 'employeeId'

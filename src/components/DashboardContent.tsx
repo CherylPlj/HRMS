@@ -57,8 +57,11 @@ interface Employee {
 export default function DashboardContent() {
   const router = useRouter();
   const { user } = useUser();
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  // Initialize with current month
+  const today = new Date();
+  const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [startDate, setStartDate] = useState<Date>(firstDayOfCurrentMonth);
+  const [endDate, setEndDate] = useState<Date>(today);
   const dateRange: [Date, Date] = [startDate, endDate];
   const clickCountRef = React.useRef<number>(0);
   const [facultyStats, setFacultyStats] = useState({
@@ -358,14 +361,13 @@ export default function DashboardContent() {
 
 
 
-        // Fetch Leave Requests
+        // Fetch Leave Requests with date filtering
         const { data: leaves, error: leavesError } = await supabase
           .from("Leave")
-          .select("*");
-          // .gte("CreatedAt", dateRange[0].toISOString())
-          // .lte("CreatedAt", dateRange[1].toISOString())
-          // .eq("Status", "Pending");
-            console.log(leaves);
+          .select("*")
+          .gte("CreatedAt", startDate.toISOString())
+          .lte("CreatedAt", endDate.toISOString());
+        
         if (leavesError) {
           console.error("Leave requests fetch error:", leavesError.message || leavesError);
           throw leavesError;
@@ -376,28 +378,34 @@ export default function DashboardContent() {
           approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
           rejected: leaves?.filter((l) => l.Status === "Returned").length || 0,
         });
-        console.log("Statuses:", leaves.map((l) => l.Status));
+        console.log("Filtered leaves:", leaves?.length, "from", startDate.toLocaleDateString(), "to", endDate.toLocaleDateString());
 
-        // Fetch Documents Status
+        // Fetch Documents Status with date filtering
         const { data: documents, error: documentsError } = await supabase
           .from("Document")
-          .select("*");
+          .select("*")
+          .gte("DateSubmitted", startDate.toISOString())
+          .lte("DateSubmitted", endDate.toISOString());
         if (documentsError) throw documentsError;
         const submittedCount = documents?.filter(doc => doc.SubmissionStatus === "Submitted").length || 0;
         setDocumentStats({ submitted: submittedCount });
 
-        // Fetch Recruitment Stats
+        // Fetch Recruitment Stats with date filtering
         const { data: vacancies, error: vacanciesError } = await supabase
           .from("Vacancy")
           .select("*")
-          .eq("isDeleted", false);
+          .eq("isDeleted", false)
+          .gte("DatePosted", startDate.toISOString())
+          .lte("DatePosted", endDate.toISOString());
 
         if (vacanciesError) throw vacanciesError;
 
         const { data: candidates, error: candidatesError } = await supabase
           .from("Candidate")
           .select("*")
-          .eq("isDeleted", false);
+          .eq("isDeleted", false)
+          .gte("DateApplied", startDate.toISOString())
+          .lte("DateApplied", endDate.toISOString());
 
         if (candidatesError) throw candidatesError;
 
@@ -415,8 +423,7 @@ export default function DashboardContent() {
           hired: candidates?.filter(c => c.Status === 'Hired').length || 0,
         });
 
-        // Fetch Upcoming Interviews with proper typing
-        const today = new Date();
+        // Fetch Upcoming Interviews with proper typing and date filtering
         const { data: interviews, error: interviewsError } = await supabase
           .from("Candidate")
           .select(`
@@ -434,7 +441,8 @@ export default function DashboardContent() {
             )
           `)
           .eq("Status", "InterviewScheduled")
-          .gte("InterviewDate", today.toISOString())
+          .gte("InterviewDate", startDate.toISOString())
+          .lte("InterviewDate", endDate.toISOString())
           .order("InterviewDate", { ascending: true })
           .limit(5);
 
@@ -564,8 +572,8 @@ export default function DashboardContent() {
     <div className="p-8 w-full flex flex-col">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          {/* <div className="flex flex-col"> */}
-            {/* <label className="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</label>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</label>
             <div className="relative">
               <DatePicker
                 selected={startDate}
@@ -613,19 +621,44 @@ export default function DashboardContent() {
                 className="w-full"
               />
             </div>
-          </div>  */}
-          <div className="flex items-end gap-2 pt-6">
-            <button 
-              onClick={() => {
+          </div>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-2">Quick Select Month</label>
+            <select
+              value="custom"
+              onChange={(e) => {
+                if (e.target.value === 'custom') return;
+                const [year, month] = e.target.value.split('-').map(Number);
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
                 const today = new Date();
-                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                setStartDate(firstDayOfMonth);
-                setEndDate(today);
+                // If it's the current month, set end date to today
+                if (year === today.getFullYear() && month === today.getMonth()) {
+                  setStartDate(firstDay);
+                  setEndDate(today);
+                } else {
+                  setStartDate(firstDay);
+                  setEndDate(lastDay);
+                }
               }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
+              className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
             >
-              This Month
-            </button>
+              <option value="custom">Select a month...</option>
+              {Array.from({ length: 12 }, (_, i) => {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const label = i === 0 ? 'This Month' : date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                return (
+                  <option key={i} value={`${year}-${month}`}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="flex items-end gap-2">
             <button 
               onClick={() => {
                 const today = new Date();
@@ -636,6 +669,18 @@ export default function DashboardContent() {
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
             >
               This Year
+            </button>
+            <button 
+              onClick={() => {
+                // Set to a very old date (e.g., 10 years ago) to today
+                const today = new Date();
+                const tenYearsAgo = new Date(today.getFullYear() - 10, 0, 1);
+                setStartDate(tenYearsAgo);
+                setEndDate(today);
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
+            >
+              All Time
             </button>
           </div>
         </div>
