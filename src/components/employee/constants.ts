@@ -24,13 +24,8 @@ export const allExportColumns: ExportColumn[] = [
   { key: 'ExtensionName', label: 'Extension Name' },
   { key: 'Sex', label: 'Sex' },
   { key: 'DateOfBirth', label: 'Date of Birth' },
-  { key: 'PlaceOfBirth', label: 'Place of Birth' },
-  { key: 'CivilStatus', label: 'Civil Status' },
-  { key: 'Nationality', label: 'Nationality' },
   { key: 'Email', label: 'Email' },
   { key: 'Phone', label: 'Phone' },
-  { key: 'PresentAddress', label: 'Present Address' },
-  { key: 'PermanentAddress', label: 'Permanent Address' },
   { key: 'Position', label: 'Position' },
   { key: 'Designation', label: 'Designation' },
   { key: 'Department', label: 'Department' },
@@ -38,16 +33,8 @@ export const allExportColumns: ExportColumn[] = [
   { key: 'HireDate', label: 'Hire Date' },
   { key: 'ResignationDate', label: 'Resignation Date' },
   { key: 'SalaryGrade', label: 'Salary Grade' },
+  { key: 'SalaryAmount', label: 'Salary Amount' },
   { key: 'EmployeeType', label: 'Employee Type' },
-  { key: 'SSSNumber', label: 'SSS Number' },
-  { key: 'TINNumber', label: 'TIN Number' },
-  { key: 'PhilHealthNumber', label: 'PhilHealth Number' },
-  { key: 'PagIbigNumber', label: 'Pag-IBIG Number' },
-  { key: 'GSISNumber', label: 'GSIS Number' },
-  { key: 'PRCLicenseNumber', label: 'PRC License Number' },
-  { key: 'PRCValidity', label: 'PRC Validity' },
-  { key: 'EmergencyContactName', label: 'Emergency Contact Name' },
-  { key: 'EmergencyContactNumber', label: 'Emergency Contact Number' },
   { key: 'createdAt', label: 'Created At' },
   { key: 'updatedAt', label: 'Updated At' },
 ];
@@ -57,29 +44,46 @@ export const exportColumnSections: ExportColumnSection[] = [
     title: 'Personal Information',
     keys: [
       'FirstName', 'LastName', 'MiddleName', 'ExtensionName',
-      'Sex', 'DateOfBirth', 'PlaceOfBirth', 'CivilStatus', 'Nationality'
+      'Sex', 'DateOfBirth'
     ],
   },
   {
     title: 'Contact Information',
     keys: [
-      'Email', 'Phone', 'PresentAddress', 'PermanentAddress', 'EmergencyContactName', 'EmergencyContactNumber'
+      'Email', 'Phone'
     ],
   },
   {
     title: 'Employment Details',
     keys: [
       'Position', 'Designation', 'Department', 'EmploymentStatus', 'HireDate', 'ResignationDate',
-      'SalaryGrade', 'EmployeeType'
-    ],
-  },
-  {
-    title: 'Government IDs',
-    keys: [
-      'SSSNumber', 'TINNumber', 'PhilHealthNumber', 'PagIbigNumber', 'GSISNumber', 'PRCLicenseNumber', 'PRCValidity'
+      'SalaryGrade', 'SalaryAmount', 'EmployeeType'
     ],
   },
 ];
 
-export const excludedColumns = ['EmployeeID', 'UserID', 'createdAt', 'updatedAt', 'Religion', 'BloodType'];
+export const excludedColumns = [
+  'EmployeeID', 
+  'UserID', 
+  'createdAt', 
+  'updatedAt',
+  'Religion',
+  'BloodType',
+  // Sensitive information excluded from export
+  'PlaceOfBirth',
+  'CivilStatus',
+  'Nationality',
+  'PresentAddress',
+  'PermanentAddress',
+  'EmergencyContactName',
+  'EmergencyContactNumber',
+  // Government IDs excluded for privacy
+  'SSSNumber',
+  'TINNumber',
+  'PhilHealthNumber',
+  'PagIbigNumber',
+  'GSISNumber',
+  'PRCLicenseNumber',
+  'PRCValidity',
+];
 

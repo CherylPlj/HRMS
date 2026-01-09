@@ -2783,7 +2783,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 </p>
                 <div className="w-full overflow-x-auto">
                   <div className="bg-white p-3 rounded border text-sm font-mono whitespace-nowrap min-w-max inline-block">
-                    LastName,FirstName,MiddleName,ExtensionName,Sex,Photo,DateOfBirth,Email,Phone,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,SalaryGrade,SalaryAmount
+                    LastName,FirstName,MiddleName,ExtensionName,Sex,DateOfBirth,Email,Phone,EmploymentStatus,HireDate,ResignationDate,Designation,Position,DepartmentID,SalaryGrade,SalaryAmount
                   </div>
                 </div>
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
@@ -2794,14 +2794,14 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                 <button
                   onClick={() => {
                     const csvHeaders = [
-                      'LastName','FirstName','MiddleName','ExtensionName','Sex','Photo','DateOfBirth','Email','Phone','EmploymentStatus','HireDate','ResignationDate','Designation','Position','DepartmentID','SalaryGrade','SalaryAmount'
+                      'LastName','FirstName','MiddleName','ExtensionName','Sex','DateOfBirth','Email','Phone','EmploymentStatus','HireDate','ResignationDate','Designation','Position','DepartmentID','SalaryGrade','SalaryAmount'
                     ];
                     const csvRows = [
                       csvHeaders.join(','),
-                      // 3 sample employee rows with new structure (no EmployeeID, removed unnecessary fields)
-                      'Garcia,Juan,Cruz,,Male,,1980-02-15,juan.sjsfi@gmail.com,09171234567,Regular,2010-06-01,,Faculty,Teacher I,21,12,45000.00',
-                      'Reyes,Ana,Lopez,,Female,,1985-07-20,ana.sjsfi@gmail.com,09181239876,Probationary,2015-08-15,,Faculty,Teacher II,22,13,48000.00',
-                      'Santos,Mark,David,,Male,,1992-11-05,mark.sjsfi@gmail.com,09183456789,Regular,2018-11-20,,Faculty,Teacher III,23,14,52000.00'
+                      // 3 sample employee rows with new structure (no EmployeeID, no Photo, removed unnecessary fields)
+                      'Garcia,Juan,Cruz,,Male,1980-02-15,juan.sjsfi@gmail.com,09171234567,Regular,2010-06-01,,Faculty,Teacher I,21,12,45000.00',
+                      'Reyes,Ana,Lopez,,Female,1985-07-20,ana.sjsfi@gmail.com,09181239876,Probationary,2015-08-15,,Faculty,Teacher II,22,13,48000.00',
+                      'Santos,Mark,David,,Male,1992-11-05,mark.sjsfi@gmail.com,09183456789,Regular,2018-11-20,,Faculty,Teacher III,23,14,52000.00'
                     ];
                     const csvContent = csvRows.join('\n');
                     const blob = new Blob([csvContent], { type: 'text/csv' });

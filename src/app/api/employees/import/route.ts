@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         MiddleName: data.MiddleName || null,
         ExtensionName: data.ExtensionName || null,
         Sex: data.Sex,
-        Photo: data.Photo || null,
+        Photo: null, // Photo removed from import
         DateOfBirth: data.DateOfBirth,
         PlaceOfBirth: null,
         CivilStatus: null,
