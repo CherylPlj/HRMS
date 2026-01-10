@@ -508,13 +508,13 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                       const validation = validatePassword(sanitized);
                       setPasswordError(validation ? null : 'Invalid');
                   }}
-                  className={`w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-[#800000]`}
+                  className={`w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-[#800000] [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-contacts-auto-fill-button]:hidden`}
                   placeholder="Enter new password"
                 />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none z-10"
                     disabled={isLoading}
                   >
                     {showNewPassword ? (
@@ -1294,9 +1294,9 @@ export default function SignInPage() {
                     <input
                       autoComplete="off"
                       placeholder="Password"
-                      className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 w-full focus:outline-0 focus:ring-1 ${
+                      className={`bg-white border text-black text-sm border-gray-300 rounded-sm px-4 py-2 pr-10 w-full focus:outline-0 focus:ring-1 ${
                         passwordError ? 'focus:ring-red-500 border-red-500' : 'focus:ring-[#800000]'
-                      }`}
+                      } [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-contacts-auto-fill-button]:hidden`}
                       type={showPassword ? "text" : "password"}
                       name="password"
                       value={password}
@@ -1315,7 +1315,7 @@ export default function SignInPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-black focus:outline-none z-10"
                       disabled={isLoading}
                     >
                       {showPassword ? (

@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
@@ -15,38 +16,39 @@ model UserIDSequence {
 }
 
 model User {
-  UserID       String         @id
-  ClerkID      String?        @unique
-  EmployeeID   String?        @unique
-  FirstName    String
-  LastName     String
-  Email        String         @unique
-  Photo        String?
-  PasswordHash String
-  Status       Status         @default(Active)
-  DateCreated  DateTime       @default(now())
-  DateModified DateTime?      @updatedAt
-  LastLogin    DateTime?
-  createdBy    String?
-  updatedBy    String?
-  isDeleted    Boolean        @default(false)
-  invitationId String?        @db.VarChar(255)
-  AIChat       AIChat[]
-  ActivityLog  ActivityLog[]
-  Cashier      Cashier?       @relation("UserCashier")
-  Faculty      Faculty?       @relation("UserFaculty")
-  Notification Notification[]
-  Registrar    Registrar?     @relation("UserRegistrar")
-  Report       Report[]
-  Employee     Employee?      @relation(fields: [EmployeeID], references: [EmployeeID])
-  Role         UserRole[]
-  trainingDocs  TrainingDocument[]
-  PerformanceReviewer PerformanceReview[] @relation("PerformanceReviewer")
+  UserID                String         @id
+  ClerkID               String?        @unique
+  EmployeeID            String?        @unique
+  FirstName             String
+  LastName              String
+  Email                 String         @unique
+  Photo                 String?
+  PasswordHash          String
+  Status                Status         @default(Active)
+  RequirePasswordChange Boolean        @default(false)
+  DateCreated           DateTime       @default(now())
+  DateModified          DateTime?      @updatedAt
+  LastLogin             DateTime?
+  createdBy             String?
+  updatedBy             String?
+  isDeleted             Boolean        @default(false)
+  invitationId          String?        @db.VarChar(255)
+  AIChat                AIChat[]
+  ActivityLog           ActivityLog[]
+  Cashier               Cashier?       @relation("UserCashier")
+  Faculty               Faculty?       @relation("UserFaculty")
+  Notification          Notification[]
+  Registrar             Registrar?     @relation("UserRegistrar")
+  Report                Report[]
+  Employee              Employee?      @relation(fields: [EmployeeID], references: [EmployeeID])
+  Role                  UserRole[]
+  trainingDocs          TrainingDocument[]
+  PerformanceReviewer   PerformanceReview[] @relation("PerformanceReviewer")
   DisciplinarySupervisor DisciplinaryRecord[] @relation("DisciplinarySupervisor")
-  PIPInitiator PerformanceImprovementPlan[] @relation("PIPInitiator")
-  PIPReviewer PIPReview[] @relation("PIPReviewer")
+  PIPInitiator          PerformanceImprovementPlan[] @relation("PIPInitiator")
+  PIPReviewer           PIPReview[] @relation("PIPReviewer")
   DisciplinaryActionApprover DisciplinaryAction[] @relation("DisciplinaryActionApprover")
-  AppealReviewer DisciplinaryAppeal[] @relation("AppealReviewer")
+  AppealReviewer        DisciplinaryAppeal[] @relation("AppealReviewer")
 
   @@index([invitationId], map: "user_invitation_id_idx")
 }

@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher, getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // Public routes that don't require authentication
 const publicRoutes = [
@@ -158,8 +159,34 @@ export default clerkMiddleware(async (auth, req) => {
             });
         }
 
-        // If user is authenticated, allow access to all routes except sign-in/sign-up
+        // If user is authenticated, check if they need to change password
         if (isAuthenticated) {
+            // Skip password change check for these routes
+            const skipPasswordChangeCheck = 
+                url.pathname.startsWith('/change-password') ||
+                url.pathname.startsWith('/api/user/password-change-status') ||
+                url.pathname.startsWith('/api/user/update-password-flag') ||
+                url.pathname.startsWith('/sign-out');
+
+            if (!skipPasswordChangeCheck) {
+                try {
+                    // Check if user requires password change
+                    const { data: user } = await supabaseAdmin
+                        .from('User')
+                        .select('RequirePasswordChange')
+                        .eq('ClerkID', userId)
+                        .single();
+
+                    if (user?.RequirePasswordChange === true) {
+                        // Redirect to password change page
+                        return NextResponse.redirect(new URL('/change-password', req.url));
+                    }
+                } catch (error) {
+                    console.error('Error checking password change requirement:', error);
+                    // Continue without blocking if check fails
+                }
+            }
+
             // Only redirect from sign-in/sign-up if we're not in a redirect loop
             if ((url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) && !isRedirectLoop) {
                 try {

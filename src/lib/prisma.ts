@@ -1,21 +1,20 @@
 // lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
 
-// Create a new Prisma client with proper pooling settings
+// Create a new Prisma client with proper pooling settings for Supabase
 const createPrismaClient = () => {
+  // Use DIRECT_URL for migrations and DATABASE_URL for queries
+  // Add pgbouncer=true to disable prepared statements when using connection pooler
+  const databaseUrl = process.env.DATABASE_URL;
+  const directUrl = process.env.DIRECT_URL;
+  
   const client = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    // Disable prepared statements for PgBouncer compatibility
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: databaseUrl,
       },
     },
-  });
-  
-  // Eagerly connect to avoid "Engine is not yet connected" errors
-  client.$connect().catch((e) => {
-    console.error('Failed to connect to database:', e);
   });
   
   return client;
@@ -46,13 +45,6 @@ export async function ensurePrismaConnected() {
       // Already connected, that's fine
       return;
     }
-    // If connection fails, try to disconnect and reconnect
-    try {
-      await prisma.$disconnect();
-    } catch (disconnectError) {
-      // Ignore disconnect errors
-    }
-    // Retry connection
-    await prisma.$connect();
+    console.error('Prisma connection error:', error);
   }
 }

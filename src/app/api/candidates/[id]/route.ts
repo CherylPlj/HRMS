@@ -3,6 +3,208 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
 import { sendEmail, generateStatusUpdateEmail, generateInterviewScheduleEmail, formatNameForEmail } from '@/lib/email';
 import crypto from 'crypto';
+import { createClerkClient } from '@clerk/clerk-sdk-node';
+import { generateUserId } from '@/lib/generateUserId';
+
+// Initialize Clerk client
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
+// Helper function to generate a secure temporary password
+function generateTemporaryPassword(): string {
+  const length = 12;
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*';
+  const allChars = uppercase + lowercase + numbers + symbols;
+  
+  let password = '';
+  // Ensure at least one of each type
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+  
+  // Fill the rest randomly
+  for (let i = password.length; i < length; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// Helper function to create User and Clerk account for hired employees
+async function createUserAccountForHiredEmployee(
+  candidateEmail: string,
+  firstName: string,
+  lastName: string,
+  candidateId: number
+): Promise<{ success: boolean; userId?: string; temporaryPassword?: string; error?: string }> {
+  try {
+    console.log('Creating user account for hired employee:', candidateEmail);
+
+    // Check if user already exists in database
+    const { data: existingUser } = await supabaseAdmin
+      .from('User')
+      .select('UserID, Email')
+      .ilike('Email', candidateEmail.trim())
+      .single();
+
+    if (existingUser) {
+      console.log('User already exists:', existingUser.UserID);
+      return { success: true, userId: existingUser.UserID };
+    }
+
+    // Generate unique UserID and temporary password
+    const userId = await generateUserId(new Date()); // Use current date as hire date
+    const temporaryPassword = generateTemporaryPassword();
+    console.log('Generated UserID:', userId);
+
+    // Create User record in database with 'employee' role by default
+    const { data: newUser, error: userError } = await supabaseAdmin
+      .from('User')
+      .insert({
+        UserID: userId,
+        Email: candidateEmail.toLowerCase().trim(),
+        FirstName: firstName,
+        LastName: lastName,
+        Status: 'Active',
+        RequirePasswordChange: true, // Flag to force password change on first login
+        DateCreated: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        PasswordHash: crypto.createHash('sha256').update(crypto.randomBytes(32).toString('hex')).digest('hex')
+      })
+      .select()
+      .single();
+
+    if (userError) {
+      console.error('Error creating user:', userError);
+      return { success: false, error: `Failed to create user: ${userError.message}` };
+    }
+
+    console.log('User created successfully:', userId);
+
+    // Assign 'employee' role to the user
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('Role')
+      .select('id, name')
+      .ilike('name', 'employee')
+      .single();
+
+    if (roleError) {
+      console.error('Error finding employee role:', roleError);
+      // Continue even if role assignment fails
+    } else {
+      const { error: userRoleError } = await supabaseAdmin
+        .from('UserRole')
+        .insert({
+          userId: userId,
+          roleId: roleData.id
+        });
+
+      if (userRoleError) {
+        console.error('Error assigning employee role:', userRoleError);
+        // Continue even if role assignment fails
+      } else {
+        console.log('Employee role assigned successfully');
+      }
+    }
+
+    // Create Clerk user directly with password (not invitation)
+    let clerkUserId: string | undefined;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        // Create Clerk user with password
+        const clerkUser = await clerk.users.createUser({
+          emailAddress: [candidateEmail.toLowerCase().trim()],
+          password: temporaryPassword,
+          firstName: firstName,
+          lastName: lastName,
+          publicMetadata: {
+            userId: userId,
+            role: 'employee',
+            candidateId: candidateId
+          },
+          skipPasswordChecks: false, // Ensure password meets requirements
+          skipPasswordRequirement: false
+        });
+        
+        clerkUserId = clerkUser.id;
+        console.log('Clerk user created successfully:', clerkUserId);
+        break;
+      } catch (clerkError: any) {
+        retryCount++;
+        console.log(`Clerk user creation attempt ${retryCount} failed:`, clerkError.message);
+        
+        if (clerkError.message?.includes('already exists') || clerkError.message?.includes('email_address_exists')) {
+          if (retryCount < maxRetries) {
+            // Try to clean up orphaned Clerk accounts
+            try {
+              const existingClerkUsers = await clerk.users.getUserList({
+                emailAddress: [candidateEmail.toLowerCase().trim()]
+              });
+              
+              if (existingClerkUsers.data && existingClerkUsers.data.length > 0) {
+                const existingClerkUser = existingClerkUsers.data[0];
+                await clerk.users.deleteUser(existingClerkUser.id);
+                console.log('Deleted orphaned Clerk account during retry');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                continue;
+              }
+            } catch (cleanupError) {
+              console.error('Failed to cleanup during retry:', cleanupError);
+            }
+          }
+          
+          if (retryCount >= maxRetries) {
+            return { 
+              success: false, 
+              error: 'An authentication account with this email already exists. Please contact IT support.' 
+            };
+          }
+        } else {
+          return { success: false, error: clerkError.message };
+        }
+      }
+    }
+
+    if (!clerkUserId) {
+      return { success: false, error: 'Failed to create Clerk user after retries' };
+    }
+
+    // Update user record with Clerk ID
+    const { error: updateError } = await supabaseAdmin
+      .from('User')
+      .update({
+        ClerkID: clerkUserId,
+        DateModified: new Date().toISOString()
+      })
+      .eq('UserID', userId);
+
+    if (updateError) {
+      console.error('Error updating user with Clerk ID:', updateError);
+      // Try to delete the Clerk user if database update fails
+      try {
+        await clerk.users.deleteUser(clerkUserId);
+      } catch (deleteError) {
+        console.error('Failed to delete Clerk user:', deleteError);
+      }
+      return { success: false, error: `Failed to update user: ${updateError.message}` };
+    }
+
+    console.log('User account and Clerk user created successfully for:', candidateEmail);
+    return { success: true, userId, temporaryPassword };
+
+  } catch (error: any) {
+    console.error('Error in createUserAccountForHiredEmployee:', error);
+    return { success: false, error: error.message || 'Unknown error occurred' };
+  }
+}
+
 
 export async function GET(
   req: NextRequest,
@@ -255,7 +457,7 @@ export async function PATCH(
           if (candidateToken) {
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
               ? `https://${process.env.VERCEL_URL}` 
-              : 'http://localhost:3000');
+              : 'https://hrms-v2-azure.vercel.app');
             const offerLink = `${baseUrl}/offered-applicant/${candidateToken}`;
             
             await sendEmail({
@@ -271,6 +473,51 @@ export async function PATCH(
               html: generateStatusUpdateEmail(formattedName, vacancyName, Status)
             });
           }
+        }
+        // For "Hired" status, create User account and Clerk user with credentials
+        else if (Status === 'Hired') {
+          let accountCreated = false;
+          let temporaryPassword = '';
+          
+          // Create User account and Clerk user for the hired employee
+          const userCreationResult = await createUserAccountForHiredEmployee(
+            Email,
+            FirstName,
+            LastName,
+            parseInt(id)
+          );
+
+          if (userCreationResult.success) {
+            console.log('User account created successfully for hired employee');
+            accountCreated = true;
+            temporaryPassword = userCreationResult.temporaryPassword || '';
+            
+            // Update candidate with UserID if created
+            if (userCreationResult.userId) {
+              await supabaseAdmin
+                .from('Candidate')
+                .update({ UserID: userCreationResult.userId })
+                .eq('CandidateID', id);
+            }
+          } else {
+            console.error('Failed to create user account:', userCreationResult.error);
+            // Continue to send email even if account creation fails
+          }
+
+          // Send hired status email with account credentials
+          await sendEmail({
+            to: Email,
+            subject: 'Welcome to Saint Joseph School of Fairview Inc. - Your Account Credentials',
+            html: generateStatusUpdateEmail(
+              formattedName, 
+              vacancyName, 
+              Status, 
+              undefined, 
+              accountCreated,
+              temporaryPassword,
+              Email
+            )
+          });
         }
         // For all other status changes, send the status update email
         else {

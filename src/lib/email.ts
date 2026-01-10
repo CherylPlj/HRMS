@@ -131,7 +131,15 @@ export function generateInterviewScheduleEmail(candidateName: string, vacancyNam
   `;
 }
 
-export function generateStatusUpdateEmail(candidateName: string, vacancyName: string, newStatus: string, offerLink?: string) {
+export function generateStatusUpdateEmail(
+  candidateName: string, 
+  vacancyName: string, 
+  newStatus: string, 
+  offerLink?: string, 
+  accountCreated?: boolean, 
+  temporaryPassword?: string,
+  candidateEmail?: string
+) {
   let statusMessage = '';
   
   switch(newStatus) {
@@ -145,7 +153,9 @@ export function generateStatusUpdateEmail(candidateName: string, vacancyName: st
       statusMessage = 'Congratulations! We would like to offer you the position. Please complete your employee information using the link below to proceed with your onboarding.';
       break;
     case 'Hired':
-      statusMessage = 'Welcome to Saint Joseph School of Fairview Inc.! You will receive additional information about your onboarding process soon.';
+      statusMessage = accountCreated 
+        ? 'Welcome to Saint Joseph School of Fairview Inc.! Your HRMS account has been created and your login credentials are provided below.' 
+        : 'Welcome to Saint Joseph School of Fairview Inc.! You will receive additional information about your onboarding process soon.';
       break;
     case 'Returned':
       statusMessage = 'After careful consideration, we regret to inform you that we have decided to move forward with other candidates. We appreciate your interest in joining our team and wish you the best in your job search.';
@@ -176,6 +186,50 @@ export function generateStatusUpdateEmail(candidateName: string, vacancyName: st
           <p style="margin: 0 0 15px 0;">Please click the link below to submit your employee information:</p>
           <a href="${offerLink}" style="display: inline-block; background-color: #800000; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 0;">Submit Employee Information</a>
           <p style="margin: 15px 0 0 0; font-size: 12px; color: #666;">This link will expire in 30 days. Please complete the form as soon as possible.</p>
+        </div>
+        ` : ''}
+        
+        ${newStatus === 'Hired' && accountCreated && temporaryPassword ? `
+        <div style="background-color: #d1fae5; border: 1px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
+          <h3 style="margin: 0 0 10px 0; color: #065f46;">🎉 Your HRMS Account Has Been Created!</h3>
+          <p style="margin: 10px 0; color: #065f46;">We've created your account in our Human Resource Management System. You can now access the system using the credentials below.</p>
+          
+          <div style="background-color: #ffffff; border: 2px solid #800000; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h4 style="margin: 0 0 15px 0; color: #800000; text-align: center;">🔐 Your Login Credentials</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 10px; font-weight: bold; color: #374151; width: 35%;">Email:</td>
+                <td style="padding: 10px; background-color: #f3f4f6; border-radius: 4px; font-family: monospace; color: #1f2937;">${candidateEmail || 'Your registered email'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; font-weight: bold; color: #374151;">Temporary Password:</td>
+                <td style="padding: 10px; background-color: #fef3c7; border-radius: 4px; font-family: monospace; font-weight: bold; color: #92400e; letter-spacing: 1px;">${temporaryPassword}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; font-weight: bold; color: #374151;">System URL:</td>
+                <td style="padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://hrms-v2-azure.vercel.app'}" style="color: #800000; font-weight: bold; text-decoration: none;">${process.env.NEXT_PUBLIC_APP_URL || 'https://hrms-v2-azure.vercel.app'}</a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h4 style="margin: 0 0 10px 0; color: #92400e;">⚠️ Important Security Steps:</h4>
+            <ol style="margin: 0; padding-left: 20px; color: #92400e;">
+              <li style="margin: 5px 0;"><strong>Login</strong> to the system using your email and temporary password</li>
+              <li style="margin: 5px 0;"><strong>You will be required to change your password</strong> immediately upon first login</li>
+              <li style="margin: 5px 0;">Choose a <strong>strong, unique password</strong> that you haven't used elsewhere</li>
+              <li style="margin: 5px 0;"><strong>Do not share</strong> your password with anyone</li>
+              <li style="margin: 5px 0;">Delete this email after you've changed your password</li>
+            </ol>
+          </div>
+          
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://hrms-v2-azure.vercel.app'}" style="display: inline-block; background-color: #800000; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Login to HRMS Now →</a>
+          </div>
+          
+          <p style="margin: 10px 0; color: #065f46; font-size: 13px;"><strong>Note:</strong> This is a one-time temporary password. For security reasons, you must change it when you first login.</p>
         </div>
         ` : ''}
         
