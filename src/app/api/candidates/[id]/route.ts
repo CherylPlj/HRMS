@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
-import { sendEmail, generateStatusUpdateEmail, generateInterviewScheduleEmail } from '@/lib/email';
+import { sendEmail, generateStatusUpdateEmail, generateInterviewScheduleEmail, formatNameForEmail } from '@/lib/email';
 import crypto from 'crypto';
 
 export async function GET(
@@ -217,6 +217,9 @@ export async function PATCH(
     // Send email notifications for status changes
     if (Status !== currentCandidate?.Status) {
       try {
+        // Format name for email: FirstName MiddleInitial. LastName
+        const formattedName = formatNameForEmail(FirstName, LastName, MiddleName, ExtensionName);
+        
         // For interview scheduled status, send the interview schedule email
         if (Status === 'InterviewScheduled' && InterviewDate) {
           const formattedInterviewDate = new Date(InterviewDate).toLocaleString('en-US', {
@@ -233,7 +236,7 @@ export async function PATCH(
           await sendEmail({
             to: Email,
             subject: 'Interview Schedule - Saint Joseph School of Fairview Inc.',
-            html: generateInterviewScheduleEmail(FullName, vacancyName, formattedInterviewDate)
+            html: generateInterviewScheduleEmail(formattedName, vacancyName, formattedInterviewDate)
           });
         } 
         // For "Offered" status, send email with token link
@@ -249,14 +252,14 @@ export async function PATCH(
             await sendEmail({
               to: Email,
               subject: 'Application Status Update - Saint Joseph School of Fairview Inc.',
-              html: generateStatusUpdateEmail(FullName, vacancyName, Status, offerLink)
+              html: generateStatusUpdateEmail(formattedName, vacancyName, Status, offerLink)
             });
           } else {
             // Fallback if token wasn't generated
             await sendEmail({
               to: Email,
               subject: 'Application Status Update - Saint Joseph School of Fairview Inc.',
-              html: generateStatusUpdateEmail(FullName, vacancyName, Status)
+              html: generateStatusUpdateEmail(formattedName, vacancyName, Status)
             });
           }
         }
@@ -265,7 +268,7 @@ export async function PATCH(
           await sendEmail({
             to: Email,
             subject: 'Application Status Update - Saint Joseph School of Fairview Inc.',
-            html: generateStatusUpdateEmail(FullName, vacancyName, Status)
+            html: generateStatusUpdateEmail(formattedName, vacancyName, Status)
           });
         }
       } catch (emailError) {

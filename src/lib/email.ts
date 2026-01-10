@@ -1,5 +1,12 @@
 import nodemailer from 'nodemailer';
 
+// Helper function to format name for emails: FirstName MiddleInitial. LastName
+export function formatNameForEmail(firstName: string, lastName: string, middleName?: string | null, extensionName?: string | null): string {
+  const middleInitial = middleName ? ` ${middleName.charAt(0).toUpperCase()}.` : '';
+  const extension = extensionName ? `, ${extensionName}` : '';
+  return `${firstName}${middleInitial} ${lastName}${extension}`.trim();
+}
+
 // Create a transporter using Gmail
 const transporter = nodemailer.createTransport({
   service: 'gmail',

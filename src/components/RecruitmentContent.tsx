@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { CandidatesTab, VacanciesTab, RecruitmentDashboard, ResumePreviewModal, SubmittedInformationTab, Candidate, Vacancy } from './recruitment';
@@ -43,6 +43,9 @@ const RecruitmentContent: React.FC = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [previewResumeUrl, setPreviewResumeUrl] = useState<string | null>(null);
   const [previewCandidateName, setPreviewCandidateName] = useState<string>('');
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const previousCandidateCountRef = useRef<number>(0);
 
   // Data fetching functions
   const fetchVacancies = async () => {
@@ -60,23 +63,37 @@ const RecruitmentContent: React.FC = () => {
     }
   };
 
-  const fetchCandidates = async () => {
+  const fetchCandidates = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       const response = await fetch('/api/candidates');
       if (!response.ok) throw new Error('Failed to fetch candidates');
       const data = await response.json();
+      
+      // Check if new candidates were added
+      const newCandidateCount = data.length;
+      const previousCount = previousCandidateCountRef.current;
+      
+      if (previousCount > 0 && newCandidateCount > previousCount) {
+        const newApplicants = newCandidateCount - previousCount;
+        toast.success(`${newApplicants} new applicant${newApplicants > 1 ? 's' : ''} received!`, {
+          duration: 5000,
+          icon: '🎉',
+        });
+      }
+      
+      previousCandidateCountRef.current = newCandidateCount;
       setCandidates(data);
     } catch (error) {
       console.error('Error fetching candidates:', error);
-      toast.error('Failed to fetch candidates');
+      if (!silent) toast.error('Failed to fetch candidates');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
-  const refreshData = async () => {
-    await Promise.all([fetchVacancies(), fetchCandidates()]);
+  const refreshData = async (silent = false) => {
+    await Promise.all([fetchVacancies(), fetchCandidates(silent)]);
   };
 
   // Add function to check and update vacancy status
@@ -151,6 +168,35 @@ const RecruitmentContent: React.FC = () => {
     refreshData();
   }, []);
 
+  // Auto-refresh polling for candidates when on dashboard or candidates tab
+  useEffect(() => {
+    // Clear any existing interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    // Only enable polling when on dashboard or candidates tab and auto-refresh is enabled
+    const shouldPoll = autoRefreshEnabled && (activeTab === 'dashboard' || activeTab === 'candidates');
+    
+    if (shouldPoll) {
+      // Poll every 30 seconds for new candidates
+      pollingIntervalRef.current = setInterval(() => {
+        fetchCandidates(true); // silent fetch (no loading spinner)
+      }, 30000); // 30 seconds
+
+      console.log('Auto-refresh enabled: Checking for new applicants every 30 seconds');
+    }
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [activeTab, autoRefreshEnabled]);
+
   // Remove localStorage tab handling - now using URL params
   useEffect(() => {
     const storedFilter = localStorage.getItem('recruitmentFilter');
@@ -174,37 +220,57 @@ const RecruitmentContent: React.FC = () => {
         </div>
       )}
       
-      <div className="flex space-x-4 mb-6">
-        <button
-          className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'dashboard' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => handleTabChange('dashboard')}
-        >
-          Dashboard
-        </button>
-        <button
-          className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'candidates' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => handleTabChange('candidates')}
-        >
-          Active Candidates
-        </button>
-        <button
-          className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'submitted' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => handleTabChange('submitted')}
-        >
-          Submitted Information
-        </button>
-        <button
-          className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'hired' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => handleTabChange('hired')}
-        >
-          Hired Candidates
-        </button>
-        <button
-          className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'vacancies' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
-          onClick={() => handleTabChange('vacancies')}
-        >
-          Vacancies
-        </button>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex space-x-4">
+          <button
+            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'dashboard' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => handleTabChange('dashboard')}
+          >
+            Dashboard
+          </button>
+          <button
+            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'candidates' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => handleTabChange('candidates')}
+          >
+            Active Candidates
+          </button>
+          <button
+            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'submitted' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => handleTabChange('submitted')}
+          >
+            Submitted Information
+          </button>
+          <button
+            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'hired' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => handleTabChange('hired')}
+          >
+            Hired Candidates
+          </button>
+          <button
+            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'vacancies' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => handleTabChange('vacancies')}
+          >
+            Vacancies
+          </button>
+        </div>
+        
+        {/* Auto-refresh toggle - only show on dashboard and candidates tab */}
+        {(activeTab === 'dashboard' || activeTab === 'candidates') && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                autoRefreshEnabled
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={autoRefreshEnabled ? 'Auto-refresh enabled (30s)' : 'Auto-refresh disabled'}
+            >
+              <span className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+              {autoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+            </button>
+          </div>
+        )}
       </div>
 
       {activeTab === 'dashboard' && (

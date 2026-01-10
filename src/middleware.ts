@@ -75,9 +75,41 @@ const isIgnoredRoute = createRouteMatcher(ignoredRoutes);
 
 export default clerkMiddleware(async (auth, req) => {
     try {
+        const url = new URL(req.url);
+        
+        // Allow public routes to skip Clerk auth protection
+        if (isPublicRoute(req)) {
+            // Don't call auth() for public routes - this allows them to be accessed without authentication
+            const response = NextResponse.next();
+            
+            // Add security headers
+            const isResumeApiRoute = url.pathname.startsWith('/api/candidates/resume/');
+            if (isResumeApiRoute) {
+                response.headers.set("X-Frame-Options", "SAMEORIGIN");
+            } else {
+                response.headers.set("X-Frame-Options", "DENY");
+            }
+            
+            response.headers.set("X-Content-Type-Options", "nosniff");
+            response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+            
+            let csp = "default-src 'self'; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://cdn.jsdelivr.net blob:; " +
+                "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
+                "img-src 'self' data: https: blob:; " +
+                "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+                "connect-src 'self' https://*.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co https://clerk-telemetry.com; " +
+                "frame-src 'self' https://*.clerk.accounts.dev; " +
+                "object-src 'self' blob:; " +
+                "worker-src 'self' blob:; " +
+                "child-src 'self' blob:;";
+            
+            response.headers.set("Content-Security-Policy", csp);
+            return response;
+        }
+        
         const { userId } = await auth();
         const isAuthenticated = !!userId;
-        const url = new URL(req.url);
         
         // Check for redirect loop protection - if we're already redirecting to sign-in, don't redirect again
         const redirectUrl = url.searchParams.get('redirect_url');
@@ -111,11 +143,6 @@ export default clerkMiddleware(async (auth, req) => {
         
         response.headers.set("Content-Security-Policy", csp);
 
-        // Always allow access to ignored routes (including sign-in/sign-up to prevent loops)
-        if (isIgnoredRoute(req)) {
-            return response;
-        }
-
         // Handle API routes
         if (url.pathname.startsWith('/api/')) {
             // Allow authenticated API requests
@@ -123,12 +150,10 @@ export default clerkMiddleware(async (auth, req) => {
                 return response;
             }
             // For unauthenticated API requests to protected routes, return 401
-            if (!isPublicRoute(req)) {
-                return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-                    status: 401,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+            return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         // If user is authenticated, allow access to all routes except sign-in/sign-up
@@ -162,7 +187,7 @@ export default clerkMiddleware(async (auth, req) => {
 
         // If not authenticated and trying to access a protected route, redirect to sign-in
         // But prevent redirect loops by checking if we're already at sign-in
-        if (!isPublicRoute(req) && !isRedirectLoop) {
+        if (!isRedirectLoop) {
             const signInUrl = new URL('/sign-in', req.url);
             // Only add redirect_url if it's different from the current path
             if (url.pathname !== '/sign-in') {

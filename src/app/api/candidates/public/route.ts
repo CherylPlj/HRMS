@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { sendEmail, generateApplicationConfirmationEmail, generateNewApplicationNotificationEmail } from '@/lib/email';
+import { sendEmail, generateApplicationConfirmationEmail, generateNewApplicationNotificationEmail, formatNameForEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -163,10 +163,18 @@ export async function POST(req: NextRequest) {
     // Send confirmation email to applicant
     try {
       console.log('Preparing to send confirmation email to:', Email);
+      // Format name for email: FirstName MiddleInitial. LastName
+      const formattedName = formatNameForEmail(
+        FirstName as string,
+        LastName as string,
+        MiddleName as string,
+        ExtensionName as string
+      );
+      
       const emailResult = await sendEmail({
         to: Email as string,
         subject: 'Application Received - Saint Joseph School of Fairview Inc.',
-        html: generateApplicationConfirmationEmail(FullName),
+        html: generateApplicationConfirmationEmail(formattedName),
       });
       
       if (emailResult.success) {
@@ -182,11 +190,19 @@ export async function POST(req: NextRequest) {
     // Send notification email to sjsfihrms@gmail.com
     try {
       console.log('Preparing to send notification email to sjsfihrms@gmail.com');
+      // Format name for email: FirstName MiddleInitial. LastName
+      const formattedName = formatNameForEmail(
+        FirstName as string,
+        LastName as string,
+        MiddleName as string,
+        ExtensionName as string
+      );
+      
       const notificationEmailResult = await sendEmail({
         to: 'sjsfihrms@gmail.com',
-        subject: `New Job Application: ${FullName} - ${vacancyName}`,
+        subject: `New Job Application: ${formattedName} - ${vacancyName}`,
         html: generateNewApplicationNotificationEmail(
-          FullName,
+          formattedName,
           Email as string,
           ContactNumber as string | null,
           MessengerName as string | null,

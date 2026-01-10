@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { sendEmail, generateReturnedInfoEmail } from '@/lib/email';
+import { sendEmail, generateReturnedInfoEmail, formatNameForEmail } from '@/lib/email';
 
 export async function POST(
   req: NextRequest,
@@ -25,6 +25,8 @@ export async function POST(
         CandidateID,
         LastName,
         FirstName,
+        MiddleName,
+        ExtensionName,
         FullName,
         Email,
         Token,
@@ -76,11 +78,19 @@ export async function POST(
           : 'http://localhost:3000');
         const editLink = `${baseUrl}/offered-applicant/${candidate.Token}`;
         
+        // Format name for email: FirstName MiddleInitial. LastName
+        const formattedName = formatNameForEmail(
+          candidate.FirstName,
+          candidate.LastName,
+          candidate.MiddleName,
+          candidate.ExtensionName
+        );
+        
         await sendEmail({
           to: candidate.Email,
           subject: 'Employee Information Returned - Action Required',
           html: generateReturnedInfoEmail(
-            candidate.FullName,
+            formattedName,
             candidate.Vacancy?.VacancyName || '',
             reason,
             editLink
