@@ -420,7 +420,7 @@ model Vacancy {
   JobTitle          JobTitle
   VacancyName       String
   Description       String?
-  HiringManager     String
+  HiringManager     String?
   Status            VacancyStatus @default(Active)
   DatePosted        DateTime?
   DateCreated       DateTime      @default(now())

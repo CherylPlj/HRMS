@@ -55,8 +55,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
     const searchLower = vacancySearch.toLowerCase();
     const matchesSearch = 
       vacancy.VacancyName.toLowerCase().includes(searchLower) ||
-      vacancy.Description?.toLowerCase().includes(searchLower) ||
-      vacancy.HiringManager.toLowerCase().includes(searchLower);
+      vacancy.Description?.toLowerCase().includes(searchLower);
 
     const matchesStatus = !vacancyStatusFilter || vacancy.Status === vacancyStatusFilter;
     const matchesJobTitle = !vacancyJobTitleFilter || vacancy.JobTitle === vacancyJobTitleFilter;
@@ -102,7 +101,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
           JobTitle: vacancyJobTitle,
           VacancyName: vacancyName,
           Description: vacancyDescription,
-          HiringManager: vacancyHiringManager,
+          HiringManager: '',
           Status: vacancyStatus,
           DatePosted: datePosted,
           NumberOfPositions: vacancyNumberOfPositions
@@ -152,7 +151,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
           JobTitle: updatedData.JobTitle,
           VacancyName: updatedData.VacancyName,
           Description: updatedData.Description,
-          HiringManager: updatedData.HiringManager,
+          HiringManager: '',
           Status: updatedData.Status,
           DatePosted: updatedData.DatePosted,
           NumberOfPositions: updatedData.NumberOfPositions
@@ -376,7 +375,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
             >
               <option value="">All Job Titles</option>
               {jobTitles.map((title) => (
-                <option key={title} value={title}>{title}</option>
+                <option key={title} value={title}>{title.replace('_', ' ')}</option>
               ))}
             </select>
           </div>
@@ -432,7 +431,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
                   required
                 >
                   {jobTitles.map((title) => (
-                    <option key={title} value={title}>{title}</option>
+                    <option key={title} value={title}>{title.replace('_', ' ')}</option>
                   ))}
                 </select>
               </div>
@@ -470,17 +469,6 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
                 />
               </div>
               <div className="mb-4">
-                <RequiredLabel text="Hiring Manager" />
-                <input 
-                  type="text" 
-                  className="w-full border rounded px-3 py-2" 
-                  value={vacancyHiringManager} 
-                  onChange={e => setVacancyHiringManager(e.target.value)} 
-                  placeholder="Enter hiring manager"
-                  required 
-                />
-              </div>
-              <div className="mb-4">
                 <label className="block mb-1 font-medium">Date Posted</label>
                 <input 
                   title="Date posted"
@@ -511,7 +499,6 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
                   setVacancyJobTitle('HR_Manager');
                   setVacancyName('');
                   setVacancyDescription('');
-                  setVacancyHiringManager('');
                   setVacancyStatus('Active');
                   setVacancyDatePosted('');
                   setVacancyNumberOfPositions(1);
@@ -536,7 +523,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
                 <div className="relative">
                   <select title="job title" className="w-full border rounded pl-3 pr-10 py-2 appearance-none bg-white" value={editVacancyData.JobTitle} onChange={e => setEditVacancyData({ ...editVacancyData, JobTitle: e.target.value as 'HR_Manager' | 'Faculty' | 'Registrar' | 'Cashier' | 'Other' })}>
                     {jobTitles.map((title) => (
-                      <option key={title} value={title}>{title}</option>
+                      <option key={title} value={title}>{title.replace('_', ' ')}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -566,17 +553,6 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
                   onChange={e => setEditVacancyData({ ...editVacancyData, NumberOfPositions: Math.max(1, parseInt(e.target.value) || 1) })} 
                   min="1"
                   required 
-                />
-              </div>
-              <div className="mb-4">
-                <RequiredLabel text="Hiring Manager" />
-                <input 
-                  title="hiring manager"
-                  type="text" 
-                  className="w-full border rounded px-3 py-2" 
-                  value={editVacancyData.HiringManager} 
-                  onChange={e => setEditVacancyData({ ...editVacancyData, HiringManager: e.target.value })} 
-                  required
                 />
               </div>
               <div className="mb-4">
