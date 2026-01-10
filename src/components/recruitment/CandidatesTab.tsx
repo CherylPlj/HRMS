@@ -706,6 +706,7 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
                   accept=".doc,.docx,.odt,.pdf,.rtf,.txt"
                   onChange={handleResumeChange}
                 />
+                <p className="mt-1 text-xs text-gray-500">Maximum file size: 5MB. Accepted formats: PDF, DOC, DOCX, ODT, RTF, TXT</p>
                 {candidateResume && <div className="mt-2 text-sm text-gray-600">Selected: {candidateResume.name}</div>}
               </div>
               <div className="flex justify-end space-x-2 mt-6">
@@ -1030,6 +1031,7 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
                   onChange={handleImportFileChange}
                   required 
                 />
+                <p className="mt-1 text-xs text-gray-500">Maximum file size: 5MB</p>
                 {importFile && <div className="mt-2 text-sm text-gray-600">Selected: {importFile.name}</div>}
               </div>
               <div className="mb-4">

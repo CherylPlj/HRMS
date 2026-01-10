@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Papa from 'papaparse';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { validateCSVFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,11 +20,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      return NextResponse.json({ 
-        error: 'Invalid file type. Please upload a CSV file.' 
-      }, { status: 400 });
+    // Validate CSV file
+    const fileValidation = validateCSVFile(file, true);
+    if (!fileValidation.valid) {
+      return NextResponse.json(
+        { error: fileValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Additional security check: verify file size
+    if (file.size > FILE_SIZE_LIMITS.CSV) {
+      return NextResponse.json(
+        { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.CSV / (1024 * 1024)}MB` },
+        { status: 400 }
+      );
     }
 
     // Read and parse CSV

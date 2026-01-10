@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuth } from '@clerk/nextjs/server';
 import { parse } from 'csv-parse/sync';
 import { prisma } from '@/lib/prisma';
+import { validateCSVFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 type CandidateRow = {
   'Last Name': string;
@@ -32,6 +33,23 @@ export async function POST(req: NextRequest) {
     if (!file || !vacancyId) {
       return NextResponse.json(
         { error: 'File and vacancy ID are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate CSV file
+    const fileValidation = validateCSVFile(file, true);
+    if (!fileValidation.valid) {
+      return NextResponse.json(
+        { error: fileValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Additional security check: verify file size
+    if (file.size > FILE_SIZE_LIMITS.CSV) {
+      return NextResponse.json(
+        { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.CSV / (1024 * 1024)}MB` },
         { status: 400 }
       );
     }

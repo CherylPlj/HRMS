@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
 import { facultyDocumentService } from '@/services/facultyDocumentService';
+import { validateFacultyDocumentFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 interface User {
   FirstName: string;
@@ -186,6 +187,23 @@ export async function POST(request: Request) {
     if (!DocumentTypeID || !file) {
       return NextResponse.json(
         { error: 'Document type and file are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file
+    const fileValidation = validateFacultyDocumentFile(file, true);
+    if (!fileValidation.valid) {
+      return NextResponse.json(
+        { error: fileValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Additional security check: verify file size
+    if (file.size > FILE_SIZE_LIMITS.DOCUMENT) {
+      return NextResponse.json(
+        { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.DOCUMENT / (1024 * 1024)}MB` },
         { status: 400 }
       );
     }

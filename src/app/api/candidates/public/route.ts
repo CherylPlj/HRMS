@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendEmail, generateApplicationConfirmationEmail, generateNewApplicationNotificationEmail, formatNameForEmail } from '@/lib/email';
+import { validateResumeFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,6 +60,23 @@ export async function POST(req: NextRequest) {
     let Resume = null;
     let ResumeUrl = null;
     if (resume) {
+      // Validate resume file
+      const fileValidation = validateResumeFile(resume, false);
+      if (!fileValidation.valid) {
+        return NextResponse.json(
+          { error: fileValidation.error },
+          { status: 400 }
+        );
+      }
+
+      // Additional security check: verify file size
+      if (resume.size > FILE_SIZE_LIMITS.RESUME) {
+        return NextResponse.json(
+          { error: `Resume file size exceeds maximum limit of ${FILE_SIZE_LIMITS.RESUME / (1024 * 1024)}MB` },
+          { status: 400 }
+        );
+      }
+
       try {
         // Upload file to Supabase Storage
         const fileName = `${Date.now()}_${resume.name}`;

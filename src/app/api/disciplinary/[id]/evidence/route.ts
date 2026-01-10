@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { disciplinaryEvidenceService } from '@/services/disciplinaryEvidenceService';
+import { validateEvidenceFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 export async function GET(
   request: NextRequest,
@@ -43,6 +44,23 @@ export async function POST(
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file
+    const fileValidation = validateEvidenceFile(file, true);
+    if (!fileValidation.valid) {
+      return NextResponse.json(
+        { error: fileValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Additional security check: verify file size
+    if (file.size > FILE_SIZE_LIMITS.EVIDENCE) {
+      return NextResponse.json(
+        { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.EVIDENCE / (1024 * 1024)}MB` },
         { status: 400 }
       );
     }

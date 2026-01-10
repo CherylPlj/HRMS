@@ -5,6 +5,7 @@ import { disciplinaryActionService } from '@/services/disciplinaryActionService'
 import { disciplinaryService } from '@/services/disciplinaryService';
 import { DisciplinaryActionType, DisciplinaryActionStatus } from '@prisma/client';
 import { sanitizeString } from '@/lib/formValidation';
+import { validateCSVFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 // Valid action types from enum
 const VALID_ACTION_TYPES: DisciplinaryActionType[] = [
@@ -222,19 +223,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith('.csv')) {
+    // Validate CSV file
+    const fileValidation = validateCSVFile(file, true);
+    if (!fileValidation.valid) {
       return NextResponse.json(
-        { error: 'Invalid file type. Please upload a CSV file.' },
+        { error: fileValidation.error },
         { status: 400 }
       );
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
+    // Additional security check: verify file size
+    if (file.size > FILE_SIZE_LIMITS.CSV) {
       return NextResponse.json(
-        { error: 'File size exceeds maximum limit of 5MB' },
+        { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.CSV / (1024 * 1024)}MB` },
         { status: 400 }
       );
     }

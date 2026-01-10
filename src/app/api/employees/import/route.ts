@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
+import { validateCSVFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 const REQUIRED_FIELDS = [
   'FirstName',

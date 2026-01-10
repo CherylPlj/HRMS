@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { parse } from 'csv-parse/sync';
 import { JobTitle, VacancyStatus } from '@prisma/client';
 import { DateTime } from 'luxon';
+import { validateCSVFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 type VacancyRow = {
   JobTitle: string;
@@ -21,6 +22,23 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json(
         { error: 'No file uploaded' },
+        { status: 400 }
+      );
+    }
+
+    // Validate CSV file
+    const fileValidation = validateCSVFile(file, true);
+    if (!fileValidation.valid) {
+      return NextResponse.json(
+        { error: fileValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Additional security check: verify file size
+    if (file.size > FILE_SIZE_LIMITS.CSV) {
+      return NextResponse.json(
+        { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.CSV / (1024 * 1024)}MB` },
         { status: 400 }
       );
     }

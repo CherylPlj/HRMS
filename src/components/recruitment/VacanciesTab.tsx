@@ -790,6 +790,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
                   onChange={handleImportFileChange}
                   required 
                 />
+                <p className="mt-1 text-xs text-gray-500">Maximum file size: 5MB</p>
                 {importFile && <div className="mt-2 text-sm text-gray-600">Selected: {importFile.name}</div>}
               </div>
               {importResults && (

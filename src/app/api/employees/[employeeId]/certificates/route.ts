@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { auth } from '@clerk/nextjs/server';
 import { isUserAdmin } from '@/utils/serverRoleUtils';
+import { validateCertificateFile, FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 export async function GET(
   request: NextRequest,
@@ -56,6 +57,23 @@ export async function POST(
 
     let fileUrl = null;
     if (fileData) {
+      // Validate certificate file
+      const fileValidation = validateCertificateFile(fileData, false);
+      if (!fileValidation.valid) {
+        return NextResponse.json(
+          { error: fileValidation.error },
+          { status: 400 }
+        );
+      }
+
+      // Additional security check: verify file size
+      if (fileData.size > FILE_SIZE_LIMITS.CERTIFICATE) {
+        return NextResponse.json(
+          { error: `File size exceeds maximum limit of ${FILE_SIZE_LIMITS.CERTIFICATE / (1024 * 1024)}MB` },
+          { status: 400 }
+        );
+      }
+
       try {
         // Create a unique filename
         const timestamp = Date.now();

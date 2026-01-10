@@ -2781,6 +2781,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                       onChange={handleFileUpload}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-red-800"
                     />
+                    <p className="mt-1 text-xs text-gray-500">Maximum file size: 5MB</p>
                   </div>
                   
                   {importFile && (

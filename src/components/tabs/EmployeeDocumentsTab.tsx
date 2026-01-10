@@ -1256,6 +1256,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                 <FileText size={16} />
                 {importLoading ? 'Importing...' : 'Choose CSV File'}
               </button>
+              <p className="mt-1 text-xs text-gray-500">Maximum file size: 5MB</p>
 
               {importError && (
                 <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md">

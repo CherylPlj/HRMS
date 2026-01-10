@@ -1,4 +1,5 @@
 // Validation and sanitization utilities for form inputs
+// For file upload validation, see fileValidation.ts
 
 export interface ValidationResult {
   valid: boolean;

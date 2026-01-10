@@ -349,6 +349,7 @@ const CertificatesTab: React.FC<CertificatesTabProps> = ({ employeeId }) => {
                     className="mt-1 w-full"
                     accept=".pdf,.jpg,.jpeg,.png"
                   />
+                  <p className="mt-1 text-xs text-gray-500">Maximum file size: 10MB. Accepted formats: PDF, JPG, PNG</p>
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
                   <button
