@@ -380,7 +380,9 @@ const OfferedApplicantPage = () => {
     
     // Validate emergency contact is not self
     if (candidate) {
-      const selfValidation = validateEmergencyContactNotSelf(candidate.FullName, employeeInfo.EmergencyContactName);
+      // Use formatted display name for more accurate comparison
+      const formattedCandidateName = formatDisplayName(candidate);
+      const selfValidation = validateEmergencyContactNotSelf(formattedCandidateName, employeeInfo.EmergencyContactName);
       if (!selfValidation.valid) errors.EmergencyContactName = selfValidation.error || '';
     }
     
