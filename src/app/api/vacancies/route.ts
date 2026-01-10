@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const { JobTitle, VacancyName, Description, HiringManager, Status, DatePosted, NumberOfPositions } = data;
 
     // Validate required fields
-    if (!JobTitle || !VacancyName || !HiringManager) {
+    if (!JobTitle || !VacancyName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

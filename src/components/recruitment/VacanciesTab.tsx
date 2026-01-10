@@ -101,7 +101,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
           JobTitle: vacancyJobTitle,
           VacancyName: vacancyName,
           Description: vacancyDescription,
-          HiringManager: '',
+          HiringManager: null,
           Status: vacancyStatus,
           DatePosted: datePosted,
           NumberOfPositions: vacancyNumberOfPositions
@@ -151,7 +151,7 @@ export const VacanciesTab: React.FC<VacanciesTabProps> = ({
           JobTitle: updatedData.JobTitle,
           VacancyName: updatedData.VacancyName,
           Description: updatedData.Description,
-          HiringManager: '',
+          HiringManager: null,
           Status: updatedData.Status,
           DatePosted: updatedData.DatePosted,
           NumberOfPositions: updatedData.NumberOfPositions

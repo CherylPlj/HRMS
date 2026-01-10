@@ -60,7 +60,7 @@ export async function PATCH(
     const { JobTitle, VacancyName, HiringManager, Status, NumberOfPositions, Description, DatePosted } = data;
 
     // Validate required fields
-    if (!JobTitle || !VacancyName || !HiringManager) {
+    if (!JobTitle || !VacancyName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
