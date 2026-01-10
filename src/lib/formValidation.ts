@@ -5,15 +5,12 @@ export interface ValidationResult {
   error?: string;
 }
 
-// Sanitize string input - remove dangerous characters and trim
+// Sanitize string input - remove dangerous characters
 export const sanitizeString = (input: string | null | undefined, maxLength: number = 500): string => {
   if (!input || typeof input !== 'string') return '';
   
-  // Remove null bytes and control characters
-  let sanitized = input.replace(/[\x00-\x1F\x7F]/g, '');
-  
-  // Trim whitespace
-  sanitized = sanitized.trim();
+  // Remove null bytes and control characters (but preserve normal spaces and line breaks)
+  let sanitized = input.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
   
   // Limit length
   if (sanitized.length > maxLength) {
@@ -27,14 +24,15 @@ export const sanitizeString = (input: string | null | undefined, maxLength: numb
 export const sanitizeName = (input: string | null | undefined): string => {
   if (!input || typeof input !== 'string') return '';
   
-  // Remove null bytes and control characters
-  let sanitized = input.replace(/[\x00-\x1F\x7F]/g, '');
+  // Remove null bytes and control characters (but preserve normal spaces)
+  let sanitized = input.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '');
   
-  // Only allow letters, spaces, hyphens, apostrophes, periods
-  sanitized = sanitized.replace(/[^a-zA-Z\s\-\'\.]/g, '');
+  // Allow letters (including Unicode/accented), spaces, hyphens, apostrophes, periods, and common Filipino characters (ñ, Ñ)
+  // Using \p{L} to match all Unicode letters, including accented characters
+  sanitized = sanitized.replace(/[^\p{L}\s\-'\.]/gu, '');
   
-  // Trim and normalize whitespace
-  sanitized = sanitized.trim().replace(/\s+/g, ' ');
+  // Normalize whitespace (replace multiple spaces with single space, but don't trim yet to allow typing)
+  sanitized = sanitized.replace(/\s+/g, ' ');
   
   return sanitized;
 };
@@ -82,8 +80,8 @@ export const sanitizeGovtId = (input: string | null | undefined): string => {
   // Only allow alphanumeric, spaces, hyphens
   sanitized = sanitized.replace(/[^a-zA-Z0-9\s\-]/g, '');
   
-  // Trim and normalize whitespace
-  sanitized = sanitized.trim().replace(/\s+/g, ' ');
+  // Normalize whitespace (replace multiple spaces with single space)
+  sanitized = sanitized.replace(/\s+/g, ' ');
   
   return sanitized;
 };
@@ -186,16 +184,22 @@ export const validateName = (name: string | null | undefined, fieldName: string 
     return { valid: false, error: `${fieldName} is required` };
   }
   
-  const sanitized = sanitizeName(name);
-  if (sanitized !== name.trim()) {
+  const trimmedName = name.trim();
+  const sanitized = sanitizeName(trimmedName);
+  
+  // Normalize both for comparison (replace multiple spaces with single space)
+  const normalizedInput = trimmedName.replace(/\s+/g, ' ');
+  const normalizedSanitized = sanitized.replace(/\s+/g, ' ');
+  
+  if (normalizedSanitized !== normalizedInput) {
     return { valid: false, error: `${fieldName} contains invalid characters` };
   }
   
-  if (sanitized.length < 2) {
+  if (sanitized.trim().length < 2) {
     return { valid: false, error: `${fieldName} must be at least 2 characters` };
   }
   
-  if (sanitized.length > 100) {
+  if (sanitized.trim().length > 100) {
     return { valid: false, error: `${fieldName} must be less than 100 characters` };
   }
   
@@ -208,7 +212,8 @@ export const validateAddress = (address: string | null | undefined, fieldName: s
     return { valid: false, error: `${fieldName} is required` };
   }
   
-  const sanitized = sanitizeString(address, 500);
+  const trimmedAddress = address.trim();
+  const sanitized = sanitizeString(trimmedAddress, 500);
   
   if (sanitized.length < 5) {
     return { valid: false, error: `${fieldName} must be at least 5 characters` };
@@ -432,3 +437,24 @@ export const validateEmergencyContactNotSelf = (
   return { valid: true };
 };
 
+// Validate that emergency contact number is not the same as applicant's contact number
+export const validateEmergencyContactNumberNotSame = (
+  applicantPhone: string | null | undefined,
+  emergencyContactPhone: string
+): ValidationResult => {
+  if (!applicantPhone || !emergencyContactPhone) {
+    return { valid: true }; // Will be caught by required validation
+  }
+  
+  // Normalize phone numbers (remove all non-digit characters)
+  const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+  const applicantNormalized = normalizePhone(applicantPhone);
+  const emergencyNormalized = normalizePhone(emergencyContactPhone);
+  
+  // Check if phone numbers are the same
+  if (applicantNormalized === emergencyNormalized && applicantNormalized.length > 0) {
+    return { valid: false, error: 'Emergency contact number cannot be the same as your contact number. Please provide a different contact number.' };
+  }
+  
+  return { valid: true };
+};

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     // Validate token and fetch candidate
     const { data: candidate, error: candidateError } = await supabaseAdmin
       .from('Candidate')
-      .select('CandidateID, Status, Token, TokenExpiry, EmployeeInfoSubmitted, InfoReturned')
+      .select('CandidateID, Status, Token, TokenExpiry, EmployeeInfoSubmitted, InfoReturned, FullName, ContactNumber')
       .eq('Token', token)
       .eq('isDeleted', false)
       .single();
@@ -105,6 +105,21 @@ export async function POST(req: NextRequest) {
       if (emergencyName === normalizedCandidateName) {
         return NextResponse.json(
           { error: 'Emergency contact cannot be yourself. Please provide a different contact person.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate emergency contact number is not the same as applicant's contact number
+    if (employeeInfo.EmergencyContactNumber) {
+      // Normalize phone numbers (remove all non-digit characters)
+      const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+      const applicantPhone = normalizePhone(employeeInfo.Phone || candidate.ContactNumber || '');
+      const emergencyPhone = normalizePhone(employeeInfo.EmergencyContactNumber);
+      
+      if (applicantPhone && emergencyPhone && applicantPhone === emergencyPhone) {
+        return NextResponse.json(
+          { error: 'Emergency contact number cannot be the same as your contact number. Please provide a different contact number.' },
           { status: 400 }
         );
       }

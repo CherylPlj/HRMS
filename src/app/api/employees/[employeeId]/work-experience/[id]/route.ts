@@ -43,7 +43,8 @@ export async function PUT(
         position: data.position,
         startDate: new Date(data.startDate),
         endDate: data.endDate ? new Date(data.endDate) : null,
-        reasonForLeaving: data.reasonForLeaving
+        reasonForLeaving: data.reasonForLeaving,
+        salary: data.salary ? parseFloat(data.salary) : null
       },
     });
 

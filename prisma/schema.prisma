@@ -513,6 +513,7 @@ model EmploymentHistory {
   startDate        DateTime
   endDate          DateTime?
   reasonForLeaving String?
+  salary           Float?
   employee         Employee  @relation(fields: [employeeId], references: [EmployeeID])
 }
 

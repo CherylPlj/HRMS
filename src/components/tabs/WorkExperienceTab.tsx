@@ -11,6 +11,7 @@ interface WorkExperience {
   startDate: Date;
   endDate?: Date | null;
   reasonForLeaving?: string | null;
+  salary?: number | null;
 }
 
 interface WorkExperienceTabProps {
@@ -214,7 +215,8 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                 position: '',
                 startDate: new Date(),
                 endDate: null,
-                reasonForLeaving: null
+                reasonForLeaving: null,
+                salary: null
               });
               setShowForm(true);
             }}
@@ -241,6 +243,11 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                 {experience.endDate && (
                   <p className="text-sm text-gray-600">
                     End Date: {new Date(experience.endDate).toLocaleDateString()}
+                  </p>
+                )}
+                {experience.salary && (
+                  <p className="text-sm text-gray-600">
+                    Salary: ₱{experience.salary.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 )}
                 {experience.reasonForLeaving && (
@@ -356,6 +363,22 @@ const WorkExperienceTab: React.FC<WorkExperienceTabProps> = ({ employeeId }) => 
                   {formErrors.dateRange && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.dateRange}</p>
                   )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Salary Amount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={currentRecord.salary || ''}
+                    onChange={(e) =>
+                      setCurrentRecord({
+                        ...currentRecord,
+                        salary: e.target.value ? parseFloat(e.target.value) : null
+                      })
+                    }
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    placeholder="Enter salary amount"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Reason for Leaving</label>

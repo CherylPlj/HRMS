@@ -21,6 +21,7 @@ import {
   validateAtLeastOneGovtId,
   validateRelationship,
   validateEmergencyContactNotSelf,
+  validateEmergencyContactNumberNotSame,
   validateSSSNumber,
   validateTINNumber,
   validatePhilHealthNumber,
@@ -385,6 +386,13 @@ const OfferedApplicantPage = () => {
       const selfValidation = validateEmergencyContactNotSelf(formattedCandidateName, employeeInfo.EmergencyContactName);
       if (!selfValidation.valid) errors.EmergencyContactName = selfValidation.error || '';
     }
+    
+    // Validate emergency contact number is not the same as applicant's contact number
+    const phoneNotSameValidation = validateEmergencyContactNumberNotSame(
+      employeeInfo.Phone || candidate?.ContactNumber,
+      employeeInfo.EmergencyContactNumber
+    );
+    if (!phoneNotSameValidation.valid) errors.EmergencyContactNumber = phoneNotSameValidation.error || '';
     
     // Validate consent
     if (!consentGiven) {

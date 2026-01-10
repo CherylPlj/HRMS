@@ -40,7 +40,7 @@ async function createUserAccountForHiredEmployee(
   firstName: string,
   lastName: string,
   candidateId: number
-): Promise<{ success: boolean; userId?: string; temporaryPassword?: string; error?: string }> {
+): Promise<{ success: boolean; userId?: string; temporaryPassword?: string; error?: string; accountAlreadyExists?: boolean }> {
   try {
     console.log('Creating user account for hired employee:', candidateEmail);
 
@@ -53,7 +53,7 @@ async function createUserAccountForHiredEmployee(
 
     if (existingUser) {
       console.log('User already exists:', existingUser.UserID);
-      return { success: true, userId: existingUser.UserID };
+      return { success: true, userId: existingUser.UserID, temporaryPassword: undefined, accountAlreadyExists: true };
     }
 
     // Generate unique UserID and temporary password
@@ -161,18 +161,51 @@ async function createUserAccountForHiredEmployee(
           }
           
           if (retryCount >= maxRetries) {
+            // Clean up the orphaned User record if Clerk creation failed
+            try {
+              await supabaseAdmin
+                .from('User')
+                .delete()
+                .eq('UserID', userId);
+              console.log('Cleaned up orphaned User record after Clerk creation failure');
+            } catch (cleanupError) {
+              console.error('Failed to cleanup User record:', cleanupError);
+            }
+            
             return { 
               success: false, 
               error: 'An authentication account with this email already exists. Please contact IT support.' 
             };
           }
         } else {
+          // Clean up the orphaned User record if Clerk creation failed
+          try {
+            await supabaseAdmin
+              .from('User')
+              .delete()
+              .eq('UserID', userId);
+            console.log('Cleaned up orphaned User record after Clerk error');
+          } catch (cleanupError) {
+            console.error('Failed to cleanup User record:', cleanupError);
+          }
+          
           return { success: false, error: clerkError.message };
         }
       }
     }
 
     if (!clerkUserId) {
+      // Clean up the orphaned User record if Clerk creation failed
+      try {
+        await supabaseAdmin
+          .from('User')
+          .delete()
+          .eq('UserID', userId);
+        console.log('Cleaned up orphaned User record - no Clerk user created');
+      } catch (cleanupError) {
+        console.error('Failed to cleanup User record:', cleanupError);
+      }
+      
       return { success: false, error: 'Failed to create Clerk user after retries' };
     }
 
@@ -478,6 +511,7 @@ export async function PATCH(
         else if (Status === 'Hired') {
           let accountCreated = false;
           let temporaryPassword = '';
+          let accountAlreadyExists = false;
           
           // Create User account and Clerk user for the hired employee
           const userCreationResult = await createUserAccountForHiredEmployee(
@@ -491,6 +525,7 @@ export async function PATCH(
             console.log('User account created successfully for hired employee');
             accountCreated = true;
             temporaryPassword = userCreationResult.temporaryPassword || '';
+            accountAlreadyExists = userCreationResult.accountAlreadyExists || false;
             
             // Update candidate with UserID if created
             if (userCreationResult.userId) {
@@ -505,6 +540,9 @@ export async function PATCH(
           }
 
           // Send hired status email with account credentials
+          // Only include credentials if this is a newly created account with a temp password
+          const includeCredentials = accountCreated && !!temporaryPassword && !accountAlreadyExists;
+          
           await sendEmail({
             to: Email,
             subject: 'Welcome to Saint Joseph School of Fairview Inc. - Your Account Credentials',
@@ -513,8 +551,8 @@ export async function PATCH(
               vacancyName, 
               Status, 
               undefined, 
-              accountCreated,
-              temporaryPassword,
+              includeCredentials,
+              includeCredentials ? temporaryPassword : undefined,
               Email
             )
           });
