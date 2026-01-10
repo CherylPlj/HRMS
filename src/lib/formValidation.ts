@@ -39,18 +39,20 @@ export const sanitizeName = (input: string | null | undefined): string => {
   return sanitized;
 };
 
-// Sanitize phone number - only digits, spaces, hyphens, parentheses, plus
+// Sanitize phone number - only digits for Philippine mobile format (09XXXXXXXXX)
 export const sanitizePhone = (input: string | null | undefined): string => {
   if (!input || typeof input !== 'string') return '';
   
   // Remove null bytes and control characters
   let sanitized = input.replace(/[\x00-\x1F\x7F]/g, '');
   
-  // Only allow digits, spaces, hyphens, parentheses, plus
-  sanitized = sanitized.replace(/[^0-9\s\-\+\(\)]/g, '');
+  // Only allow digits
+  sanitized = sanitized.replace(/[^0-9]/g, '');
   
-  // Trim
-  sanitized = sanitized.trim();
+  // Limit to 11 digits
+  if (sanitized.length > 11) {
+    sanitized = sanitized.slice(0, 11);
+  }
   
   return sanitized;
 };
@@ -104,28 +106,22 @@ export const validateEmail = (email: string): ValidationResult => {
   return { valid: true };
 };
 
-// Validate phone number (Philippine format)
+// Validate phone number (Philippine mobile format only: 09XXXXXXXXX)
 export const validatePhone = (phone: string): ValidationResult => {
   if (!phone || !phone.trim()) {
     return { valid: false, error: 'Phone number is required' };
   }
   
-  // Remove non-digit characters for validation
+  // Remove all non-digit characters
   const digitsOnly = phone.replace(/\D/g, '');
   
-  // Philippine phone number: starts with +63 or 0, followed by 9-10 digits
-  if (digitsOnly.startsWith('63')) {
-    // +63 format (12-13 digits total)
-    if (digitsOnly.length < 12 || digitsOnly.length > 13) {
-      return { valid: false, error: 'Please enter a valid Philippine phone number (e.g., +639123456789)' };
-    }
-  } else if (digitsOnly.startsWith('0')) {
-    // 0 format (11 digits total)
-    if (digitsOnly.length !== 11) {
-      return { valid: false, error: 'Please enter a valid Philippine phone number (e.g., 09123456789)' };
-    }
-  } else {
-    return { valid: false, error: 'Phone number must start with +63 or 0' };
+  // Must be exactly 11 digits starting with 09
+  if (digitsOnly.length !== 11) {
+    return { valid: false, error: 'Phone number must be exactly 11 digits (e.g., 09123456789)' };
+  }
+  
+  if (!digitsOnly.startsWith('09')) {
+    return { valid: false, error: 'Phone number must start with 09 (e.g., 09123456789)' };
   }
   
   return { valid: true };
@@ -213,8 +209,21 @@ export const validateAddress = (address: string | null | undefined, fieldName: s
   }
   
   const sanitized = sanitizeString(address, 500);
+  
   if (sanitized.length < 5) {
     return { valid: false, error: `${fieldName} must be at least 5 characters` };
+  }
+  
+  // Check if address contains at least some alphabetic characters
+  const hasAlpha = /[a-zA-Z]/.test(sanitized);
+  if (!hasAlpha) {
+    return { valid: false, error: `${fieldName} must contain letters (not just numbers)` };
+  }
+  
+  // Check if address is alphanumeric with allowed special characters (spaces, commas, periods, hyphens, #)
+  const isValidFormat = /^[a-zA-Z0-9\s,.\-#()]+$/.test(sanitized);
+  if (!isValidFormat) {
+    return { valid: false, error: `${fieldName} can only contain letters, numbers, spaces, commas, periods, hyphens, and #` };
   }
   
   return { valid: true };
@@ -278,17 +287,110 @@ export const validateAtLeastOneGovtId = (govtIds: {
   return { valid: true };
 };
 
+// Validate SSS Number format (XX-XXXXXXX-X or 10 digits)
+export const validateSSSNumber = (sssNumber: string, optional: boolean = true): ValidationResult => {
+  if (!sssNumber || !sssNumber.trim()) {
+    return optional ? { valid: true } : { valid: false, error: 'SSS Number is required' };
+  }
+  
+  // Remove hyphens and spaces for validation
+  const digitsOnly = sssNumber.replace(/[-\s]/g, '');
+  
+  if (!/^\d{10}$/.test(digitsOnly)) {
+    return { valid: false, error: 'SSS Number must be 10 digits (format: XX-XXXXXXX-X)' };
+  }
+  
+  return { valid: true };
+};
+
+// Validate TIN Number format (XXX-XXX-XXX-XXX or 9-12 digits)
+export const validateTINNumber = (tinNumber: string, optional: boolean = true): ValidationResult => {
+  if (!tinNumber || !tinNumber.trim()) {
+    return optional ? { valid: true } : { valid: false, error: 'TIN Number is required' };
+  }
+  
+  // Remove hyphens and spaces for validation
+  const digitsOnly = tinNumber.replace(/[-\s]/g, '');
+  
+  if (!/^\d{9,12}$/.test(digitsOnly)) {
+    return { valid: false, error: 'TIN Number must be 9-12 digits (format: XXX-XXX-XXX or XXX-XXX-XXX-XXX)' };
+  }
+  
+  return { valid: true };
+};
+
+// Validate PhilHealth Number format (XX-XXXXXXXXX-X or 12 digits)
+export const validatePhilHealthNumber = (philHealthNumber: string, optional: boolean = true): ValidationResult => {
+  if (!philHealthNumber || !philHealthNumber.trim()) {
+    return optional ? { valid: true } : { valid: false, error: 'PhilHealth Number is required' };
+  }
+  
+  // Remove hyphens and spaces for validation
+  const digitsOnly = philHealthNumber.replace(/[-\s]/g, '');
+  
+  if (!/^\d{12}$/.test(digitsOnly)) {
+    return { valid: false, error: 'PhilHealth Number must be 12 digits (format: XX-XXXXXXXXX-X)' };
+  }
+  
+  return { valid: true };
+};
+
+// Validate Pag-IBIG Number format (XXXX-XXXX-XXXX or 12 digits)
+export const validatePagIbigNumber = (pagIbigNumber: string, optional: boolean = true): ValidationResult => {
+  if (!pagIbigNumber || !pagIbigNumber.trim()) {
+    return optional ? { valid: true } : { valid: false, error: 'Pag-IBIG Number is required' };
+  }
+  
+  // Remove hyphens and spaces for validation
+  const digitsOnly = pagIbigNumber.replace(/[-\s]/g, '');
+  
+  if (!/^\d{12}$/.test(digitsOnly)) {
+    return { valid: false, error: 'Pag-IBIG Number must be 12 digits (format: XXXX-XXXX-XXXX)' };
+  }
+  
+  return { valid: true };
+};
+
+// Validate GSIS Number format (11 digits)
+export const validateGSISNumber = (gsisNumber: string, optional: boolean = true): ValidationResult => {
+  if (!gsisNumber || !gsisNumber.trim()) {
+    return optional ? { valid: true } : { valid: false, error: 'GSIS Number is required' };
+  }
+  
+  // Remove hyphens and spaces for validation
+  const digitsOnly = gsisNumber.replace(/[-\s]/g, '');
+  
+  if (!/^\d{11}$/.test(digitsOnly)) {
+    return { valid: false, error: 'GSIS Number must be 11 digits' };
+  }
+  
+  return { valid: true };
+};
+
+// Validate PRC License Number format (7 digits)
+export const validatePRCLicenseNumber = (prcNumber: string, optional: boolean = true): ValidationResult => {
+  if (!prcNumber || !prcNumber.trim()) {
+    return optional ? { valid: true } : { valid: false, error: 'PRC License Number is required' };
+  }
+  
+  // Remove hyphens and spaces for validation
+  const digitsOnly = prcNumber.replace(/[-\s]/g, '');
+  
+  if (!/^\d{7}$/.test(digitsOnly)) {
+    return { valid: false, error: 'PRC License Number must be 7 digits' };
+  }
+  
+  return { valid: true };
+};
+
 // Validate relationship (must not be empty and should be a valid relationship type)
 export const validateRelationship = (relationship: string | null | undefined): ValidationResult => {
   if (!relationship || !relationship.trim()) {
     return { valid: false, error: 'Relationship to emergency contact is required' };
   }
   
-  const validRelationships = ['Spouse', 'Parent', 'Sibling', 'Child', 'Relative', 'Friend', 'Other'];
-  if (!validRelationships.includes(relationship.trim())) {
-    return { valid: true }; // Allow custom relationships but validate it's not empty
-  }
-  
+  // Always return valid if a value is provided (either predefined or custom)
+  // The dropdown ensures valid options, and custom "Other" allows any text
   return { valid: true };
 };
 
@@ -306,15 +408,25 @@ export const validateEmergencyContactNotSelf = (
   const candidateNormalized = normalizeName(candidateName);
   const contactNormalized = normalizeName(emergencyContactName);
   
-  // Check if names are similar (simple check - if they match exactly or contain each other)
+  // Only check if names are exactly the same
   if (candidateNormalized === contactNormalized) {
     return { valid: false, error: 'Emergency contact cannot be yourself. Please provide a different contact person.' };
   }
   
-  // Check if emergency contact name is contained in candidate name (e.g., "John Doe" vs "John")
+  // Check if the full first and last names match (more strict comparison)
   const candidateParts = candidateNormalized.split(' ');
-  if (candidateParts.some(part => part.length > 2 && contactNormalized.includes(part))) {
-    return { valid: false, error: 'Emergency contact appears to be yourself. Please provide a different contact person.' };
+  const contactParts = contactNormalized.split(' ');
+  
+  // Only flag as self if at least first AND last name match
+  if (candidateParts.length >= 2 && contactParts.length >= 2) {
+    const candidateFirst = candidateParts[0];
+    const candidateLast = candidateParts[candidateParts.length - 1];
+    const contactFirst = contactParts[0];
+    const contactLast = contactParts[contactParts.length - 1];
+    
+    if (candidateFirst === contactFirst && candidateLast === contactLast) {
+      return { valid: false, error: 'Emergency contact appears to be yourself. Please provide a different contact person.' };
+    }
   }
   
   return { valid: true };

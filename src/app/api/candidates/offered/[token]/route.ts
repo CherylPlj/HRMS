@@ -82,6 +82,10 @@ export async function GET(
     return NextResponse.json({
       candidate: {
         CandidateID: candidate.CandidateID,
+        FirstName: candidate.FirstName,
+        LastName: candidate.LastName,
+        MiddleName: candidate.MiddleName,
+        ExtensionName: candidate.ExtensionName,
         FullName: candidate.FullName,
         Email: candidate.Email,
         ContactNumber: candidate.ContactNumber,

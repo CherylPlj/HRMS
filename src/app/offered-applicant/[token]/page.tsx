@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast, Toaster } from 'react-hot-toast';
+import { ChevronDown } from 'lucide-react';
 import {
   sanitizeString,
   sanitizeName,
@@ -19,11 +20,21 @@ import {
   validateAddress,
   validateAtLeastOneGovtId,
   validateRelationship,
-  validateEmergencyContactNotSelf
+  validateEmergencyContactNotSelf,
+  validateSSSNumber,
+  validateTINNumber,
+  validatePhilHealthNumber,
+  validatePagIbigNumber,
+  validateGSISNumber,
+  validatePRCLicenseNumber
 } from '@/lib/formValidation';
 
 interface CandidateData {
   CandidateID: number;
+  FirstName: string;
+  LastName: string;
+  MiddleName?: string;
+  ExtensionName?: string;
   FullName: string;
   Email: string;
   ContactNumber?: string;
@@ -86,12 +97,51 @@ const OfferedApplicantPage = () => {
   const [religionConsent, setReligionConsent] = useState(false);
   const [messengerConsent, setMessengerConsent] = useState(false);
   const [fbLinkConsent, setFbLinkConsent] = useState(false);
+  const [nationalitySearch, setNationalitySearch] = useState('');
+  const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
+  const [sameAsPresentAddress, setSameAsPresentAddress] = useState(false);
+
+  // Format name as: FirstName MiddleInitial. LastName
+  const formatDisplayName = (candidate: CandidateData): string => {
+    const middleInitial = candidate.MiddleName ? ` ${candidate.MiddleName.charAt(0).toUpperCase()}.` : '';
+    const extension = candidate.ExtensionName ? `, ${candidate.ExtensionName}` : '';
+    return `${candidate.FirstName}${middleInitial} ${candidate.LastName}${extension}`.trim();
+  };
+
+  // List of nationalities
+  const nationalities = [
+    'Filipino',
+    'American',
+    'Australian',
+    'British',
+    'Canadian',
+    'Chinese',
+    'French',
+    'German',
+    'Indian',
+    'Indonesian',
+    'Italian',
+    'Japanese',
+    'Korean',
+    'Malaysian',
+    'Mexican',
+    'Singaporean',
+    'Spanish',
+    'Thai',
+    'Vietnamese',
+    'Other'
+  ].sort();
+
+  // Filter nationalities based on search
+  const filteredNationalities = nationalities.filter(nat =>
+    nat.toLowerCase().includes(nationalitySearch.toLowerCase())
+  );
 
   const [employeeInfo, setEmployeeInfo] = useState<EmployeeInfo>({
     DateOfBirth: '',
     PlaceOfBirth: '',
     CivilStatus: '',
-    Nationality: '',
+    Nationality: 'Filipino',
     Religion: '',
     BloodType: '',
     PresentAddress: '',
@@ -270,6 +320,53 @@ const OfferedApplicantPage = () => {
       PRCLicenseNumber: employeeInfo.PRCLicenseNumber
     });
     if (!govtIdValidation.valid) errors.GovtIds = govtIdValidation.error || '';
+    
+    // Validate individual government ID formats (only if provided)
+    if (employeeInfo.SSSNumber && employeeInfo.SSSNumber.trim()) {
+      const sssValidation = validateSSSNumber(employeeInfo.SSSNumber, false);
+      if (!sssValidation.valid) errors.SSSNumber = sssValidation.error || '';
+    }
+    
+    if (employeeInfo.TINNumber && employeeInfo.TINNumber.trim()) {
+      const tinValidation = validateTINNumber(employeeInfo.TINNumber, false);
+      if (!tinValidation.valid) errors.TINNumber = tinValidation.error || '';
+    }
+    
+    if (employeeInfo.PhilHealthNumber && employeeInfo.PhilHealthNumber.trim()) {
+      const philHealthValidation = validatePhilHealthNumber(employeeInfo.PhilHealthNumber, false);
+      if (!philHealthValidation.valid) errors.PhilHealthNumber = philHealthValidation.error || '';
+    }
+    
+    if (employeeInfo.PagIbigNumber && employeeInfo.PagIbigNumber.trim()) {
+      const pagIbigValidation = validatePagIbigNumber(employeeInfo.PagIbigNumber, false);
+      if (!pagIbigValidation.valid) errors.PagIbigNumber = pagIbigValidation.error || '';
+    }
+    
+    if (employeeInfo.GSISNumber && employeeInfo.GSISNumber.trim()) {
+      const gsisValidation = validateGSISNumber(employeeInfo.GSISNumber, false);
+      if (!gsisValidation.valid) errors.GSISNumber = gsisValidation.error || '';
+    }
+    
+    if (employeeInfo.PRCLicenseNumber && employeeInfo.PRCLicenseNumber.trim()) {
+      const prcValidation = validatePRCLicenseNumber(employeeInfo.PRCLicenseNumber, false);
+      if (!prcValidation.valid) errors.PRCLicenseNumber = prcValidation.error || '';
+    }
+    
+    // Validate PRC Validity is required if PRC License Number is provided
+    if (employeeInfo.PRCLicenseNumber && employeeInfo.PRCLicenseNumber.trim()) {
+      if (!employeeInfo.PRCValidity || !employeeInfo.PRCValidity.trim()) {
+        errors.PRCValidity = 'PRC Validity is required when PRC License Number is provided';
+      } else {
+        // Validate the date is not in the past
+        const validityDate = new Date(employeeInfo.PRCValidity);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to compare only dates
+        
+        if (validityDate < today) {
+          errors.PRCValidity = 'PRC Validity date cannot be in the past';
+        }
+      }
+    }
     
     // Validate emergency contact
     const emergencyNameValidation = validateName(employeeInfo.EmergencyContactName, 'Emergency Contact Name');
@@ -455,7 +552,7 @@ const OfferedApplicantPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Full Name</label>
-              <p className="mt-1 text-gray-900">{candidate.FullName}</p>
+              <p className="mt-1 text-gray-900">{formatDisplayName(candidate)}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
@@ -573,17 +670,52 @@ const OfferedApplicantPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nationality <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="Nationality"
-                    value={employeeInfo.Nationality}
-                    onChange={handleInputChange}
-                    required
-                    disabled={alreadySubmitted && !infoReturned}
-                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
-                      formErrors.Nationality ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="Nationality"
+                      value={employeeInfo.Nationality}
+                      onChange={(e) => {
+                        setEmployeeInfo(prev => ({ ...prev, Nationality: e.target.value }));
+                        setNationalitySearch(e.target.value);
+                        setShowNationalityDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setNationalitySearch(employeeInfo.Nationality);
+                        setShowNationalityDropdown(true);
+                      }}
+                      onBlur={() => {
+                        // Delay to allow click on dropdown item
+                        setTimeout(() => setShowNationalityDropdown(false), 200);
+                      }}
+                      required
+                      placeholder="Search or select nationality"
+                      disabled={alreadySubmitted && !infoReturned}
+                      className={`w-full border rounded-md pl-3 pr-10 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                        formErrors.Nationality ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                    {showNationalityDropdown && filteredNationalities.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {filteredNationalities.map((nat) => (
+                          <div
+                            key={nat}
+                            onClick={() => {
+                              setEmployeeInfo(prev => ({ ...prev, Nationality: nat }));
+                              setNationalitySearch(nat);
+                              setShowNationalityDropdown(false);
+                            }}
+                            className="px-3 py-2 hover:bg-[#800000] hover:text-white cursor-pointer transition-colors"
+                          >
+                            {nat}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {formErrors.Nationality && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.Nationality}</p>
                   )}
@@ -652,7 +784,17 @@ const OfferedApplicantPage = () => {
                   <textarea
                     name="PresentAddress"
                     value={employeeInfo.PresentAddress}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      // If "same as present" is checked, update permanent address too
+                      if (sameAsPresentAddress) {
+                        setEmployeeInfo(prev => ({ 
+                          ...prev, 
+                          PresentAddress: e.target.value,
+                          PermanentAddress: e.target.value 
+                        }));
+                      }
+                    }}
                     required
                     disabled={alreadySubmitted && !infoReturned}
                     rows={3}
@@ -665,13 +807,40 @@ const OfferedApplicantPage = () => {
                   )}
                 </div>
                 <div>
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="sameAsPresentAddress"
+                      checked={sameAsPresentAddress}
+                      onChange={(e) => {
+                        setSameAsPresentAddress(e.target.checked);
+                        if (e.target.checked) {
+                          setEmployeeInfo(prev => ({ 
+                            ...prev, 
+                            PermanentAddress: prev.PresentAddress 
+                          }));
+                        }
+                      }}
+                      disabled={alreadySubmitted && !infoReturned}
+                      className="h-4 w-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded disabled:bg-gray-100"
+                    />
+                    <label htmlFor="sameAsPresentAddress" className="ml-2 text-sm text-gray-700">
+                      Same as Present Address
+                    </label>
+                  </div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Permanent Address <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     name="PermanentAddress"
                     value={employeeInfo.PermanentAddress}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      // Uncheck the checkbox if user manually edits permanent address
+                      if (sameAsPresentAddress && e.target.value !== employeeInfo.PresentAddress) {
+                        setSameAsPresentAddress(false);
+                      }
+                    }}
                     required
                     disabled={alreadySubmitted && !infoReturned}
                     rows={3}
@@ -693,7 +862,8 @@ const OfferedApplicantPage = () => {
                     value={employeeInfo.Phone}
                     onChange={handleInputChange}
                     required
-                    placeholder="+639123456789 or 09123456789"
+                    placeholder="09123456789"
+                    maxLength={11}
                     disabled={alreadySubmitted && !infoReturned}
                     className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
                       formErrors.Phone ? 'border-red-500' : 'border-gray-300'
@@ -788,9 +958,15 @@ const OfferedApplicantPage = () => {
                     name="SSSNumber"
                     value={employeeInfo.SSSNumber}
                     onChange={handleInputChange}
+                    placeholder="XX-XXXXXXX-X"
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.SSSNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.SSSNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.SSSNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">TIN Number</label>
@@ -799,9 +975,15 @@ const OfferedApplicantPage = () => {
                     name="TINNumber"
                     value={employeeInfo.TINNumber}
                     onChange={handleInputChange}
+                    placeholder="XXX-XXX-XXX-XXX"
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.TINNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.TINNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.TINNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">PhilHealth Number</label>
@@ -810,9 +992,15 @@ const OfferedApplicantPage = () => {
                     name="PhilHealthNumber"
                     value={employeeInfo.PhilHealthNumber}
                     onChange={handleInputChange}
+                    placeholder="XX-XXXXXXXXX-X"
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.PhilHealthNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.PhilHealthNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.PhilHealthNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Pag-IBIG Number</label>
@@ -821,9 +1009,15 @@ const OfferedApplicantPage = () => {
                     name="PagIbigNumber"
                     value={employeeInfo.PagIbigNumber}
                     onChange={handleInputChange}
+                    placeholder="XXXX-XXXX-XXXX"
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.PagIbigNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.PagIbigNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.PagIbigNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">GSIS Number</label>
@@ -832,9 +1026,15 @@ const OfferedApplicantPage = () => {
                     name="GSISNumber"
                     value={employeeInfo.GSISNumber}
                     onChange={handleInputChange}
+                    placeholder="11 digits"
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.GSISNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.GSISNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.GSISNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">PRC License Number</label>
@@ -843,20 +1043,34 @@ const OfferedApplicantPage = () => {
                     name="PRCLicenseNumber"
                     value={employeeInfo.PRCLicenseNumber}
                     onChange={handleInputChange}
+                    placeholder="7 digits"
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.PRCLicenseNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.PRCLicenseNumber && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.PRCLicenseNumber}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PRC Validity</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    PRC Validity {employeeInfo.PRCLicenseNumber && <span className="text-red-500">*</span>}
+                  </label>
                   <input
                     type="date"
                     name="PRCValidity"
                     value={employeeInfo.PRCValidity}
                     onChange={handleInputChange}
+                    required={!!employeeInfo.PRCLicenseNumber}
                     disabled={alreadySubmitted && !infoReturned}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100"
+                    className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                      formErrors.PRCValidity ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {formErrors.PRCValidity && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.PRCValidity}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -893,23 +1107,44 @@ const OfferedApplicantPage = () => {
                     Relationship <span className="text-red-500">*</span>
                   </label>
                   {employeeInfo.EmergencyContactRelationship === 'Other' ? (
-                    <input
-                      type="text"
-                      name="EmergencyContactRelationship"
-                      value={employeeInfo.EmergencyContactRelationship}
-                      onChange={handleInputChange}
-                      placeholder="Specify relationship (e.g., Cousin, Neighbor, etc.)"
-                      required
-                      disabled={alreadySubmitted && !infoReturned}
-                      className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
-                        formErrors.EmergencyContactRelationship ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
+                    <div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          name="EmergencyContactRelationship"
+                          value={employeeInfo.EmergencyContactRelationship === 'Other' ? '' : employeeInfo.EmergencyContactRelationship}
+                          onChange={handleInputChange}
+                          placeholder="Specify relationship (e.g., Cousin, Neighbor, etc.)"
+                          required
+                          disabled={alreadySubmitted && !infoReturned}
+                          className={`flex-1 border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
+                            formErrors.EmergencyContactRelationship ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmployeeInfo(prev => ({ ...prev, EmergencyContactRelationship: '' }));
+                          }}
+                          disabled={alreadySubmitted && !infoReturned}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:bg-gray-100"
+                        >
+                          Back
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">Click "Back" to select from predefined relationships</p>
+                    </div>
                   ) : (
                     <select
                       name="EmergencyContactRelationship"
                       value={employeeInfo.EmergencyContactRelationship}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setEmployeeInfo(prev => ({ ...prev, EmergencyContactRelationship: 'Other' }));
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
                       required
                       disabled={alreadySubmitted && !infoReturned}
                       className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
@@ -929,18 +1164,6 @@ const OfferedApplicantPage = () => {
                   {formErrors.EmergencyContactRelationship && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.EmergencyContactRelationship}</p>
                   )}
-                  {employeeInfo.EmergencyContactRelationship && employeeInfo.EmergencyContactRelationship !== 'Other' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmployeeInfo(prev => ({ ...prev, EmergencyContactRelationship: 'Other' }));
-                      }}
-                      className="mt-2 text-sm text-[#800000] hover:underline"
-                      disabled={alreadySubmitted && !infoReturned}
-                    >
-                      Not listed? Click to specify custom relationship
-                    </button>
-                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -952,7 +1175,8 @@ const OfferedApplicantPage = () => {
                     value={employeeInfo.EmergencyContactNumber}
                     onChange={handleInputChange}
                     required
-                    placeholder="+639123456789 or 09123456789"
+                    placeholder="09123456789"
+                    maxLength={11}
                     disabled={alreadySubmitted && !infoReturned}
                     className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] disabled:bg-gray-100 ${
                       formErrors.EmergencyContactNumber ? 'border-red-500' : 'border-gray-300'
