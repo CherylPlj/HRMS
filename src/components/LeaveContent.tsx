@@ -21,7 +21,6 @@ import {
     type TransformedLeave,
     type LeaveTypeItem,
     formatRequestType,
-    fetchUserProfilePhoto,
     formatDate,
     calculateDuration
 } from './leave';
@@ -65,7 +64,6 @@ const LeaveContent: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedLeave, setSelectedLeave] = useState<TransformedLeave | null>(null);
-    const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
     const fetchLeavesRef = useRef(false);
     
     // Modal states
@@ -129,7 +127,8 @@ const LeaveContent: React.FC = () => {
             setLoading(true);
             setError(null);
             
-            const response = await fetch('/api/leaves', {
+            // Fetch leaves with limit - get most recent 500 records (configurable)
+            const response = await fetch('/api/leaves?limit=500&offset=0', {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
@@ -148,53 +147,19 @@ const LeaveContent: React.FC = () => {
                 throw new Error(errorData.error || errorData.details || `Server error: ${response.status}`);
             }
             
-            const data = await response.json();
+            const responseData = await response.json();
             
-            if (!Array.isArray(data)) {
+            // Handle new paginated response format
+            const leavesData = Array.isArray(responseData) ? responseData : responseData.leaves;
+            
+            if (!Array.isArray(leavesData)) {
                 throw new Error('Invalid response format from server');
             }
             
             // Update leaves immediately - UI is already visible
-            setLeaves(data);
+            setLeaves(leavesData);
             setError(null);
 
-            // Fetch photos asynchronously in background - don't block UI
-            const uniqueUserIds = new Set<string>();
-            data.forEach((leave: TransformedLeave) => {
-                if (leave.Faculty?.UserID) {
-                    uniqueUserIds.add(leave.Faculty.UserID);
-                }
-            });
-
-            // Fetch photos in background without blocking
-            // Use functional update to avoid dependency on profilePhotos
-            setProfilePhotos(prevPhotos => {
-                const userIdsToFetch = Array.from(uniqueUserIds).filter(
-                    userId => !prevPhotos[userId]
-                );
-
-                if (userIdsToFetch.length > 0) {
-                    // Don't await - let this run in background
-                    Promise.all(
-                        userIdsToFetch.map(async (userId) => {
-                            try {
-                                const photoUrl = await fetchUserProfilePhoto(userId);
-                                return [userId, photoUrl] as [string, string];
-                            } catch (error) {
-                                return [userId, '/manprofileavatar.png'] as [string, string];
-                            }
-                        })
-                    ).then((photoResults) => {
-                        const newPhotos = Object.fromEntries(photoResults);
-                        setProfilePhotos(prev => ({ ...prev, ...newPhotos }));
-                    }).catch((err) => {
-                        console.error('Error loading profile photos:', err);
-                        // Non-critical error, don't show to user
-                    });
-                }
-
-                return prevPhotos;
-            });
         } catch (err) {
             console.error('Error fetching leaves:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch leaves');
@@ -586,7 +551,6 @@ const LeaveContent: React.FC = () => {
                     <>
                         <LeaveManagementTable
                             leaves={paginatedPendingLeaves}
-                            profilePhotos={profilePhotos}
                             isLoading={loading}
                             onView={(leave) => {
                                 setSelectedLeave(leave);
@@ -628,7 +592,6 @@ const LeaveContent: React.FC = () => {
                     <>
                         <LeaveLogsTable
                             leaves={paginatedApprovedRejectedLeaves}
-                            profilePhotos={profilePhotos}
                             isLoading={loading}
                             onView={(leave) => {
                                 setSelectedLeave(leave);

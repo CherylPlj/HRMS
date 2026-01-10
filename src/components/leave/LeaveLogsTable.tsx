@@ -1,13 +1,12 @@
 import React from 'react';
-import Image from 'next/image';
-import { User, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { LeaveStatus } from '@prisma/client';
 import type { TransformedLeave } from './types';
 import { formatDate, formatRequestType, calculateDuration } from './utils';
 
 interface LeaveLogsTableProps {
     leaves: TransformedLeave[];
-    profilePhotos: Record<string, string>;
+    profilePhotos?: Record<string, string>;
     isLoading?: boolean;
     onView: (leave: TransformedLeave) => void;
 }
@@ -16,12 +15,9 @@ interface LeaveLogsTableProps {
 const SkeletonRow: React.FC = () => (
     <tr className="animate-pulse">
         <td className="px-6 py-4 whitespace-nowrap">
-            <div className="flex items-center">
-                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200"></div>
-                <div className="ml-4">
-                    <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 w-24 bg-gray-200 rounded"></div>
-                </div>
+            <div className="ml-4">
+                <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 w-24 bg-gray-200 rounded"></div>
             </div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
@@ -50,7 +46,6 @@ const SkeletonRow: React.FC = () => (
 
 const LeaveLogsTable: React.FC<LeaveLogsTableProps> = ({
     leaves,
-    profilePhotos,
     isLoading = false,
     onView
 }) => {
@@ -97,25 +92,6 @@ const LeaveLogsTable: React.FC<LeaveLogsTableProps> = ({
                                 <tr key={leave.LeaveID} className="hover:bg-gray-50 transition-colors duration-200">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-10 w-10">
-                                                {leave.Faculty?.UserID && profilePhotos[leave.Faculty.UserID] ? (
-                                                    <Image
-                                                        src={profilePhotos[leave.Faculty.UserID]}
-                                                        alt={leave.Faculty.Name}
-                                                        width={40}
-                                                        height={40}
-                                                        className="rounded-full"
-                                                        onError={(e) => {
-                                                            const target = e.target as HTMLImageElement;
-                                                            target.src = '/manprofileavatar.png';
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                        <User className="h-6 w-6 text-gray-400" />
-                                                    </div>
-                                                )}
-                                            </div>
                                             <div className="ml-4">
                                                 <div className="text-sm font-medium text-gray-900">
                                                     {leave.Faculty?.Name}
@@ -176,4 +152,3 @@ const LeaveLogsTable: React.FC<LeaveLogsTableProps> = ({
 };
 
 export default LeaveLogsTable;
-

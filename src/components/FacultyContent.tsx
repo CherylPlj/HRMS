@@ -452,13 +452,6 @@ const FacultyContent = () => {
     }
   };
 
-  const getProfilePhoto = (facultyUserId: string) => {
-    if (user && user.id === facultyUserId) {
-      return user.imageUrl;
-    }
-    return '/default-avatar.png';
-  };
-
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     if (checked) {
@@ -630,7 +623,6 @@ const FacultyContent = () => {
             onExpandToggle={(facultyId) => setExpandedFacultyId(expandedFacultyId === facultyId ? null : facultyId)}
             onViewDetails={openViewDetailsModal}
             onViewDocument={handleViewDocument}
-            getProfilePhoto={getProfilePhoto}
           />
           {filteredFacultyList.length > 0 && (
             <Pagination

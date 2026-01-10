@@ -18,7 +18,6 @@ interface FacultyTableProps {
   onExpandToggle: (facultyId: number) => void;
   onViewDetails: (faculty: Faculty) => void;
   onViewDocument: (document: DocumentFacultyRow) => void;
-  getProfilePhoto: (facultyUserId: string) => string;
 }
 
 const FacultyTable: React.FC<FacultyTableProps> = ({
@@ -34,8 +33,7 @@ const FacultyTable: React.FC<FacultyTableProps> = ({
   onSelectAll,
   onExpandToggle,
   onViewDetails,
-  onViewDocument,
-  getProfilePhoto
+  onViewDocument
 }) => {
   if (loading) {
     return <div className="text-center py-4">Loading...</div>;
@@ -130,13 +128,6 @@ const FacultyTable: React.FC<FacultyTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        <img
-                          className="h-10 w-10 rounded-full object-cover"
-                          src={getProfilePhoto(faculty.User?.UserID)}
-                          alt={`${faculty.User?.FirstName || ''} ${faculty.User?.LastName || ''}`}
-                        />
-                      </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {faculty.User?.FirstName || 'Unknown'} {faculty.User?.LastName || 'User'}

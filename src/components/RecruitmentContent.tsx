@@ -205,10 +205,39 @@ const RecruitmentContent: React.FC = () => {
     }
   }, []);
 
-  // Filter candidates based on active tab
-  const activeCandidates = candidates.filter(candidate => 
-    activeTab === 'hired' ? candidate.Status === 'Hired' : candidate.Status !== 'Hired'
-  );
+  // Filter and sort candidates based on active tab
+  // Active candidates excludes: Hired and Withdrawn
+  // Shortlisted candidates are moved to the bottom
+  const activeCandidates = candidates
+    .filter(candidate => 
+      candidate.Status !== 'Hired' && 
+      candidate.Status !== 'Withdrawn'
+    )
+    .sort((a, b) => {
+      // Define priority for statuses (lower number = higher priority/shown first)
+      const statusPriority: Record<string, number> = {
+        'ApplicationInitiated': 1,
+        'UnderReview': 2,
+        'InterviewScheduled': 3,
+        'InterviewCompleted': 4,
+        'Offered': 5,
+        'Returned': 6,
+        'Shortlisted': 99  // Move to bottom
+      };
+      
+      const priorityA = statusPriority[a.Status] || 50;
+      const priorityB = statusPriority[b.Status] || 50;
+      
+      // Sort by priority first
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // If same priority, sort by date applied (newest first)
+      const dateA = new Date(a.DateApplied || 0).getTime();
+      const dateB = new Date(b.DateApplied || 0).getTime();
+      return dateB - dateA;
+    });
 
   const hiredCandidates = candidates.filter(candidate => candidate.Status === 'Hired');
 

@@ -11,7 +11,6 @@ interface Employee {
   Department?: { DepartmentID: number; DepartmentName: string };
   Position?: string;
   EmploymentStatus?: string;
-  Photo?: string;
 }
 
 interface DocumentEmployeeRow {

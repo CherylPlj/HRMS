@@ -413,6 +413,11 @@ model Leave {
   UpdatedAt               DateTime?   @updatedAt
   Faculty                 Faculty     @relation(fields: [FacultyID], references: [FacultyID])
   Employee                Employee?   @relation(fields: [employeeId], references: [EmployeeID])
+
+  @@index([Status])
+  @@index([CreatedAt])
+  @@index([FacultyID])
+  @@index([Status, CreatedAt])
 }
 
 model Vacancy {

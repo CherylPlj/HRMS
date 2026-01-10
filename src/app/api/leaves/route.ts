@@ -70,37 +70,57 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
         }
 
-        // Fetch all leaves with faculty and department information
-        const leaves = await prisma.leave.findMany({
-            include: {
-                Faculty: {
-                    include: {
-                        User: {
-                            select: {
-                                FirstName: true,
-                                LastName: true,
-                                UserID: true,
-                            }
-                        },
-                        Department: {
-                            select: {
-                                DepartmentName: true
+        // Get pagination parameters from query string
+        const { searchParams } = new URL(request.url);
+        const limit = parseInt(searchParams.get('limit') || '500'); // Default limit to prevent huge queries
+        const offset = parseInt(searchParams.get('offset') || '0');
+        const status = searchParams.get('status'); // Optional status filter
+
+        // Build where clause
+        const whereClause: any = {};
+        if (status && ['Pending', 'Approved', 'Returned'].includes(status)) {
+            whereClause.Status = status as LeaveStatus;
+        }
+
+        // Fetch leaves with optimized query - limit results and use selective includes
+        const [leaves, totalCount] = await Promise.all([
+            prisma.leave.findMany({
+                where: whereClause,
+                include: {
+                    Faculty: {
+                        select: {
+                            FacultyID: true,
+                            User: {
+                                select: {
+                                    FirstName: true,
+                                    LastName: true,
+                                    UserID: true,
+                                }
+                            },
+                            Department: {
+                                select: {
+                                    DepartmentName: true
+                                }
                             }
                         }
                     }
-                }
-            },
-            orderBy: {
-                CreatedAt: 'desc'
-            }
-        });
+                },
+                orderBy: {
+                    CreatedAt: 'desc'
+                },
+                take: limit,
+                skip: offset
+            }),
+            // Get total count for pagination
+            prisma.leave.count({ where: whereClause })
+        ]);
 
         // Transform the data to match the frontend structure
         const transformedLeaves = leaves.map(leave => ({
@@ -114,16 +134,23 @@ export async function GET() {
             }
         }));
 
-        return NextResponse.json(transformedLeaves, { headers: corsHeaders });
+        return NextResponse.json({
+            leaves: transformedLeaves,
+            pagination: {
+                total: totalCount,
+                limit,
+                offset,
+                hasMore: offset + limit < totalCount
+            }
+        }, { headers: corsHeaders });
     } catch (error) {
         console.error('Error fetching leaves:', error);
         return NextResponse.json(
             { error: 'Failed to fetch leaves', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500, headers: corsHeaders }
         );
-    } finally {
-        await prisma.$disconnect();
     }
+    // Removed prisma.$disconnect() - let Prisma manage connection pooling
 }
 
 export async function POST(request: NextRequest) {

@@ -6,9 +6,18 @@ import crypto from 'crypto';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = await params.id;
+  const { id } = await params;
+  
+  // Ensure id exists
+  if (!id) {
+    return NextResponse.json(
+      { error: 'Candidate ID is required' },
+      { status: 400 }
+    );
+  }
+  
   try {
     const { data: candidate, error } = await supabaseAdmin
       .from('Candidate')
@@ -292,9 +301,18 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = await params.id;
+  const { id } = await params;
+  
+  // Ensure id exists
+  if (!id) {
+    return NextResponse.json(
+      { error: 'Candidate ID is required' },
+      { status: 400 }
+    );
+  }
+  
   try {
     const { userId } = getAuth(req) || {};
     if (!userId) {
