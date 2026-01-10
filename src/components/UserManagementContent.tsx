@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
-import { Search, ChevronUp, ChevronDown, Plus, Trash2, UserPlus, RefreshCw, Lock, UserCheck, Shield } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Plus, Trash2, UserPlus, RefreshCw, Lock, UserCheck, Shield, UserX } from 'lucide-react';
 import ManageUserRoles from './ManageUserRoles';
 
 interface UserRecord {
@@ -63,6 +63,7 @@ const UserManagementContent: React.FC = () => {
   const [viewType, setViewType] = useState<'users' | 'employees' | 'faculty' | 'students'>('users');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<UserRecord | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; alt: string } | null>(null);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -775,6 +776,75 @@ const UserManagementContent: React.FC = () => {
     setShowDeleteModal(true);
   };
 
+  const confirmDeactivate = (userRecord: UserRecord) => {
+    setSelectedRecord(userRecord);
+    setShowDeactivateModal(true);
+  };
+
+  const handleDeactivateUser = async (userRecord: UserRecord) => {
+    if (isDeleting) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      if (!user) {
+        setNotification({
+          type: 'error',
+          message: 'Not authenticated. Please sign in again.'
+        });
+        return;
+      }
+
+      if (!userRecord.User[0]?.UserID) {
+        setNotification({
+          type: 'error',
+          message: 'User ID not found'
+        });
+        return;
+      }
+
+      const response = await fetch('/api/updateUser', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userRecord.User[0].UserID,
+          firstName: userRecord.FirstName,
+          lastName: userRecord.LastName,
+          email: userRecord.Email,
+          role: (userRecord.User[0].Role?.[0]?.role as any)?.name?.toLowerCase() || 'faculty',
+          status: 'Inactive',
+          updatedBy: user.id
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to deactivate user');
+      }
+
+      setNotification({
+        type: 'success',
+        message: 'User deactivated successfully'
+      });
+
+      await fetchData();
+      setShowDeactivateModal(false);
+      setSelectedRecord(null);
+    } catch (error) {
+      console.error('Deactivate operation failed:', error);
+      setNotification({
+        type: 'error',
+        message: `Failed to deactivate: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+      setShowDeactivateModal(false);
+      setSelectedRecord(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -1326,12 +1396,12 @@ const UserManagementContent: React.FC = () => {
                                     <Lock className="h-5 w-5" />
                                   )}
                                 </button>
-                                {userRecord.User[0]?.Status === 'Invited' && (
+                                {(userRecord.User[0]?.Status === 'Invited' || userRecord.User[0]?.Status === 'Inactive') && (
                                   <button
                                     onClick={() => handleActivateUser(userRecord)}
                                     disabled={isActivating === userRecord.User[0].UserID}
                                     className="text-green-600 hover:text-green-800 transition-colors relative group"
-                                    title="Activate User"
+                                    title={userRecord.User[0]?.Status === 'Inactive' ? 'Reactivate User' : 'Activate User'}
                                   >
                                     {isActivating === userRecord.User[0].UserID ? (
                                       <div className="animate-spin">
@@ -1341,18 +1411,20 @@ const UserManagementContent: React.FC = () => {
                                       <UserCheck size={20} />
                                     )}
                                     <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                      Activate User
+                                      {userRecord.User[0]?.Status === 'Inactive' ? 'Reactivate User' : 'Activate User'}
                                     </span>
                                   </button>
                             )}
-                            <button
-                              onClick={() => confirmDelete(userRecord)}
-                                  className="text-red-600 hover:text-red-800"
-                                  disabled={isDeleting}
-                                  title="Delete Account"
-                            >
-                                  <Trash2 className="h-5 w-5" />
-                            </button>
+                            {userRecord.User[0]?.Status !== 'Inactive' && (
+                              <button
+                                onClick={() => confirmDeactivate(userRecord)}
+                                className="text-orange-600 hover:text-orange-800"
+                                disabled={isDeleting}
+                                title="Deactivate Account"
+                              >
+                                <UserX className="h-5 w-5" />
+                              </button>
+                            )}
                               </div>
                             ) : (
                               <button
@@ -1477,6 +1549,47 @@ const UserManagementContent: React.FC = () => {
                   'Delete'
                 )}
             </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {showDeactivateModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Deactivate</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to deactivate {[selectedRecord.FirstName, selectedRecord.LastName].filter(Boolean).join(' ')}'s account?
+              This will temporarily suspend their access to the system. You can reactivate them later.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setShowDeactivateModal(false);
+                  setSelectedRecord(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeactivateUser(selectedRecord)}
+                className={`px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 flex items-center ${
+                  isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Deactivating...
+                  </>
+                ) : (
+                  'Deactivate'
+                )}
+              </button>
             </div>
           </div>
         </div>
