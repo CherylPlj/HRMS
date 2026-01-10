@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import "chart.js/auto";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { 
-  Calendar, 
   Users, 
   UserCheck, 
   History,
@@ -57,13 +54,6 @@ interface Employee {
 export default function DashboardContent() {
   const router = useRouter();
   const { user } = useUser();
-  // Initialize with current month
-  const today = new Date();
-  const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [startDate, setStartDate] = useState<Date>(firstDayOfCurrentMonth);
-  const [endDate, setEndDate] = useState<Date>(today);
-  const dateRange: [Date, Date] = [startDate, endDate];
-  const clickCountRef = React.useRef<number>(0);
   const [facultyStats, setFacultyStats] = useState({
     total: 0,
     regular: 0,
@@ -126,60 +116,6 @@ export default function DashboardContent() {
       JobTitle: string;
     };
   }>>([]);
-
-  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
-    const [start, end] = dates;
-    
-    // If both dates are provided, set both
-    if (start && end) {
-      setStartDate(start);
-      setEndDate(end);
-      clickCountRef.current = 0;
-      return;
-    }
-    
-    // If only start is provided
-    if (start) {
-      if (clickCountRef.current === 0) {
-        // First click - set start date
-        setStartDate(start);
-        clickCountRef.current = 1;
-      }
-    }
-  };
-  
-  const handleDateSelect = (date: Date | null) => {
-    if (!date) return;
-    
-    // onSelect fires on every date click, use it to manually handle range selection
-    if (clickCountRef.current === 0) {
-      // First click - set start date
-      setStartDate(date);
-      clickCountRef.current = 1;
-    } else if (clickCountRef.current === 1) {
-      // Second click - set end date
-      const currentStart = startDate;
-      if (date.getTime() >= currentStart.getTime()) {
-        setEndDate(date);
-      } else {
-        // End is before start - swap them
-        setEndDate(currentStart);
-        setStartDate(date);
-      }
-      clickCountRef.current = 0;
-    }
-  };
-
-  const handleClearDateRange = () => {
-    const today = new Date();
-    setStartDate(today);
-    setEndDate(today);
-  };
-
-  // Add navigation handlers
-  // const handleCardClick = (module: string) => {
-  //   router.push(`/dashboard/admin/${module}`);
-  // };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -361,12 +297,10 @@ export default function DashboardContent() {
 
 
 
-        // Fetch Leave Requests with date filtering
+        // Fetch Leave Requests - show all current pending/recent leaves
         const { data: leaves, error: leavesError } = await supabase
           .from("Leave")
-          .select("*")
-          .gte("CreatedAt", startDate.toISOString())
-          .lte("CreatedAt", endDate.toISOString());
+          .select("*");
         
         if (leavesError) {
           console.error("Leave requests fetch error:", leavesError.message || leavesError);
@@ -378,34 +312,27 @@ export default function DashboardContent() {
           approved: leaves?.filter((l) => l.Status === "Approved").length || 0,
           rejected: leaves?.filter((l) => l.Status === "Returned").length || 0,
         });
-        console.log("Filtered leaves:", leaves?.length, "from", startDate.toLocaleDateString(), "to", endDate.toLocaleDateString());
 
-        // Fetch Documents Status with date filtering
+        // Fetch Documents Status - show all submitted documents
         const { data: documents, error: documentsError } = await supabase
           .from("Document")
-          .select("*")
-          .gte("DateSubmitted", startDate.toISOString())
-          .lte("DateSubmitted", endDate.toISOString());
+          .select("*");
         if (documentsError) throw documentsError;
         const submittedCount = documents?.filter(doc => doc.SubmissionStatus === "Submitted").length || 0;
         setDocumentStats({ submitted: submittedCount });
 
-        // Fetch Recruitment Stats with date filtering
+        // Fetch Recruitment Stats - show all active data regardless of date range
         const { data: vacancies, error: vacanciesError } = await supabase
           .from("Vacancy")
           .select("*")
-          .eq("isDeleted", false)
-          .gte("DatePosted", startDate.toISOString())
-          .lte("DatePosted", endDate.toISOString());
+          .eq("isDeleted", false);
 
         if (vacanciesError) throw vacanciesError;
 
         const { data: candidates, error: candidatesError } = await supabase
           .from("Candidate")
           .select("*")
-          .eq("isDeleted", false)
-          .gte("DateApplied", startDate.toISOString())
-          .lte("DateApplied", endDate.toISOString());
+          .eq("isDeleted", false);
 
         if (candidatesError) throw candidatesError;
 
@@ -423,7 +350,10 @@ export default function DashboardContent() {
           hired: candidates?.filter(c => c.Status === 'Hired').length || 0,
         });
 
-        // Fetch Upcoming Interviews with proper typing and date filtering
+        // Fetch Upcoming Interviews - show upcoming interviews from today onwards
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset to start of day
+        
         const { data: interviews, error: interviewsError } = await supabase
           .from("Candidate")
           .select(`
@@ -441,8 +371,7 @@ export default function DashboardContent() {
             )
           `)
           .eq("Status", "InterviewScheduled")
-          .gte("InterviewDate", startDate.toISOString())
-          .lte("InterviewDate", endDate.toISOString())
+          .gte("InterviewDate", today.toISOString())
           .order("InterviewDate", { ascending: true })
           .limit(5);
 
@@ -479,7 +408,7 @@ export default function DashboardContent() {
     };
 
     fetchDashboardData();
-  }, [startDate, endDate]);
+  }, []);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -570,128 +499,9 @@ export default function DashboardContent() {
 
   return (
     <div className="p-8 w-full flex flex-col">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</label>
-            <div className="relative">
-              <DatePicker
-                selected={startDate}
-                onChange={handleDateRangeChange}
-                onSelect={handleDateSelect}
-                startDate={startDate}
-                endDate={endDate}
-                selectsRange
-                shouldCloseOnSelect={false}
-                dateFormat="MMM d, yyyy"
-                maxDate={new Date()}
-                placeholderText="Select Date Range"
-                customInput={
-                  <div className="relative">
-                    <button 
-                      type="button"
-                      className="flex items-center justify-between w-full min-w-[280px] bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:border-[#800000] hover:bg-gray-50 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                    >
-                      <div className="flex items-center">
-                        <Calendar className="mr-2 text-[#800000]" />
-                        <span className="text-sm">
-                          {startDate && endDate
-                            ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                            : "Select Date Range"}
-                        </span>
-                      </div>
-                      {startDate && endDate && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClearDateRange();
-                          }}
-                          className="ml-2 text-gray-400 hover:text-[#800000] transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
-                          title="Clear date range"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </button>
-                  </div>
-                }
-                className="w-full"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-2">Quick Select Month</label>
-            <select
-              value="custom"
-              onChange={(e) => {
-                if (e.target.value === 'custom') return;
-                const [year, month] = e.target.value.split('-').map(Number);
-                const firstDay = new Date(year, month, 1);
-                const lastDay = new Date(year, month + 1, 0);
-                const today = new Date();
-                // If it's the current month, set end date to today
-                if (year === today.getFullYear() && month === today.getMonth()) {
-                  setStartDate(firstDay);
-                  setEndDate(today);
-                } else {
-                  setStartDate(firstDay);
-                  setEndDate(lastDay);
-                }
-              }}
-              className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-            >
-              <option value="custom">Select a month...</option>
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date();
-                date.setMonth(date.getMonth() - i);
-                const year = date.getFullYear();
-                const month = date.getMonth();
-                const label = i === 0 ? 'This Month' : date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                return (
-                  <option key={i} value={`${year}-${month}`}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <div className="flex items-end gap-2">
-            <button 
-              onClick={() => {
-                const today = new Date();
-                const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
-                setStartDate(firstDayOfYear);
-                setEndDate(today);
-              }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
-            >
-              This Year
-            </button>
-            <button 
-              onClick={() => {
-                // Set to a very old date (e.g., 10 years ago) to today
-                const today = new Date();
-                const tenYearsAgo = new Date(today.getFullYear() - 10, 0, 1);
-                setStartDate(tenYearsAgo);
-                setEndDate(today);
-              }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-[#800000] hover:text-white hover:border-[#800000] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-1"
-            >
-              All Time
-            </button>
-          </div>
-        </div>
-        <div className="text-sm text-gray-500 hidden md:block">
-          Showing data from {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to {endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
           // onClick={() => handleCardClick('faculty')}
         >
           <div className="flex items-center justify-between">
@@ -704,7 +514,7 @@ export default function DashboardContent() {
         </div>
 
         <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
           // onClick={() => handleCardClick('recruitment')}
         >
           <div className="flex items-center justify-between">
@@ -717,7 +527,7 @@ export default function DashboardContent() {
         </div>
 
         <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
           // onClick={() => handleCardClick('documents')}
         >
           <div className="flex items-center justify-between">
@@ -730,7 +540,7 @@ export default function DashboardContent() {
         </div>
 
         <div 
-          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
+          className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
           // onClick={() => handleCardClick('leaves')}
         >
           <div className="flex items-center justify-between">
@@ -741,6 +551,181 @@ export default function DashboardContent() {
             <Clock className="text-4xl text-[#800000] opacity-50" />
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Employee Overview Section */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <GraduationCap className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.regular}</p>
+              <p className="text-gray-600 font-medium text-center">Regular</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.partTime}</p>
+              <p className="text-gray-600 font-medium text-center">Part Time</p>
+            </div>
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.probationary}</p>
+              <p className="text-gray-600 font-medium text-sm">Probationary</p>
+            </div> */}
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.hired}</p>
+              <p className="text-gray-600 font-medium text-sm">Hired</p>
+            </div> */}
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.resigned}</p>
+              <p className="text-gray-600 font-medium text-center">Resigned</p>
+            </div>
+            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
+              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.retired}</p>
+              <p className="text-gray-600 font-medium text-sm">Retired</p>
+            </div> */}
+          </div>
+          <div className="mt-6 h-[200px]">
+            <Bar data={departmentData} options={{
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    display: true
+                  },
+                  ticks: {
+                    stepSize: 1,
+                    precision: 0
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  }
+                }
+              }
+            }} />
+          </div>
+        </div>
+
+        {/* Leave Requests Section */}
+        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
+          <div className="flex items-center mb-6">
+            <Briefcase className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
+          </div>
+          <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.pending}</p>
+              <p className="text-gray-600 font-medium text-center">Pending</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.approved}</p>
+              <p className="text-gray-600 font-medium text-center">Approved</p>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.rejected}</p>
+              <p className="text-gray-600 font-medium text-center">Returned</p>
+            </div>
+          </div>
+          <div className="h-[200px] flex items-center justify-center">
+            <Pie data={leavePieData} options={{ 
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { 
+                legend: { 
+                  display: true, 
+                  position: 'bottom',
+                  align: 'center',
+                  labels: {
+                    boxWidth: 20,
+                    padding: 15,
+                    usePointStyle: true
+                  }
+                } 
+              } 
+            }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Upcoming Interviews Section */}
+      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <CalendarCheck className="text-[#800000] text-2xl mr-3" />
+            <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
+          </div>
+          {/* <button 
+            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
+            // onClick={() => handleCardClick('recruitment')}
+          >
+            View All
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button> */}
+        </div>
+
+        {upcomingInterviews.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Interview Schedule
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Candidate Name
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Position
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
+                    Contact
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {upcomingInterviews.map((interview) => (
+                  <tr key={interview.CandidateID} className="hover:bg-gray-50">
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatDateTime(interview.InterviewDate)}
+                    </td>
+                    <td className="py-4 text-sm text-gray-900">
+                      {formatCandidateName(
+                        interview.FirstName,
+                        interview.LastName,
+                        interview.MiddleName,
+                        interview.ExtensionName
+                      )}
+                    </td>
+                    <td className="py-4">
+                      <div className="text-sm text-gray-900">{interview.Vacancy.VacancyName}</div>
+                      <div className="text-sm text-gray-500">{interview.Vacancy.JobTitle}</div>
+                    </td>
+                    <td className="py-4">
+                      <div className="text-sm text-gray-900">{interview.Email}</div>
+                      <div className="text-sm text-gray-500">{interview.ContactNumber || 'No contact number'}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No upcoming interviews scheduled
+          </div>
+        )}
       </div>
 
       {/* Recruitment Overview Section */}
@@ -890,192 +875,6 @@ export default function DashboardContent() {
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.hired}</p>
             <p className="text-sm text-gray-600">Hired</p>
           </div>
-        </div>
-      </div>
-
-      {/* Upcoming Interviews Section */}
-      <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <CalendarCheck className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Upcoming Interviews</h2>
-          </div>
-          {/* <button 
-            className="text-[#800000] hover:text-[#600000] transition-colors duration-300 text-sm flex items-center"
-            // onClick={() => handleCardClick('recruitment')}
-          >
-            View All
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button> */}
-        </div>
-
-        {upcomingInterviews.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Interview Schedule
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Candidate Name
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Position
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-4">
-                    Contact
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {upcomingInterviews.map((interview) => (
-                  <tr key={interview.CandidateID} className="hover:bg-gray-50">
-                    <td className="py-4 text-sm text-gray-900">
-                      {formatDateTime(interview.InterviewDate)}
-                    </td>
-                    <td className="py-4 text-sm text-gray-900">
-                      {formatCandidateName(
-                        interview.FirstName,
-                        interview.LastName,
-                        interview.MiddleName,
-                        interview.ExtensionName
-                      )}
-                    </td>
-                    <td className="py-4">
-                      <div className="text-sm text-gray-900">{interview.Vacancy.VacancyName}</div>
-                      <div className="text-sm text-gray-500">{interview.Vacancy.JobTitle}</div>
-                    </td>
-                    <td className="py-4">
-                      <div className="text-sm text-gray-900">{interview.Email}</div>
-                      <div className="text-sm text-gray-500">{interview.ContactNumber || 'No contact number'}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            No upcoming interviews scheduled
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Employee Overview Section */}
-        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-          <div className="flex items-center mb-6">
-            <GraduationCap className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.regular}</p>
-              <p className="text-gray-600 font-medium text-center">Regular</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.partTime}</p>
-              <p className="text-gray-600 font-medium text-center">Part Time</p>
-            </div>
-            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.probationary}</p>
-              <p className="text-gray-600 font-medium text-sm">Probationary</p>
-            </div> */}
-            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.hired}</p>
-              <p className="text-gray-600 font-medium text-sm">Hired</p>
-            </div> */}
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.resigned}</p>
-              <p className="text-gray-600 font-medium text-center">Resigned</p>
-            </div>
-            {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.retired}</p>
-              <p className="text-gray-600 font-medium text-sm">Retired</p>
-            </div> */}
-          </div>
-          <div className="mt-6 h-[200px]">
-            <Bar data={departmentData} options={{
-              responsive: true,
-              maintainAspectRatio: true,
-              plugins: {
-                legend: {
-                  display: false
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  grid: {
-                    display: true
-                  },
-                  ticks: {
-                    stepSize: 1,
-                    precision: 0
-                  }
-                },
-                x: {
-                  grid: {
-                    display: false
-                  }
-                }
-              }
-            }} />
-          </div>
-        </div>
-
-        {/* Leave Requests Section */}
-        <div className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 p-8 rounded-xl border border-gray-100">
-          <div className="flex items-center mb-6">
-            <Briefcase className="text-[#800000] text-2xl mr-3" />
-            <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
-          </div>
-          <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.pending}</p>
-              <p className="text-gray-600 font-medium text-center">Pending</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.approved}</p>
-              <p className="text-gray-600 font-medium text-center">Approved</p>
-            </div>
-            <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.rejected}</p>
-              <p className="text-gray-600 font-medium text-center">Returned</p>
-            </div>
-          </div>
-          <div className="h-[200px] flex items-center justify-center">
-            <Pie data={leavePieData} options={{ 
-              responsive: true,
-              maintainAspectRatio: true,
-              plugins: { 
-                legend: { 
-                  display: true, 
-                  position: 'bottom',
-                  align: 'center',
-                  labels: {
-                    boxWidth: 20,
-                    padding: 15,
-                    usePointStyle: true
-                  }
-                } 
-              } 
-            }} />
-          </div>
-        </div>
-      </div>
-
-      {/* AI Insights Section */}
-      <div className="mt-8">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <GraduationCap className="text-[#800000]" />
-            AI Insights & Recommendations
-          </h2>
-          <AIDashboard />
         </div>
       </div>
      
