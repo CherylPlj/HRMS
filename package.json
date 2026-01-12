@@ -13,6 +13,7 @@
     "seed:vacancies": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-vacancies.ts",
     "seed:users": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-users.ts",
     "seed:academic": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-academic.ts",
+    "seed:subjects": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json prisma/seed-subjects-sections.ts",
     "sync:clerk": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/sync-clerk-ids.ts",
     "migrate:faculty": "ts-node -r tsconfig-paths/register --project tsconfig.prisma.json scripts/backfill-faculty-records.ts"
   },

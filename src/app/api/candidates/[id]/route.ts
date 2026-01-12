@@ -253,6 +253,158 @@ async function createUserAccountForHiredEmployee(
       return { success: false, error: `Failed to update user: ${updateError.message}` };
     }
 
+    // Link Employee record to UserID if it exists
+    try {
+      // First check if Employee already linked to this UserID
+      const { data: existingEmployee } = await supabaseAdmin
+        .from('Employee')
+        .select('EmployeeID, UserID')
+        .eq('UserID', userId)
+        .maybeSingle();
+
+      // If no employee found with this UserID, try to find by email via ContactInfo
+      if (!existingEmployee) {
+        const { data: contactInfo } = await supabaseAdmin
+          .from('ContactInfo')
+          .select('employeeId')
+          .eq('Email', candidateEmail.toLowerCase().trim())
+          .maybeSingle();
+
+        if (contactInfo?.employeeId) {
+          // Update Employee record with UserID
+          const { error: employeeUpdateError } = await supabaseAdmin
+            .from('Employee')
+            .update({ UserID: userId })
+            .eq('EmployeeID', contactInfo.employeeId);
+
+          if (employeeUpdateError) {
+            console.error('Error linking Employee to User:', employeeUpdateError);
+          } else {
+            console.log('Linked Employee record to User:', contactInfo.employeeId);
+            
+            // If this is a faculty position, create Faculty record if it doesn't exist
+            if (roleToAssign === 'faculty') {
+              const { data: existingFaculty } = await supabaseAdmin
+                .from('Faculty')
+                .select('FacultyID')
+                .eq('UserID', userId)
+                .maybeSingle();
+
+              if (!existingFaculty) {
+                // Generate unique FacultyID
+                const { data: maxFaculty } = await supabaseAdmin
+                  .from('Faculty')
+                  .select('FacultyID')
+                  .order('FacultyID', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                const nextFacultyId = maxFaculty?.FacultyID ? maxFaculty.FacultyID + 1 : 1;
+
+                // Get employee data for faculty record
+                const { data: employeeData } = await supabaseAdmin
+                  .from('Employee')
+                  .select('DateOfBirth, DepartmentID')
+                  .eq('EmployeeID', contactInfo.employeeId)
+                  .maybeSingle();
+
+                // Get contact info for phone and address
+                const { data: contactData } = await supabaseAdmin
+                  .from('ContactInfo')
+                  .select('Phone, PresentAddress, PermanentAddress')
+                  .eq('employeeId', contactInfo.employeeId)
+                  .maybeSingle();
+
+                // Create Faculty record
+                const { error: facultyError } = await supabaseAdmin
+                  .from('Faculty')
+                  .insert({
+                    FacultyID: nextFacultyId,
+                    UserID: userId,
+                    EmployeeID: contactInfo.employeeId,
+                    DateOfBirth: employeeData?.DateOfBirth || new Date().toISOString().split('T')[0],
+                    Phone: contactData?.Phone || null,
+                    Address: contactData?.PresentAddress || contactData?.PermanentAddress || null,
+                    EmploymentStatus: 'Regular',
+                    HireDate: new Date().toISOString().split('T')[0],
+                    Position: 'Faculty',
+                    DepartmentID: employeeData?.DepartmentID || null,
+                    EmployeeType: 'Regular'
+                  });
+
+                if (facultyError) {
+                  console.error('Error creating Faculty record:', facultyError);
+                } else {
+                  console.log('Faculty record created successfully:', nextFacultyId);
+                }
+              }
+            }
+          }
+        }
+      } else if (existingEmployee) {
+        // Employee already linked, check if Faculty record needed
+        if (roleToAssign === 'faculty') {
+          const { data: existingFaculty } = await supabaseAdmin
+            .from('Faculty')
+            .select('FacultyID')
+            .eq('UserID', userId)
+            .single();
+
+          if (!existingFaculty) {
+            // Generate unique FacultyID
+            const { data: maxFaculty } = await supabaseAdmin
+              .from('Faculty')
+              .select('FacultyID')
+              .order('FacultyID', { ascending: false })
+              .limit(1)
+              .single();
+
+            const nextFacultyId = maxFaculty?.FacultyID ? maxFaculty.FacultyID + 1 : 1;
+
+            // Get employee data for faculty record
+            const { data: employeeData } = await supabaseAdmin
+              .from('Employee')
+              .select('DateOfBirth, DepartmentID')
+              .eq('EmployeeID', existingEmployee.EmployeeID)
+              .maybeSingle();
+
+            // Get contact info for phone and address
+            const { data: contactData } = await supabaseAdmin
+              .from('ContactInfo')
+              .select('Phone, PresentAddress, PermanentAddress')
+              .eq('employeeId', existingEmployee.EmployeeID)
+              .maybeSingle();
+
+            // Create Faculty record
+            const { error: facultyError } = await supabaseAdmin
+              .from('Faculty')
+              .insert({
+                FacultyID: nextFacultyId,
+                UserID: userId,
+                EmployeeID: existingEmployee.EmployeeID,
+                DateOfBirth: employeeData?.DateOfBirth || new Date().toISOString().split('T')[0],
+                Phone: contactData?.Phone || null,
+                Address: contactData?.PresentAddress || contactData?.PermanentAddress || null,
+                EmploymentStatus: 'Regular',
+                HireDate: new Date().toISOString().split('T')[0],
+                Position: 'Faculty',
+                DepartmentID: employeeData?.DepartmentID || null,
+                EmployeeType: 'Regular'
+              });
+
+            if (facultyError) {
+              console.error('Error creating Faculty record:', facultyError);
+            } else {
+              console.log('Faculty record created successfully:', nextFacultyId);
+            }
+          }
+        }
+      }
+    } catch (linkError) {
+      console.error('Error linking Employee/Faculty records:', linkError);
+      // Don't fail the entire process if linking fails
+    }
+
     console.log('User account and Clerk user created successfully for:', candidateEmail);
     return { success: true, userId, temporaryPassword };
 
@@ -361,9 +513,20 @@ export async function PATCH(
     // Get the current candidate data to check if status is being changed
     const { data: currentCandidate } = await supabaseAdmin
       .from('Candidate')
-      .select('Status, Vacancy (VacancyName)')
+      .select('Status, Vacancy (VacancyName), UserID')
       .eq('CandidateID', id)
       .single();
+
+    // Prevent duplicate hiring - check if already hired
+    if (Status === 'Hired' && currentCandidate?.Status === 'Hired') {
+      return NextResponse.json(
+        { 
+          error: 'Candidate has already been hired',
+          message: 'This candidate is already marked as hired. User account may already exist.'
+        },
+        { status: 409 }
+      );
+    }
 
     // Get the vacancy name for email notifications
     const { data: vacancy } = await supabaseAdmin
@@ -386,6 +549,34 @@ export async function PATCH(
       tokenExpiry.setDate(tokenExpiry.getDate() + 30);
     }
 
+    // Check if employee/user already exists when trying to hire (before creating updateData)
+    let existingUserId: string | null = null;
+    if (Status === 'Hired' && currentCandidate?.Status !== 'Hired') {
+      // Check if User already exists for this email
+      const { data: existingUser } = await supabaseAdmin
+        .from('User')
+        .select('UserID, Email')
+        .ilike('Email', Email.trim())
+        .maybeSingle();
+
+      if (existingUser) {
+        console.log('User already exists for this candidate:', existingUser.UserID);
+        existingUserId = existingUser.UserID;
+      }
+
+      // Check if Employee already exists for this email
+      const { data: contactInfo } = await supabaseAdmin
+        .from('ContactInfo')
+        .select('employeeId')
+        .eq('Email', Email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (contactInfo?.employeeId) {
+        console.log('Employee already exists for this candidate:', contactInfo.employeeId);
+        // Don't create duplicate employee - user account creation will link to existing employee
+      }
+    }
+
     // Prepare update data
     const updateData: any = {
       LastName,
@@ -402,6 +593,11 @@ export async function PATCH(
       Phone: ContactNumber || null,
       DateModified: new Date().toISOString()
     };
+
+    // Add existing UserID if found
+    if (existingUserId) {
+      updateData.UserID = existingUserId;
+    }
 
     // Handle resetting submitted employee info
     if (ResetSubmittedInfo) {
@@ -537,30 +733,36 @@ export async function PATCH(
           let temporaryPassword = '';
           let accountAlreadyExists = false;
           
-          // Create User account and Clerk user for the hired employee
-          const userCreationResult = await createUserAccountForHiredEmployee(
-            Email,
-            FirstName,
-            LastName,
-            parseInt(id)
-          );
+          // Only create user account if UserID is not already set
+          if (!candidate.UserID) {
+            // Create User account and Clerk user for the hired employee
+            const userCreationResult = await createUserAccountForHiredEmployee(
+              Email,
+              FirstName,
+              LastName,
+              parseInt(id)
+            );
 
-          if (userCreationResult.success) {
-            console.log('User account created successfully for hired employee');
-            accountCreated = true;
-            temporaryPassword = userCreationResult.temporaryPassword || '';
-            accountAlreadyExists = userCreationResult.accountAlreadyExists || false;
-            
-            // Update candidate with UserID if created
-            if (userCreationResult.userId) {
-              await supabaseAdmin
-                .from('Candidate')
-                .update({ UserID: userCreationResult.userId })
-                .eq('CandidateID', id);
+            if (userCreationResult.success) {
+              console.log('User account created successfully for hired employee');
+              accountCreated = true;
+              temporaryPassword = userCreationResult.temporaryPassword || '';
+              accountAlreadyExists = userCreationResult.accountAlreadyExists || false;
+              
+              // Update candidate with UserID if created
+              if (userCreationResult.userId) {
+                await supabaseAdmin
+                  .from('Candidate')
+                  .update({ UserID: userCreationResult.userId })
+                  .eq('CandidateID', id);
+              }
+            } else {
+              console.error('Failed to create user account:', userCreationResult.error);
+              // Continue to send email even if account creation fails
             }
           } else {
-            console.error('Failed to create user account:', userCreationResult.error);
-            // Continue to send email even if account creation fails
+            console.log('User account already exists for this candidate:', candidate.UserID);
+            accountAlreadyExists = true;
           }
 
           // Send hired status email with account credentials

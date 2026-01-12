@@ -154,6 +154,93 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check for existing employee to prevent duplicates
+    // First check by UserID if provided
+    if (data.UserID) {
+      const { data: existingByUserID } = await supabaseAdmin
+        .from('Employee')
+        .select('EmployeeID, FirstName, LastName')
+        .eq('UserID', data.UserID)
+        .maybeSingle();
+
+      if (existingByUserID) {
+        console.log('Employee already exists with this UserID:', existingByUserID.EmployeeID);
+        return NextResponse.json(
+          { 
+            error: 'Employee already exists for this user account',
+            existingEmployeeId: existingByUserID.EmployeeID
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Check by email via ContactInfo
+    if (data.Email) {
+      const { data: contactInfo } = await supabaseAdmin
+        .from('ContactInfo')
+        .select('employeeId')
+        .eq('Email', data.Email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (contactInfo?.employeeId) {
+        // Check if this employee already exists
+        const { data: existingByEmail } = await supabaseAdmin
+          .from('Employee')
+          .select('EmployeeID, FirstName, LastName, UserID')
+          .eq('EmployeeID', contactInfo.employeeId)
+          .maybeSingle();
+
+        if (existingByEmail) {
+          console.log('Employee already exists with this email:', existingByEmail.EmployeeID);
+          // If UserID is provided and doesn't match, update it
+          if (data.UserID && !existingByEmail.UserID) {
+            const { error: updateError } = await supabaseAdmin
+              .from('Employee')
+              .update({ UserID: data.UserID })
+              .eq('EmployeeID', existingByEmail.EmployeeID);
+
+            if (updateError) {
+              console.error('Error updating Employee UserID:', updateError);
+            } else {
+              console.log('Updated existing Employee with UserID:', existingByEmail.EmployeeID);
+              // Return the existing employee instead of creating a new one
+              return NextResponse.json({
+                ...existingByEmail,
+                message: 'Employee already exists, UserID updated'
+              });
+            }
+          }
+
+          return NextResponse.json(
+            { 
+              error: 'Employee already exists with this email address',
+              existingEmployeeId: existingByEmail.EmployeeID
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
+    // Check by name and DateOfBirth as additional safeguard
+    const { data: existingByName } = await supabaseAdmin
+      .from('Employee')
+      .select('EmployeeID, FirstName, LastName, DateOfBirth')
+      .eq('FirstName', data.FirstName)
+      .eq('LastName', data.LastName)
+      .eq('DateOfBirth', data.DateOfBirth)
+      .maybeSingle();
+
+    if (existingByName) {
+      console.log('Employee with same name and date of birth already exists:', existingByName.EmployeeID);
+      // Only warn, don't block - might be legitimate duplicate
+      console.warn('Potential duplicate employee detected:', {
+        existing: existingByName.EmployeeID,
+        new: data
+      });
+    }
+
     // Start a Supabase transaction
     console.log('Creating employee with data:', {
       employmentStatus,

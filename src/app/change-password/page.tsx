@@ -166,7 +166,7 @@ export default function ChangePasswordPage() {
       } catch (roleError) {
         console.error('Error getting user role for redirect:', roleError);
         // Fallback to general dashboard if role lookup fails
-        router.push('/dashboard');
+      router.push('/dashboard');
       }
     } catch (error: any) {
       console.error('Password change error:', error);
@@ -180,7 +180,7 @@ export default function ChangePasswordPage() {
           setError(clerkError.message || 'Failed to change password. Please try again.');
         }
       } else {
-        setError(error.message || 'Failed to change password. Please check your current password and try again.');
+      setError(error.message || 'Failed to change password. Please check your current password and try again.');
       }
     } finally {
       setIsLoading(false);
@@ -199,10 +199,10 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 overflow-y-auto">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-16 w-16 bg-maroon rounded-full flex items-center justify-center">
+          <div className="mx-auto h-16 w-16 bg-[#800000] rounded-full flex items-center justify-center">
             <AlertCircle className="h-10 w-10 text-white" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -247,7 +247,7 @@ export default function ChangePasswordPage() {
                   required
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-maroon focus:border-maroon sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm"
                   placeholder="Enter your temporary password"
                 />
                 <button
@@ -278,7 +278,7 @@ export default function ChangePasswordPage() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-maroon focus:border-maroon sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm"
                   placeholder="Enter your new password"
                 />
                 <button
@@ -327,7 +327,7 @@ export default function ChangePasswordPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-maroon focus:border-maroon sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm"
                   placeholder="Confirm your new password"
                 />
                 <button
@@ -392,7 +392,7 @@ export default function ChangePasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-maroon hover:bg-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#800000] hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
             {isLoading ? (
               <span className="flex items-center">
@@ -405,7 +405,7 @@ export default function ChangePasswordPage() {
             ) : (
               "Change Password"
             )}
-            </button>
+          </button>
           </div>
         </form>
       </div>

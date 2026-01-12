@@ -93,6 +93,12 @@ export const SubmittedInformationTab: React.FC<SubmittedInformationTabProps> = (
   const handleApprove = async () => {
     if (!selectedCandidate) return;
 
+    // Prevent duplicate hiring if already hired
+    if (selectedCandidate.Status === 'Hired') {
+      toast.error('This candidate has already been hired');
+      return;
+    }
+
     try {
       setProcessing(true);
       
@@ -156,7 +162,14 @@ export const SubmittedInformationTab: React.FC<SubmittedInformationTabProps> = (
 
       if (!employeeResponse.ok) {
         const errorData = await employeeResponse.json();
-        throw new Error(errorData.error || 'Failed to create employee');
+        
+        // If employee already exists (409), still proceed to update candidate status
+        if (employeeResponse.status === 409) {
+          console.warn('Employee already exists:', errorData.existingEmployeeId);
+          // Continue with candidate status update - employee already exists
+        } else {
+          throw new Error(errorData.error || 'Failed to create employee');
+        }
       }
 
       // Update candidate status to "Hired" using FormData

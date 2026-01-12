@@ -67,9 +67,31 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+      // On mobile, close sidebar by default
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Function to position chatbot on the right side of the chat icon
   const positionChatbot = () => {
+    // On mobile, center the chatbot or position it full-screen
+    if (isMobile) {
+      setChatbotPosition({ x: 0, y: 0 });
+      return;
+    }
+
     if (chatButtonRef.current) {
       const buttonRect = chatButtonRef.current.getBoundingClientRect();
       const chatbotWidth = 380;
@@ -108,12 +130,12 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
     }
   };
 
-  // Update position when chatbot becomes visible
+  // Update position when chatbot becomes visible or mobile state changes
   useEffect(() => {
     if (isChatbotVisible) {
       positionChatbot();
     }
-  }, [isChatbotVisible]);
+  }, [isChatbotVisible, isMobile]);
 
   // Reposition chatbot on window resize
   useEffect(() => {
@@ -125,7 +147,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isChatbotVisible]);
+  }, [isChatbotVisible, isMobile]);
 
   // Check user's role and redirect if not admin
   useEffect(() => {
@@ -375,6 +397,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
       'employees': 'EMPLOYEES',
       'documents': 'DOCUMENTS',
       'leave': 'LEAVE',
+      'schedules': 'SCHEDULES',
       'performance': 'PERFORMANCE',
       'disciplinary': 'DISCIPLINARY ACTION',
       'disciplinary-history': 'DISCIPLINARY HISTORY',
@@ -391,10 +414,13 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
     <>
       <Toaster position="top-right" />
       <div className="flex h-screen overflow-hidden bg-gray-100 font-sans">
-        {/* Sidebar - collapsible on all screen sizes */}
+        {/* Sidebar - responsive for mobile */}
         <div className={`bg-[#800000] text-white transition-all duration-300
-          ${isSidebarOpen ? 'w-64' : 'w-20'} 
-          flex-shrink-0 flex flex-col fixed h-full z-30`}>
+          ${isSidebarOpen 
+            ? (isMobile ? 'w-64 translate-x-0' : 'w-64') 
+            : (isMobile ? '-translate-x-full w-64' : 'w-20')
+          } 
+          flex-shrink-0 flex flex-col fixed h-full z-30 md:relative md:translate-x-0`}>
           
           {/* Toggle Button - Above logo */}
           <div className="flex justify-center py-2">
@@ -410,6 +436,12 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
           {/* Logo and Title - Made clickable */}
           <Link 
             href="/dashboard/admin"
+            onClick={() => {
+              // Close sidebar on mobile when logo is clicked
+              if (isMobile) {
+                setIsSidebarOpen(false);
+              }
+            }}
             className={`flex flex-col items-center cursor-pointer
               ${isSidebarOpen ? 'p-4' : 'p-2'}`}
           >
@@ -434,6 +466,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
               { name: 'Employees', icon: 'fa-users', key: 'employees', route: 'employees' },
               { name: 'Documents', icon: 'fa-file-alt', key: 'documents', route: 'documents' },
               { name: 'Leave', icon: 'fa-clipboard', key: 'leave', route: 'leave' },
+              { name: 'Schedules', icon: 'fa-calendar-alt', key: 'schedules', route: 'schedules' },
               // { name: 'Performance', icon: 'fa-chart-line', key: 'performance', route: 'performance' },
               // { name: 'Disciplinary Action', icon: 'fa-gavel', key: 'disciplinary', route: 'disciplinary' },
               { name: 'Recruitment', icon: 'fa-briefcase', key: 'recruitment', route: 'recruitment' },
@@ -452,6 +485,12 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
                 <Link
                   key={item.key}
                   href={href}
+                  onClick={() => {
+                    // Close sidebar on mobile when navigation link is clicked
+                    if (isMobile) {
+                      setIsSidebarOpen(false);
+                    }
+                  }}
                   className={`flex items-center rounded-md cursor-pointer transition-colors
                     ${isSidebarOpen 
                       ? 'space-x-3 px-3 py-2' 
@@ -482,21 +521,36 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
         {/* Main Content Area - Adjusted margin for sidebar */}
         <div className={`flex-1 flex flex-col overflow-hidden
-          ${isSidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+          ${isMobile 
+            ? 'ml-0' 
+            : (isSidebarOpen ? 'ml-64' : 'ml-20')
+          } transition-all duration-300`}>
           {/* Header */}
           <header className="bg-white shadow-md sticky top-0 z-20">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 space-y-4 sm:space-y-0">
-              {/* Title and Breadcrumb */}
-              <div className="flex items-center">
-                <h1 className="text-xl font-bold text-red-700">
+            <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 space-y-3 md:space-y-0">
+              {/* Title and Mobile Menu Button */}
+              <div className="flex items-center justify-between md:justify-start">
+                {/* Mobile Menu Button - Only visible on mobile */}
+                {isMobile && (
+                  <button
+                    title="toggle menu"
+                    className="text-gray-700 p-2 mr-2 hover:bg-gray-100 rounded transition-colors md:hidden"
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  >
+                    <i className="fas fa-bars text-xl"></i>
+                  </button>
+                )}
+                <h1 className="text-lg md:text-xl font-bold text-red-700 truncate">
                   {getPageTitle()}
                 </h1>
               </div>
 
               {/* Right Side Icons and User Info */}
-              <div className="flex items-center justify-between sm:justify-end space-x-4">
+              <div className="flex items-center justify-between md:justify-end space-x-2 md:space-x-4">
                 {/* Role Switcher */}
-                <RoleSwitcher />
+                <div className="hidden sm:block">
+                  <RoleSwitcher />
+                </div>
 
                 {/* Chat Icon */}
                 <a
@@ -504,9 +558,12 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
                   href="#"
                   className="p-2 rounded-full hover:bg-gray-200 transition"
                   title="Chatbot"
-                  onClick={() => setChatbotVisible(!isChatbotVisible)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setChatbotVisible(!isChatbotVisible);
+                  }}
                 >
-                  <i className="fas fa-comments text-black text-lg"></i>
+                  <i className="fas fa-comments text-black text-base md:text-lg"></i>
                 </a>
 
                 {/* Profile Section using Clerk's UserButton */}
@@ -518,7 +575,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
                       elements: {
                         userButtonPopoverCard: 'rounded-lg shadow-xl border border-gray-200',
                         userButtonPopoverActionButton: 'hover:bg-gray-100',
-                        userButtonAvatarBox: 'w-8 h-8 sm:w-10 sm:h-10'
+                        userButtonAvatarBox: 'w-8 h-8 md:w-10 md:h-10'
                       }
                     }}
                   />
@@ -528,15 +585,15 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
+          <main className="flex-1 overflow-y-auto bg-gray-50 p-3 md:p-4">
             {children}
           </main>
         </div>
 
-        {/* Overlay for when sidebar is open */}
-        {isSidebarOpen && (
+        {/* Overlay for when sidebar is open on mobile */}
+        {isMobile && isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20"
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
         )}
@@ -559,8 +616,8 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-96">
             <h2 className="text-xl text-center font-bold text-red-700 mb-4">LOGOUT</h2>
             <p className="text-gray-700 text-center mb-6">Are you sure you want to logout?</p>
             <div className="flex justify-center space-x-10">
@@ -585,8 +642,8 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
       {/* Admin Info Modal */}
       {isAdminInfoVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-2xl w-[480px] transform transition-all duration-300 ease-in-out">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] max-h-[90vh] overflow-y-auto transform transition-all duration-300 ease-in-out">
             {/* Header */}
             <div className="bg-[#800000] text-white p-6 rounded-t-xl">
               <div className="flex items-center justify-between">
@@ -636,7 +693,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
                   {/* User Information */}
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-600 mb-1">First Name</label>
                         <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
@@ -701,8 +758,8 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
       {/* Edit Profile Modal */}
       {isEditProfileVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-2xl w-[480px] transform transition-all duration-300 ease-in-out">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] max-h-[90vh] overflow-y-auto transform transition-all duration-300 ease-in-out">
             {/* Header */}
             <div className="bg-[#800000] text-white p-6 rounded-t-xl">
               <div className="flex items-center justify-between">
@@ -732,7 +789,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
               <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
                 <div className="space-y-4">
                   {/* Read-only fields */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">First Name</label>
                       <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
@@ -822,8 +879,8 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
 
       {/* Add the UserProfile modal */}
       {isProfileVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-[1000px] max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-[1000px] max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-bold text-[#800000]">Profile Settings</h2>
               <button
