@@ -133,8 +133,10 @@ export default function CareersPage() {
                 style={{ backgroundColor: '#DAA520' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c4941d'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#DAA520'}
+                title="for Admin or Employees"
+                aria-label="HRMS Portal for Admin or Employees"
               >
-                Login
+                HRMS Portal
               </button>
             </div>
           </div>
