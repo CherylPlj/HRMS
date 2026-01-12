@@ -483,15 +483,33 @@ model Candidate {
 }
 
 model Subject {
-  id        Int         @id @default(autoincrement())
-  name      String      @unique
-  schedules Schedules[]
+  id          Int         @id @default(autoincrement())
+  code        String?     @unique
+  name        String      @unique
+  description String?
+  units       Int?
+  gradeLevel  String?
+  department  String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime?   @updatedAt
+  schedules   Schedules[]
 }
 
 model ClassSection {
-  id        Int         @id @default(autoincrement())
-  name      String      @unique
-  schedules Schedules[]
+  id          Int         @id @default(autoincrement())
+  name        String      @unique
+  gradeLevel  String?
+  section     String?
+  schoolYear  String?
+  semester    String?
+  adviser     String?
+  room        String?
+  capacity    Int?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime?   @updatedAt
+  schedules   Schedules[]
 }
 
 model Education {

@@ -72,7 +72,6 @@ async function createUserAccountForHiredEmployee(
         Status: 'Active',
         RequirePasswordChange: true, // Flag to force password change on first login
         DateCreated: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         PasswordHash: crypto.createHash('sha256').update(crypto.randomBytes(32).toString('hex')).digest('hex')
       })
       .select()
