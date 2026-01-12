@@ -84,15 +84,40 @@ async function createUserAccountForHiredEmployee(
 
     console.log('User created successfully:', userId);
 
-    // Assign 'employee' role to the user
+    // Check if this is a faculty position by getting the vacancy information
+    let roleToAssign = 'employee'; // Default role
+    try {
+      const { data: candidateData, error: candidateError } = await supabaseAdmin
+        .from('Candidate')
+        .select(`
+          VacancyID,
+          Vacancy (
+            JobTitle
+          )
+        `)
+        .eq('CandidateID', candidateId)
+        .single();
+
+      if (candidateError) {
+        console.error('Error fetching candidate vacancy:', candidateError);
+      } else if (candidateData?.Vacancy?.JobTitle === 'Faculty') {
+        roleToAssign = 'faculty';
+        console.log('Faculty position detected - assigning faculty role');
+      }
+    } catch (vacancyError) {
+      console.error('Error checking vacancy for role assignment:', vacancyError);
+      // Continue with default 'employee' role if check fails
+    }
+
+    // Assign the appropriate role to the user
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('Role')
       .select('id, name')
-      .ilike('name', 'employee')
+      .ilike('name', roleToAssign)
       .single();
 
     if (roleError) {
-      console.error('Error finding employee role:', roleError);
+      console.error(`Error finding ${roleToAssign} role:`, roleError);
       // Continue even if role assignment fails
     } else {
       const { error: userRoleError } = await supabaseAdmin
@@ -103,10 +128,10 @@ async function createUserAccountForHiredEmployee(
         });
 
       if (userRoleError) {
-        console.error('Error assigning employee role:', userRoleError);
+        console.error(`Error assigning ${roleToAssign} role:`, userRoleError);
         // Continue even if role assignment fails
       } else {
-        console.log('Employee role assigned successfully');
+        console.log(`${roleToAssign.charAt(0).toUpperCase() + roleToAssign.slice(1)} role assigned successfully`);
       }
     }
 

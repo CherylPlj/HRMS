@@ -79,9 +79,16 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
 
         const role = (userData as UserRoleData)?.UserRole?.[0]?.role?.name?.toLowerCase();
         
-        if (role !== 'faculty') {
-          if (role === 'admin') {
+        // Check if user should be on employee dashboard
+        if (role !== 'employee' && !role.includes('employee')) {
+          if (role === 'admin' || role.includes('admin')) {
             router.push('/dashboard/admin');
+          } else if (role === 'faculty') {
+            router.push('/dashboard/faculty');
+          } else if (role === 'cashier') {
+            router.push('/dashboard/cashier');
+          } else if (role === 'registrar') {
+            router.push('/dashboard/registrar');
           } else {
             router.push('/dashboard');
           }

@@ -202,6 +202,8 @@ export default clerkMiddleware(async (auth, req) => {
                         ? '/dashboard/cashier'
                         : role === 'registrar'
                         ? '/dashboard/registrar'
+                        : role === 'employee' || role?.includes('employee')
+                        ? '/dashboard/employee'
                         : '/dashboard';
                     
                     return NextResponse.redirect(new URL(dashboardPath, req.url));

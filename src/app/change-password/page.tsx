@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { getActiveRole, getDashboardPath } from "@/lib/userRoles";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -128,6 +129,7 @@ export default function ChangePasswordPage() {
         throw new Error("User not found");
       }
 
+      // This actually changes the password in Clerk's authentication system
       await user.updatePassword({
         currentPassword,
         newPassword,
@@ -146,14 +148,40 @@ export default function ChangePasswordPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update password change flag');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update password change flag');
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Password successfully changed - get user's role and redirect to appropriate dashboard
+      try {
+        const email = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
+        if (email) {
+          const role = await getActiveRole(undefined, email);
+          const dashboardPath = role ? getDashboardPath(role) : '/dashboard';
+          router.push(dashboardPath);
+        } else {
+          // Fallback to general dashboard if email not available
+          router.push('/dashboard');
+        }
+      } catch (roleError) {
+        console.error('Error getting user role for redirect:', roleError);
+        // Fallback to general dashboard if role lookup fails
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       console.error('Password change error:', error);
-      setError(error.message || 'Failed to change password. Please check your current password and try again.');
+      
+      // Handle specific Clerk errors
+      if (error.errors && error.errors.length > 0) {
+        const clerkError = error.errors[0];
+        if (clerkError.code === 'form_identifier_not_found' || clerkError.message?.includes('password')) {
+          setError('Current password is incorrect. Please try again.');
+        } else {
+          setError(clerkError.message || 'Failed to change password. Please try again.');
+        }
+      } else {
+        setError(error.message || 'Failed to change password. Please check your current password and try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -228,9 +256,9 @@ export default function ChangePasswordPage() {
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
                   {showCurrentPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
                     <Eye className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </div>
@@ -259,9 +287,9 @@ export default function ChangePasswordPage() {
                   onClick={() => setShowNewPassword(!showNewPassword)}
                 >
                   {showNewPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
                     <Eye className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </div>
@@ -308,9 +336,9 @@ export default function ChangePasswordPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
                     <Eye className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </div>
@@ -360,11 +388,12 @@ export default function ChangePasswordPage() {
             </ul>
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-maroon hover:bg-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <div className="mt-6">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-maroon hover:bg-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
             {isLoading ? (
               <span className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -376,7 +405,8 @@ export default function ChangePasswordPage() {
             ) : (
               "Change Password"
             )}
-          </button>
+            </button>
+          </div>
         </form>
       </div>
     </div>

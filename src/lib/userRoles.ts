@@ -163,6 +163,8 @@ export function getDashboardPath(role: string): string {
     return '/dashboard/cashier';
   } else if (roleLower.includes('registrar')) {
     return '/dashboard/registrar';
+  } else if (roleLower.includes('employee')) {
+    return '/dashboard/employee';
   }
   return '/dashboard';
 }

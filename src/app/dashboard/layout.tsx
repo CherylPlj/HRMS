@@ -118,12 +118,23 @@ export default function DashboardLayout({
           dashboardPath = 'admin'; // Super Admin users go to admin dashboard
         }
 
+        // Only redirect if on base dashboard path
         if (pathname === '/dashboard' || pathname === '/dashboard/') {
           router.push(`/dashboard/${dashboardPath}`);
         }
         // If trying to access wrong role's dashboard, redirect to correct one
-        else if (pathname.startsWith('/dashboard/') && !pathname.includes(`/dashboard/${dashboardPath}`)) {
-          router.push(`/dashboard/${dashboardPath}`);
+        // But only if not already on a valid role-specific dashboard
+        else if (pathname.startsWith('/dashboard/')) {
+          const currentPath = pathname.split('/dashboard/')[1]?.split('/')[0];
+          const validPaths = ['admin', 'faculty', 'cashier', 'registrar', 'employee'];
+          const isOnValidPath = validPaths.includes(currentPath);
+          
+          // Only redirect if on wrong dashboard or on an invalid path
+          if (isOnValidPath && currentPath !== dashboardPath) {
+            router.push(`/dashboard/${dashboardPath}`);
+          } else if (!isOnValidPath && dashboardPath) {
+            router.push(`/dashboard/${dashboardPath}`);
+          }
         }
       } catch (error) {
         console.error('Error in role check:', error);
