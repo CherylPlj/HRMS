@@ -62,36 +62,36 @@ export function PerformanceModule() {
   const selectedEmployeeData = employees.find((e) => e.EmployeeID === selectedEmployee);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Performance Module</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Performance Module</h1>
+          <p className="text-xs md:text-sm text-gray-600 mt-1">
             Track promotions, training needs, and employee development
           </p>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search employees..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              className="w-full pl-9 md:pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
             />
           </div>
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
             <select
               value={filterDepartment}
               onChange={(e) => setFilterDepartment(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none"
+              className="w-full pl-9 md:pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent appearance-none bg-white"
             >
               <option value="">All Departments</option>
               {departments.map((dept) => (
@@ -101,44 +101,44 @@ export function PerformanceModule() {
               ))}
             </select>
           </div>
-          <div className="text-sm text-gray-600 flex items-center">
+          <div className="text-xs md:text-sm text-gray-600 flex items-center">
             Showing {filteredEmployees.length} of {employees.length} employees
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Employee List */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 order-2 lg:order-1">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#800000]" />
+            <div className="p-3 md:p-4 border-b border-gray-200">
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
+                <Users className="w-4 h-4 md:w-5 md:h-5 text-[#800000]" />
                 Employees
               </h2>
             </div>
-            <div className="max-h-[600px] overflow-y-auto">
+            <div className="max-h-[400px] lg:max-h-[600px] overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-center text-gray-500">Loading...</div>
+                <div className="p-4 text-center text-sm text-gray-500">Loading...</div>
               ) : filteredEmployees.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">No employees found</div>
+                <div className="p-4 text-center text-sm text-gray-500">No employees found</div>
               ) : (
                 <div className="divide-y divide-gray-200">
                   {filteredEmployees.map((employee) => (
                     <button
                       key={employee.EmployeeID}
                       onClick={() => setSelectedEmployee(employee.EmployeeID)}
-                      className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
+                      className={`w-full text-left p-3 md:p-4 hover:bg-gray-50 transition-colors ${
                         selectedEmployee === employee.EmployeeID
                           ? 'bg-[#800000] text-white'
                           : ''
                       }`}
                     >
-                      <div className="font-medium">
+                      <div className="font-medium text-sm md:text-base">
                         {employee.FirstName} {employee.LastName}
                       </div>
                       <div
-                        className={`text-sm ${
+                        className={`text-xs md:text-sm ${
                           selectedEmployee === employee.EmployeeID
                             ? 'text-white/80'
                             : 'text-gray-500'
@@ -147,7 +147,7 @@ export function PerformanceModule() {
                         {employee.Position || 'No position'}
                       </div>
                       <div
-                        className={`text-xs mt-1 ${
+                        className={`text-[10px] md:text-xs mt-1 ${
                           selectedEmployee === employee.EmployeeID
                             ? 'text-white/70'
                             : 'text-gray-400'
@@ -164,36 +164,36 @@ export function PerformanceModule() {
         </div>
 
         {/* AI Analysis Panel */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-1 lg:order-2">
           {selectedEmployee ? (
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {/* Employee Info */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">
                   {selectedEmployeeData?.FirstName} {selectedEmployeeData?.LastName}
                 </h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Position:</span>
-                    <span className="ml-2 font-medium">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
+                  <div className="flex items-center">
+                    <span className="text-gray-600 min-w-[100px]">Position:</span>
+                    <span className="font-medium">
                       {selectedEmployeeData?.Position || 'N/A'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600">Department:</span>
-                    <span className="ml-2 font-medium">
+                  <div className="flex items-center">
+                    <span className="text-gray-600 min-w-[100px]">Department:</span>
+                    <span className="font-medium">
                       {selectedEmployeeData?.Department?.DepartmentName || 'N/A'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600">Salary Grade:</span>
-                    <span className="ml-2 font-medium">
+                  <div className="flex items-center">
+                    <span className="text-gray-600 min-w-[100px]">Salary Grade:</span>
+                    <span className="font-medium">
                       {selectedEmployeeData?.employmentDetails?.SalaryGrade || 'N/A'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600">Salary:</span>
-                    <span className="ml-2 font-medium">
+                  <div className="flex items-center">
+                    <span className="text-gray-600 min-w-[100px]">Salary:</span>
+                    <span className="font-medium">
                       {selectedEmployeeData?.employmentDetails?.SalaryAmount
                         ? `₱${selectedEmployeeData.employmentDetails.SalaryAmount.toLocaleString()}`
                         : 'N/A'}
@@ -215,12 +215,12 @@ export function PerformanceModule() {
               />
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-              <TrendingUp className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 text-center">
+              <TrendingUp className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
                 Select an Employee
               </h3>
-              <p className="text-gray-600">
+              <p className="text-xs md:text-sm text-gray-600 max-w-sm mx-auto">
                 Choose an employee from the list to view AI-powered promotion and training
                 recommendations
               </p>

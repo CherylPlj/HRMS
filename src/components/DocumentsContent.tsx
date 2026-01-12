@@ -134,17 +134,17 @@ const DocumentsContent = () => {
 
 
   return (
-    <div className="p-6">
-      <div className="flex space-x-4 mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex space-x-2 sm:space-x-4 mb-6 overflow-x-auto pb-2 scrollbar-hide">
       <button
           onClick={() => setActiveTab('documentRequirements')}
-          className={`px-4 py-2 rounded ${activeTab === 'documentRequirements' ? 'bg-[#800000] text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-3 sm:px-4 py-2 rounded font-medium whitespace-nowrap text-sm sm:text-base ${activeTab === 'documentRequirements' ? 'bg-[#800000] text-white' : 'bg-gray-200 text-gray-700'}`}
         >
           Document Requirements
         </button>
         <button
           onClick={() => setActiveTab('employeeList')}
-          className={`px-4 py-2 rounded ${activeTab === 'employeeList' ? 'bg-[#800000] text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-3 sm:px-4 py-2 rounded font-medium whitespace-nowrap text-sm sm:text-base ${activeTab === 'employeeList' ? 'bg-[#800000] text-white' : 'bg-gray-200 text-gray-700'}`}
         >
           Employee List
         </button>

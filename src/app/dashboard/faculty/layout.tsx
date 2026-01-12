@@ -409,39 +409,41 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
               </div>
 
               {/* Right Side Icons and User Info */}
-              <div className="flex items-center justify-between md:justify-end space-x-2 md:space-x-4">
-                {/* Role Switcher */}
+              <div className="flex items-center justify-end space-x-2 md:space-x-4">
+                {/* Role Switcher - Hidden on very small screens, visible from sm up */}
                 <div className="hidden sm:block">
                   <RoleSwitcher />
                 </div>
 
-                {/* Chat Icon */}
-                <a
-                  ref={chatButtonRef}
-                  href="#"
-                  className="p-2 rounded-full hover:bg-gray-200 transition"
-                  title="Chatbot"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setChatbotVisible(!isChatbotVisible);
-                  }}
-                >
-                  <i className="fas fa-comments text-black text-base md:text-lg"></i>
-                </a>
-
-                {/* Profile Section using Clerk's UserButton */}
-                <div className="flex items-center">
-                  <UserButton
-                    afterSignOutUrl="/"
-                    userProfileMode="modal"
-                    appearance={{
-                      elements: {
-                        userButtonPopoverCard: 'rounded-lg shadow-xl border border-gray-200',
-                        userButtonPopoverActionButton: 'hover:bg-gray-100',
-                        userButtonAvatarBox: 'w-8 h-8 md:w-10 md:h-10'
-                      }
+                <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+                  {/* Chat Icon */}
+                  <a
+                    ref={chatButtonRef}
+                    href="#"
+                    className="p-1.5 sm:p-2 rounded-full hover:bg-gray-200 transition"
+                    title="Chatbot"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setChatbotVisible(!isChatbotVisible);
                     }}
-                  />
+                  >
+                    <i className="fas fa-comments text-black text-sm sm:text-base md:text-lg"></i>
+                  </a>
+
+                  {/* Profile Section using Clerk's UserButton */}
+                  <div className="flex items-center">
+                    <UserButton
+                      afterSignOutUrl="/"
+                      userProfileMode="modal"
+                      appearance={{
+                        elements: {
+                          userButtonPopoverCard: 'rounded-lg shadow-xl border border-gray-200',
+                          userButtonPopoverActionButton: 'hover:bg-gray-100',
+                          userButtonAvatarBox: 'w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10'
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

@@ -131,14 +131,17 @@ export default function RoleSwitcher({ className = '' }: RoleSwitcherProps) {
     <div className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+        className="flex items-center space-x-1.5 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm"
         title="Switch Role"
       >
         <i className={`fas ${getRoleIcon(currentRole)} text-[#800000]`}></i>
-        <span className="text-sm font-medium text-gray-700">
+        <span className="font-medium text-gray-700 hidden xs:inline">
           {getRoleDisplayName(currentRole)}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="font-medium text-gray-700 xs:hidden">
+          Role
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 md:w-4 md:h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -150,26 +153,26 @@ export default function RoleSwitcher({ className = '' }: RoleSwitcherProps) {
           ></div>
 
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
-            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-100">
+          <div className="absolute right-0 mt-2 w-48 md:w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
+            <div className="px-3 py-2 text-[10px] md:text-xs font-semibold text-gray-500 uppercase border-b border-gray-100">
               Switch Role
             </div>
             {roles.map((role) => (
               <button
                 key={role}
                 onClick={() => handleRoleChange(role)}
-                className={`w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 transition-colors
+                className={`w-full flex items-center justify-between px-3 md:px-4 py-2 text-sm hover:bg-gray-50 transition-colors
                   ${currentRole === role ? 'bg-red-50' : ''}
                 `}
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 md:space-x-3">
                   <i className={`fas ${getRoleIcon(role)} text-[#800000] w-4`}></i>
-                  <span className={`${currentRole === role ? 'font-semibold text-[#800000]' : 'text-gray-700'}`}>
+                  <span className={`text-xs md:text-sm ${currentRole === role ? 'font-semibold text-[#800000]' : 'text-gray-700'}`}>
                     {getRoleDisplayName(role)}
                   </span>
                 </div>
                 {currentRole === role && (
-                  <Check className="w-4 h-4 text-[#800000]" />
+                  <Check className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#800000]" />
                 )}
               </button>
             ))}

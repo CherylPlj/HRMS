@@ -80,55 +80,55 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 md:py-8">
       {/* Action Buttons */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex gap-3">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-8">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button
             onClick={onAddEmployee}
-            className="bg-[#800000] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+            className="bg-[#800000] text-white px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors text-sm sm:text-base flex-1 sm:flex-none justify-center"
           >
-            <Plus size={16} /> Add Employee
+            <Plus size={16} /> <span className="whitespace-nowrap">Add Employee</span>
           </button>
           <button
             onClick={onImportEmployees}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+            className="bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors text-sm sm:text-base flex-1 sm:flex-none justify-center"
           >
-            <Upload size={16} /> Import Employees
+            <Upload size={16} /> <span className="whitespace-nowrap">Import</span>
           </button>
           <button
             onClick={onExportEmployees}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
+            className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors text-sm sm:text-base flex-1 sm:flex-none justify-center"
           >
-            <Download size={16} /> Export Employees
+            <Download size={16} /> <span className="whitespace-nowrap">Export</span>
           </button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={onToggleView}
             disabled={isLoadingAll}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base flex-1 sm:flex-none justify-center"
           >
             {isLoadingAll ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Loading...
+                <span>Loading...</span>
               </>
             ) : viewMode === 'paginated' ? (
               <>
-                <Eye size={16} /> Show All ({pagination.totalCount})
+                <Eye size={16} /> <span className="whitespace-nowrap">Show All ({pagination.totalCount})</span>
               </>
             ) : (
               <>
-                <Eye size={16} /> Show Paginated
+                <Eye size={16} /> <span className="whitespace-nowrap">Show Paginated</span>
               </>
             )}
           </button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-1 sm:flex-none">
             <button
               onClick={() => onQuickExport('csv')}
               disabled={isExporting}
-              className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex-1 justify-center"
               title="Export current view as CSV"
             >
               {isExporting ? (
@@ -141,7 +141,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
             <button
               onClick={() => onQuickExport('pdf')}
               disabled={isExporting}
-              className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex-1 justify-center"
               title="Export current view as PDF"
             >
               {isExporting ? (
@@ -153,7 +153,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
             </button>
           </div>
           {viewMode === 'all' && (
-            <span className="text-sm text-gray-600">
+            <span className="text-xs sm:text-sm text-gray-600 w-full sm:w-auto text-center sm:text-left">
               Showing all {allEmployees.length} employees
             </span>
           )}

@@ -97,37 +97,37 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
   }, [notification]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Notification */}
       {notification && (
-        <div className={`p-4 rounded-lg flex items-center justify-between ${
+        <div className={`p-3 md:p-4 rounded-lg flex items-center justify-between ${
           notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
-          <div className="flex items-center">
+          <div className="flex items-center text-sm md:text-base">
             {notification.type === 'success' ? (
-              <Check className="w-5 h-5 mr-2" />
+              <Check className="w-4 h-4 md:w-5 md:h-5 mr-2" />
             ) : (
-              <X className="w-5 h-5 mr-2" />
+              <X className="w-4 h-4 md:w-5 md:h-5 mr-2" />
             )}
             {notification.message}
           </div>
           <button
             onClick={() => setNotification(null)}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 p-1"
           >
-            <X className="w-4 h-4" />
+            <X size={16} />
           </button>
         </div>
       )}
 
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Contact Information</h3>
+        <h3 className="text-base md:text-lg font-bold text-gray-900 uppercase tracking-wide">Contact Information</h3>
       </div>
 
       {/* Contact Information Form */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Email</label>
           {isEditing ? (
             <input
               type="email"
@@ -136,184 +136,194 @@ const ContactInfoTab: React.FC<ContactInfoTabProps> = ({
                 const value = e.target.value;
                 onInputChange('Email', value);
               }}
-              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.Email && !validateEmail(contactInfo.Email) ? 'border-red-500' : ''}`}
-              placeholder="Enter email address"
+              className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                (contactInfo?.Email && !validateEmail(contactInfo.Email)) || validationErrors.Email ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="e.g. juan.delacruz@example.com"
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{contactInfo?.Email || 'N/A'}</p>
+            <p className="mt-1 text-sm md:text-base text-gray-900 font-medium">{contactInfo?.Email || 'Not Provided'}</p>
           )}
-          {contactInfo?.Email && !validateEmail(contactInfo.Email) && (
-            <p className="mt-1 text-sm text-red-600">Invalid email format</p>
+          {(contactInfo?.Email && !validateEmail(contactInfo.Email)) && (
+            <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">Invalid email format</p>
           )}
           {validationErrors.Email && (
-            <p className="mt-1 text-sm text-red-600">{validationErrors.Email}</p>
+            <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{validationErrors.Email}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Phone</label>
+          <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Phone Number</label>
           {isEditing ? (
             <input
               type="tel"
               value={contactInfo?.Phone || ''}
               onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9]/g, ''); // Only numbers
+                const value = e.target.value.replace(/[^0-9]/g, '');
                 onInputChange('Phone', value);
               }}
-              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.Phone && !validatePhoneNumber(contactInfo.Phone) ? 'border-red-500' : ''}`}
+              className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                (contactInfo?.Phone && !validatePhoneNumber(contactInfo.Phone)) || validationErrors.Phone ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="09XXXXXXXXX"
               maxLength={11}
             />
           ) : (
-            <p className="mt-1 text-sm text-gray-900">{contactInfo?.Phone || 'N/A'}</p>
+            <p className="mt-1 text-sm md:text-base text-gray-900 font-medium">{contactInfo?.Phone || 'Not Provided'}</p>
           )}
-          {contactInfo?.Phone && !validatePhoneNumber(contactInfo.Phone) && (
-            <p className="mt-1 text-sm text-red-600">Phone number must be 11 digits, start with 09</p>
+          {(contactInfo?.Phone && !validatePhoneNumber(contactInfo.Phone)) && (
+            <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">Starts with 09, 11 digits</p>
           )}
           {validationErrors.Phone && (
-            <p className="mt-1 text-sm text-red-600">{validationErrors.Phone}</p>
+            <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{validationErrors.Phone}</p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Present Address</label>
-          {isEditing ? (
-            <textarea
-              value={contactInfo?.PresentAddress || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                onInputChange('PresentAddress', value);
-              }}
-              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.PresentAddress && !validateAddress(contactInfo.PresentAddress) ? 'border-red-500' : ''}`}
-              placeholder="Enter present address"
-              rows={3}
-            />
-          ) : (
-            <p className="mt-1 text-sm text-gray-900">{contactInfo?.PresentAddress || 'N/A'}</p>
-          )}
-          {contactInfo?.PresentAddress && !validateAddress(contactInfo.PresentAddress) && (
-            <p className="mt-1 text-sm text-red-600">Address can only contain letters, numbers, spaces, and . , - # /</p>
-          )}
-          {validationErrors.PresentAddress && (
-            <p className="mt-1 text-sm text-red-600">{validationErrors.PresentAddress}</p>
-          )}
-          {/* Same as Present Address Checkbox */}
-          {isEditing && onSameAsPresentAddressChange && (
-            <div className="mt-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={sameAsPresentAddress}
-                  onChange={(e) => onSameAsPresentAddressChange(e.target.checked)}
-                  className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+        <div className="md:col-span-2 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div>
+              <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Present Address</label>
+              {isEditing ? (
+                <textarea
+                  value={contactInfo?.PresentAddress || ''}
+                  onChange={(e) => onInputChange('PresentAddress', e.target.value)}
+                  className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                    (contactInfo?.PresentAddress && !validateAddress(contactInfo.PresentAddress)) || validationErrors.PresentAddress ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Street, Barangay, City, Province"
+                  rows={3}
                 />
-                <span className="text-sm text-gray-700">Same as Present Address</span>
-              </label>
+              ) : (
+                <p className="mt-1 text-sm md:text-base text-gray-900 font-medium leading-relaxed">{contactInfo?.PresentAddress || 'Not Provided'}</p>
+              )}
+              {contactInfo?.PresentAddress && !validateAddress(contactInfo.PresentAddress) && (
+                <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">Invalid characters in address</p>
+              )}
+              {validationErrors.PresentAddress && (
+                <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{validationErrors.PresentAddress}</p>
+              )}
+              
+              {isEditing && onSameAsPresentAddressChange && (
+                <div className="mt-3 flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <input
+                    type="checkbox"
+                    id="sameAsPresent"
+                    checked={sameAsPresentAddress}
+                    onChange={(e) => onSameAsPresentAddressChange(e.target.checked)}
+                    className="w-4 h-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000]"
+                  />
+                  <label htmlFor="sameAsPresent" className="text-xs md:text-sm font-medium text-gray-700 cursor-pointer">
+                    Permanent address is same as present
+                  </label>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Permanent Address</label>
-          {isEditing ? (
-            <textarea
-              value={contactInfo?.PermanentAddress || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                onInputChange('PermanentAddress', value);
-              }}
-              className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.PermanentAddress && !validateAddress(contactInfo.PermanentAddress) ? 'border-red-500' : ''}`}
-              placeholder="Enter permanent address"
-              rows={3}
-              disabled={sameAsPresentAddress}
-            />
-          ) : (
-            <p className="mt-1 text-sm text-gray-900">{contactInfo?.PermanentAddress || 'N/A'}</p>
-          )}
-          {contactInfo?.PermanentAddress && !validateAddress(contactInfo.PermanentAddress) && (
-            <p className="mt-1 text-sm text-red-600">Address can only contain letters, numbers, spaces, and . , - # /</p>
-          )}
-          {validationErrors.PermanentAddress && (
-            <p className="mt-1 text-sm text-red-600">{validationErrors.PermanentAddress}</p>
-          )}
+            <div>
+              <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Permanent Address</label>
+              {isEditing ? (
+                <textarea
+                  value={contactInfo?.PermanentAddress || ''}
+                  onChange={(e) => onInputChange('PermanentAddress', e.target.value)}
+                  disabled={sameAsPresentAddress}
+                  className={`w-full p-2 md:p-2.5 rounded-lg border transition-all text-sm md:text-base ${
+                    sameAsPresentAddress 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+                      : `bg-gray-50 text-gray-900 border-gray-300 focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] ${
+                          (contactInfo?.PermanentAddress && !validateAddress(contactInfo.PermanentAddress)) || validationErrors.PermanentAddress ? 'border-red-500' : ''
+                        }`
+                  }`}
+                  placeholder="Street, Barangay, City, Province"
+                  rows={3}
+                />
+              ) : (
+                <p className="mt-1 text-sm md:text-base text-gray-900 font-medium leading-relaxed">{contactInfo?.PermanentAddress || 'Not Provided'}</p>
+              )}
+              {!sameAsPresentAddress && contactInfo?.PermanentAddress && !validateAddress(contactInfo.PermanentAddress) && (
+                <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">Invalid characters in address</p>
+              )}
+              {!sameAsPresentAddress && validationErrors.PermanentAddress && (
+                <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{validationErrors.PermanentAddress}</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Emergency Contact Section */}
       <div className="border-t pt-6">
-        <h4 className="text-lg font-medium text-gray-900 mb-4">Emergency Contact</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <h4 className="text-sm md:text-base font-bold text-gray-900 uppercase tracking-wide mb-4">Emergency Contact Information</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 p-4 md:p-5 bg-red-50/30 rounded-xl border border-red-100">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Contact Name</label>
+            <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Contact Name</label>
             {isEditing ? (
               <input
                 type="text"
                 value={contactInfo?.EmergencyContactName || ''}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/[^a-zA-Z ]/g, ''); // Only letters and spaces
+                  const value = e.target.value.replace(/[^a-zA-Z ]/g, '');
                   onInputChange('EmergencyContactName', value);
                 }}
-                className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.EmergencyContactName && !validateContactName(contactInfo.EmergencyContactName) ? 'border-red-500' : ''}`}
-                placeholder="Enter emergency contact name"
+                className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                  (contactInfo?.EmergencyContactName && !validateContactName(contactInfo.EmergencyContactName)) || validationErrors.EmergencyContactName ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Name of contact person"
               />
             ) : (
-              <p className="mt-1 text-sm text-gray-900">{contactInfo?.EmergencyContactName || 'N/A'}</p>
+              <p className="mt-1 text-sm md:text-base text-gray-900 font-bold">{contactInfo?.EmergencyContactName || 'Not Provided'}</p>
             )}
             {contactInfo?.EmergencyContactName && !validateContactName(contactInfo.EmergencyContactName) && (
-              <p className="mt-1 text-sm text-red-600">Name must be at least 3 letters and can only contain letters and spaces</p>
+              <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">At least 3 letters required</p>
             )}
             {validationErrors.EmergencyContactName && (
-              <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContactName}</p>
+              <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{validationErrors.EmergencyContactName}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Contact Number</label>
+            <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Contact Number</label>
             {isEditing ? (
               <input
                 type="tel"
                 value={contactInfo?.EmergencyContactNumber || ''}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9]/g, ''); // Only numbers
+                  const value = e.target.value.replace(/[^0-9]/g, '');
                   onInputChange('EmergencyContactNumber', value);
                 }}
-                className={`mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 ${contactInfo?.EmergencyContactNumber && !validatePhoneNumber(contactInfo.EmergencyContactNumber) ? 'border-red-500' : ''}`}
+                className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                  (contactInfo?.EmergencyContactNumber && !validatePhoneNumber(contactInfo.EmergencyContactNumber)) || validationErrors.EmergencyContactNumber ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="09XXXXXXXXX"
                 maxLength={11}
               />
             ) : (
-              <p className="mt-1 text-sm text-gray-900">{contactInfo?.EmergencyContactNumber || 'N/A'}</p>
+              <p className="mt-1 text-sm md:text-base text-gray-900 font-bold">{contactInfo?.EmergencyContactNumber || 'Not Provided'}</p>
             )}
             {contactInfo?.EmergencyContactNumber && !validatePhoneNumber(contactInfo.EmergencyContactNumber) && (
-              <p className="mt-1 text-sm text-red-600">Contact number must be 11 digits, start with 09</p>
+              <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">Starts with 09, 11 digits</p>
             )}
             {validationErrors.EmergencyContactNumber && (
-              <p className="mt-1 text-sm text-red-600">{validationErrors.EmergencyContactNumber}</p>
+              <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{validationErrors.EmergencyContactNumber}</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Information Note */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex">
+      {/* Guidelines Note */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 md:p-5">
+        <div className="flex gap-3">
           <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
           </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-blue-800">
-              Contact Information Guidelines
-            </h3>
-            <div className="mt-2 text-sm text-blue-700">
-              <ul className="list-disc list-inside space-y-1">
-                <li>Please provide accurate and up-to-date contact information</li>
-                <li>Emergency contact should be someone who can be reached in case of emergency</li>
-                <li>Phone numbers should include country code if applicable</li>
-                <li>Addresses should be complete and current</li>
-              </ul>
-            </div>
+          <div>
+            <h3 className="text-sm font-bold text-blue-800 uppercase tracking-wide">Contact Information Guidelines</h3>
+            <ul className="mt-2 text-xs md:text-sm text-blue-700 space-y-1.5 list-disc list-inside">
+              <li>Keep your contact details current for official communications.</li>
+              <li>Emergency contacts are vital for your safety and well-being.</li>
+              <li>Ensure addresses are complete and accurate for records.</li>
+            </ul>
           </div>
         </div>
       </div>

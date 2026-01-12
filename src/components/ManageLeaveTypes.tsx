@@ -375,45 +375,45 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
       {/* Settings Button */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300"
+        className="bg-gray-200 text-gray-700 px-3 md:px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300 text-sm md:text-base w-full sm:w-auto justify-center sm:justify-start"
         title="Manage Leave Types"
         type="button"
       >
-        <Settings size={16} /> Manage Leave Types
+        <Settings size={16} /> <span className="whitespace-nowrap">Manage Leave Types</span>
       </button>
 
       {/* Main Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-xl md:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="text-2xl font-bold text-gray-800">Manage Leave Types</h2>
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b gap-3 sm:gap-0">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">Leave Types</h2>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 {/* Mode Buttons */}
                 {mode === 'view' && (
                   <>
                     <button
                       onClick={() => setMode('add')}
-                      className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+                      className="flex-1 sm:flex-none bg-[#800000] text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-red-800 text-xs md:text-sm"
                       title="Add Leave Types"
                     >
-                      <Plus size={16} /> Add
+                      <Plus size={14} className="md:w-4 md:h-4" /> Add
                     </button>
                     <button
                       onClick={() => setMode('edit')}
-                      className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
+                      className="flex-1 sm:flex-none bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-blue-700 text-xs md:text-sm"
                       title="Edit Leave Types"
                     >
-                      <Pen size={16} /> Edit
+                      <Pen size={14} className="md:w-4 md:h-4" /> Edit
                     </button>
                     <button
                       onClick={handleDeleteClick}
                       disabled={selectedTypes.length === 0}
-                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 sm:flex-none bg-red-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
                       title="Delete Selected Leave Types"
                     >
-                      <Trash2 size={16} /> Delete ({selectedTypes.length})
+                      <Trash2 size={14} className="md:w-4 md:h-4" /> Delete ({selectedTypes.length})
                     </button>
                   </>
                 )}
@@ -422,9 +422,9 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                     <button
                       onClick={handleAddTypes}
                       disabled={isAdding || newTypes.every(v => !v.name.trim())}
-                      className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                      className="flex-1 sm:flex-none bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-green-700 disabled:opacity-50 text-xs md:text-sm"
                     >
-                      <Check size={16} /> Save
+                      <Check size={14} className="md:w-4 md:h-4" /> Save
                     </button>
                     <button
                       onClick={() => {
@@ -432,7 +432,7 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                         setNewTypes([{ name: '', days: '' }]);
                         setAddErrors({});
                       }}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                      className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-3 md:px-4 py-1.5 md:py-2 rounded hover:bg-gray-300 text-xs md:text-sm"
                     >
                       Cancel
                     </button>
@@ -443,13 +443,13 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                     <button
                       onClick={handleSaveEdits}
                       disabled={isSaving || !hasEdits}
-                      className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                      className="flex-1 sm:flex-none bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-green-700 disabled:opacity-50 text-xs md:text-sm"
                     >
-                      <Save size={16} /> Save Changes
+                      <Save size={14} className="md:w-4 md:h-4" /> Save
                     </button>
                     <button
                       onClick={handleCancelEdit}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                      className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-3 md:px-4 py-1.5 md:py-2 rounded hover:bg-gray-300 text-xs md:text-sm"
                     >
                       Cancel
                     </button>
@@ -460,28 +460,28 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                     setIsModalOpen(false);
                     setMode('view');
                   }}
-                  className="text-gray-400 hover:text-gray-700 focus:outline-none"
+                  className="p-1 text-gray-400 hover:text-gray-700 focus:outline-none ml-auto sm:ml-2"
                   aria-label="Close"
                 >
-                  <X size={24} />
+                  <X size={20} className="md:w-6 md:h-6" />
                 </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-4 md:p-6">
               {/* Add Mode */}
               {mode === 'add' && (
                 <div className="space-y-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Add New Leave Types</h3>
-                    <p className="text-sm text-gray-600">You can add multiple leave types at once.</p>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-1 md:mb-2">Add New Leave Types</h3>
+                    <p className="text-xs md:text-sm text-gray-600">You can add multiple leave types at once.</p>
                   </div>
                   {newTypes.map((item, index) => (
-                    <div key={index} className="flex items-start gap-2 p-4 border rounded-lg">
-                      <div className="flex-1 space-y-3">
+                    <div key={index} className="flex flex-col sm:flex-row items-start gap-2 p-3 md:p-4 border rounded-lg relative">
+                      <div className="flex-1 w-full space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                             Leave Type Name <span className="text-red-600">*</span>
                           </label>
                           <input
@@ -489,17 +489,17 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                             value={item.name}
                             onChange={(e) => handleNewTypeChange(index, 'name', e.target.value)}
                             placeholder={`Leave Type ${index + 1}`}
-                            className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-base ${
+                            className={`w-full rounded-lg border px-3 md:px-4 py-1.5 md:py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-sm md:text-base ${
                               addErrors[index] ? 'border-red-500' : 'border-gray-300'
                             }`}
                             maxLength={50}
                           />
                           {addErrors[index] && (
-                            <div className="text-red-600 text-xs mt-1">{addErrors[index]}</div>
+                            <div className="text-red-600 text-[10px] md:text-xs mt-1">{addErrors[index]}</div>
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                             Number of Days (Optional)
                           </label>
                           <input
@@ -508,30 +508,27 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                             step="1"
                             value={item.days}
                             onChange={(e) => handleNewTypeChange(index, 'days', e.target.value)}
-                            placeholder="e.g. 10 (leave empty for unlimited)"
-                            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-base"
+                            placeholder="leave empty for unlimited"
+                            className="w-full rounded-lg border border-gray-300 px-3 md:px-4 py-1.5 md:py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-sm md:text-base"
                           />
-                          <div className="text-gray-400 text-xs mt-1">
-                            Enter the number of allowed paid leave days. Leave empty if unlimited.
-                          </div>
                         </div>
                       </div>
                       {newTypes.length > 1 && (
                         <button
                           onClick={() => handleRemoveAddInput(index)}
-                          className="text-red-600 hover:text-red-800 p-2"
+                          className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0 text-red-600 hover:text-red-800 p-1 md:p-2"
                           title="Remove"
                         >
-                          <X size={16} />
+                          <X size={14} className="md:w-4 md:h-4" />
                         </button>
                       )}
                     </div>
                   ))}
                   <button
                     onClick={handleAddNewInput}
-                    className="text-[#800000] hover:text-red-800 flex items-center gap-2 text-sm font-medium"
+                    className="text-[#800000] hover:text-red-800 flex items-center gap-2 text-xs md:text-sm font-medium"
                   >
-                    <Plus size={16} /> Add Another
+                    <Plus size={14} className="md:w-4 md:h-4" /> Add Another
                   </button>
                 </div>
               )}
@@ -540,8 +537,8 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
               {mode === 'edit' && (
                 <div className="space-y-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Edit Leave Types</h3>
-                    <p className="text-sm text-gray-600">Edit the leave types below. Only changed items will be saved.</p>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-1 md:mb-2">Edit Leave Types</h3>
+                    <p className="text-xs md:text-sm text-gray-600">Edit the leave types below. Only changed items will be saved.</p>
                   </div>
                   {leaveTypes.map((lt) => {
                     const edited = editingTypes[lt.LeaveTypeID] || { name: lt.LeaveTypeName, days: lt.NumberOfDays?.toString() || '' };
@@ -550,27 +547,27 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                     const isModified = nameChanged || daysChanged;
                     
                     return (
-                      <div key={lt.LeaveTypeID} className={`flex items-start gap-2 p-4 border rounded-lg ${isModified ? 'bg-blue-50 border-blue-200' : ''}`}>
-                        <div className="flex-1 space-y-3">
+                      <div key={lt.LeaveTypeID} className={`flex flex-col sm:flex-row items-start gap-2 p-3 md:p-4 border rounded-lg relative ${isModified ? 'bg-blue-50 border-blue-200' : ''}`}>
+                        <div className="flex-1 w-full space-y-3">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                               Leave Type Name
                             </label>
                             <input
                               type="text"
                               value={edited.name}
                               onChange={(e) => handleEditTypeChange(lt.LeaveTypeID, 'name', e.target.value)}
-                              className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base ${
+                              className={`w-full rounded-lg border px-3 md:px-4 py-1.5 md:py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm md:text-base ${
                                 editErrors[lt.LeaveTypeID] ? 'border-red-500' : 'border-gray-300'
                               }`}
                               maxLength={50}
                             />
                             {editErrors[lt.LeaveTypeID] && (
-                              <div className="text-red-600 text-xs mt-1">{editErrors[lt.LeaveTypeID]}</div>
+                              <div className="text-red-600 text-[10px] md:text-xs mt-1">{editErrors[lt.LeaveTypeID]}</div>
                             )}
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                               Number of Days
                             </label>
                             <input
@@ -580,12 +577,12 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                               value={edited.days}
                               onChange={(e) => handleEditTypeChange(lt.LeaveTypeID, 'days', e.target.value)}
                               placeholder="Leave empty for unlimited"
-                              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
+                              className="w-full rounded-lg border border-gray-300 px-3 md:px-4 py-1.5 md:py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm md:text-base"
                             />
                           </div>
                         </div>
                         {isModified && (
-                          <span className="text-blue-600 text-sm mt-2">Modified</span>
+                          <span className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0 text-blue-600 text-[10px] md:text-sm mt-2">Modified</span>
                         )}
                       </div>
                     );
@@ -597,54 +594,57 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
               {mode === 'view' && (
                 <div>
                   <div className="mb-4">
-                    <p className="text-sm text-gray-600">Select leave types to delete, or use Add/Edit buttons to manage them.</p>
+                    <p className="text-xs md:text-sm text-gray-600">Select leave types to delete, or use Add/Edit buttons to manage them.</p>
                   </div>
                   <div className="border rounded-lg overflow-hidden">
-                    <table className="min-w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left">
-                            <input
-                              type="checkbox"
-                              checked={selectedTypes.length === leaveTypes.length && leaveTypes.length > 0}
-                              onChange={handleSelectAll}
-                              className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                            />
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Leave Type</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Number of Days</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {leaveTypes.length === 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead className="bg-gray-50">
                           <tr>
-                            <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
-                              No leave types found.
-                            </td>
+                            <th className="px-3 md:px-4 py-2 md:py-3 text-left w-10">
+                              <input
+                                type="checkbox"
+                                checked={selectedTypes.length === leaveTypes.length && leaveTypes.length > 0}
+                                onChange={handleSelectAll}
+                                className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                              />
+                            </th>
+                            <th className="px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-700">Leave Type</th>
+                            <th className="px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-700">Days</th>
                           </tr>
-                        ) : (
-                          leaveTypes.map((lt) => (
-                            <tr
-                              key={lt.LeaveTypeID}
-                              className={`hover:bg-gray-50 ${selectedTypes.includes(lt.LeaveTypeID) ? 'bg-blue-50' : ''}`}
-                            >
-                              <td className="px-4 py-3">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedTypes.includes(lt.LeaveTypeID)}
-                                  onChange={() => handleSelectType(lt.LeaveTypeID)}
-                                  className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                                />
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-800">{lt.LeaveTypeName}</td>
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {lt.NumberOfDays !== null && lt.NumberOfDays !== undefined ? lt.NumberOfDays : 'Unlimited'}
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {leaveTypes.length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="px-4 py-8 text-center text-sm text-gray-500">
+                                No leave types found.
                               </td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          ) : (
+                            leaveTypes.map((lt) => (
+                              <tr
+                                key={lt.LeaveTypeID}
+                                className={`hover:bg-gray-50 ${selectedTypes.includes(lt.LeaveTypeID) ? 'bg-blue-50' : ''}`}
+                                onClick={() => handleSelectType(lt.LeaveTypeID)}
+                              >
+                                <td className="px-3 md:px-4 py-2 md:py-3" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedTypes.includes(lt.LeaveTypeID)}
+                                    onChange={() => handleSelectType(lt.LeaveTypeID)}
+                                    className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                                  />
+                                </td>
+                                <td className="px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-800">{lt.LeaveTypeName}</td>
+                                <td className="px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600">
+                                  {lt.NumberOfDays !== null && lt.NumberOfDays !== undefined ? lt.NumberOfDays : 'Unlimited'}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -656,25 +656,25 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+          <div className="bg-white rounded-lg p-5 md:p-6 max-w-md w-full shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Confirm Delete</h2>
+              <h2 className="text-lg md:text-xl font-bold text-gray-800">Confirm Delete</h2>
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
-                <X size={24} />
+                <X size={20} className="md:w-6 md:h-6" />
               </button>
             </div>
 
             <div className="mb-6">
-              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-                <p className="text-red-800 mb-2">
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 md:p-4 mb-4">
+                <p className="text-red-800 mb-2 text-sm md:text-base">
                   Are you sure you want to delete {typesToDelete.length} leave type(s)?
                 </p>
-                <ul className="list-disc list-inside text-sm text-red-700">
+                <ul className="list-disc list-inside text-xs md:text-sm text-red-700 max-h-32 overflow-y-auto">
                   {typesToDelete.map(lt => (
                     <li key={lt.LeaveTypeID}>{lt.LeaveTypeName}</li>
                   ))}
@@ -687,14 +687,14 @@ const ManageLeaveTypes: React.FC<ManageLeaveTypesProps> = ({ leaveTypes, onUpdat
                 onClick={() => {
                   setShowDeleteModal(false);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>

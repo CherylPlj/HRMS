@@ -512,7 +512,7 @@ const FacultyContent = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {notification && (
         <div className={`mb-4 p-4 rounded flex items-center justify-between ${
           notification.type === 'success' 
@@ -532,11 +532,11 @@ const FacultyContent = () => {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex space-x-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+        <div className="flex space-x-2 sm:space-x-4 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-hide">
           <button
             onClick={() => handleViewChange('documentDashboard')}
-            className={`px-4 py-2 rounded ${
+            className={`px-3 sm:px-4 py-2 rounded font-medium whitespace-nowrap text-sm sm:text-base ${
               activeView === 'documentDashboard'
                 ? 'bg-[#800000] text-white'
                 : 'bg-gray-200 text-gray-700'
@@ -546,7 +546,7 @@ const FacultyContent = () => {
           </button>
           <button
             onClick={() => handleViewChange('documentManagement')}
-            className={`px-4 py-2 rounded ${
+            className={`px-3 sm:px-4 py-2 rounded font-medium whitespace-nowrap text-sm sm:text-base ${
               activeView === 'documentManagement'
                 ? 'bg-[#800000] text-white'
                 : 'bg-gray-200 text-gray-700'
@@ -556,7 +556,7 @@ const FacultyContent = () => {
           </button>
           <button
             onClick={() => handleViewChange('facultyManagement')}
-            className={`px-4 py-2 rounded ${
+            className={`px-3 sm:px-4 py-2 rounded font-medium whitespace-nowrap text-sm sm:text-base ${
               activeView === 'facultyManagement'
                 ? 'bg-[#800000] text-white'
                 : 'bg-gray-200 text-gray-700'
@@ -566,12 +566,13 @@ const FacultyContent = () => {
           </button>
         </div>
         {activeView !== 'documentDashboard' && (
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 w-full sm:w-auto justify-end">
             <button
               onClick={handleDownloadPDF}
-              className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+              className="bg-[#800000] text-white px-3 sm:px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800 text-sm sm:text-base whitespace-nowrap"
             >
-              <Download size={16} /> Download {
+              <Download size={16} /> 
+              <span className="hidden xs:inline">Download</span> {
                 activeView === 'facultyManagement' ? 'Faculty List' : 'Documents List'
               }
             </button>

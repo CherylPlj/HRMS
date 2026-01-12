@@ -1238,76 +1238,76 @@ const validateDateOfBirth = (dob: string): string | undefined => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-2 sm:px-4 py-4 md:py-8">
       {/* Success Toast Notification */}
       {showSuccessToast && (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-right duration-300">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg flex items-center gap-2 sm:gap-3 animate-in slide-in-from-right duration-300 max-w-[90vw]">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
           </svg>
-          <span className="font-medium">{successMessage}</span>
+          <span className="font-medium text-sm sm:text-base truncate">{successMessage}</span>
           <button
             title="notif"
             onClick={() => setShowSuccessToast(false)}
-            className="ml-2 hover:bg-green-600 rounded-full p-1 transition-colors"
+            className="ml-auto hover:bg-green-600 rounded-full p-1 transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="h-6 w-px bg-gray-300"></div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 md:mb-8 gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 w-full">
+          <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
           
           {/* Photo and Name Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
             {/* Photo Display */}
             <div 
-              className={`relative ${editingTabs.personal ? 'cursor-pointer' : ''}`}
+              className={`relative shrink-0 ${editingTabs.personal ? 'cursor-pointer' : ''}`}
               onClick={handlePhotoClick}
             >
               {facultyDetails?.Photo ? (
                 <img
                   src={facultyDetails.Photo}
                   alt="Profile"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-300 hover:border-[#800000] transition-colors"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-gray-300 hover:border-[#800000] transition-colors"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 hover:border-[#800000] transition-colors">
-                  <UserCircle className="w-8 h-8 text-gray-400" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 hover:border-[#800000] transition-colors">
+                  <UserCircle className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                 </div>
               )}
               
               {/* Edit indicator */}
               {editingTabs.personal && (
                 <div className="absolute -bottom-1 -right-1 bg-[#800000] text-white rounded-full p-1">
-                  <Camera className="w-3 h-3" />
+                  <Camera className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </div>
               )}
             </div>
             
             {/* Name */}
-            <h1 className="text-2xl font-bold text-gray-800">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
               {facultyDetails ? `${facultyDetails.FirstName || ''} ${facultyDetails.MiddleName ? facultyDetails.MiddleName + ' ' : ''}${facultyDetails.LastName || ''}`.trim() : 'Personal Data'}
             </h1>
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {/* Only show edit buttons for specific tabs that use the main editing system */}
           {['personal', 'government', 'contact'].includes(activeTab) ? (
             editingTabs[activeTab as keyof typeof editingTabs] ? (
               <>
                 <button
                   onClick={() => handleSaveTab(activeTab as keyof typeof editingTabs)}
-                  className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+                  className="flex-1 sm:flex-none bg-green-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-green-700 transition-colors text-sm sm:text-base"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => handleCancelEditTab(activeTab as keyof typeof editingTabs)}
-                  className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                  className="flex-1 sm:flex-none bg-gray-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-gray-700 transition-colors text-sm sm:text-base"
                 >
                   Cancel
                 </button>
@@ -1315,7 +1315,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
             ) : (
               <button
                 onClick={() => handleStartEditTab(activeTab as keyof typeof editingTabs)}
-                className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+                className="flex-1 sm:flex-none bg-[#800000] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-red-800 transition-colors text-sm sm:text-base"
               >
                 <Pen size={16} /> Edit
               </button>
@@ -1325,8 +1325,8 @@ const validateDateOfBirth = (dob: string): string | undefined => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="mb-6 border-b">
-        <nav className="flex space-x-4">
+      <div className="mb-6 border-b overflow-x-auto scrollbar-hide">
+        <nav className="flex space-x-2 sm:space-x-4 min-w-max">
           {tabs.map((tab) => {
             // Only show editing indicators for tabs that use the main editing system
             const isMainEditingTab = ['personal', 'government', 'contact'].includes(tab.id);
@@ -1337,16 +1337,16 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               <button
                 key={tab.id}
                 onClick={() => handleTabSwitch(tab.id)}
-                className={`py-2 px-4 flex items-center gap-2 relative ${
+                className={`py-2 px-3 sm:px-4 flex items-center gap-1.5 sm:gap-2 relative text-sm sm:text-base whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-b-2 border-[#800000] text-[#800000]'
-                    : 'text-gray-500'
+                    ? 'border-b-2 border-[#800000] text-[#800000] font-medium'
+                    : 'text-gray-500 hover:text-gray-700'
                 } ${isTabEditing ? 'bg-yellow-50' : ''}`}
               >
-                <tab.icon className="w-4 h-4" />
+                <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 {tab.label}
                 {isTabEditing && (
-                  <span className="ml-1 text-xs bg-yellow-500 text-white px-1 rounded-full">
+                  <span className="ml-1 text-[10px] sm:text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded-full">
                     {hasChanges ? 'Modified' : 'Editing'}
                   </span>
                 )}
@@ -1357,15 +1357,15 @@ const validateDateOfBirth = (dob: string): string | undefined => {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow-sm sm:shadow p-4 sm:p-6">
         {/* Unsaved Changes Warning - only for main editing tabs */}
         {['personal', 'government', 'contact'].includes(activeTab) && editingTabs[activeTab as keyof typeof editingTabs] && (
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-yellow-600 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
-              <span className="text-sm text-yellow-800">
+              <span className="text-xs sm:text-sm text-yellow-800">
                 You have unsaved changes. Please save or cancel your changes before switching tabs.
               </span>
             </div>
@@ -1374,9 +1374,9 @@ const validateDateOfBirth = (dob: string): string | undefined => {
 
         {/* Personal Information Tab */}
         {activeTab === 'personal' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Last Name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Last Name</label>
               {editingTabs.personal ? (
                 <>
                   <input
@@ -1384,18 +1384,18 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                     type="text"
                     value={editedDetails?.LastName || ''}
                     onChange={(e) => handleInputChange('LastName', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                   />
                   {validationErrors.LastName && (
-                    <p className="text-xs text-red-600 mt-1">{validationErrors.LastName}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 mt-1">{validationErrors.LastName}</p>
                   )}
                 </>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.LastName}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.LastName || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">First Name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">First Name</label>
               {editingTabs.personal ? (
                 <>
                   <input
@@ -1403,18 +1403,18 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                     type="text"
                     value={editedDetails?.FirstName || ''}
                     onChange={(e) => handleInputChange('FirstName', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                   />
                   {validationErrors.FirstName && (
-                    <p className="text-xs text-red-600 mt-1">{validationErrors.FirstName}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 mt-1">{validationErrors.FirstName}</p>
                   )}
                 </>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.FirstName}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.FirstName || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Middle Name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Middle Name</label>
               {editingTabs.personal ? (
                 <>
                   <input
@@ -1422,18 +1422,18 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                     type="text"
                     value={editedDetails?.MiddleName || ''}
                     onChange={(e) => handleInputChange('MiddleName', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                   />
                   {validationErrors.MiddleName && (
-                    <p className="text-xs text-red-600 mt-1">{validationErrors.MiddleName}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 mt-1">{validationErrors.MiddleName}</p>
                   )}
                 </>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.MiddleName || 'N/A'}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.MiddleName || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Extension Name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Extension Name</label>
               {editingTabs.personal ? (
                 <>
                   <input
@@ -1441,24 +1441,24 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                     type="text"
                     value={editedDetails?.ExtensionName || ''}
                     onChange={(e) => handleInputChange('ExtensionName', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                   />
                   {validationErrors.ExtensionName && (
-                    <p className="text-xs text-red-600 mt-1">{validationErrors.ExtensionName}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 mt-1">{validationErrors.ExtensionName}</p>
                   )}
                 </>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.ExtensionName || 'N/A'}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.ExtensionName || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Sex</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Sex</label>
               {editingTabs.personal ? (
                 <select
                   title="Sex"
                   value={editedDetails?.Sex || ''}
                   onChange={(e) => handleInputChange('Sex', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                 >
                   <option value="">Select Sex</option>
                   <option value="Male">Male</option>
@@ -1466,18 +1466,18 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                   <option value="Intersex">Intersex</option>
                 </select>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.Sex}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.Sex || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Date of Birth</label>
               {editingTabs.personal ? (
                 <input
                   title="Date of Birth"
                   type="date"
                   value={editedDetails?.DateOfBirth || ''}
                   onChange={(e) => handleInputChange('DateOfBirth', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                   min="1940-01-01"
                   max={(() => {
                     const today = new Date();
@@ -1488,11 +1488,11 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                   })()}
                 />
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.DateOfBirth}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.DateOfBirth || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Place of Birth</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Place of Birth</label>
               {editingTabs.personal ? (
                 <>
                   <input
@@ -1500,24 +1500,24 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                     type="text"
                     value={editedDetails?.PlaceOfBirth || ''}
                     onChange={(e) => handleInputChange('PlaceOfBirth', e.target.value)}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                   />
                   {validationErrors.PlaceOfBirth && (
-                    <p className="text-xs text-red-600 mt-1">{validationErrors.PlaceOfBirth}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 mt-1">{validationErrors.PlaceOfBirth}</p>
                   )}
                 </>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.PlaceOfBirth || 'N/A'}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.PlaceOfBirth || 'N/A'}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Civil Status</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">Civil Status</label>
               {editingTabs.personal ? (
                 <select
                   title="Civil Status"
                   value={editedDetails?.CivilStatus || ''}
                   onChange={(e) => handleInputChange('CivilStatus', e.target.value)}
-                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                  className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300 text-sm"
                 >
                   <option value="">Select Status</option>
                   <option value="Single">Single</option>
@@ -1527,7 +1527,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
                   <option value="Divorced">Divorced</option>
                 </select>
               ) : (
-                <p className="mt-1 text-sm text-gray-900">{facultyDetails?.CivilStatus || 'N/A'}</p>
+                <p className="mt-1 text-sm text-gray-900 font-medium">{facultyDetails?.CivilStatus || 'N/A'}</p>
               )}
             </div>
           </div>
@@ -1663,61 +1663,64 @@ const validateDateOfBirth = (dob: string): string | undefined => {
 
       {/* Photo Upload Modal */}
       {showPhotoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Update Profile Photo</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">Update Photo</h3>
               <button
                 title="show photo"
                 onClick={() => setShowPhotoModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
             
-            <div className="space-y-4">
-              {/* Current Photo Preview */}
-              <div className="text-center">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Current Photo</label>
-                {facultyDetails?.Photo ? (
-                  <img
-                    src={facultyDetails.Photo}
-                    alt="Current Profile"
-                    className="w-24 h-24 rounded-full object-cover mx-auto border-2 border-gray-300"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-2 border-gray-300">
-                    <UserCircle className="w-12 h-12 text-gray-400" />
+            <div className="space-y-4 md:space-y-6">
+              {/* Photos Row */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
+                {/* Current Photo Preview */}
+                <div className="text-center">
+                  <label className="block text-xs md:text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider">Current</label>
+                  {facultyDetails?.Photo ? (
+                    <img
+                      src={facultyDetails.Photo}
+                      alt="Current Profile"
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover mx-auto border-2 border-gray-200 shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-100 flex items-center justify-center mx-auto border-2 border-gray-200">
+                      <UserCircle className="w-10 h-10 md:w-12 md:h-12 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* New Photo Preview */}
+                {photoPreview && (
+                  <div className="text-center">
+                    <label className="block text-xs md:text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider">New Preview</label>
+                    <img
+                      src={photoPreview}
+                      alt="New Profile Preview"
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover mx-auto border-2 border-[#800000] shadow-md ring-2 ring-red-50"
+                    />
                   </div>
                 )}
               </div>
 
-              {/* New Photo Preview */}
-              {photoPreview && (
-                <div className="text-center">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Photo Preview</label>
-                  <img
-                    src={photoPreview}
-                    alt="New Profile Preview"
-                    className="w-24 h-24 rounded-full object-cover mx-auto border-2 border-[#800000]"
-                  />
-                </div>
-              )}
-
               {/* Upload Section */}
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 <label className="block text-sm font-medium text-gray-700">
-                  Upload New Photo
+                  Select New Photo
                 </label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-4 text-gray-500" />
-                      <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
+                  <label className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                      <Upload className="w-6 h-6 md:w-8 md:h-8 mb-2 md:mb-3 text-gray-400" />
+                      <p className="mb-1 text-sm text-gray-600">
+                        <span className="font-semibold">Tap to upload</span>
                       </p>
-                      <p className="text-xs text-gray-500">PNG, JPG, JPEG up to 5MB</p>
+                      <p className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wide">PNG, JPG up to 5MB</p>
                     </div>
                     <input
                       type="file"
@@ -1730,41 +1733,31 @@ const validateDateOfBirth = (dob: string): string | undefined => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                {photoFile ? (
-                  <>
-                    <button
-                      onClick={handleUploadPhoto}
-                      disabled={uploadingPhoto}
-                      className="flex-1 bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50"
-                    >
-                      {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
-                    </button>
-                    <button
-                      onClick={handleRemovePhoto}
-                      disabled={uploadingPhoto}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {facultyDetails?.Photo && (
-                      <button
-                        onClick={handleRemoveExistingPhoto}
-                        disabled={uploadingPhoto}
-                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                      >
-                        {uploadingPhoto ? 'Removing...' : 'Remove Current Photo'}
-                      </button>
-                    )}
-                  </>
+              <div className="flex flex-col gap-2 pt-2 md:pt-4">
+                {photoFile && (
+                  <button
+                    onClick={handleUploadPhoto}
+                    disabled={uploadingPhoto}
+                    className="w-full bg-[#800000] text-white px-4 py-2.5 rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50 font-medium text-sm md:text-base shadow-sm"
+                  >
+                    {uploadingPhoto ? 'Uploading...' : 'Save New Photo'}
+                  </button>
                 )}
+                
+                {!photoFile && facultyDetails?.Photo && (
+                  <button
+                    onClick={handleRemoveExistingPhoto}
+                    disabled={uploadingPhoto}
+                    className="w-full bg-red-50 text-red-600 border border-red-100 px-4 py-2.5 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 font-medium text-sm md:text-base"
+                  >
+                    {uploadingPhoto ? 'Removing...' : 'Remove Current Photo'}
+                  </button>
+                )}
+                
                 <button
                   onClick={() => setShowPhotoModal(false)}
                   disabled={uploadingPhoto}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-gray-700 font-medium text-sm md:text-base"
                 >
                   Cancel
                 </button>

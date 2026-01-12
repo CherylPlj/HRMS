@@ -737,22 +737,17 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        {/* <div>
-          <h1 className="text-2xl font-bold text-gray-900">Disciplinary Action Management</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Manage and track employee disciplinary actions
-          </p>
-        </div> */}
+        {/* ... */}
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-4 mb-4 border-b border-gray-200">
+      <div className="flex space-x-2 sm:space-x-4 mb-4 border-b border-gray-200 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => handleTabChange('dashboard')}
-          className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
+          className={`px-3 sm:px-4 py-3 rounded-t-lg transition-colors border-b-2 whitespace-nowrap text-sm sm:text-base ${
             activeTab === 'dashboard'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'
               : 'bg-gray-50 border-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-100'
@@ -762,7 +757,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
         </button>
         <button
           onClick={() => handleTabChange('records')}
-          className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
+          className={`px-3 sm:px-4 py-3 rounded-t-lg transition-colors border-b-2 whitespace-nowrap text-sm sm:text-base ${
             activeTab === 'records'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'
               : 'bg-gray-50 border-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-100'
@@ -772,7 +767,7 @@ const DisciplinaryContent: React.FC<DisciplinaryContentProps> = ({
         </button>
         <button
           onClick={() => handleTabChange('history')}
-          className={`px-4 py-3 rounded-t-lg transition-colors border-b-2 ${
+          className={`px-3 sm:px-4 py-3 rounded-t-lg transition-colors border-b-2 whitespace-nowrap text-sm sm:text-base ${
             activeTab === 'history'
               ? 'bg-white border-[#800000] text-[#800000] font-semibold'
               : 'bg-gray-50 border-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-100'

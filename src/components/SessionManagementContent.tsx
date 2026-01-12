@@ -176,18 +176,18 @@ export default function SessionManagementContent() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Session Management</h2>
-        <p className="text-gray-600">Monitor active user sessions and system activity.</p>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-4">Session Management</h2>
+        <p className="text-sm md:text-base text-gray-600">Monitor active user sessions and system activity.</p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
+        <nav className="-mb-px flex space-x-4 md:space-x-8 min-w-max">
           <button
             onClick={() => setActiveTab('sessions')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'sessions'
                 ? 'border-[#800000] text-[#800000]'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -197,7 +197,7 @@ export default function SessionManagementContent() {
           </button>
           <button
             onClick={() => setActiveTab('activity')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'activity'
                 ? 'border-[#800000] text-[#800000]'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -218,7 +218,7 @@ export default function SessionManagementContent() {
               placeholder="Search users or activities..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#800000]"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#800000]"
             />
           </div>
           {activeTab === 'activity' && (
@@ -228,7 +228,7 @@ export default function SessionManagementContent() {
                 title="time-filter"
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#800000]"
               >
                 <option value="1h">Last Hour</option>
                 <option value="24h">Last 24 Hours</option>
@@ -244,18 +244,18 @@ export default function SessionManagementContent() {
       {/* Active Sessions Tab */}
       {activeTab === 'sessions' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Active Sessions (Last 24 Hours)</h3>
+          <div className="px-4 md:px-6 py-4 border-b border-gray-200">
+            <h3 className="text-base md:text-lg font-medium text-gray-900">Active Sessions (Last 24 Hours)</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[800px] md:min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -266,7 +266,7 @@ export default function SessionManagementContent() {
                   
                   return (
                     <tr key={session.UserID} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
                             {session.FirstName} {session.LastName}
@@ -274,7 +274,7 @@ export default function SessionManagementContent() {
                           <div className="text-sm text-gray-500">{session.Email}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           userRole === 'Super Admin' ? 'bg-purple-100 text-purple-800' :
                           userRole === 'Admin' ? 'bg-red-100 text-red-800' :
@@ -284,11 +284,11 @@ export default function SessionManagementContent() {
                           {userRole}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {lastLogin ? (
                           <div>
-                            <div>{lastLogin.toLocaleString()}</div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs md:text-sm">{lastLogin.toLocaleString()}</div>
+                            <div className="text-[10px] md:text-xs text-gray-400">
                               {timeAgo !== null && (
                                 timeAgo < 60 ? `${timeAgo}m ago` :
                                 timeAgo < 1440 ? `${Math.floor(timeAgo / 60)}h ago` :
@@ -300,7 +300,7 @@ export default function SessionManagementContent() {
                           'Never'
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           timeAgo !== null && timeAgo < 30 ? 'bg-green-100 text-green-800' :
                           timeAgo !== null && timeAgo < 120 ? 'bg-yellow-100 text-yellow-800' :
@@ -310,11 +310,11 @@ export default function SessionManagementContent() {
                            timeAgo !== null && timeAgo < 120 ? 'Idle' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm font-medium">
                         {session.UserID !== user?.id && (
                           <button
                             onClick={() => handleForceLogout(session.UserID)}
-                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs"
+                            className="px-2 md:px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-[10px] md:text-xs"
                           >
                             Force Logout
                           </button>
@@ -329,7 +329,7 @@ export default function SessionManagementContent() {
 
           {filteredSessions.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No active sessions found in the last 24 hours.</p>
+              <p className="text-sm text-gray-500">No active sessions found in the last 24 hours.</p>
             </div>
           )}
         </div>
@@ -338,32 +338,32 @@ export default function SessionManagementContent() {
       {/* Recent Activity Tab */}
       {activeTab === 'activity' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent System Activity</h3>
+          <div className="px-4 md:px-6 py-4 border-b border-gray-200">
+            <h3 className="text-base md:text-lg font-medium text-gray-900">Recent System Activity</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px] md:min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredActivity.map((activity) => (
                   <tr key={activity.LogID} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {activity.User?.[0]?.FirstName} {activity.User?.[0]?.LastName}
                         </div>
-                        <div className="text-sm text-gray-500">{activity.User?.[0]?.Email}</div>
+                        <div className="text-[10px] md:text-sm text-gray-500">{activity.User?.[0]?.Email}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         activity.ActionType?.includes('login') ? 'bg-green-100 text-green-800' :
                         activity.ActionType?.includes('delete') ? 'bg-red-100 text-red-800' :
@@ -374,13 +374,13 @@ export default function SessionManagementContent() {
                         {activity.ActionType}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                    <td className="px-4 md:px-6 py-4 text-xs md:text-sm text-gray-900 max-w-xs truncate">
                       {activity.ActionDetails}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500">
                       {activity.IPAddress}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500">
                       {new Date(activity.Timestamp).toLocaleString()}
                     </td>
                   </tr>
@@ -391,7 +391,7 @@ export default function SessionManagementContent() {
 
           {filteredActivity.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No activity found for the selected time range.</p>
+              <p className="text-sm text-gray-500">No activity found for the selected time range.</p>
             </div>
           )}
         </div>

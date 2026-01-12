@@ -6,17 +6,17 @@ const Navigation = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-[#800000] text-white p-4">
+    <nav className="bg-[#800000] text-white p-3 md:p-4">
       <div className="container mx-auto">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-8">
-            <Link href="/" className="text-2xl font-bold">
+          <div className="flex items-center space-x-4 md:space-x-8">
+            <Link href="/" className="text-xl md:text-2xl font-bold">
               HRMS
             </Link>
-            <div className="hidden md:flex space-x-4">
+            <div className="hidden sm:flex space-x-3 md:space-x-4">
               <Link
                 href="/dashboard"
-                className={`hover:text-gray-300 ${
+                className={`text-sm md:text-base hover:text-gray-300 ${
                   pathname === '/dashboard' ? 'font-bold' : ''
                 }`}
               >
@@ -24,7 +24,7 @@ const Navigation = () => {
               </Link>
               <Link
                 href="/employees"
-                className={`hover:text-gray-300 ${
+                className={`text-sm md:text-base hover:text-gray-300 ${
                   pathname === '/employees' ? 'font-bold' : ''
                 }`}
               >
@@ -32,7 +32,7 @@ const Navigation = () => {
               </Link>
               <Link
                 href="/departments"
-                className={`hover:text-gray-300 ${
+                className={`text-sm md:text-base hover:text-gray-300 ${
                   pathname === '/departments' ? 'font-bold' : ''
                 }`}
               >
@@ -40,7 +40,7 @@ const Navigation = () => {
               </Link>
               <Link
                 href="/reports"
-                className={`hover:text-gray-300 ${
+                className={`text-sm md:text-base hover:text-gray-300 ${
                   pathname === '/reports' ? 'font-bold' : ''
                 }`}
               >
@@ -48,7 +48,7 @@ const Navigation = () => {
               </Link>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 md:space-x-4">
             <UserButton afterSignOutUrl="/" />
           </div>
         </div>

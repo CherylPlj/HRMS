@@ -1352,13 +1352,13 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
   // Main employee view with dashboard/list toggle
   return (
-    <>
+    <div className="p-4 md:p-6">
       {/* View Toggle Buttons */}
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex space-x-4">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex space-x-2 sm:space-x-4 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-hide">
           <button
             onClick={() => handleViewChange('dashboard')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-3 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeView === 'dashboard'
                 ? 'bg-[#800000] text-white shadow-md'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -1368,7 +1368,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
           </button>
           <button
             onClick={() => handleViewChange('list')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-3 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeView === 'list'
                 ? 'bg-[#800000] text-white shadow-md'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -1381,7 +1381,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
       {/* Dashboard View */}
       {activeView === 'dashboard' && (
-        <div className="p-6">
+        <div className="py-2">
           <EmployeeDashboard 
             employees={allEmployees.length > 0 ? allEmployees : employees}
             departments={departments}
@@ -3313,7 +3313,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         message={errorMessage}
         onClose={() => setErrorMessage('')}
       />
-    </>
+    </div>
   );
 };
 

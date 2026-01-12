@@ -1201,10 +1201,10 @@ const UserManagementContent: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
       {/* Notification */}
       {notification && (
-        <div className={`mb-8 p-4 rounded-lg shadow-sm ${
+        <div className={`mb-6 sm:mb-8 p-4 rounded-lg shadow-sm ${
           notification.type === 'success'
             ? 'bg-green-50 border border-green-200 text-green-700'
             : notification.type === 'error'
@@ -1216,69 +1216,72 @@ const UserManagementContent: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
           {viewType === 'faculty' ? 'Faculty Management' : 
            viewType === 'employees' ? 'Employee Management' :
           //  viewType === 'students' ? 'Student Management' : 
            'User Management'}
         </h2>
-        <p className="text-gray-600">
-          {viewType === 'faculty' ? 'View all faculty members and their account status. Manage teaching staff access.' :
-           viewType === 'employees' ? 'View all employees and their account status. Manage employee system access.' :
-          //  viewType === 'students' ? 'View all students and their account status. Manage student portal access.' :
-           'View all users with their account status. Manage system access for all user types.'}
+        <p className="text-sm sm:text-base text-gray-600">
+          {viewType === 'faculty' ? 'View all faculty members and their account status.' :
+           viewType === 'employees' ? 'View all employees and their account status.' :
+           'View all users with their account status.'}
         </p>
       </div>
 
       {/* Search and Filter Section */}
-      <div className="mb-8 flex flex-wrap gap-4">
-        <div className="flex-1 min-w-[300px]">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0 sm:min-w-[300px]">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
-              placeholder="Search by name, email, or employee ID..."
+              placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
             />
           </div>
         </div>
-        <select
-          title="status-filter"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-        >
-          <option value="All">All Status</option>
-          <option value="No Account">No Account</option>
-          <option value="Active">Active Account</option>
-          <option value="Inactive">Inactive Account</option>
-          <option value="Invited">Invited</option>
-        </select>
-        <select
-          title="role"
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-        >
-          <option value="All Roles">All Roles</option>
-          {allRoles.map((role) => (
-            <option key={role} value={role}>{role}</option>
-          ))}
-        </select>
-        <ManageUserRoles
-          roles={roles}
-          onUpdate={fetchRoles}
-        />
-        <button
-          onClick={handleOpenSuperAdminModal}
-          className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors flex items-center gap-2"
-        >
-          <Shield className="h-5 w-5" />
-          Create Super Admin
-        </button>
+        <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
+          <select
+            title="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+          >
+            <option value="All">All Status</option>
+            <option value="No Account">No Account</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Invited">Invited</option>
+          </select>
+          <select
+            title="role"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+          >
+            <option value="All Roles">All Roles</option>
+            {allRoles.map((role) => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+          <ManageUserRoles
+            roles={roles}
+            onUpdate={fetchRoles}
+          />
+          <button
+            onClick={handleOpenSuperAdminModal}
+            className="flex-1 lg:flex-none px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            <Shield className="h-4 w-4" />
+            <span className="whitespace-nowrap">Create Super Admin</span>
+          </button>
+        </div>
       </div>
 
       {/* Results Count */}

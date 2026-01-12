@@ -477,13 +477,13 @@ const LeaveContent: React.FC = () => {
     const paginatedApprovedRejectedLeaves = approvedRejectedLeaves.slice(logsStartIndex, logsEndIndex);
 
     return (
-        <div className="text-black p-6 min-h-screen bg-gray-50">
+        <div className="text-black p-4 sm:p-6 min-h-screen bg-gray-50">
             {/* Header with Toggle Switch */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex space-x-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                <div className="flex space-x-2 sm:space-x-6 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-hide">
                     <button
                         onClick={() => handleTabChange('dashboard')}
-                        className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
+                        className={`relative px-3 sm:px-4 py-2 text-sm sm:text-lg font-medium transition-all duration-200 whitespace-nowrap ${
                             activeTab === 'dashboard'
                                 ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -493,7 +493,7 @@ const LeaveContent: React.FC = () => {
                     </button>
                     <button
                         onClick={() => handleTabChange('management')}
-                        className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
+                        className={`relative px-3 sm:px-4 py-2 text-sm sm:text-lg font-medium transition-all duration-200 whitespace-nowrap ${
                             activeTab === 'management'
                                 ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -503,7 +503,7 @@ const LeaveContent: React.FC = () => {
                     </button>
                     <button
                         onClick={() => handleTabChange('logs')}
-                        className={`relative px-4 py-2 text-lg font-medium transition-all duration-200 ${
+                        className={`relative px-3 sm:px-4 py-2 text-sm sm:text-lg font-medium transition-all duration-200 whitespace-nowrap ${
                             activeTab === 'logs'
                                 ? 'text-[#800000] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#800000]'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -512,18 +512,20 @@ const LeaveContent: React.FC = () => {
                         Leave Logs
                     </button>
                 </div>
-                <div className="flex items-center gap-3">
-                    <ManageLeaveTypes
-                        leaveTypes={leaveTypes}
-                        onUpdate={fetchLeaveTypes}
-                    />
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+                    <div className="flex-1 sm:flex-none">
+                        <ManageLeaveTypes
+                            leaveTypes={leaveTypes}
+                            onUpdate={fetchLeaveTypes}
+                        />
+                    </div>
                     {activeTab !== 'dashboard' && (
                         <button
                             onClick={handleDownloadPDF}
-                            className="bg-[#800000] hover:bg-red-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                            className="bg-[#800000] hover:bg-red-800 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base flex-1 sm:flex-none whitespace-nowrap"
                         >
                             <Download size={18} />
-                            Download
+                            <span>Download Report</span>
                         </button>
                     )}
                 </div>

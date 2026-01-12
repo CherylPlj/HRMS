@@ -461,84 +461,91 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
   }, [documentSearchTerm, selectedDocumentType, selectedDocumentStatus]);
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-4">
-          <div className="relative w-80">
-            <input
-              type="text"
-              placeholder="Search documents..."
-              value={documentSearchTerm}
-              onChange={(e) => setDocumentSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-            />
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-center">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search documents..."
+            value={documentSearchTerm}
+            onChange={(e) => setDocumentSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] text-sm md:text-base"
+          />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-          </div>
+        </div>
 
-        {/* Filter Options for Documents */}
-          <div className="flex items-center gap-4 flex-grow">
-            <div className="w-64">
-                <select
-                  id="documentTypeFilter"
-                  value={selectedDocumentType}
-                  onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
-                  title="Filter by Document Type"
-                >
-                  <option value="all">All Document Types</option>
-                  {documentTypes.map((type) => (
-                    <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
-                      {type.DocumentTypeName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            <div className="w-64">
-                <select
-                  id="documentStatusFilter"
-                  value={selectedDocumentStatus}
-                  onChange={(e) => setSelectedDocumentStatus(e.target.value)}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2"
-                  title="Filter by Submission Status"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="Submitted">Submitted</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Returned">Returned</option>
-                </select>
-              </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 sm:w-48">
+            <select
+              id="documentTypeFilter"
+              value={selectedDocumentType}
+              onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2 text-sm"
+              title="Filter by Document Type"
+            >
+              <option value="all">All Types</option>
+              {documentTypes.map((type) => (
+                <option key={type.DocumentTypeID} value={type.DocumentTypeID}>
+                  {type.DocumentTypeName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 sm:w-48">
+            <select
+              id="documentStatusFilter"
+              value={selectedDocumentStatus}
+              onChange={(e) => setSelectedDocumentStatus(e.target.value)}
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2 text-sm"
+              title="Filter by Status"
+            >
+              <option value="all">All Statuses</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Approved">Approved</option>
+              <option value="Returned">Returned</option>
+            </select>
+          </div>
+          <div className="shrink-0">
             <ManageDocumentTypes
               documentTypes={documentTypes}
               onUpdate={() => window.location.reload()}
             />
           </div>
         </div>
+      </div>
 
       {/* Document Management Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 md:px-6 py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">#</th>
+                <th className="px-4 md:px-6 py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">Employee</th>
+                <th className="px-4 md:px-6 py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">Document</th>
+                <th className="px-4 md:px-6 py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">Upload Date</th>
+                <th className="px-4 md:px-6 py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                <th className="px-4 md:px-6 py-3 text-right text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {docLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-400">Loading documents...</td>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 border-4 border-gray-200 border-t-[#800000] rounded-full animate-spin"></div>
+                      <p className="text-sm text-gray-500">Loading documents...</p>
+                    </div>
+                  </td>
                 </tr>
-            ) : filteredDocuments.length === 0 ? (
+              ) : filteredDocuments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-400">No documents found.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
+                    No documents matching your criteria.
+                  </td>
                 </tr>
               ) : (() => {
                 const sorted = [...filteredDocuments].sort((a, b) => {
-                  // Custom order: Submitted (1), Pending (2), Returned (3), Approved (4)
                   const getStatusOrder = (status: string) => {
                     switch (status) {
                       case 'Submitted': return 1;
@@ -549,159 +556,151 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                   };
                   const orderA = getStatusOrder(a.SubmissionStatus);
                   const orderB = getStatusOrder(b.SubmissionStatus);
-                  if (orderA !== orderB) {
-                    return orderA - orderB;
-                  }
-                  // If same status, sort by date (newest first)
+                  if (orderA !== orderB) return orderA - orderB;
                   return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
                 });
                 
-                const totalPages = Math.ceil(sorted.length / itemsPerPage);
                 const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const paginatedDocuments = sorted.slice(startIndex, endIndex);
+                const paginatedDocuments = sorted.slice(startIndex, startIndex + itemsPerPage);
                 
-                return paginatedDocuments.map((doc, idx) => {
-                    return (
-                      <tr
-                        key={doc.DocumentID}
-                        className="hover:bg-gray-100 transition-colors"
-                      >
-                        <td className="px-6 py-4 text-sm text-gray-700">{startIndex + idx + 1}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{doc.employeeName || 'Unknown Employee'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700 font-medium">{doc.Title || doc.documentTypeName || 'Untitled'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{doc.documentTypeName || 'Unknown Type'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{new Date(doc.UploadDate).toLocaleString()}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium
-                            ${
-                              doc.SubmissionStatus === 'Approved'
-                                ? 'bg-green-100 text-green-800'
-                                : doc.SubmissionStatus === 'Returned'
-                                ? 'bg-red-100 text-red-800'
-                                : doc.SubmissionStatus === 'Submitted'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-gray-100 text-gray-900' // For Pending
-                            }
-                          `}>
-                            {doc.SubmissionStatus}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 flex items-center space-x-2">
-                          {doc.FileUrl && (
-                            <span className="flex items-center space-x-1">
-                              <button
-                                onClick={() => handleViewDocument(doc)}
-                                className="text-gray-600 hover:text-gray-900"
-                                title="View Document"
-                              >
-                                <Eye size={20} />
-                              </button>
-                              <a
-                                href={getViewUrl(doc.FileUrl)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-gray-600 hover:text-gray-900"
-                                title="Open in New Tab"
-                              >
-                                <ExternalLink size={20} />
-                              </a>
-                              <button
-                                onClick={() => handleDownload(doc.DownloadUrl || doc.FileUrl, doc.Title || doc.documentTypeName)}
-                                className="text-gray-600 hover:text-gray-900"
-                                title="Download Document"
-                              >
-                                <Download size={20} />
-                              </button>
-                              <button
-                                onClick={() => handleStatusChange(doc.DocumentID, doc.SubmissionStatus)}
-                                disabled={statusUpdating === doc.DocumentID || doc.SubmissionStatus === 'Submitted'}
-                                className="text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={doc.SubmissionStatus === 'Submitted' ? 'Cannot edit submitted documents. Only returned documents can be edited.' : 'Edit Status'}
-                              >
-                                <Pen size={20} />
-                              </button>
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  });
+                return paginatedDocuments.map((doc, idx) => (
+                  <tr key={doc.DocumentID} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 md:px-6 py-4 text-xs md:text-sm text-gray-500 font-medium">{startIndex + idx + 1}</td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs md:text-sm font-bold text-gray-900">{doc.employeeName}</span>
+                        <span className="text-[10px] md:text-xs text-gray-500">{doc.EmployeeID}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs md:text-sm font-medium text-gray-900 line-clamp-1">{doc.Title || doc.documentTypeName}</span>
+                        <span className="text-[10px] md:text-xs text-gray-500 italic">{doc.documentTypeName}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex flex-col text-[10px] md:text-xs text-gray-600">
+                        <span>{new Date(doc.UploadDate).toLocaleDateString()}</span>
+                        <span>{new Date(doc.UploadDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold
+                        ${
+                          doc.SubmissionStatus === 'Approved'
+                            ? 'bg-green-100 text-green-700'
+                            : doc.SubmissionStatus === 'Returned'
+                            ? 'bg-red-100 text-red-700'
+                            : doc.SubmissionStatus === 'Submitted'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }
+                      `}>
+                        {doc.SubmissionStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex justify-end gap-1.5">
+                        {doc.FileUrl && (
+                          <>
+                            <button
+                              onClick={() => handleViewDocument(doc)}
+                              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                              title="View Document"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <a
+                              href={getViewUrl(doc.FileUrl)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                              title="Open in New Tab"
+                            >
+                              <ExternalLink size={18} />
+                            </a>
+                            <button
+                              onClick={() => handleDownload(doc.DownloadUrl || doc.FileUrl, doc.Title || doc.documentTypeName)}
+                              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                              title="Download"
+                            >
+                              <Download size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(doc.DocumentID, doc.SubmissionStatus)}
+                              disabled={statusUpdating === doc.DocumentID || doc.SubmissionStatus === 'Submitted'}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Update Status"
+                            >
+                              <Pen size={18} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ));
               })()}
             </tbody>
           </table>
         </div>
+      </div>
         
-        {/* Pagination Controls */}
-        {(() => {
-          if (docLoading || filteredDocuments.length === 0) return null;
-          
-          const sorted = [...filteredDocuments].sort((a, b) => {
-            const getStatusOrder = (status: string) => {
-              switch (status) {
-                case 'Submitted': return 1;
-                case 'Returned': return 2;
-                case 'Approved': return 3;
-                default: return 4;
-              }
-            };
-            const orderA = getStatusOrder(a.SubmissionStatus);
-            const orderB = getStatusOrder(b.SubmissionStatus);
-            if (orderA !== orderB) {
-              return orderA - orderB;
-            }
-            return new Date(b.UploadDate).getTime() - new Date(a.UploadDate).getTime();
-          });
-          
-          const totalPages = Math.ceil(sorted.length / itemsPerPage);
-          const startIndex = (currentPage - 1) * itemsPerPage;
-          const endIndex = Math.min(startIndex + itemsPerPage, sorted.length);
-          
-          return (
-            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Items per page:</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-gray-600">
-                  Showing <span className="font-semibold">{startIndex + 1}-{endIndex}</span> of <span className="font-semibold">{sorted.length}</span>
-                </span>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-gray-700 px-3">
-                    Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white bg-white transition-colors"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+      {/* Pagination Controls */}
+      {(() => {
+        if (docLoading || filteredDocuments.length === 0) return null;
+        
+        const totalItems = filteredDocuments.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        
+        return (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs md:text-sm text-gray-600">
+                Showing <span className="font-bold text-gray-900">{startIndex + 1}-{endIndex}</span> of <span className="font-bold text-gray-900">{totalItems}</span>
+              </span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-gray-300 rounded px-2 py-1 text-xs focus:ring-[#800000] focus:border-[#800000]"
+              >
+                {[10, 25, 50, 100].map(val => (
+                  <option key={val} value={val}>{val} per page</option>
+                ))}
+              </select>
             </div>
-          );
-        })()}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  Prev
+                </button>
+                <div className="flex items-center gap-1 mx-2">
+                  <span className="text-xs text-gray-600">Page</span>
+                  <span className="text-xs font-bold text-gray-900">{currentPage}</span>
+                  <span className="text-xs text-gray-600">of</span>
+                  <span className="text-xs font-bold text-gray-900">{totalPages}</span>
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Status Update Confirmation Modal */}
       {isStatusUpdateModalOpen && pendingStatusUpdate && (

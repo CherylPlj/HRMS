@@ -412,45 +412,45 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
       {/* Settings Button */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300"
+        className="bg-gray-200 text-gray-700 px-3 md:px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-300 border border-gray-300 text-sm md:text-base w-full sm:w-auto justify-center sm:justify-start"
         title="Manage User Roles"
         type="button"
       >
-        <Settings size={16} /> Manage User Roles
+        <Settings size={16} /> <span className="whitespace-nowrap">Manage User Roles</span>
       </button>
 
       {/* Main Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-xl md:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="text-2xl font-bold text-gray-800">Manage User Roles</h2>
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b gap-3 sm:gap-0">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">User Roles</h2>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 {/* Mode Buttons */}
                 {mode === 'view' && (
                   <>
                     <button
                       onClick={() => setMode('add')}
-                      className="bg-[#800000] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-800"
+                      className="flex-1 sm:flex-none bg-[#800000] text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-red-800 text-xs md:text-sm"
                       title="Add Roles"
                     >
-                      <Plus size={16} /> Add
+                      <Plus size={14} className="md:w-4 md:h-4" /> Add
                     </button>
                     <button
                       onClick={() => setMode('edit')}
-                      className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
+                      className="flex-1 sm:flex-none bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-blue-700 text-xs md:text-sm"
                       title="Edit Roles"
                     >
-                      <Pen size={16} /> Edit
+                      <Pen size={14} className="md:w-4 md:h-4" /> Edit
                     </button>
                     <button
                       onClick={handleDeleteClick}
                       disabled={selectedRoles.length === 0}
-                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 sm:flex-none bg-red-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
                       title="Delete Selected Roles"
                     >
-                      <Trash2 size={16} /> Delete ({selectedRoles.length})
+                      <Trash2 size={14} className="md:w-4 md:h-4" /> Delete ({selectedRoles.length})
                     </button>
                   </>
                 )}
@@ -459,9 +459,9 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                     <button
                       onClick={handleAddRoles}
                       disabled={isAdding || newRoles.every(v => !v.name.trim())}
-                      className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                      className="flex-1 sm:flex-none bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-green-700 disabled:opacity-50 text-xs md:text-sm"
                     >
-                      <Check size={16} /> Save
+                      <Check size={14} className="md:w-4 md:h-4" /> Save
                     </button>
                     <button
                       onClick={() => {
@@ -469,7 +469,7 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                         setNewRoles([{ name: '' }]);
                         setAddErrors({});
                       }}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                      className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-3 md:px-4 py-1.5 md:py-2 rounded hover:bg-gray-300 text-xs md:text-sm"
                     >
                       Cancel
                     </button>
@@ -480,13 +480,13 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                     <button
                       onClick={handleSaveEdits}
                       disabled={isSaving || !hasEdits}
-                      className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                      className="flex-1 sm:flex-none bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center justify-center gap-1.5 md:gap-2 hover:bg-green-700 disabled:opacity-50 text-xs md:text-sm"
                     >
-                      <Save size={16} /> Save Changes
+                      <Save size={14} className="md:w-4 md:h-4" /> Save
                     </button>
                     <button
                       onClick={handleCancelEdit}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                      className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-3 md:px-4 py-1.5 md:py-2 rounded hover:bg-gray-300 text-xs md:text-sm"
                     >
                       Cancel
                     </button>
@@ -497,28 +497,28 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                     setIsModalOpen(false);
                     setMode('view');
                   }}
-                  className="text-gray-400 hover:text-gray-700 focus:outline-none"
+                  className="p-1 text-gray-400 hover:text-gray-700 focus:outline-none ml-auto sm:ml-2"
                   aria-label="Close"
                 >
-                  <X size={24} />
+                  <X size={20} className="md:w-6 md:h-6" />
                 </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-4 md:p-6">
               {/* Add Mode */}
               {mode === 'add' && (
                 <div className="space-y-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Add New Roles</h3>
-                    <p className="text-sm text-gray-600">You can add multiple roles at once.</p>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-1 md:mb-2">Add New Roles</h3>
+                    <p className="text-xs md:text-sm text-gray-600">You can add multiple roles at once.</p>
                   </div>
                   {newRoles.map((item, index) => (
-                    <div key={index} className="flex items-start gap-2 p-4 border rounded-lg">
+                    <div key={index} className="flex items-start gap-2 p-3 md:p-4 border rounded-lg">
                       <div className="flex-1">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                             Role Name <span className="text-red-600">*</span>
                           </label>
                           <input
@@ -526,32 +526,32 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                             value={item.name}
                             onChange={(e) => handleNewRoleChange(index, e.target.value)}
                             placeholder={`Role ${index + 1}`}
-                            className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-base ${
+                            className={`w-full rounded-lg border px-3 md:px-4 py-1.5 md:py-2 focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all text-sm md:text-base ${
                               addErrors[index] ? 'border-red-500' : 'border-gray-300'
                             }`}
                             maxLength={50}
                           />
                           {addErrors[index] && (
-                            <div className="text-red-600 text-xs mt-1">{addErrors[index]}</div>
+                            <div className="text-red-600 text-[10px] md:text-xs mt-1">{addErrors[index]}</div>
                           )}
                         </div>
                       </div>
                       {newRoles.length > 1 && (
                         <button
                           onClick={() => handleRemoveAddInput(index)}
-                          className="text-red-600 hover:text-red-800 p-2"
+                          className="text-red-600 hover:text-red-800 p-1 md:p-2"
                           title="Remove"
                         >
-                          <X size={16} />
+                          <X size={14} className="md:w-4 md:h-4" />
                         </button>
                       )}
                     </div>
                   ))}
                   <button
                     onClick={handleAddNewInput}
-                    className="text-[#800000] hover:text-red-800 flex items-center gap-2 text-sm font-medium"
+                    className="text-[#800000] hover:text-red-800 flex items-center gap-2 text-xs md:text-sm font-medium"
                   >
-                    <Plus size={16} /> Add Another
+                    <Plus size={14} className="md:w-4 md:h-4" /> Add Another
                   </button>
                 </div>
               )}
@@ -560,8 +560,8 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
               {mode === 'edit' && (
                 <div className="space-y-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Edit Roles</h3>
-                    <p className="text-sm text-gray-600">Edit the roles below. Only changed items will be saved.</p>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-1 md:mb-2">Edit Roles</h3>
+                    <p className="text-xs md:text-sm text-gray-600">Edit the roles below. Only changed items will be saved.</p>
                   </div>
                   {filteredRoles.map((r) => {
                     const edited = editingRoles[r.id] || { name: r.name };
@@ -569,28 +569,28 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                     const isModified = nameChanged;
                     
                     return (
-                      <div key={r.id} className={`flex items-start gap-2 p-4 border rounded-lg ${isModified ? 'bg-blue-50 border-blue-200' : ''}`}>
-                        <div className="flex-1">
+                      <div key={r.id} className={`flex items-start gap-2 p-3 md:p-4 border rounded-lg relative ${isModified ? 'bg-blue-50 border-blue-200' : ''}`}>
+                        <div className="flex-1 w-full">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                               Role Name
                             </label>
                             <input
                               type="text"
                               value={edited.name}
                               onChange={(e) => handleEditRoleChange(r.id, e.target.value)}
-                              className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base ${
+                              className={`w-full rounded-lg border px-3 md:px-4 py-1.5 md:py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm md:text-base ${
                                 editErrors[r.id] ? 'border-red-500' : 'border-gray-300'
                               }`}
                               maxLength={50}
                             />
                             {editErrors[r.id] && (
-                              <div className="text-red-600 text-xs mt-1">{editErrors[r.id]}</div>
+                              <div className="text-red-600 text-[10px] md:text-xs mt-1">{editErrors[r.id]}</div>
                             )}
                           </div>
                         </div>
                         {isModified && (
-                          <span className="text-blue-600 text-sm mt-2">Modified</span>
+                          <span className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0 text-blue-600 text-[10px] md:text-sm mt-2">Modified</span>
                         )}
                       </div>
                     );
@@ -602,50 +602,53 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
               {mode === 'view' && (
                 <div>
                   <div className="mb-4">
-                    <p className="text-sm text-gray-600">Select roles to delete, or use Add/Edit buttons to manage them.</p>
+                    <p className="text-xs md:text-sm text-gray-600">Select roles to delete, or use Add/Edit buttons to manage them.</p>
                   </div>
                   <div className="border rounded-lg overflow-hidden">
-                    <table className="min-w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left">
-                            <input
-                              type="checkbox"
-                              checked={selectedRoles.length === filteredRoles.length && filteredRoles.length > 0}
-                              onChange={handleSelectAll}
-                              className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                            />
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Role Name</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {filteredRoles.length === 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead className="bg-gray-50">
                           <tr>
-                            <td colSpan={2} className="px-4 py-8 text-center text-gray-500">
-                              No roles found.
-                            </td>
+                            <th className="px-3 md:px-4 py-2 md:py-3 text-left w-10">
+                              <input
+                                type="checkbox"
+                                checked={selectedRoles.length === filteredRoles.length && filteredRoles.length > 0}
+                                onChange={handleSelectAll}
+                                className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                              />
+                            </th>
+                            <th className="px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-700">Role Name</th>
                           </tr>
-                        ) : (
-                          filteredRoles.map((r) => (
-                            <tr
-                              key={r.id}
-                              className={`hover:bg-gray-50 ${selectedRoles.includes(r.id) ? 'bg-blue-50' : ''}`}
-                            >
-                              <td className="px-4 py-3">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedRoles.includes(r.id)}
-                                  onChange={() => handleSelectRole(r.id)}
-                                  className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
-                                />
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {filteredRoles.length === 0 ? (
+                            <tr>
+                              <td colSpan={2} className="px-4 py-8 text-center text-sm text-gray-500">
+                                No roles found.
                               </td>
-                              <td className="px-4 py-3 text-sm text-gray-800">{r.name}</td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          ) : (
+                            filteredRoles.map((r) => (
+                              <tr
+                                key={r.id}
+                                className={`hover:bg-gray-50 ${selectedRoles.includes(r.id) ? 'bg-blue-50' : ''}`}
+                                onClick={() => handleSelectRole(r.id)}
+                              >
+                                <td className="px-3 md:px-4 py-2 md:py-3" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRoles.includes(r.id)}
+                                    onChange={() => handleSelectRole(r.id)}
+                                    className="rounded border-gray-300 text-[#800000] focus:ring-[#800000]"
+                                  />
+                                </td>
+                                <td className="px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-800">{r.name}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -657,30 +660,30 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+          <div className="bg-white rounded-lg p-5 md:p-6 max-w-md w-full shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Confirm Delete</h2>
+              <h2 className="text-lg md:text-xl font-bold text-gray-800">Confirm Delete</h2>
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
-                <X size={24} />
+                <X size={20} className="md:w-6 md:h-6" />
               </button>
             </div>
 
             <div className="mb-6">
-              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-                <p className="text-red-800 mb-2">
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 md:p-4 mb-4">
+                <p className="text-red-800 mb-2 text-sm md:text-base">
                   Are you sure you want to delete {rolesToDelete.length} role(s)?
                 </p>
-                <ul className="list-disc list-inside text-sm text-red-700">
+                <ul className="list-disc list-inside text-xs md:text-sm text-red-700 max-h-32 overflow-y-auto">
                   {rolesToDelete.map(r => (
                     <li key={r.id}>{r.name}</li>
                   ))}
                 </ul>
-                <p className="text-red-700 text-xs mt-2">
+                <p className="text-red-700 text-[10px] md:text-xs mt-2">
                   Note: Roles that are assigned to users cannot be deleted.
                 </p>
               </div>
@@ -691,14 +694,14 @@ const ManageUserRoles: React.FC<ManageUserRolesProps> = ({ roles, onUpdate }) =>
                 onClick={() => {
                   setShowDeleteModal(false);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>

@@ -68,182 +68,101 @@ export function AIDashboard({ userId }: AIDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* <Sparkles className="w-6 h-6 text-[#800000]" /> */}
-          <h2 className="text-2xl font-bold text-gray-900"></h2>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">AI Insights</h2>
         </div>
         <button
           onClick={fetchInsights}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-2"
+          className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm"
         >
-          <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <Loader2 className={`w-3.5 h-3.5 md:w-4 md:h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span className="hidden xs:inline">Refresh</span>
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Candidates Screened */}
-        <div className="bg-white border rounded-lg p-6">
+        <div className="bg-white border rounded-lg p-4 md:p-6">
           <div className="flex items-center justify-between mb-2">
-            <Sparkles className="w-5 h-5 text-[#800000]" />
-            <span className="text-xs text-gray-500">Today</span>
+            <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-[#800000]" />
+            <span className="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider">Today</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{insights.candidatesScreened.today}</p>
-          <p className="text-sm text-gray-600 mt-1">Candidates Screened</p>
-          <div className="mt-2 text-xs text-gray-500">
+          <p className="text-xl md:text-2xl font-bold text-gray-900">{insights.candidatesScreened.today}</p>
+          <p className="text-xs md:text-sm text-gray-600 mt-1">Candidates Screened</p>
+          <div className="mt-2 text-[10px] md:text-xs text-gray-400">
             {insights.candidatesScreened.thisWeek} this week • {insights.candidatesScreened.thisMonth} this month
           </div>
         </div>
 
-        {/* Promotion Ready - Hidden for now */}
-        {/* <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-5 h-5 text-green-600" />
-            <CheckCircle className="w-4 h-4 text-green-600" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{insights.promotionReady.count}</p>
-          <p className="text-sm text-gray-600 mt-1">Promotion Ready Employees</p>
-        </div> */}
-
         {/* Training Needs */}
-        <div className="bg-white border rounded-lg p-6">
+        <div className="bg-white border rounded-lg p-4 md:p-6">
           <div className="flex items-center justify-between mb-2">
-            <BookOpen className="w-5 h-5 text-blue-600" />
-            <span className="text-xs text-red-600 font-semibold">
+            <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+            <span className="text-[10px] md:text-xs text-red-600 font-semibold uppercase tracking-wider">
               {insights.trainingNeeds.highPriority} High Priority
             </span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{insights.trainingNeeds.total}</p>
-          <p className="text-sm text-gray-600 mt-1">Training Needs Identified</p>
+          <p className="text-xl md:text-2xl font-bold text-gray-900">{insights.trainingNeeds.total}</p>
+          <p className="text-xs md:text-sm text-gray-600 mt-1">Training Needs Identified</p>
         </div>
-
-        {/* High Risk Employees - Hidden for now */}
-        {/* <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <span className="text-xs text-red-600 font-semibold">Alert</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{insights.highRiskEmployees.count}</p>
-          <p className="text-sm text-gray-600 mt-1">High Risk Employees</p>
-        </div> */}
       </div>
 
-      {/* Promotion Ready Employees - Hidden for now */}
-      {/* {insights.promotionReady.employees.length > 0 && (
-        <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-[#800000]" />
-            <h3 className="text-lg font-semibold text-gray-900">Promotion Ready Employees</h3>
-          </div>
-          <div className="space-y-2">
-            {insights.promotionReady.employees.slice(0, 5).map((emp, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{emp.name}</p>
-                  <p className="text-xs text-gray-500">Employee ID: {emp.employeeId}</p>
+      {/* Grid for charts and tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Training Needs by Department */}
+        {Object.keys(insights.trainingNeeds.byDepartment).length > 0 && (
+          <div className="bg-white border rounded-lg p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-[#800000]" />
+              <h3 className="text-base md:text-lg font-semibold text-gray-900">Needs by Department</h3>
+            </div>
+            <div className="space-y-2">
+              {Object.entries(insights.trainingNeeds.byDepartment).map(([dept, count], i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2.5 md:p-3 bg-gray-50 rounded-lg"
+                >
+                  <span className="text-xs md:text-sm font-medium text-gray-900 truncate pr-2">{dept}</span>
+                  <span className="px-2.5 py-0.5 bg-[#800000] text-white rounded-full text-[10px] md:text-xs font-semibold shrink-0">
+                    {count}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-[#800000]">{emp.score}/100</p>
-                  <p className="text-xs text-gray-500">Eligibility Score</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )} */}
+        )}
 
-      {/* High Risk Employees - Hidden for now */}
-      {/* {insights.highRiskEmployees.employees.length > 0 && (
-        <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <h3 className="text-lg font-semibold text-gray-900">High Risk Employees</h3>
-          </div>
-          <div className="space-y-2">
-            {insights.highRiskEmployees.employees.map((emp, i) => (
-              <div
-                key={i}
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  emp.riskLevel === 'Critical' || emp.riskLevel === 'High'
-                    ? 'bg-red-50 border border-red-200'
-                    : 'bg-yellow-50 border border-yellow-200'
-                }`}
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{emp.name}</p>
-                  <p className="text-xs text-gray-500">Employee ID: {emp.employeeId}</p>
+        {/* Recent Recommendations */}
+        {insights.recentRecommendations.length > 0 && (
+          <div className="bg-white border rounded-lg p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-4 h-4 md:w-5 md:h-5 text-[#800000]" />
+              <h3 className="text-base md:text-lg font-semibold text-gray-900">Recent AI Recommendations</h3>
+            </div>
+            <div className="space-y-2">
+              {insights.recentRecommendations.map((rec, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 p-2.5 md:p-3 bg-gray-50 rounded-lg"
+                >
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs md:text-sm text-gray-900 line-clamp-2">{rec.message}</p>
+                    <p className="text-[10px] md:text-xs text-gray-400 mt-1">
+                      {new Date(rec.timestamp).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${
-                    emp.riskLevel === 'Critical' || emp.riskLevel === 'High'
-                      ? 'text-red-600'
-                      : 'text-yellow-600'
-                  }`}>
-                    {emp.riskScore}/100
-                  </p>
-                  <p className="text-xs text-gray-500">{emp.riskLevel} Risk</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )} */}
-
-      {/* Training Needs by Department */}
-      {Object.keys(insights.trainingNeeds.byDepartment).length > 0 && (
-        <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-5 h-5 text-[#800000]" />
-            <h3 className="text-lg font-semibold text-gray-900">Training Needs by Department</h3>
-          </div>
-          <div className="space-y-2">
-            {Object.entries(insights.trainingNeeds.byDepartment).map(([dept, count], i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <span className="font-medium text-gray-900">{dept}</span>
-                <span className="px-3 py-1 bg-[#800000] text-white rounded-full text-sm font-semibold">
-                  {count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Recommendations */}
-      {insights.recentRecommendations.length > 0 && (
-        <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-5 h-5 text-[#800000]" />
-            <h3 className="text-lg font-semibold text-gray-900">Recent AI Recommendations</h3>
-          </div>
-          <div className="space-y-2">
-            {insights.recentRecommendations.map((rec, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
-              >
-                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900">{rec.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(rec.timestamp).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

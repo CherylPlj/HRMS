@@ -498,8 +498,8 @@ export default function DashboardContent() {
   };
 
   return (
-    <div className="p-8 w-full flex flex-col">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="p-4 md:p-8 w-full flex flex-col">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div 
           className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
           // onClick={() => handleCardClick('faculty')}
@@ -560,7 +560,7 @@ export default function DashboardContent() {
             <GraduationCap className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Employees Overview</h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
               <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.regular}</p>
               <p className="text-gray-600 font-medium text-center">Regular</p>
@@ -622,7 +622,7 @@ export default function DashboardContent() {
             <Briefcase className="text-[#800000] text-2xl mr-3" />
             <h2 className="text-2xl font-bold text-gray-800">Leave Requests</h2>
           </div>
-          <div className="flex flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch gap-4 mb-6 min-w-0">
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex-1 min-w-0">
               <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{leaveRequests.pending}</p>
               <p className="text-gray-600 font-medium text-center">Pending</p>
@@ -849,7 +849,7 @@ export default function DashboardContent() {
         </div>
 
         {/* Quick Stats Row */}
-        <div className="grid grid-cols-5 gap-4 mt-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-8">
           <div className="bg-gray-50 p-4 rounded-lg text-center">
             <Building className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.activeVacancies}</p>
@@ -870,7 +870,7 @@ export default function DashboardContent() {
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.interviewed}</p>
             <p className="text-sm text-gray-600">Interviewed</p>
           </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
+          <div className="bg-gray-50 p-4 rounded-lg text-center col-span-2 sm:col-span-1">
             <UserCheck className="text-[#800000] text-xl mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#800000]">{recruitmentStats.hired}</p>
             <p className="text-sm text-gray-600">Hired</p>

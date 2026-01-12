@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pen, Trash2 } from 'lucide-react';
+import { Plus, Pen, Trash2, X } from 'lucide-react';
 import { getEducationData, addEducationRecord, updateEducationRecord, deleteEducationRecord } from '@/lib/employeeService';
 
 interface Education {
@@ -317,30 +317,30 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Notification */}
       {notification && (
-        <div className={`p-4 rounded-lg ${
+        <div className={`p-3 md:p-4 rounded-lg flex items-center justify-between ${
           notification.type === 'success' 
             ? 'bg-green-50 text-green-800 border border-green-200' 
             : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center text-sm md:text-base">
             <p>{notification.message}</p>
-            <button
-              onClick={() => setNotification(null)}
-              className="text-current hover:opacity-70"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-current hover:opacity-70 p-1"
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Education Records</h3>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+        <h3 className="text-base md:text-lg font-bold text-gray-900 uppercase tracking-wide">Education Records</h3>
         <button
           onClick={() => {
             setCurrentRecord({
@@ -355,77 +355,96 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
             setNotification(null);
             setShowForm(true);
           }}
-          className="bg-[#800000] text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-red-800 transition-colors"
+          className="w-full sm:w-auto bg-[#800000] text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-800 transition-colors text-sm md:text-base"
         >
           <Plus size={16} /> Add Education
         </button>
       </div>
 
       {/* List of education records */}
-      <div className="grid grid-cols-1 gap-4">
-        {educationRecords.map((record) => (
-          <div key={record.id} className="bg-white p-4 rounded-lg shadow border">
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="font-medium">{record.level}</h4>
-                <p className="text-sm text-gray-600">{record.schoolName}</p>
-                {record.course && <p className="text-sm text-gray-600">{record.course}</p>}
-                {record.yearGraduated && (
-                  <p className="text-sm text-gray-600">Graduated: {record.yearGraduated}</p>
-                )}
-                {record.honors && <p className="text-sm text-gray-600">Honors: {record.honors}</p>}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setCurrentRecord(record);
-                    setFormErrors({});
-                    setNotification(null);
-                    setShowForm(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <Pen size={16} />
-                </button>
-                <button
-                  onClick={() => handleDelete(record.id)}
-                  disabled={loading}
-                  className={`${loading ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+      <div className="grid grid-cols-1 gap-3 md:gap-4">
+        {educationRecords.length === 0 ? (
+          <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <p className="text-sm text-gray-500">No education records found.</p>
+          </div>
+        ) : (
+          educationRecords.map((record) => (
+            <div key={record.id} className="bg-white p-3 md:p-4 rounded-lg shadow-sm border border-gray-200 hover:border-gray-300 transition-colors">
+              <div className="flex justify-between items-start gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-gray-900 text-sm md:text-base">{record.level}</h4>
+                    {record.yearGraduated && (
+                      <span className="text-[10px] md:text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+                        Class of {record.yearGraduated}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs md:text-sm text-gray-700 mt-1 font-medium">{record.schoolName}</p>
+                  {record.course && (
+                    <p className="text-xs md:text-sm text-gray-500 mt-0.5 line-clamp-1 italic">{record.course}</p>
+                  )}
+                  {record.honors && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] md:text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-md w-fit">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      {record.honors}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setCurrentRecord(record);
+                      setFormErrors({});
+                      setNotification(null);
+                      setShowForm(true);
+                    }}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    title="Edit"
+                  >
+                    <Pen size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(record.id)}
+                    disabled={loading}
+                    className={`p-1.5 transition-colors rounded-md ${loading ? 'text-gray-300 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Add/Edit Form */}
       {showForm && currentRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">
-                {currentRecord.id ? 'Edit Education Record' : 'Add Education Record'}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-4 md:px-6 py-3 md:py-4 border-b">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800">
+                {currentRecord.id ? 'Edit Education' : 'Add Education'}
               </h3>
               <button
                 onClick={() => {
                   setShowForm(false);
                   setCurrentRecord(null);
-                    setFormErrors({});
-                    setNotification(null);
+                  setFormErrors({});
+                  setNotification(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-400 hover:text-gray-600 p-1 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={20} className="md:w-6 md:h-6" />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1">
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="overflow-y-auto flex-1 p-4 md:p-6">
+              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Level <span className="text-red-500">*</span></label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Level <span className="text-red-500">*</span></label>
                   <select
                     value={currentRecord.level}
                     onChange={(e) => {
@@ -437,7 +456,7 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                         course: shouldHaveCourse ? currentRecord.course : null,
                       });
                     }}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    className="w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base"
                     required
                   >
                     <option value="">Select Level</option>
@@ -449,22 +468,25 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">School Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">School Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={currentRecord.schoolName}
                     onChange={(e) =>
                       { setCurrentRecord({ ...currentRecord, schoolName: e.target.value }); if (formErrors.schoolName) setFormErrors({ ...formErrors, schoolName: undefined }); }
                     }
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
+                    placeholder="Enter full name of institution"
+                    className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                      formErrors.schoolName ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     required
                   />
                   {formErrors.schoolName && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.schoolName}</p>
+                    <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{formErrors.schoolName}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Course {courseLevels.includes(currentRecord.level) ? <span className="text-red-500">*</span> : null}</label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Course {courseLevels.includes(currentRecord.level) ? <span className="text-red-500">*</span> : null}</label>
                   <input
                     type="text"
                     list="courseSuggestions"
@@ -476,7 +498,11 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                         if (formErrors.course) setFormErrors({ ...formErrors, course: undefined });
                       }
                     }}
-                    className={`mt-1 w-full p-2 rounded border border-gray-300 ${courseLevels.includes(currentRecord.level) ? 'bg-gray-50 text-black' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
+                    className={`w-full p-2 md:p-2.5 rounded-lg border transition-all text-sm md:text-base ${
+                      courseLevels.includes(currentRecord.level) 
+                        ? 'bg-gray-50 text-gray-900 border-gray-300 focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000]' 
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                    } ${formErrors.course ? 'border-red-500' : ''}`}
                     disabled={!courseLevels.includes(currentRecord.level)}
                     readOnly={!courseLevels.includes(currentRecord.level)}
                     required={courseLevels.includes(currentRecord.level)}
@@ -487,69 +513,71 @@ const EducationTab: React.FC<EducationTabProps> = ({ employeeId }) => {
                     ))}
                   </datalist>
                   {formErrors.course && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.course}</p>
+                    <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{formErrors.course}</p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Year Graduated</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="\d{4}"
-                    maxLength={4}
-                    min="1940"
-                    max={new Date().getFullYear()}
-                    value={currentRecord.yearGraduated !== null && currentRecord.yearGraduated !== undefined ? String(currentRecord.yearGraduated) : ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      // Only allow numbers, max 4 digits
-                      if (/^\d{0,4}$/.test(val)) {
-                        setCurrentRecord({
-                          ...currentRecord,
-                          yearGraduated: val ? parseInt(val) : null,
-                        });
-                        if (formErrors.yearGraduated) setFormErrors({ ...formErrors, yearGraduated: undefined });
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Year Graduated</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d{4}"
+                      maxLength={4}
+                      value={currentRecord.yearGraduated !== null && currentRecord.yearGraduated !== undefined ? String(currentRecord.yearGraduated) : ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^\d{0,4}$/.test(val)) {
+                          setCurrentRecord({
+                            ...currentRecord,
+                            yearGraduated: val ? parseInt(val) : null,
+                          });
+                          if (formErrors.yearGraduated) setFormErrors({ ...formErrors, yearGraduated: undefined });
+                        }
+                      }}
+                      className={`w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base ${
+                        formErrors.yearGraduated ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="YYYY (e.g. 2020)"
+                    />
+                    {formErrors.yearGraduated && (
+                      <p className="mt-1 text-[10px] md:text-xs text-red-600 font-medium">{formErrors.yearGraduated}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Honors</label>
+                    <input
+                      type="text"
+                      value={currentRecord.honors || ''}
+                      onChange={(e) =>
+                        setCurrentRecord({ ...currentRecord, honors: e.target.value })
                       }
-                    }}
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                    placeholder="e.g. 2020"
-                  />
-                  {formErrors.yearGraduated && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.yearGraduated}</p>
-                  )}
+                      placeholder="e.g. Cum Laude"
+                      className="w-full bg-gray-50 text-gray-900 p-2 md:p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-all text-sm md:text-base"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Honors</label>
-                  <input
-                    type="text"
-                    value={currentRecord.honors || ''}
-                    onChange={(e) =>
-                      setCurrentRecord({ ...currentRecord, honors: e.target.value })
-                    }
-                    className="mt-1 w-full bg-gray-50 text-black p-2 rounded border border-gray-300"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t mt-6">
                   <button
                     type="button"
                     onClick={() => {
                       setShowForm(false);
                       setCurrentRecord(null);
                     }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    className="w-full sm:w-auto px-6 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase tracking-wide"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                    className={`w-full sm:w-auto px-8 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm transition-all uppercase tracking-wide ${
                       loading 
                         ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-[#800000] hover:bg-red-800'
+                        : 'bg-[#800000] hover:bg-red-800 hover:shadow-md'
                     }`}
                   >
-                    {loading ? 'Saving...' : (currentRecord.id ? 'Update' : 'Add')}
+                    {loading ? 'Saving...' : (currentRecord.id ? 'Update Record' : 'Add Record')}
                   </button>
                 </div>
               </form>

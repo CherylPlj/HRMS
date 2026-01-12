@@ -436,7 +436,7 @@ const ApplicantPage = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-6" style={{ backgroundColor: '#FFFACD' }}>
+    <div className="flex-1 overflow-auto p-4 sm:p-6" style={{ backgroundColor: '#FFFACD' }}>
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -457,7 +457,7 @@ const ApplicantPage = () => {
         onClose={() => setShowSuccessModal(false)} 
       />
       <div 
-        className="max-w-3xl mx-auto rounded-lg shadow p-6"
+        className="max-w-3xl mx-auto rounded-lg shadow p-4 sm:p-6"
         style={{ 
           border: '2px solid #DAA520',
           backgroundColor: 'white'
@@ -466,11 +466,11 @@ const ApplicantPage = () => {
         <div className="mb-6">
           <Link 
             href="/careers" 
-            className="inline-flex items-center text-[#800000] hover:text-[#600000] transition-colors"
+            className="inline-flex items-center text-[#800000] hover:text-[#600000] transition-colors text-sm sm:text-base"
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5 mr-2" 
+              className="h-4 w-4 sm:h-5 sm:w-5 mr-2" 
               viewBox="0 0 20 20" 
               fill="currentColor"
             >
@@ -483,7 +483,7 @@ const ApplicantPage = () => {
             Back to Careers
           </Link>
         </div>
-        <h1 className="text-2xl font-bold text-[#800000] mb-6">Application Form</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#800000] mb-6">Application Form</h1>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField 
@@ -640,7 +640,7 @@ const ApplicantPage = () => {
               <p className="mt-1 text-sm text-gray-500">Maximum file size: 5MB</p>
             </div>
             <div className="space-y-2 col-span-1 md:col-span-2">
-              <div className={`border ${errors.consent ? 'border-red-500' : 'border-gray-300'} rounded-md p-4 bg-gray-50`}>
+              <div className={`border ${errors.consent ? 'border-red-500' : 'border-gray-300'} rounded-md p-3 sm:p-4 bg-gray-50`}>
                 <label className="flex items-start cursor-pointer">
                   <input
                     type="checkbox"
@@ -654,7 +654,7 @@ const ApplicantPage = () => {
                     <span className="text-sm font-medium text-gray-700">
                       I consent to the processing of my personal data <span className="text-red-500">*</span>
                     </span>
-                    <p className="mt-2 text-sm text-gray-600">
+                    <p className="mt-2 text-xs sm:text-sm text-gray-600">
                       Your personal data will be retained for a period of 2 years from the date of application submission, 
                       or until you request its deletion, whichever comes first. If you wish to request early deletion of your data, 
                       please email us at{' '}
@@ -678,14 +678,14 @@ const ApplicantPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2 bg-[#4ade80] text-white rounded-md font-medium hover:bg-[#22c55e] transition-colors ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full sm:w-auto px-6 py-2 bg-[#4ade80] text-white rounded-md font-medium hover:bg-[#22c55e] transition-colors ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSubmitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
         </form>
         <div className="mt-6 text-center text-gray-600 border-t pt-6">
-          <p>
+          <p className="text-sm sm:text-base">
             Please email us if you have any concerns or updates with your application at:{' '}
             <a 
               href="mailto:sjsfihrms@gmail.com" 

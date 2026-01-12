@@ -242,41 +242,41 @@ const RecruitmentContent: React.FC = () => {
   const hiredCandidates = candidates.filter(candidate => candidate.Status === 'Hired');
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 min-h-[600px]">
+    <div className="bg-white rounded-lg shadow p-4 md:p-6 min-h-[600px]">
       {isLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
         </div>
       )}
       
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex space-x-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="flex space-x-2 sm:space-x-4 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto scrollbar-hide">
           <button
-            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'dashboard' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap text-sm sm:text-base ${activeTab === 'dashboard' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
             onClick={() => handleTabChange('dashboard')}
           >
             Dashboard
           </button>
           <button
-            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'candidates' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap text-sm sm:text-base ${activeTab === 'candidates' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
             onClick={() => handleTabChange('candidates')}
           >
             Active Candidates
           </button>
           <button
-            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'submitted' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap text-sm sm:text-base ${activeTab === 'submitted' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
             onClick={() => handleTabChange('submitted')}
           >
             Submitted Information
           </button>
           <button
-            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'hired' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap text-sm sm:text-base ${activeTab === 'hired' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
             onClick={() => handleTabChange('hired')}
           >
             Hired Candidates
           </button>
           <button
-            className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'vacancies' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap text-sm sm:text-base ${activeTab === 'vacancies' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700'}`}
             onClick={() => handleTabChange('vacancies')}
           >
             Vacancies

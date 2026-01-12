@@ -195,12 +195,12 @@ function SchedulePageContent() {
   const uniqueSubjectsCount = new Set(schedules.map(s => s.subjectId)).size;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
       {/* Stats Cards and Action Buttons */}
       {view === 'all' && (
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           {/* Stats Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
               <div className="flex items-center">
@@ -345,7 +345,7 @@ function SchedulePageContent() {
       {/* Search and Filter Section */}
       {view === 'all' && (
         <div className="mb-6 bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search Box */}
             <div className="md:col-span-2">
               <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">

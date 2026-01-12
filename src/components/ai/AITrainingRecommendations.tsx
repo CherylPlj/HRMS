@@ -66,24 +66,24 @@ export function AITrainingRecommendations({
   };
 
   return (
-    <div className="border rounded-lg p-4 bg-white">
-      <div className="flex items-center justify-between mb-4">
+    <div className="border rounded-lg p-3 md:p-4 bg-white">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-[#800000]" />
-          <h3 className="font-semibold text-gray-900">Training Needs Analysis</h3>
+          <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-[#800000]" />
+          <h3 className="font-semibold text-gray-900 text-sm md:text-base">Training Needs Analysis</h3>
           {employeeName && (
-            <span className="text-sm text-gray-500">- {employeeName}</span>
+            <span className="text-xs md:text-sm text-gray-500 hidden sm:inline">- {employeeName}</span>
           )}
         </div>
         <button
           onClick={analyzeTraining}
           disabled={loading}
-          className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+          className="w-full sm:w-auto px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors text-sm"
         >
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
           ) : (
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-3 h-3 md:w-4 md:h-4" />
           )}
           Refresh
         </button>
@@ -91,25 +91,25 @@ export function AITrainingRecommendations({
 
       {loading && !result && (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-[#800000]" />
-          <span className="ml-2 text-gray-600">Analyzing training needs...</span>
+          <Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin text-[#800000]" />
+          <span className="ml-2 text-xs md:text-sm text-gray-600">Analyzing training needs...</span>
         </div>
       )}
 
       {result && (
         <div className="space-y-4">
           {/* Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 rounded-lg p-3 md:p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Skill Gaps Identified</p>
-                <p className="text-2xl font-bold text-[#800000]">
+                <p className="text-xs md:text-sm text-gray-600">Skill Gaps</p>
+                <p className="text-xl md:text-2xl font-bold text-[#800000]">
                   {result.skillGaps?.length || 0}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Training Recommendations</p>
-                <p className="text-2xl font-bold text-[#800000]">
+                <p className="text-xs md:text-sm text-gray-600">Recommendations</p>
+                <p className="text-xl md:text-2xl font-bold text-[#800000]">
                   {result.trainingRecommendations?.length || 0}
                 </p>
               </div>
@@ -119,7 +119,7 @@ export function AITrainingRecommendations({
           {/* Toggle Details */}
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-sm text-[#800000] hover:underline"
+            className="text-xs md:text-sm text-[#800000] hover:underline"
           >
             {showDetails ? 'Hide' : 'Show'} Detailed Analysis
           </button>
@@ -129,7 +129,7 @@ export function AITrainingRecommendations({
               {/* Skill Gaps */}
               {result.skillGaps && result.skillGaps.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-gray-700 mb-3">Skill Gaps</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3 text-sm">Skill Gaps</h4>
                   <div className="space-y-3">
                     {result.skillGaps.map((gap, i) => (
                       <div
@@ -137,16 +137,16 @@ export function AITrainingRecommendations({
                         className="border rounded-lg p-3 bg-gray-50"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-900">{gap.skill}</span>
+                          <span className="font-medium text-gray-900 text-sm">{gap.skill}</span>
                           <span
-                            className={`px-2 py-1 rounded text-xs font-semibold border ${getPriorityColor(
+                            className={`px-2 py-0.5 rounded text-[10px] md:text-xs font-semibold border ${getPriorityColor(
                               gap.priority
                             )}`}
                           >
                             {gap.priority}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs md:text-sm text-gray-600">
                           <span>Current: {gap.currentLevel}</span>
                           <span className="mx-2">→</span>
                           <span>Required: {gap.requiredLevel}</span>
@@ -160,36 +160,36 @@ export function AITrainingRecommendations({
               {/* Training Recommendations */}
               {result.trainingRecommendations && result.trainingRecommendations.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-gray-700 mb-3">Training Recommendations</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3 text-sm">Training Recommendations</h4>
                   <div className="space-y-3">
                     {result.trainingRecommendations.map((training, i) => (
                       <div
                         key={i}
-                        className="border rounded-lg p-4 bg-white"
+                        className="border rounded-lg p-3 md:p-4 bg-white"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h5 className="font-semibold text-gray-900">{training.title}</h5>
+                            <h5 className="font-semibold text-gray-900 text-sm md:text-base">{training.title}</h5>
                             {training.description && (
-                              <p className="text-sm text-gray-600 mt-1">{training.description}</p>
+                              <p className="text-xs md:text-sm text-gray-600 mt-1">{training.description}</p>
                             )}
                           </div>
                           <span
-                            className={`px-2 py-1 rounded text-xs font-semibold border ml-2 ${getPriorityColor(
+                            className={`px-2 py-0.5 rounded text-[10px] md:text-xs font-semibold border ml-2 ${getPriorityColor(
                               training.priority
                             )}`}
                           >
                             {training.priority}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="text-sm text-gray-600">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3">
+                          <div className="text-[10px] md:text-xs text-gray-600">
                             <span>Estimated Hours: {training.estimatedHours}</span>
                           </div>
                           {onApprove && (
                             <button
                               onClick={() => onApprove(training.title)}
-                              className="px-3 py-1.5 bg-[#800000] text-white rounded text-sm hover:bg-[#600000] transition-colors"
+                              className="w-full sm:w-auto px-3 py-1.5 bg-[#800000] text-white rounded text-xs hover:bg-[#600000] transition-colors"
                             >
                               Approve Training
                             </button>
@@ -204,8 +204,8 @@ export function AITrainingRecommendations({
               {/* Analysis */}
               {result.analysis && (
                 <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">Analysis</h4>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded">
+                  <h4 className="font-semibold text-gray-700 mb-2 text-sm">Analysis</h4>
+                  <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-2 md:p-3 rounded">
                     {result.analysis}
                   </p>
                 </div>
