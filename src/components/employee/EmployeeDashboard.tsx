@@ -32,6 +32,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     // Employment status breakdown
     const regular = employees.filter(e => e.status === 'Regular' || e.status === 'Active' || e.status === 'regular').length;
     const probationary = employees.filter(e => e.status === 'Probationary' || e.status === 'probationary').length;
+    const partTime = employees.filter(e => e.status === 'Part_Time' || e.status === 'Part Time' || e.status === 'part_time' || e.status === 'part time').length;
     const resigned = employees.filter(e => e.status === 'Resigned' || e.status === 'resigned').length;
     const hired = employees.filter(e => e.status === 'Hired' || e.status === 'hired').length;
     
@@ -157,6 +158,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       total,
       regular,
       probationary,
+      partTime,
       resigned,
       hired,
       recentHires,
@@ -338,11 +340,11 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Resigned</p>
-              <p className="text-2xl font-bold text-red-600 mt-2">{stats.resigned}</p>
+              <p className="text-sm font-medium text-gray-600">Part-Time</p>
+              <p className="text-2xl font-bold text-purple-600 mt-2">{stats.partTime}</p>
             </div>
-            <div className="bg-red-100 rounded-full p-3">
-              <UserX className="h-6 w-6 text-red-600" />
+            <div className="bg-purple-100 rounded-full p-3">
+              <Users className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>

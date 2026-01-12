@@ -84,7 +84,7 @@ async function createUserAccountForHiredEmployee(
 
     console.log('User created successfully:', userId);
 
-    // Check if this is a faculty position by getting the vacancy information
+    // Determine role based on position/designation by getting the vacancy information
     let roleToAssign = 'employee'; // Default role
     try {
       const { data: candidateData, error: candidateError } = await supabaseAdmin
@@ -100,9 +100,31 @@ async function createUserAccountForHiredEmployee(
 
       if (candidateError) {
         console.error('Error fetching candidate vacancy:', candidateError);
-      } else if (candidateData?.Vacancy?.JobTitle === 'Faculty') {
-        roleToAssign = 'faculty';
-        console.log('Faculty position detected - assigning faculty role');
+      } else if (candidateData?.Vacancy?.JobTitle) {
+        const jobTitle = candidateData.Vacancy.JobTitle;
+        
+        // Map JobTitle to role
+        switch (jobTitle) {
+          case 'Registrar':
+            roleToAssign = 'registrar';
+            console.log('Registrar position detected - assigning registrar role');
+            break;
+          case 'Cashier':
+            roleToAssign = 'cashier';
+            console.log('Cashier position detected - assigning cashier role');
+            break;
+          case 'HR_Manager':
+            roleToAssign = 'admin';
+            console.log('HR Manager position detected - assigning admin role');
+            break;
+          case 'Faculty':
+            roleToAssign = 'faculty';
+            console.log('Faculty position detected - assigning faculty role');
+            break;
+          default:
+            roleToAssign = 'employee';
+            console.log(`JobTitle "${jobTitle}" - assigning default employee role`);
+        }
       }
     } catch (vacancyError) {
       console.error('Error checking vacancy for role assignment:', vacancyError);

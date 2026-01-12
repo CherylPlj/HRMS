@@ -342,28 +342,29 @@ export default function DashboardFaculty() {
         }
       }
 
-      // Fetch performance metrics
-      const metricsResponse = await fetch(`/api/performance/metrics?employeeId=${empId}`);
+      // Performance metrics API call disabled - module is hidden
+      // const metricsResponse = await fetch(`/api/performance/metrics?employeeId=${empId}`);
       let totalMetrics = 0;
       
-      if (metricsResponse.ok) {
-        const metricsData = await metricsResponse.json();
-        totalMetrics = metricsData.total || (metricsData.metrics?.length || 0);
-      } else {
-        // Silently handle errors - don't show technical errors to user
-        const errorData = await metricsResponse.json().catch(() => ({}));
-        const errorMessage = errorData.error || '';
-        const isTechnicalError = 
-          errorMessage.includes('prepared statement') ||
-          errorMessage.includes('ConnectorError') ||
-          errorMessage.includes('QueryError') ||
-          errorMessage.includes('PostgresError') ||
-          errorMessage.includes('Prisma');
-        
-        if (!isTechnicalError) {
-          console.error('Error fetching performance metrics:', errorMessage);
-        }
-      }
+      // Metrics fetching disabled - set to 0
+      // if (metricsResponse.ok) {
+      //   const metricsData = await metricsResponse.json();
+      //   totalMetrics = metricsData.total || (metricsData.metrics?.length || 0);
+      // } else {
+      //   // Silently handle errors - don't show technical errors to user
+      //   const errorData = await metricsResponse.json().catch(() => ({}));
+      //   const errorMessage = errorData.error || '';
+      //   const isTechnicalError = 
+      //     errorMessage.includes('prepared statement') ||
+      //     errorMessage.includes('ConnectorError') ||
+      //     errorMessage.includes('QueryError') ||
+      //     errorMessage.includes('PostgresError') ||
+      //     errorMessage.includes('Prisma');
+      //   
+      //   if (!isTechnicalError) {
+      //     console.error('Error fetching performance metrics:', errorMessage);
+      //   }
+      // }
 
       setPerformanceData({
         averageScore: reviewCount > 0 ? Math.round((totalScore / reviewCount) * 100) / 100 : 0,

@@ -57,6 +57,10 @@ export async function GET() {
         Department:DepartmentID (
           DepartmentID,
           DepartmentName
+        ),
+        Employee:EmployeeID (
+          EmployeeID,
+          EmploymentDetail(Designation)
         )
       `)
       .order('FacultyID', { ascending: true });

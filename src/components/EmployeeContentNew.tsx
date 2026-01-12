@@ -7,7 +7,7 @@ import { RefreshCw, Download, FileSpreadsheet, FileText, Plus, Upload, Pen, Eye,
 import { EmployeeList, EmployeeDetail, EmployeeDashboard, PhotoModal, SuccessModal, ErrorModal } from './employee';
 import { Employee, EmployeeFormState, Department, Pagination as PaginationType } from './employee/types';
 import { allExportColumns, excludedColumns, exportColumnSections } from './employee/constants';
-import { calculateYearsOfService, formatDesignation } from './employee/utils';
+import { calculateYearsOfService, formatDesignation, getSalaryGradeRange } from './employee/utils';
 
 // Import types from employee module
 import { Education, EmploymentHistory, MedicalInfo } from './employee/types';
@@ -1911,8 +1911,10 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             >
                               <option value="Regular">Regular</option>
                               <option value="Probationary">Probationary</option>
+                              <option value="Part_Time">Part-Time</option>
                               <option value="Hired">Hired</option>
                               <option value="Resigned">Resigned</option>
+                              <option value="Retired">Retired</option>
                             </select>
                             <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                           </div>
@@ -2014,22 +2016,25 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                           <label className="block text-sm font-semibold text-gray-700">
                             Salary Amount
                           </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newEmployee.SalaryAmount || ''}
-                            onChange={(e) => {
-                              const value = e.target.value.trim();
-                              if (value === '') {
-                                setNewEmployee({...newEmployee, SalaryAmount: null});
-                              } else {
-                                const parsed = parseFloat(value);
-                                setNewEmployee({...newEmployee, SalaryAmount: isNaN(parsed) ? null : parsed});
-                              }
-                            }}
-                            placeholder="Enter salary amount"
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                          />
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₱</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={newEmployee.SalaryAmount || ''}
+                              onChange={(e) => {
+                                const value = e.target.value.trim();
+                                if (value === '') {
+                                  setNewEmployee({...newEmployee, SalaryAmount: null});
+                                } else {
+                                  const parsed = parseFloat(value);
+                                  setNewEmployee({...newEmployee, SalaryAmount: isNaN(parsed) ? null : parsed});
+                                }
+                              }}
+                              placeholder={getSalaryGradeRange(newEmployee.SalaryGrade) || "Enter salary amount"}
+                              className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                            />
+                          </div>
                         </div>
                 </div>
               </div>
@@ -2082,7 +2087,9 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-3xl font-bold">Edit Employee</h2>
-                  <p className="text-blue-100 mt-1">Update employee information below</p>
+                  <p className="text-blue-100 mt-1">
+                    {[editEmployee.FirstName, editEmployee.MiddleName, editEmployee.LastName, editEmployee.ExtensionName].filter(Boolean).join(' ') || 'Update employee information below'}
+                  </p>
                 </div>
                 <button
                   onClick={handleCloseEditModal}
@@ -2115,19 +2122,23 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                                 <span className="text-red-500 mr-1">*</span>
                                 Employment Status
                               </label>
-                              <select
-                                value={editEmployee.EmploymentStatus}
-                                onChange={(e) => setEditEmployee({...editEmployee, EmploymentStatus: e.target.value})}
-                                required
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                              >
-                                <option value="">Select status...</option>
-                                <option value="Regular">Regular</option>
-                                <option value="Probationary">Probationary</option>
-                                <option value="Hired">Hired</option>
-                                <option value="Resigned">Resigned</option>
-                                <option value="Retired">Retired</option>
-                              </select>
+                              <div className="relative">
+                                <select
+                                  value={editEmployee.EmploymentStatus}
+                                  onChange={(e) => setEditEmployee({...editEmployee, EmploymentStatus: e.target.value})}
+                                  required
+                                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white appearance-none cursor-pointer"
+                                >
+                                  <option value="">Select status...</option>
+                                  <option value="Regular">Regular</option>
+                                  <option value="Probationary">Probationary</option>
+                                  <option value="Part_Time">Part-Time</option>
+                                  <option value="Hired">Hired</option>
+                                  <option value="Resigned">Resigned</option>
+                                  <option value="Retired">Retired</option>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                              </div>
                               {editEmployee.ResignationDate && editEmployee.EmploymentStatus !== 'Resigned' && (
                                 <p className="text-sm text-yellow-600 mt-1">
                                   ⚠️ Status will be automatically set to "Resigned" when saved
@@ -2189,38 +2200,44 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                               <label className="block text-sm font-semibold text-gray-700">
                                 Designation <span className="text-red-500">*</span>
                               </label>
-                              <select
-                                value={editEmployee.Designation || ''}
-                                onChange={(e) => setEditEmployee({...editEmployee, Designation: e.target.value})}
-                                required
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                              >
-                                <option value="">Select designation...</option>
-                                <option value="President">President</option>
-                                <option value="Admin_Officer">Admin Officer</option>
-                                <option value="Vice_President">Vice President</option>
-                                <option value="Registrar">Registrar</option>
-                                <option value="Faculty">Faculty</option>
-                                <option value="Principal">Principal</option>
-                                <option value="Cashier">Cashier</option>
-                              </select>
+                              <div className="relative">
+                                <select
+                                  value={editEmployee.Designation || ''}
+                                  onChange={(e) => setEditEmployee({...editEmployee, Designation: e.target.value})}
+                                  required
+                                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white appearance-none cursor-pointer"
+                                >
+                                  <option value="">Select designation...</option>
+                                  <option value="President">President</option>
+                                  <option value="Admin_Officer">Admin Officer</option>
+                                  <option value="Vice_President">Vice President</option>
+                                  <option value="Registrar">Registrar</option>
+                                  <option value="Faculty">Faculty</option>
+                                  <option value="Principal">Principal</option>
+                                  <option value="Cashier">Cashier</option>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <label className="block text-sm font-semibold text-gray-700">
                                 Department <span className="text-red-500">*</span>
                               </label>
-                              <select
-                                value={editEmployee.DepartmentID || ''}
-                                onChange={(e) => setEditEmployee({...editEmployee, DepartmentID: parseInt(e.target.value) || null})}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                              >
-                                <option value="">Select department...</option>
-                                {departments.map((dept) => (
-                                  <option key={dept.id} value={dept.id}>
-                                    {dept.name}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="relative">
+                                <select
+                                  value={editEmployee.DepartmentID || ''}
+                                  onChange={(e) => setEditEmployee({...editEmployee, DepartmentID: parseInt(e.target.value) || null})}
+                                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white appearance-none cursor-pointer"
+                                >
+                                  <option value="">Select department...</option>
+                                  {departments.map((dept) => (
+                                    <option key={dept.id} value={dept.id}>
+                                      {dept.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <label className="block text-sm font-semibold text-gray-700">
@@ -2238,22 +2255,25 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                               <label className="block text-sm font-semibold text-gray-700">
                                 Salary Amount
                               </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editEmployee.SalaryAmount || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value.trim();
-                                  if (value === '') {
-                                    setEditEmployee({...editEmployee, SalaryAmount: null});
-                                  } else {
-                                    const parsed = parseFloat(value);
-                                    setEditEmployee({...editEmployee, SalaryAmount: isNaN(parsed) ? null : parsed});
-                                  }
-                                }}
-                                placeholder="Salary Amount"
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
-                              />
+                              <div className="relative">
+                                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₱</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editEmployee.SalaryAmount || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value.trim();
+                                    if (value === '') {
+                                      setEditEmployee({...editEmployee, SalaryAmount: null});
+                                    } else {
+                                      const parsed = parseFloat(value);
+                                      setEditEmployee({...editEmployee, SalaryAmount: isNaN(parsed) ? null : parsed});
+                                    }
+                                  }}
+                                  placeholder={getSalaryGradeRange(editEmployee.SalaryGrade) || "Salary Amount"}
+                                  className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-0 transition-colors bg-white"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2353,17 +2373,20 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                             <span className="text-red-500 mr-1">*</span>
                             Sex
                           </label>
-                          <select
-                            value={editEmployee.Sex}
-                            onChange={(e) => setEditEmployee({...editEmployee, Sex: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                            required
-                          >
-                            <option value="">Select sex...</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Intersex">Intersex</option>
-                          </select>
+                          <div className="relative">
+                            <select
+                              value={editEmployee.Sex}
+                              onChange={(e) => setEditEmployee({...editEmployee, Sex: e.target.value})}
+                              className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white appearance-none cursor-pointer"
+                              required
+                            >
+                              <option value="">Select sex...</option>
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                              <option value="Intersex">Intersex</option>
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">
@@ -2446,17 +2469,20 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                           <label className="block text-sm font-semibold text-gray-700">
                             Civil Status
                           </label>
-                          <select
-                            value={editEmployee.CivilStatus}
-                            onChange={(e) => setEditEmployee({...editEmployee, CivilStatus: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white"
-                          >
-                            <option value="">Select status...</option>
-                            <option value="Single">Single</option>
-                            <option value="Married">Married</option>
-                            <option value="Widowed">Widowed</option>
-                            <option value="Separated">Separated</option>
-                          </select>
+                          <div className="relative">
+                            <select
+                              value={editEmployee.CivilStatus}
+                              onChange={(e) => setEditEmployee({...editEmployee, CivilStatus: e.target.value})}
+                              className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0 transition-colors bg-white appearance-none cursor-pointer"
+                            >
+                              <option value="">Select status...</option>
+                              <option value="Single">Single</option>
+                              <option value="Married">Married</option>
+                              <option value="Widowed">Widowed</option>
+                              <option value="Separated">Separated</option>
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-semibold text-gray-700">

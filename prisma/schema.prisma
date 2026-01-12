@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
@@ -16,122 +16,125 @@ model UserIDSequence {
 }
 
 model User {
-  UserID                String         @id
-  ClerkID               String?        @unique
-  EmployeeID            String?        @unique
-  FirstName             String
-  LastName              String
-  Email                 String         @unique
-  Photo                 String?
-  PasswordHash          String
-  Status                Status         @default(Active)
-  RequirePasswordChange Boolean        @default(false)
-  DateCreated           DateTime       @default(now())
-  DateModified          DateTime?      @updatedAt
-  LastLogin             DateTime?
-  createdBy             String?
-  updatedBy             String?
-  isDeleted             Boolean        @default(false)
-  invitationId          String?        @db.VarChar(255)
-  AIChat                AIChat[]
-  ActivityLog           ActivityLog[]
-  Cashier               Cashier?       @relation("UserCashier")
-  Faculty               Faculty?       @relation("UserFaculty")
-  Notification          Notification[]
-  Registrar             Registrar?     @relation("UserRegistrar")
-  Report                Report[]
-  Employee              Employee?      @relation(fields: [EmployeeID], references: [EmployeeID])
-  Role                  UserRole[]
-  trainingDocs          TrainingDocument[]
-  PerformanceReviewer   PerformanceReview[] @relation("PerformanceReviewer")
-  DisciplinarySupervisor DisciplinaryRecord[] @relation("DisciplinarySupervisor")
-  PIPInitiator          PerformanceImprovementPlan[] @relation("PIPInitiator")
-  PIPReviewer           PIPReview[] @relation("PIPReviewer")
-  DisciplinaryActionApprover DisciplinaryAction[] @relation("DisciplinaryActionApprover")
-  AppealReviewer        DisciplinaryAppeal[] @relation("AppealReviewer")
+  UserID                     String                       @id
+  ClerkID                    String?                      @unique
+  EmployeeID                 String?                      @unique
+  FirstName                  String
+  LastName                   String
+  Email                      String                       @unique
+  Photo                      String?
+  PasswordHash               String
+  Status                     Status                       @default(Active)
+  RequirePasswordChange      Boolean                      @default(false)
+  DateCreated                DateTime                     @default(now())
+  DateModified               DateTime?                    @updatedAt
+  LastLogin                  DateTime?
+  createdBy                  String?
+  updatedBy                  String?
+  isDeleted                  Boolean                      @default(false)
+  invitationId               String?                      @db.VarChar(255)
+  AIChat                     AIChat[]
+  ActivityLog                ActivityLog[]
+  Cashier                    Cashier?                     @relation("UserCashier")
+  Faculty                    Faculty?                     @relation("UserFaculty")
+  Notification               Notification[]
+  Registrar                  Registrar?                   @relation("UserRegistrar")
+  Report                     Report[]
+  Employee                   Employee?                    @relation(fields: [EmployeeID], references: [EmployeeID])
+  Role                       UserRole[]
+  trainingDocs               TrainingDocument[]
+  PerformanceReviewer        PerformanceReview[]          @relation("PerformanceReviewer")
+  DisciplinarySupervisor     DisciplinaryRecord[]         @relation("DisciplinarySupervisor")
+  PIPInitiator               PerformanceImprovementPlan[] @relation("PIPInitiator")
+  PIPReviewer                PIPReview[]                  @relation("PIPReviewer")
+  DisciplinaryActionApprover DisciplinaryAction[]         @relation("DisciplinaryActionApprover")
+  AppealReviewer             DisciplinaryAppeal[]         @relation("AppealReviewer")
 
   @@index([invitationId], map: "user_invitation_id_idx")
 }
 
 model Faculty {
-  FacultyID        Int              @id
-  UserID           String           @unique
-  EmployeeID       String?          @unique
-  DateOfBirth      DateTime         @db.Date
-  Phone            String?
-  Address          String?
-  EmploymentStatus EmploymentStatus @default(Regular)
-  HireDate         DateTime         @db.Date
-  ResignationDate  DateTime?        @db.Date
-  Position         String?
-  DepartmentID     Int?
-  ContractID       Int?
-  EmergencyContact String?
-  EmployeeType     EmployeeType     @default(Regular)
-  Attendance       Attendance[]
-  Documents        Document[]
-  Contract         Contract?        @relation(fields: [ContractID], references: [ContractID])
-  Department       Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
-  Employee         Employee?        @relation(fields: [EmployeeID], references: [EmployeeID])
-  User             User             @relation("UserFaculty", fields: [UserID], references: [UserID])
-  Leaves           Leave[]
-  Schedules        Schedules[]
-  isDeleted    Boolean        @default(false)
+  FacultyID           Int              @id
+  UserID              String           @unique
+  EmployeeID          String?          @unique
+  DateOfBirth         DateTime         @db.Date
+  Phone               String?
+  Address             String?
+  EmploymentStatus    EmploymentStatus @default(Regular)
+  HireDate            DateTime         @db.Date
+  ResignationDate     DateTime?        @db.Date
+  Position            String?
+  DepartmentID        Int?
+  ContractID          Int?
+  EmergencyContact    String?
+  EmployeeType        EmployeeType     @default(Regular)
+  Attendance          Attendance[]
+  Documents           Document[]
+  Contract            Contract?        @relation(fields: [ContractID], references: [ContractID])
+  Department          Department?      @relation(fields: [DepartmentID], references: [DepartmentID])
+  Employee            Employee?        @relation(fields: [EmployeeID], references: [EmployeeID])
+  User                User             @relation("UserFaculty", fields: [UserID], references: [UserID])
+  Leaves              Leave[]
+  Schedules           Schedules[]
+  adviserSections     ClassSection[]   @relation("ClassAdviser")
+  homeroomSections    ClassSection[]   @relation("HomeroomTeacher")
+  sectionHeadSections ClassSection[]   @relation("SectionHead")
+  isDeleted           Boolean          @default(false)
 }
 
 model Employee {
-  EmployeeID        String              @id @unique
-  UserID            String?             @unique
-  LastName          String?
-  FirstName         String?
-  MiddleName        String?
-  ExtensionName     String?
-  Sex               String?
-  Photo             String?
-  DateOfBirth       DateTime            @db.Date
-  PlaceOfBirth      String?
-  CivilStatus       String?
-  Nationality       String?
-  Religion          String?
-  ContractID        Int?
-  DepartmentID      Int?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime?           @updatedAt
-  createdBy         String?
-  updatedBy         String?
-  Email             String?             @unique
-  HireDate          DateTime            @default(now()) @db.Date
-  Position          String?
-  Attendance        Attendance[]
-  contactInfo       ContactInfo?
-  Documents         Document[]
-  Education         Education[]
-  Eligibility       Eligibility[]
-  Contract          Contract?           @relation(fields: [ContractID], references: [ContractID])
-  Department        Department?         @relation(fields: [DepartmentID], references: [DepartmentID])
-  employmentDetails EmploymentDetail?
-  EmploymentHistory EmploymentHistory[]
-  PromotionHistory  PromotionHistory[]
-  Faculty           Faculty?
-  Family            Family[]
-  governmentIds     GovernmentID?
-  Leaves            Leave[]
-  MedicalInfo       MedicalInfo?
-  retirement        Retirement?
-  User              User?
-  certificates      Certificate[]
-  skills            Skill[]
-  trainings         trainings[]
-  PerformanceReviews PerformanceReview[]
-  DisciplinaryRecords DisciplinaryRecord[]
-  PerformanceGoals PerformanceGoal[]
+  EmployeeID                  String                       @id @unique
+  UserID                      String?                      @unique
+  LastName                    String?
+  FirstName                   String?
+  MiddleName                  String?
+  ExtensionName               String?
+  Sex                         String?
+  Photo                       String?
+  DateOfBirth                 DateTime                     @db.Date
+  PlaceOfBirth                String?
+  CivilStatus                 String?
+  Nationality                 String?
+  Religion                    String?
+  ContractID                  Int?
+  DepartmentID                Int?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime?                    @updatedAt
+  createdBy                   String?
+  updatedBy                   String?
+  Email                       String?                      @unique
+  HireDate                    DateTime                     @default(now()) @db.Date
+  Position                    String?
+  Attendance                  Attendance[]
+  contactInfo                 ContactInfo?
+  Documents                   Document[]
+  Education                   Education[]
+  Eligibility                 Eligibility[]
+  Contract                    Contract?                    @relation(fields: [ContractID], references: [ContractID])
+  Department                  Department?                  @relation(fields: [DepartmentID], references: [DepartmentID])
+  employmentDetails           EmploymentDetail?
+  EmploymentHistory           EmploymentHistory[]
+  PromotionHistory            PromotionHistory[]
+  Faculty                     Faculty?
+  Family                      Family[]
+  governmentIds               GovernmentID?
+  Leaves                      Leave[]
+  MedicalInfo                 MedicalInfo?
+  retirement                  Retirement?
+  User                        User?
+  certificates                Certificate[]
+  skills                      Skill[]
+  trainings                   trainings[]
+  PerformanceReviews          PerformanceReview[]
+  DisciplinaryRecords         DisciplinaryRecord[]
+  PerformanceGoals            PerformanceGoal[]
   PerformanceImprovementPlans PerformanceImprovementPlan[]
-  PerformanceMetrics PerformanceMetric[]
-  DisciplinaryAppeals DisciplinaryAppeal[]
-  performanceModule      PerformanceModule?
-  trainingNeedsAnalysis TrainingNeedsAnalysis[]
-  disciplinaryRiskAnalysis DisciplinaryRiskAnalysis[]
-  isDeleted    Boolean        @default(false)
+  PerformanceMetrics          PerformanceMetric[]
+  DisciplinaryAppeals         DisciplinaryAppeal[]
+  performanceModule           PerformanceModule?
+  trainingNeedsAnalysis       TrainingNeedsAnalysis[]
+  disciplinaryRiskAnalysis    DisciplinaryRiskAnalysis[]
+  isDeleted                   Boolean                      @default(false)
 }
 
 model GovernmentID {
@@ -263,8 +266,8 @@ model DocumentType {
 }
 
 model LeaveTypes {
-  LeaveTypeID   Int        @id @default(autoincrement())
-  LeaveTypeName String     @unique
+  LeaveTypeID   Int    @id @default(autoincrement())
+  LeaveTypeName String @unique
   NumberOfDays  Int?
 }
 
@@ -308,30 +311,30 @@ model Schedules {
 }
 
 model AIChat {
-  ChatID   Int    @id @default(autoincrement())
-  UserID   String
-  Question String
-  Answer   String
-  Status   String
-  User     User   @relation(fields: [UserID], references: [UserID])
+  ChatID        Int      @id @default(autoincrement())
+  UserID        String
+  Question      String
+  Answer        String
+  Status        String
+  User          User     @relation(fields: [UserID], references: [UserID])
   dateSubmitted DateTime @default(now())
 }
 
 model ChatTopic {
-  id        String      @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
   title     String
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   topicId   String
-  sender    String   // 'user' or 'bot'
+  sender    String // 'user' or 'bot'
   text      String
-  timestamp DateTime @default(now())
+  timestamp DateTime  @default(now())
   ChatTopic ChatTopic @relation(fields: [topicId], references: [id])
 }
 
@@ -341,7 +344,7 @@ model TrainingDocument {
   title      String
   content    String
   keywords   String[] // Extracted keywords for better search
-  sections   Json?    // Structured content sections for better retrieval
+  sections   Json? // Structured content sections for better retrieval
   fileUrl    String?
   fileType   String
   uploadedBy String
@@ -423,58 +426,58 @@ model Leave {
 }
 
 model Vacancy {
-  VacancyID         Int           @id @default(autoincrement())
+  VacancyID         Int                  @id @default(autoincrement())
   JobTitle          JobTitle
   VacancyName       String
   Description       String?
   HiringManager     String?
-  Status            VacancyStatus @default(Active)
+  Status            VacancyStatus        @default(Active)
   DatePosted        DateTime?
-  DateCreated       DateTime      @default(now())
-  DateModified      DateTime?     @updatedAt
-  isDeleted         Boolean       @default(false)
+  DateCreated       DateTime             @default(now())
+  DateModified      DateTime?            @updatedAt
+  isDeleted         Boolean              @default(false)
   createdBy         String?
   updatedBy         String?
-  NumberOfPositions Int           @default(1)
+  NumberOfPositions Int                  @default(1)
   Candidates        Candidate[]
   requirements      VacancyRequirement[]
   screenings        CandidateScreening[]
 }
 
 model Candidate {
-  CandidateID   Int             @id @default(autoincrement())
-  VacancyID     Int
-  LastName      String
-  FirstName     String
-  MiddleName    String?
-  ExtensionName String?
-  FullName      String
-  Email         String
-  ContactNumber String?
-  MessengerName String?
-  FBLink        String?
-  Sex           Sex?
-  DateOfBirth   DateTime?       @db.Date
-  Phone         String?
-  DateApplied   DateTime        @default(now())
-  InterviewDate DateTime?
-  Status        CandidateStatus @default(ApplicationInitiated)
-  Resume        String?
-  ResumeUrl     String?
-  isDeleted     Boolean         @default(false)
-  DateCreated   DateTime        @default(now())
-  DateModified  DateTime?       @updatedAt
-  createdBy     String?
-  updatedBy     String?
-  Vacancy       Vacancy         @relation(fields: [VacancyID], references: [VacancyID])
-  screenings    CandidateScreening[]
+  CandidateID               Int                  @id @default(autoincrement())
+  VacancyID                 Int
+  LastName                  String
+  FirstName                 String
+  MiddleName                String?
+  ExtensionName             String?
+  FullName                  String
+  Email                     String
+  ContactNumber             String?
+  MessengerName             String?
+  FBLink                    String?
+  Sex                       Sex?
+  DateOfBirth               DateTime?            @db.Date
+  Phone                     String?
+  DateApplied               DateTime             @default(now())
+  InterviewDate             DateTime?
+  Status                    CandidateStatus      @default(ApplicationInitiated)
+  Resume                    String?
+  ResumeUrl                 String?
+  isDeleted                 Boolean              @default(false)
+  DateCreated               DateTime             @default(now())
+  DateModified              DateTime?            @updatedAt
+  createdBy                 String?
+  updatedBy                 String?
+  Vacancy                   Vacancy              @relation(fields: [VacancyID], references: [VacancyID])
+  screenings                CandidateScreening[]
   // Employee information submission fields
-  EmployeeInfoSubmitted     Boolean   @default(false)
-  EmployeeInfoSubmittedDate DateTime? @db.Date
-  Token                     String?   @unique
+  EmployeeInfoSubmitted     Boolean              @default(false)
+  EmployeeInfoSubmittedDate DateTime?            @db.Date
+  Token                     String?              @unique
   TokenExpiry               DateTime?
   SubmittedEmployeeInfo     Json?
-  InfoReturned              Boolean   @default(false)
+  InfoReturned              Boolean              @default(false)
   InfoReturnedDate          DateTime?
   InfoReturnReason          String?
 
@@ -497,19 +500,25 @@ model Subject {
 }
 
 model ClassSection {
-  id          Int         @id @default(autoincrement())
-  name        String      @unique
-  gradeLevel  String?
-  section     String?
-  schoolYear  String?
-  semester    String?
-  adviser     String?
-  room        String?
-  capacity    Int?
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime?   @updatedAt
-  schedules   Schedules[]
+  id                Int         @id @default(autoincrement())
+  name              String      @unique
+  gradeLevel        String?
+  section           String?
+  schoolYear        String?
+  semester          String?
+  adviser           String? // Legacy field - kept for backward compatibility
+  adviserFacultyId  Int? // Foreign key to Faculty
+  homeroomTeacherId Int? // Foreign key to Faculty
+  sectionHeadId     Int? // Foreign key to Faculty
+  room              String?
+  capacity          Int?
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime?   @updatedAt
+  schedules         Schedules[]
+  adviserFaculty    Faculty?    @relation("ClassAdviser", fields: [adviserFacultyId], references: [FacultyID])
+  homeroomTeacher   Faculty?    @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [FacultyID])
+  sectionHead       Faculty?    @relation("SectionHead", fields: [sectionHeadId], references: [FacultyID])
 }
 
 model Education {
@@ -536,14 +545,14 @@ model EmploymentHistory {
 }
 
 model PromotionHistory {
-  id           Int       @id @default(autoincrement())
-  employeeId   String
-  fromPosition String?
-  toPosition   String
+  id              Int       @id @default(autoincrement())
+  employeeId      String
+  fromPosition    String?
+  toPosition      String
   fromSalaryGrade String?
   toSalaryGrade   String?
   effectiveDate   DateTime
-  promotionType   String?  // "Promotion", "Transfer", "Salary Adjustment", etc.
+  promotionType   String? // "Promotion", "Transfer", "Salary Adjustment", etc.
   remarks         String?
   approvedBy      String?
   createdAt       DateTime  @default(now())
@@ -554,14 +563,14 @@ model PromotionHistory {
 }
 
 model Skill {
-  id                Int       @id @default(autoincrement())
-  employeeId        String
-  name              String
-  proficiencyLevel  String
-  description       String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime? @updatedAt
-  employee          Employee  @relation(fields: [employeeId], references: [EmployeeID])
+  id               Int       @id @default(autoincrement())
+  employeeId       String
+  name             String
+  proficiencyLevel String
+  description      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime? @updatedAt
+  employee         Employee  @relation(fields: [employeeId], references: [EmployeeID])
 
   @@map("skills")
 }
@@ -673,31 +682,31 @@ model trainings {
 }
 
 model PerformanceReview {
-  id              String                @id @default(cuid())
-  employeeId      String
-  reviewerId      String?              // Made optional - not all employees have user accounts
-  period          String?               // e.g., "Q1 2024"
-  startDate       DateTime              @db.Date
-  endDate         DateTime              @db.Date
-  kpiScore        Decimal?              @db.Decimal(5, 2)
-  behaviorScore   Decimal?              @db.Decimal(5, 2)
-  attendanceScore Decimal?              @db.Decimal(5, 2)
-  totalScore      Decimal?              @db.Decimal(5, 2)
-  status          PerformanceReviewStatus @default(draft)
-  remarks         String?               @db.Text
-  employeeComments String?              @db.Text
-  goals           Json?                 // Future goals/objectives
-  achievements    Json?                 // Key achievements
-  improvementAreas Json?                // Areas for improvement
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  reviewedAt      DateTime?             // When the review was completed
-  approvedAt      DateTime?             // When the review was approved
-  employee        Employee              @relation(fields: [employeeId], references: [EmployeeID])
-  reviewer        User?                 @relation("PerformanceReviewer", fields: [reviewerId], references: [UserID])
-  performanceGoals PerformanceGoal[]     @relation("ReviewGoals")
+  id               String                  @id @default(cuid())
+  employeeId       String
+  reviewerId       String? // Made optional - not all employees have user accounts
+  period           String? // e.g., "Q1 2024"
+  startDate        DateTime                @db.Date
+  endDate          DateTime                @db.Date
+  kpiScore         Decimal?                @db.Decimal(5, 2)
+  behaviorScore    Decimal?                @db.Decimal(5, 2)
+  attendanceScore  Decimal?                @db.Decimal(5, 2)
+  totalScore       Decimal?                @db.Decimal(5, 2)
+  status           PerformanceReviewStatus @default(draft)
+  remarks          String?                 @db.Text
+  employeeComments String?                 @db.Text
+  goals            Json? // Future goals/objectives
+  achievements     Json? // Key achievements
+  improvementAreas Json? // Areas for improvement
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  reviewedAt       DateTime? // When the review was completed
+  approvedAt       DateTime? // When the review was approved
+  employee         Employee                @relation(fields: [employeeId], references: [EmployeeID])
+  reviewer         User?                   @relation("PerformanceReviewer", fields: [reviewerId], references: [UserID])
+  performanceGoals PerformanceGoal[]       @relation("ReviewGoals")
 
   @@index([employeeId])
   @@index([reviewerId])
@@ -706,32 +715,32 @@ model PerformanceReview {
 }
 
 model DisciplinaryRecord {
-  id                  String                @id @default(cuid())
-  caseNo              String                @unique
-  employeeId          String
-  supervisorId        String?
-  category            String                // e.g., "Attendance", "Behavior", "Performance", "Safety"
-  violation           String                // Specific violation type
-  severity            DisciplinarySeverity  @default(Minor)
-  status              DisciplinaryStatus    @default(Ongoing)
-  dateTime            DateTime              @default(now())
-  resolution          String?               @db.Text
-  resolutionDate      DateTime?             @db.Date
-  remarks             String?               @db.Text
-  interviewNotes      String?               @db.Text
-  hrRemarks           String?               @db.Text
-  recommendedPenalty  String?
-  digitalAcknowledgment Boolean             @default(false)
-  acknowledgedAt      DateTime?
-  offenseCount        Int                   @default(1)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  createdBy           String?
-  updatedBy           String?
-  employee            Employee              @relation(fields: [employeeId], references: [EmployeeID])
-  supervisor          User?                 @relation("DisciplinarySupervisor", fields: [supervisorId], references: [UserID])
-  evidence            DisciplinaryEvidence[]
-  actions             DisciplinaryAction[]
+  id                    String                 @id @default(cuid())
+  caseNo                String                 @unique
+  employeeId            String
+  supervisorId          String?
+  category              String // e.g., "Attendance", "Behavior", "Performance", "Safety"
+  violation             String // Specific violation type
+  severity              DisciplinarySeverity   @default(Minor)
+  status                DisciplinaryStatus     @default(Ongoing)
+  dateTime              DateTime               @default(now())
+  resolution            String?                @db.Text
+  resolutionDate        DateTime?              @db.Date
+  remarks               String?                @db.Text
+  interviewNotes        String?                @db.Text
+  hrRemarks             String?                @db.Text
+  recommendedPenalty    String?
+  digitalAcknowledgment Boolean                @default(false)
+  acknowledgedAt        DateTime?
+  offenseCount          Int                    @default(1)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  createdBy             String?
+  updatedBy             String?
+  employee              Employee               @relation(fields: [employeeId], references: [EmployeeID])
+  supervisor            User?                  @relation("DisciplinarySupervisor", fields: [supervisorId], references: [UserID])
+  evidence              DisciplinaryEvidence[]
+  actions               DisciplinaryAction[]
 
   @@index([employeeId])
   @@index([caseNo])
@@ -741,69 +750,69 @@ model DisciplinaryRecord {
 }
 
 model DisciplinaryEvidence {
-  id                  String            @id @default(cuid())
+  id                   String             @id @default(cuid())
   disciplinaryRecordId String
-  fileName            String
-  fileType            String            // e.g., "pdf", "jpg", "doc"
-  fileUrl             String
-  fileSize            Int?              // in bytes
-  uploadedAt          DateTime          @default(now())
-  uploadedBy          String?
-  description         String?
-  disciplinaryRecord  DisciplinaryRecord @relation(fields: [disciplinaryRecordId], references: [id], onDelete: Cascade)
+  fileName             String
+  fileType             String // e.g., "pdf", "jpg", "doc"
+  fileUrl              String
+  fileSize             Int? // in bytes
+  uploadedAt           DateTime           @default(now())
+  uploadedBy           String?
+  description          String?
+  disciplinaryRecord   DisciplinaryRecord @relation(fields: [disciplinaryRecordId], references: [id], onDelete: Cascade)
 
   @@index([disciplinaryRecordId])
 }
 
 model DisciplinaryCategory {
-  id              Int                 @id @default(autoincrement())
-  name            String              @unique
-  description     String?             @db.Text
-  isActive        Boolean             @default(true)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  violationTypes  ViolationType[]
+  id             Int             @id @default(autoincrement())
+  name           String          @unique
+  description    String?         @db.Text
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  violationTypes ViolationType[]
 
   @@index([isActive])
 }
 
 model ViolationType {
-  id              Int                 @id @default(autoincrement())
-  name            String              @unique
-  categoryId      Int                 // Reference to DisciplinaryCategory
-  defaultSeverity DisciplinarySeverity
-  description     String?             @db.Text
-  penaltyGuidelines String?            @db.Text
-  isActive        Boolean             @default(true)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  category        DisciplinaryCategory @relation(fields: [categoryId], references: [id])
+  id                Int                  @id @default(autoincrement())
+  name              String               @unique
+  categoryId        Int // Reference to DisciplinaryCategory
+  defaultSeverity   DisciplinarySeverity
+  description       String?              @db.Text
+  penaltyGuidelines String?              @db.Text
+  isActive          Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  createdBy         String?
+  updatedBy         String?
+  category          DisciplinaryCategory @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
   @@index([isActive])
 }
 
 model PerformanceGoal {
-  id              String              @id @default(cuid())
-  employeeId      String
-  performanceReviewId String?          // Optional link to a specific review
-  title           String
-  description     String?             @db.Text
-  targetDate      DateTime            @db.Date
-  status          PerformanceGoalStatus @default(NotStarted)
-  progress        Int                 @default(0) // 0-100 percentage
-  completionDate  DateTime?           @db.Date
-  notes           String?             @db.Text
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  employee        Employee            @relation(fields: [employeeId], references: [EmployeeID])
-  review          PerformanceReview?  @relation("ReviewGoals", fields: [performanceReviewId], references: [id])
+  id                  String                @id @default(cuid())
+  employeeId          String
+  performanceReviewId String? // Optional link to a specific review
+  title               String
+  description         String?               @db.Text
+  targetDate          DateTime              @db.Date
+  status              PerformanceGoalStatus @default(NotStarted)
+  progress            Int                   @default(0) // 0-100 percentage
+  completionDate      DateTime?             @db.Date
+  notes               String?               @db.Text
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  createdBy           String?
+  updatedBy           String?
+  employee            Employee              @relation(fields: [employeeId], references: [EmployeeID])
+  review              PerformanceReview?    @relation("ReviewGoals", fields: [performanceReviewId], references: [id])
 
   @@index([employeeId])
   @@index([status])
@@ -811,30 +820,30 @@ model PerformanceGoal {
 }
 
 model PerformanceImprovementPlan {
-  id                  String              @id @default(cuid())
-  employeeId          String
-  initiatedBy         String              // UserID of supervisor/HR who initiated
-  startDate           DateTime            @db.Date
-  endDate             DateTime            @db.Date
-  reason              String              @db.Text
-  objectives          Json                // Array of improvement objectives
-  actionItems         Json                // Array of specific action items
-  successCriteria     String?             @db.Text
-  status              PIPStatus           @default(Active)
-  progress            Int                 @default(0) // 0-100 percentage
-  reviewFrequency     String?             // e.g., "Weekly", "Bi-weekly", "Monthly"
-  lastReviewDate      DateTime?           @db.Date
-  nextReviewDate      DateTime?           @db.Date
-  outcome             PIPOutcome?
-  outcomeDate         DateTime?           @db.Date
-  notes               String?             @db.Text
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  createdBy           String?
-  updatedBy           String?
-  employee            Employee            @relation(fields: [employeeId], references: [EmployeeID])
-  initiator           User                @relation("PIPInitiator", fields: [initiatedBy], references: [UserID])
-  reviews             PIPReview[]
+  id              String      @id @default(cuid())
+  employeeId      String
+  initiatedBy     String // UserID of supervisor/HR who initiated
+  startDate       DateTime    @db.Date
+  endDate         DateTime    @db.Date
+  reason          String      @db.Text
+  objectives      Json // Array of improvement objectives
+  actionItems     Json // Array of specific action items
+  successCriteria String?     @db.Text
+  status          PIPStatus   @default(Active)
+  progress        Int         @default(0) // 0-100 percentage
+  reviewFrequency String? // e.g., "Weekly", "Bi-weekly", "Monthly"
+  lastReviewDate  DateTime?   @db.Date
+  nextReviewDate  DateTime?   @db.Date
+  outcome         PIPOutcome?
+  outcomeDate     DateTime?   @db.Date
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  employee        Employee    @relation(fields: [employeeId], references: [EmployeeID])
+  initiator       User        @relation("PIPInitiator", fields: [initiatedBy], references: [UserID])
+  reviews         PIPReview[]
 
   @@index([employeeId])
   @@index([status])
@@ -842,60 +851,60 @@ model PerformanceImprovementPlan {
 }
 
 model PIPReview {
-  id                    String                    @id @default(cuid())
-  pipId                 String
-  reviewDate            DateTime                  @db.Date
-  reviewedBy            String                    // UserID
-  progress              Int                       // 0-100 percentage
-  achievements          String?                   @db.Text
-  challenges            String?                   @db.Text
-  nextSteps             String?                   @db.Text
-  employeeFeedback      String?                   @db.Text
-  overallAssessment     String?                   @db.Text
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  pip                   PerformanceImprovementPlan @relation(fields: [pipId], references: [id], onDelete: Cascade)
-  reviewer              User                      @relation("PIPReviewer", fields: [reviewedBy], references: [UserID])
+  id                String                     @id @default(cuid())
+  pipId             String
+  reviewDate        DateTime                   @db.Date
+  reviewedBy        String // UserID
+  progress          Int // 0-100 percentage
+  achievements      String?                    @db.Text
+  challenges        String?                    @db.Text
+  nextSteps         String?                    @db.Text
+  employeeFeedback  String?                    @db.Text
+  overallAssessment String?                    @db.Text
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  pip               PerformanceImprovementPlan @relation(fields: [pipId], references: [id], onDelete: Cascade)
+  reviewer          User                       @relation("PIPReviewer", fields: [reviewedBy], references: [UserID])
 
   @@index([pipId])
   @@index([reviewDate])
 }
 
 model KPI {
-  id              String              @id @default(cuid())
-  name            String              @unique
-  description     String              @db.Text
-  category        KPICategory
-  weight          Decimal             @db.Decimal(5, 2) // Percentage weight in total score calculation
-  maxScore        Decimal             @db.Decimal(5, 2)
-  minScore        Decimal             @db.Decimal(5, 2) @default(0)
-  isActive        Boolean             @default(true)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  createdBy       String?
-  updatedBy       String?
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String      @db.Text
+  category    KPICategory
+  weight      Decimal     @db.Decimal(5, 2) // Percentage weight in total score calculation
+  maxScore    Decimal     @db.Decimal(5, 2)
+  minScore    Decimal     @default(0) @db.Decimal(5, 2)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
   @@index([category])
   @@index([isActive])
 }
 
 model PerformanceMetric {
-  id              String              @id @default(cuid())
-  employeeId      String
-  metricName      String              // e.g., "Sales Target", "Customer Satisfaction", "Project Completion"
-  metricType      PerformanceMetricType
-  value           Decimal             @db.Decimal(10, 2)
-  target          Decimal?            @db.Decimal(10, 2)
-  unit            String?             // e.g., "percentage", "count", "currency"
-  period          String              // e.g., "Q1 2024", "January 2024"
-  periodStart     DateTime            @db.Date
-  periodEnd       DateTime            @db.Date
-  notes           String?             @db.Text
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  employee        Employee            @relation(fields: [employeeId], references: [EmployeeID])
+  id          String                @id @default(cuid())
+  employeeId  String
+  metricName  String // e.g., "Sales Target", "Customer Satisfaction", "Project Completion"
+  metricType  PerformanceMetricType
+  value       Decimal               @db.Decimal(10, 2)
+  target      Decimal?              @db.Decimal(10, 2)
+  unit        String? // e.g., "percentage", "count", "currency"
+  period      String // e.g., "Q1 2024", "January 2024"
+  periodStart DateTime              @db.Date
+  periodEnd   DateTime              @db.Date
+  notes       String?               @db.Text
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  employee    Employee              @relation(fields: [employeeId], references: [EmployeeID])
 
   @@index([employeeId])
   @@index([metricName])
@@ -903,24 +912,24 @@ model PerformanceMetric {
 }
 
 model DisciplinaryAction {
-  id                  String                @id @default(cuid())
+  id                   String                   @id @default(cuid())
   disciplinaryRecordId String
-  actionType          DisciplinaryActionType
-  effectiveDate       DateTime              @db.Date
-  endDate             DateTime?             @db.Date
-  description         String                @db.Text
-  status              DisciplinaryActionStatus @default(Active)
-  completedAt         DateTime?             @db.Date
-  notes               String?               @db.Text
-  approvedBy          String?               // UserID
-  approvedAt          DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  createdBy           String?
-  updatedBy           String?
-  disciplinaryRecord  DisciplinaryRecord    @relation(fields: [disciplinaryRecordId], references: [id], onDelete: Cascade)
-  approver            User?                 @relation("DisciplinaryActionApprover", fields: [approvedBy], references: [UserID])
-  appeals             DisciplinaryAppeal[]
+  actionType           DisciplinaryActionType
+  effectiveDate        DateTime                 @db.Date
+  endDate              DateTime?                @db.Date
+  description          String                   @db.Text
+  status               DisciplinaryActionStatus @default(Active)
+  completedAt          DateTime?                @db.Date
+  notes                String?                  @db.Text
+  approvedBy           String? // UserID
+  approvedAt           DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  createdBy            String?
+  updatedBy            String?
+  disciplinaryRecord   DisciplinaryRecord       @relation(fields: [disciplinaryRecordId], references: [id], onDelete: Cascade)
+  approver             User?                    @relation("DisciplinaryActionApprover", fields: [approvedBy], references: [UserID])
+  appeals              DisciplinaryAppeal[]
 
   @@index([disciplinaryRecordId])
   @@index([actionType])
@@ -929,22 +938,22 @@ model DisciplinaryAction {
 }
 
 model DisciplinaryAppeal {
-  id                  String            @id @default(cuid())
+  id                   String             @id @default(cuid())
   disciplinaryActionId String
-  employeeId          String
-  appealDate          DateTime          @default(now())
-  reason              String            @db.Text
-  supportingDocuments Json?             // Array of document references
-  status              AppealStatus      @default(Pending)
-  reviewedBy          String?           // UserID
-  reviewedAt          DateTime?
-  decision            String?           @db.Text
-  decisionDate        DateTime?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  disciplinaryAction  DisciplinaryAction @relation(fields: [disciplinaryActionId], references: [id], onDelete: Cascade)
-  employee            Employee          @relation(fields: [employeeId], references: [EmployeeID])
-  reviewer            User?             @relation("AppealReviewer", fields: [reviewedBy], references: [UserID])
+  employeeId           String
+  appealDate           DateTime           @default(now())
+  reason               String             @db.Text
+  supportingDocuments  Json? // Array of document references
+  status               AppealStatus       @default(Pending)
+  reviewedBy           String? // UserID
+  reviewedAt           DateTime?
+  decision             String?            @db.Text
+  decisionDate         DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  disciplinaryAction   DisciplinaryAction @relation(fields: [disciplinaryActionId], references: [id], onDelete: Cascade)
+  employee             Employee           @relation(fields: [employeeId], references: [EmployeeID])
+  reviewer             User?              @relation("AppealReviewer", fields: [reviewedBy], references: [UserID])
 
   @@index([disciplinaryActionId])
   @@index([employeeId])
@@ -1208,69 +1217,69 @@ enum AppealStatus {
 
 // AI Agent Models
 model PerformanceModule {
-  id                  String              @id @default(cuid())
-  employeeId          String              @unique
-  currentPosition     String?
-  currentSalaryGrade  String?
-  currentSalaryAmount Decimal?            @db.Decimal(10, 2)
-  recommendedPosition String?
-  recommendedSalaryGrade String?
-  recommendedSalaryAmount Decimal?        @db.Decimal(10, 2)
-  promotionEligibilityScore Decimal?      @db.Decimal(5, 2)
-  promotionRecommendation String?          @db.Text
-  lastPromotionDate   DateTime?           @db.Date
-  yearsInCurrentPosition Float?
-  status              PerformanceModuleStatus @default(Active)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  employee            Employee            @relation(fields: [employeeId], references: [EmployeeID])
-  trainingRecommendations TrainingRecommendation[]
-  promotionRecommendations PromotionRecommendation[]
-  
+  id                        String                    @id @default(cuid())
+  employeeId                String                    @unique
+  currentPosition           String?
+  currentSalaryGrade        String?
+  currentSalaryAmount       Decimal?                  @db.Decimal(10, 2)
+  recommendedPosition       String?
+  recommendedSalaryGrade    String?
+  recommendedSalaryAmount   Decimal?                  @db.Decimal(10, 2)
+  promotionEligibilityScore Decimal?                  @db.Decimal(5, 2)
+  promotionRecommendation   String?                   @db.Text
+  lastPromotionDate         DateTime?                 @db.Date
+  yearsInCurrentPosition    Float?
+  status                    PerformanceModuleStatus   @default(Active)
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  employee                  Employee                  @relation(fields: [employeeId], references: [EmployeeID])
+  trainingRecommendations   TrainingRecommendation[]
+  promotionRecommendations  PromotionRecommendation[]
+
   @@index([employeeId])
   @@index([promotionEligibilityScore])
   @@index([status])
 }
 
 model TrainingRecommendation {
-  id                    String            @id @default(cuid())
-  performanceModuleId   String
-  trainingTitle         String
-  trainingDescription   String?           @db.Text
-  priority              TrainingPriority  @default(Medium)
-  reason                String?           @db.Text
-  estimatedHours        Int?
-  estimatedCost         Decimal?          @db.Decimal(10, 2)
-  skillGap              String?
-  status                TrainingRecommendationStatus @default(Pending)
-  aiGenerated           Boolean           @default(true)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  performanceModule     PerformanceModule @relation(fields: [performanceModuleId], references: [id], onDelete: Cascade)
-  
+  id                  String                       @id @default(cuid())
+  performanceModuleId String
+  trainingTitle       String
+  trainingDescription String?                      @db.Text
+  priority            TrainingPriority             @default(Medium)
+  reason              String?                      @db.Text
+  estimatedHours      Int?
+  estimatedCost       Decimal?                     @db.Decimal(10, 2)
+  skillGap            String?
+  status              TrainingRecommendationStatus @default(Pending)
+  aiGenerated         Boolean                      @default(true)
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  performanceModule   PerformanceModule            @relation(fields: [performanceModuleId], references: [id], onDelete: Cascade)
+
   @@index([performanceModuleId])
   @@index([priority])
   @@index([status])
 }
 
 model PromotionRecommendation {
-  id                    String            @id @default(cuid())
-  performanceModuleId   String
-  recommendedPosition   String
-  recommendedSalaryGrade String?
-  recommendedSalaryAmount Decimal?         @db.Decimal(10, 2)
-  promotionReason       String?           @db.Text
-  eligibilityScore      Decimal?          @db.Decimal(5, 2)
-  priority              PromotionPriority  @default(Medium)
-  status                PromotionRecommendationStatus @default(Pending)
-  aiGenerated           Boolean           @default(true)
-  approvedBy            String?
-  approvedAt            DateTime?
-  rejectedReason        String?           @db.Text
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  performanceModule     PerformanceModule @relation(fields: [performanceModuleId], references: [id], onDelete: Cascade)
-  
+  id                      String                        @id @default(cuid())
+  performanceModuleId     String
+  recommendedPosition     String
+  recommendedSalaryGrade  String?
+  recommendedSalaryAmount Decimal?                      @db.Decimal(10, 2)
+  promotionReason         String?                       @db.Text
+  eligibilityScore        Decimal?                      @db.Decimal(5, 2)
+  priority                PromotionPriority             @default(Medium)
+  status                  PromotionRecommendationStatus @default(Pending)
+  aiGenerated             Boolean                       @default(true)
+  approvedBy              String?
+  approvedAt              DateTime?
+  rejectedReason          String?                       @db.Text
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  performanceModule       PerformanceModule             @relation(fields: [performanceModuleId], references: [id], onDelete: Cascade)
+
   @@index([performanceModuleId])
   @@index([priority])
   @@index([status])
@@ -1278,27 +1287,27 @@ model PromotionRecommendation {
 }
 
 model CandidateScreening {
-  id                    String              @id @default(cuid())
+  id                    String                  @id @default(cuid())
   candidateId           Int
   vacancyId             Int
-  overallScore           Decimal?            @db.Decimal(5, 2)
-  resumeScore           Decimal?            @db.Decimal(5, 2)
-  qualificationScore    Decimal?            @db.Decimal(5, 2)
-  experienceScore       Decimal?            @db.Decimal(5, 2)
-  skillMatchScore       Decimal?            @db.Decimal(5, 2)
+  overallScore          Decimal?                @db.Decimal(5, 2)
+  resumeScore           Decimal?                @db.Decimal(5, 2)
+  qualificationScore    Decimal?                @db.Decimal(5, 2)
+  experienceScore       Decimal?                @db.Decimal(5, 2)
+  skillMatchScore       Decimal?                @db.Decimal(5, 2)
   recommendation        CandidateRecommendation @default(Reject)
-  aiAnalysis            String?             @db.Text
+  aiAnalysis            String?                 @db.Text
   strengths             Json?
   weaknesses            Json?
   missingQualifications Json?
   suggestedQuestions    Json?
   riskFactors           Json?
-  status                ScreeningStatus     @default(Pending)
-  screenedAt            DateTime?          @default(now())
-  screenedBy            String?             @default("AI_AGENT")
-  candidate             Candidate           @relation(fields: [candidateId], references: [CandidateID])
-  vacancy               Vacancy             @relation(fields: [vacancyId], references: [VacancyID])
-  
+  status                ScreeningStatus         @default(Pending)
+  screenedAt            DateTime?               @default(now())
+  screenedBy            String?                 @default("AI_AGENT")
+  candidate             Candidate               @relation(fields: [candidateId], references: [CandidateID])
+  vacancy               Vacancy                 @relation(fields: [vacancyId], references: [VacancyID])
+
   @@unique([candidateId, vacancyId])
   @@index([overallScore])
   @@index([recommendation])
@@ -1306,48 +1315,48 @@ model CandidateScreening {
 }
 
 model VacancyRequirement {
-  id                    String              @id @default(cuid())
-  vacancyId             Int
-  requirementType        RequirementType
-  requirementText        String              @db.Text
-  isRequired             Boolean             @default(true)
-  weight                 Decimal?            @db.Decimal(5, 2)
-  vacancy                Vacancy             @relation(fields: [vacancyId], references: [VacancyID])
-  
+  id              String          @id @default(cuid())
+  vacancyId       Int
+  requirementType RequirementType
+  requirementText String          @db.Text
+  isRequired      Boolean         @default(true)
+  weight          Decimal?        @db.Decimal(5, 2)
+  vacancy         Vacancy         @relation(fields: [vacancyId], references: [VacancyID])
+
   @@index([vacancyId])
   @@index([requirementType])
 }
 
 model TrainingNeedsAnalysis {
-  id                    String              @id @default(cuid())
-  employeeId             String
-  analysisDate          DateTime            @default(now())
-  currentSkills          Json?
-  requiredSkills         Json?
-  skillGaps              Json?
-  trainingPlan           Json?
-  priorityScore          Decimal?           @db.Decimal(5, 2)
-  estimatedCompletion    DateTime?          @db.Date
-  status                 TrainingAnalysisStatus @default(Pending)
-  aiGenerated            Boolean             @default(true)
-  employee               Employee            @relation(fields: [employeeId], references: [EmployeeID])
-  
+  id                  String                 @id @default(cuid())
+  employeeId          String
+  analysisDate        DateTime               @default(now())
+  currentSkills       Json?
+  requiredSkills      Json?
+  skillGaps           Json?
+  trainingPlan        Json?
+  priorityScore       Decimal?               @db.Decimal(5, 2)
+  estimatedCompletion DateTime?              @db.Date
+  status              TrainingAnalysisStatus @default(Pending)
+  aiGenerated         Boolean                @default(true)
+  employee            Employee               @relation(fields: [employeeId], references: [EmployeeID])
+
   @@index([employeeId])
   @@index([priorityScore])
   @@index([status])
 }
 
 model DisciplinaryRiskAnalysis {
-  id                    String              @id @default(cuid())
-  employeeId             String
-  riskScore              Decimal?           @db.Decimal(5, 2)
-  riskLevel              RiskLevel          @default(Low)
-  riskFactors            Json?
-  patternAnalysis        String?            @db.Text
-  recommendedAction      String?            @db.Text
-  lastAnalysisDate       DateTime           @default(now())
-  employee               Employee           @relation(fields: [employeeId], references: [EmployeeID])
-  
+  id                String    @id @default(cuid())
+  employeeId        String
+  riskScore         Decimal?  @db.Decimal(5, 2)
+  riskLevel         RiskLevel @default(Low)
+  riskFactors       Json?
+  patternAnalysis   String?   @db.Text
+  recommendedAction String?   @db.Text
+  lastAnalysisDate  DateTime  @default(now())
+  employee          Employee  @relation(fields: [employeeId], references: [EmployeeID])
+
   @@index([employeeId])
   @@index([riskScore])
   @@index([riskLevel])

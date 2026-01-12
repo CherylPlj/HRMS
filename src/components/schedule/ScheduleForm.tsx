@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Schedule, ScheduleFormData } from '@/contexts/ScheduleContext';
 
 interface ScheduleFormProps {
   schedule?: Schedule | null;
-  onSubmit: (data: ScheduleFormData) => Promise<boolean>;
+  onSubmit: (data: ScheduleFormData | ScheduleFormData[]) => Promise<boolean>;
   onCancel?: () => void;
   loading?: boolean;
 }
@@ -13,21 +14,44 @@ interface ScheduleFormProps {
 interface Faculty {
   FacultyID: number;
   EmployeeID: string;
+  Position?: string | null;
   User: {
     FirstName: string;
     LastName: string;
   };
+  Employee?: {
+    EmployeeID: string;
+    EmploymentDetail?: {
+      Designation?: string | null;
+    } | null;
+  } | null;
+  totalHoursPerWeek?: number;
 }
 
 interface Subject {
   id: number;
   name: string;
   code?: string;
+  gradeLevel?: string | null;
 }
 
 interface ClassSection {
   id: number;
   name: string;
+  gradeLevel?: string | null;
+}
+
+interface SubjectFacultyPair {
+  subjectId: number;
+  facultyId: number;
+}
+
+interface SubjectScheduleData {
+  subjectId: number;
+  facultyId: number;
+  days: string[];
+  time: string;
+  duration: number;
 }
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -38,14 +62,19 @@ export default function ScheduleForm({
   onCancel,
   loading = false,
 }: ScheduleFormProps) {
-  const [formData, setFormData] = useState<ScheduleFormData>({
-    facultyId: schedule?.facultyId || 0,
-    subjectId: schedule?.subjectId || 0,
-    classSectionId: schedule?.classSectionId || 0,
-    day: schedule?.day || '',
-    time: schedule?.time || '',
-    duration: schedule?.duration || 1,
-  });
+  // For editing existing schedule, use original format
+  const isEditMode = !!schedule;
+
+  // Section field
+  const [classSectionId, setClassSectionId] = useState<number>(schedule?.classSectionId || 0);
+  
+  // For edit mode: single schedule fields
+  const [day, setDay] = useState<string>(schedule?.day || '');
+  const [time, setTime] = useState<string>(schedule?.time || '');
+  const [duration, setDuration] = useState<number>(schedule?.duration || 1);
+
+  // For new mode: per-subject schedule data
+  const [subjectSchedules, setSubjectSchedules] = useState<Map<number, SubjectScheduleData>>(new Map());
 
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -58,18 +87,93 @@ export default function ScheduleForm({
     loadFormData();
   }, []);
 
+  // Initialize edit mode with schedule data
+  useEffect(() => {
+    if (schedule && isEditMode) {
+      // Edit mode uses single schedule, no need to initialize subjectSchedules
+    }
+  }, [schedule]);
+
+  // Clear subject schedules when section changes (if grade levels don't match)
+  useEffect(() => {
+    if (!isEditMode && classSectionId && classSections.length > 0 && subjects.length > 0) {
+      const selectedSection = classSections.find(s => s.id === classSectionId);
+      if (selectedSection?.gradeLevel) {
+        // Remove any subject schedules where the subject's grade level doesn't match
+        setSubjectSchedules((prevSchedules) => {
+          const newSchedules = new Map<number, SubjectScheduleData>();
+          prevSchedules.forEach((scheduleData, subjectId) => {
+            const subject = subjects.find(s => s.id === subjectId);
+            if (subject?.gradeLevel === selectedSection.gradeLevel) {
+              newSchedules.set(subjectId, scheduleData);
+            }
+          });
+          return newSchedules;
+        });
+      } else if (!selectedSection?.gradeLevel) {
+        // If section has no grade level, clear all schedules
+        setSubjectSchedules(new Map());
+      }
+    }
+  }, [classSectionId, classSections, subjects, isEditMode]);
+
+  // Filter subjects based on selected section's grade level
+  const filteredSubjects = useMemo(() => {
+    // In edit mode, show all subjects
+    if (isEditMode) {
+      return subjects;
+    }
+    
+    // If no section is selected, return empty array (user must select section first)
+    if (!classSectionId) {
+      return [];
+    }
+    
+    const selectedSection = classSections.find(s => s.id === classSectionId);
+    
+    // If section has no grade level, show all subjects
+    if (!selectedSection?.gradeLevel) {
+      return subjects;
+    }
+
+    // Filter subjects by matching grade level
+    return subjects.filter(subject => subject.gradeLevel === selectedSection.gradeLevel);
+  }, [subjects, classSectionId, classSections, isEditMode]);
+
   const loadFormData = async () => {
     setLoadingData(true);
     try {
-      const [facultiesRes, subjectsRes, sectionsRes] = await Promise.all([
+      const [facultiesRes, subjectsRes, sectionsRes, schedulesRes] = await Promise.all([
         fetch('/api/faculty'),
         fetch('/api/subjects'),
         fetch('/api/class-sections'),
+        fetch('/api/schedules'),
       ]);
 
       if (facultiesRes.ok) {
         const facultiesData = await facultiesRes.json();
-        setFaculties(facultiesData);
+        
+        // Calculate workload if schedules are available
+        if (schedulesRes.ok) {
+          const schedulesData = await schedulesRes.json();
+          const workloadMap = new Map<number, number>();
+          
+          // Calculate total hours per week for each faculty
+          schedulesData.forEach((schedule: any) => {
+            const currentLoad = workloadMap.get(schedule.facultyId) || 0;
+            workloadMap.set(schedule.facultyId, currentLoad + (schedule.duration || 0));
+          });
+          
+          // Add workload to each faculty
+          const facultiesWithLoad = facultiesData.map((faculty: Faculty) => ({
+            ...faculty,
+            totalHoursPerWeek: workloadMap.get(faculty.FacultyID) || 0,
+          }));
+          
+          setFaculties(facultiesWithLoad);
+        } else {
+          setFaculties(facultiesData);
+        }
       }
 
       if (subjectsRes.ok) {
@@ -115,25 +219,62 @@ export default function ScheduleForm({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    // Auto-calculate duration when time changes
-    if (name === 'time') {
-      const calculatedDuration = calculateDuration(value);
-      setFormData((prev) => ({
-        ...prev,
-        time: value,
-        duration: calculatedDuration || prev.duration, // Keep existing if calculation fails
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: name === 'duration' ? parseInt(value) || 0 : 
-                ['facultyId', 'subjectId', 'classSectionId'].includes(name) ? parseInt(value) || 0 : 
-                value,
-      }));
+  const handleTimeChange = (value: string) => {
+    setTime(value);
+    const calculatedDuration = calculateDuration(value);
+    if (calculatedDuration > 0) {
+      setDuration(calculatedDuration);
     }
+  };
+
+  const handleSubjectFacultyChange = (subjectId: number, facultyId: number) => {
+    const newSchedules = new Map(subjectSchedules);
+    if (facultyId === 0) {
+      newSchedules.delete(subjectId);
+    } else {
+      // Initialize or update subject schedule
+      const existing = newSchedules.get(subjectId);
+      newSchedules.set(subjectId, {
+        subjectId,
+        facultyId,
+        days: existing?.days || [],
+        time: existing?.time || '',
+        duration: existing?.duration || 1,
+      });
+    }
+    setSubjectSchedules(newSchedules);
+  };
+
+  const handleSubjectDaysChange = (subjectId: number, days: string[]) => {
+    const newSchedules = new Map(subjectSchedules);
+    const existing = newSchedules.get(subjectId);
+    if (existing) {
+      newSchedules.set(subjectId, { ...existing, days });
+    }
+    setSubjectSchedules(newSchedules);
+  };
+
+  const handleSubjectTimeChange = (subjectId: number, time: string) => {
+    const newSchedules = new Map(subjectSchedules);
+    const existing = newSchedules.get(subjectId);
+    if (existing) {
+      const calculatedDuration = calculateDuration(time);
+      newSchedules.set(subjectId, { 
+        ...existing, 
+        time,
+        duration: calculatedDuration > 0 ? calculatedDuration : existing.duration
+      });
+    }
+    setSubjectSchedules(newSchedules);
+  };
+
+  const handleSubjectDurationChange = (subjectId: number, duration: number) => {
+    const newSchedules = new Map(subjectSchedules);
+    const existing = newSchedules.get(subjectId);
+    if (existing) {
+      newSchedules.set(subjectId, { ...existing, duration });
+    }
+    setSubjectSchedules(newSchedules);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,28 +282,92 @@ export default function ScheduleForm({
     setError(null);
 
     // Validation
-    if (!formData.facultyId || !formData.subjectId || !formData.classSectionId) {
-      setError('Please fill in all required fields');
+    if (!classSectionId) {
+      setError('Please select a section');
       return;
     }
 
-    if (!formData.day || !formData.time) {
-      setError('Please select day and time');
+    // In edit mode, validate single schedule
+    if (isEditMode) {
+      if (!day || !time) {
+        setError('Please select day and time');
+        return;
+      }
+      if (duration <= 0) {
+        setError('Duration must be greater than 0. Check your time range (start time cannot equal end time)');
+        return;
+      }
+      if (duration > 5) {
+        setError('Duration cannot exceed 5 hours per subject per day');
+        return;
+      }
+    }
+
+    // In edit mode, submit single schedule
+    if (isEditMode && schedule) {
+      const formData: ScheduleFormData = {
+        facultyId: schedule.facultyId,
+        subjectId: schedule.subjectId,
+        classSectionId,
+        day,
+        time,
+        duration,
+      };
+      const success = await onSubmit(formData);
+      if (success && onCancel) {
+        onCancel();
+      }
       return;
     }
 
-    // Validate duration
-    if (formData.duration <= 0) {
-      setError('Duration must be greater than 0. Check your time range (start time cannot equal end time)');
+    // In new mode, validate at least one subject schedule with complete data
+    if (subjectSchedules.size === 0) {
+      setError('Please assign at least one faculty to a subject');
       return;
     }
 
-    if (formData.duration > 5) {
-      setError('Duration cannot exceed 5 hours per subject per day');
-      return;
+    // Validate each subject schedule
+    for (const [subjectId, scheduleData] of subjectSchedules.entries()) {
+      if (scheduleData.days.length === 0) {
+        const subject = subjects.find(s => s.id === subjectId);
+        setError(`${subject?.name || 'Subject'} is missing day selection`);
+        return;
+      }
+      if (!scheduleData.time) {
+        const subject = subjects.find(s => s.id === subjectId);
+        setError(`${subject?.name || 'Subject'} is missing time`);
+        return;
+      }
+      if (scheduleData.duration <= 0) {
+        const subject = subjects.find(s => s.id === subjectId);
+        setError(`${subject?.name || 'Subject'} duration must be greater than 0`);
+        return;
+      }
+      if (scheduleData.duration > 5) {
+        const subject = subjects.find(s => s.id === subjectId);
+        setError(`${subject?.name || 'Subject'} duration cannot exceed 5 hours per day`);
+        return;
+      }
     }
 
-    const success = await onSubmit(formData);
+    // Create schedule data for each day × subject combination
+    const schedulesToCreate: ScheduleFormData[] = [];
+    subjectSchedules.forEach((scheduleData) => {
+      scheduleData.days.forEach(day => {
+        schedulesToCreate.push({
+          facultyId: scheduleData.facultyId,
+          subjectId: scheduleData.subjectId,
+          classSectionId,
+          day,
+          time: scheduleData.time,
+          duration: scheduleData.duration,
+        });
+      });
+    });
+
+    // For now, we'll submit them one by one
+    // The parent component should handle multiple submissions
+    const success = await onSubmit(schedulesToCreate);
     if (success && onCancel) {
       onCancel();
     }
@@ -184,138 +389,249 @@ export default function ScheduleForm({
         </div>
       )}
 
-      {/* Faculty Selection */}
-      <div>
-        <label htmlFor="facultyId" className="block text-sm font-medium text-gray-700">
-          Faculty <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="facultyId"
-          name="facultyId"
-          value={formData.facultyId}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
-        >
-          <option value="">Select Faculty</option>
-          {faculties.map((faculty) => (
-            <option key={faculty.FacultyID} value={faculty.FacultyID}>
-              {faculty.User.FirstName} {faculty.User.LastName} ({faculty.EmployeeID})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Subject Selection */}
-      <div>
-        <label htmlFor="subjectId" className="block text-sm font-medium text-gray-700">
-          Subject <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="subjectId"
-          name="subjectId"
-          value={formData.subjectId}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
-        >
-          <option value="">Select Subject</option>
-          {subjects.map((subject) => (
-            <option key={subject.id} value={subject.id}>
-              {subject.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Class Section Selection */}
+      {/* Section Selection */}
       <div>
         <label htmlFor="classSectionId" className="block text-sm font-medium text-gray-700">
-          Class Section <span className="text-red-500">*</span>
+          Section <span className="text-red-500">*</span>
         </label>
-        <select
-          id="classSectionId"
-          name="classSectionId"
-          value={formData.classSectionId}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
-        >
-          <option value="">Select Class Section</option>
-          {classSections.map((section) => (
-            <option key={section.id} value={section.id}>
-              {section.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {/* Day Selection */}
-        <div>
-          <label htmlFor="day" className="block text-sm font-medium text-gray-700">
-            Day <span className="text-red-500">*</span>
-          </label>
+        <div className="relative mt-1">
           <select
-            id="day"
-            name="day"
-            value={formData.day}
-            onChange={handleChange}
+            id="classSectionId"
+            value={classSectionId}
+            onChange={(e) => setClassSectionId(parseInt(e.target.value) || 0)}
             required
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md"
+            disabled={isEditMode}
+            className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none"
           >
-            <option value="">Select Day</option>
-            {DAYS_OF_WEEK.map((day) => (
-              <option key={day} value={day}>
-                {day}
+            <option value="">Select Section</option>
+            {classSections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.name}
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Time Input */}
-        <div>
-          <label htmlFor="time" className="block text-sm font-medium text-gray-700">
-            Time <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="time"
-            name="time"
-            value={formData.time}
-            onChange={handleChange}
-            placeholder="e.g., 08:00-09:00"
-            required
-            className="mt-1 block w-full border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm"
-          />
-          <p className="mt-1 text-xs text-blue-600">
-            <i className="fas fa-magic mr-1"></i>
-            Duration will be auto-calculated • Format: HH:MM-HH:MM (e.g., 08:00-09:00)
-          </p>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         </div>
       </div>
 
-      {/* Duration */}
+      {/* Edit Mode: Day, Time, Duration (Single schedule) */}
+      {isEditMode && (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {/* Day Selection */}
+          <div>
+            <label htmlFor="day" className="block text-sm font-medium text-gray-700">
+              Day <span className="text-red-500">*</span>
+            </label>
+            <div className="relative mt-1">
+              <select
+                id="day"
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+                required
+                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md appearance-none"
+              >
+                <option value="">Select Day</option>
+                {DAYS_OF_WEEK.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Time Input */}
+          <div>
+            <label htmlFor="time" className="block text-sm font-medium text-gray-700">
+              Time <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="time"
+              value={time}
+              onChange={(e) => handleTimeChange(e.target.value)}
+              placeholder="e.g., 08:00-09:00"
+              required
+              className="mt-1 block w-full border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm px-3 py-2"
+            />
+            <p className="mt-1 text-xs text-blue-600">
+              Time format: HH:MM-HH:MM
+            </p>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+              Duration (hours) <span className="text-red-500">*</span>
+              <span className="ml-2 text-xs font-normal text-blue-600"> Auto-calculated</span>
+            </label>
+            <input
+              type="number"
+              id="duration"
+              value={duration}
+              onChange={(e) => setDuration(parseFloat(e.target.value) || 0)}
+              min="0.5"
+              max="5"
+              step="0.5"
+              required
+              className="mt-1 block w-full border border-gray-300 bg-gray-50 text-gray-900 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm px-3 py-2"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Max 5 hours per subject per day.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Subjects List with Faculty, Days, Time, and Duration Selection */}
       <div>
-        <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
-          Duration (hours) <span className="text-red-500">*</span>
-          <span className="ml-2 text-xs font-normal text-blue-600">✨ Auto-calculated</span>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          {isEditMode ? 'Subject and Faculty' : 'Assign Faculty and Schedule to Subjects'} <span className="text-red-500">*</span>
         </label>
-        <input
-          type="number"
-          id="duration"
-          name="duration"
-          value={formData.duration}
-          onChange={handleChange}
-          min="0.5"
-          max="5"
-          step="0.5"
-          required
-            className="mt-1 block w-full border border-gray-300 bg-gray-50 text-gray-900 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm"
-        />
-        <p className="mt-1 text-xs text-gray-500">
-          Automatically calculated from time range. Maximum 5 hours per subject per day.
-        </p>
+        <div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+          {filteredSubjects.length === 0 ? (
+            <div className="p-4 text-center text-gray-500 text-sm">
+              {classSectionId 
+                ? 'No subjects available for the selected section\'s grade level'
+                : 'Please select a section first'}
+            </div>
+          ) : (
+            filteredSubjects.map((subject) => {
+              const selectedFacultyId = isEditMode 
+                ? (schedule?.facultyId || 0)
+                : (subjectSchedules.get(subject.id)?.facultyId || 0);
+              const subjectSchedule = subjectSchedules.get(subject.id);
+              const isSubjectSelected = selectedFacultyId > 0;
+
+              return (
+                <div key={subject.id} className={`p-4 ${isSubjectSelected ? 'bg-blue-50' : 'hover:bg-gray-50'} transition-colors`}>
+                  <div className="space-y-4">
+                    {/* Subject Name and Faculty Selection */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900">
+                          {subject.name}
+                          {subject.code && (
+                            <span className="ml-2 text-xs text-gray-500">({subject.code})</span>
+                          )}
+                        </h4>
+                      </div>
+                      <div className="flex-shrink-0 w-64">
+                        <div className="relative">
+                          <select
+                            value={selectedFacultyId}
+                            onChange={(e) => handleSubjectFacultyChange(subject.id, parseInt(e.target.value) || 0)}
+                            className="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] rounded-md appearance-none"
+                          >
+                            <option value="">Select Faculty</option>
+                            {faculties.map((faculty) => {
+                              const position = faculty.Position;
+                              const positionText = position ? ` (${position})` : '';
+                              const designation = faculty.Employee?.EmploymentDetail?.Designation;
+                              const designationText = designation ? ` - ${designation.replace(/_/g, ' ')}` : '';
+                              const loadText = faculty.totalHoursPerWeek !== undefined 
+                                ? ` (${faculty.totalHoursPerWeek}h/week)` 
+                                : '';
+                              return (
+                                <option key={faculty.FacultyID} value={faculty.FacultyID}>
+                                  {faculty.User.FirstName} {faculty.User.LastName}{positionText}{designationText}{loadText}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Days, Time, Duration (only show if faculty is selected and not in edit mode) */}
+                    {!isEditMode && isSubjectSelected && (
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-2 border-t border-gray-200">
+                        {/* Days Selection */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">
+                            Days <span className="text-red-500">*</span>
+                          </label>
+                          <div className="space-y-2 border border-gray-300 rounded-md p-2 bg-white">
+                            <div className="grid grid-cols-2 gap-1">
+                              {DAYS_OF_WEEK.map((d) => (
+                                <label
+                                  key={d}
+                                  className="flex items-center space-x-1 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={subjectSchedule?.days.includes(d) || false}
+                                    onChange={(e) => {
+                                      const currentDays = subjectSchedule?.days || [];
+                                      const newDays = e.target.checked
+                                        ? [...currentDays, d]
+                                        : currentDays.filter(day => day !== d);
+                                      handleSubjectDaysChange(subject.id, newDays);
+                                    }}
+                                    className="h-3 w-3 text-[#800000] focus:ring-[#800000] border-gray-300 rounded"
+                                  />
+                                  <span className="text-xs text-gray-900">{d.substring(0, 3)}</span>
+                                </label>
+                              ))}
+                            </div>
+                            {subjectSchedule?.days && subjectSchedule.days.length > 0 && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                {subjectSchedule.days.join(', ')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Time Input */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Time <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={subjectSchedule?.time || ''}
+                            onChange={(e) => handleSubjectTimeChange(subject.id, e.target.value)}
+                            placeholder="08:00-09:00"
+                            className="block w-full border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] text-sm px-2 py-1.5"
+                          />
+                          <p className="mt-1 text-xs text-blue-600">
+                            HH:MM-HH:MM
+                          </p>
+                        </div>
+
+                        {/* Duration */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Duration (hrs) <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={subjectSchedule?.duration || 1}
+                            onChange={(e) => handleSubjectDurationChange(subject.id, parseFloat(e.target.value) || 0)}
+                            min="0.5"
+                            max="5"
+                            step="0.5"
+                            className="block w-full border border-gray-300 bg-gray-50 text-gray-900 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] text-sm px-2 py-1.5"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Max 5 hours/day
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        {!isEditMode && (
+          <p className="mt-2 text-xs text-gray-500">
+            Select a faculty for each subject, then set the days, time, and duration for that subject. Only subjects with complete information will be scheduled.
+          </p>
+        )}
       </div>
 
       {/* Form Actions */}
@@ -357,12 +673,12 @@ export default function ScheduleForm({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Saving...
+              {isEditMode ? 'Updating...' : 'Creating...'}
             </span>
-          ) : schedule ? (
+          ) : isEditMode ? (
             'Update Schedule'
           ) : (
-            'Create Schedule'
+            'Create Schedules'
           )}
         </button>
       </div>

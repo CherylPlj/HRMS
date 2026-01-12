@@ -1,11 +1,25 @@
 // lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
 
+// Helper to ensure DATABASE_URL has pgbouncer parameter
+const ensurePgbouncerParam = (url: string | undefined): string | undefined => {
+  if (!url) return url;
+  
+  // Check if pgbouncer parameter already exists
+  if (url.includes('pgbouncer=true')) {
+    return url;
+  }
+  
+  // Add pgbouncer=true parameter
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}pgbouncer=true`;
+};
+
 // Create a new Prisma client with proper pooling settings for Supabase
 const createPrismaClient = () => {
   // Use DIRECT_URL for migrations and DATABASE_URL for queries
   // Add pgbouncer=true to disable prepared statements when using connection pooler
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = ensurePgbouncerParam(process.env.DATABASE_URL);
   const directUrl = process.env.DIRECT_URL;
   
   const client = new PrismaClient({
@@ -46,5 +60,39 @@ export async function ensurePrismaConnected() {
       return;
     }
     console.error('Prisma connection error:', error);
+  }
+}
+
+/**
+ * Helper to handle prepared statement errors by disconnecting and reconnecting.
+ * This is useful when encountering "prepared statement does not exist" errors.
+ */
+export async function handlePreparedStatementError<T>(
+  operation: () => Promise<T>,
+  retries = 1
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error: any) {
+    // Check if this is a prepared statement error
+    const isPreparedStatementError = 
+      error?.code === '26000' || 
+      error?.message?.includes('prepared statement') ||
+      error?.meta?.code === '26000';
+    
+    if (isPreparedStatementError && retries > 0) {
+      console.warn('Prepared statement error detected, attempting to reconnect...');
+      try {
+        // Disconnect and reconnect to reset the connection
+        await prisma.$disconnect();
+        await prisma.$connect();
+        // Retry the operation
+        return await operation();
+      } catch (reconnectError) {
+        console.error('Failed to reconnect:', reconnectError);
+        throw error; // Throw original error
+      }
+    }
+    throw error;
   }
 }

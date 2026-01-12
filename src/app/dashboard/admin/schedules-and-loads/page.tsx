@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ScheduleProvider, useSchedule, Schedule } from '@/contexts/ScheduleContext';
 import ScheduleTable from '@/components/schedule/ScheduleTable';
 import ScheduleModal from '@/components/schedule/ScheduleModal';
@@ -8,6 +8,8 @@ import DeleteConfirmModal from '@/components/schedule/DeleteConfirmModal';
 import ImportCSVModal from '@/components/schedule/ImportCSVModal';
 import FacultyScheduleView from '@/components/schedule/FacultyScheduleView';
 import Toast from '@/components/Toast';
+import FacultySubjectLoadsTab from '@/components/schedule/FacultySubjectLoadsTab';
+import SectionAssignmentsTab from '@/components/section/SectionAssignmentsTab';
 
 function SchedulePageContent() {
   const {
@@ -36,7 +38,7 @@ function SchedulePageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchSchedules();
   }, []);
 
@@ -213,7 +215,7 @@ function SchedulePageContent() {
   const paginatedSchedules = filteredSchedules.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
-  useEffect(() => {
+  React.useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterDay, filterFaculty]);
 
@@ -223,7 +225,7 @@ function SchedulePageContent() {
   const uniqueSubjectsCount = new Set(schedules.map(s => s.subjectId)).size;
 
   return (
-    <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="w-full">
       {/* Stats Cards Row */}
       {view === 'all' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
@@ -703,8 +705,6 @@ function SchedulePageContent() {
         onImport={handleImportCSV}
       />
 
-      
-
       {/* Success/Error Toast */}
       {toast && (
         <Toast
@@ -717,10 +717,74 @@ function SchedulePageContent() {
   );
 }
 
-export default function SchedulesPage() {
+function CombinedSchedulesAndLoadsPage() {
+  const [activeTab, setActiveTab] = useState<'schedules' | 'loads' | 'assignments'>('schedules');
+
   return (
-    <ScheduleProvider>
-      <SchedulePageContent />
-    </ScheduleProvider>
+    <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('schedules')}
+            className={`${
+              activeTab === 'schedules'
+                ? 'border-[#800000] text-[#800000]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Schedules
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('loads')}
+            className={`${
+              activeTab === 'loads'
+                ? 'border-[#800000] text-[#800000]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              Subject Loads
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`${
+              activeTab === 'assignments'
+                ? 'border-[#800000] text-[#800000]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Section Assignments
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'schedules' ? (
+        <ScheduleProvider>
+          <SchedulePageContent />
+        </ScheduleProvider>
+      ) : activeTab === 'loads' ? (
+        <FacultySubjectLoadsTab />
+      ) : (
+        <SectionAssignmentsTab />
+      )}
+    </div>
   );
 }
+
+export default CombinedSchedulesAndLoadsPage;

@@ -578,8 +578,8 @@ export default function DashboardContent() {
               <p className="text-gray-600 font-medium text-sm">Hired</p>
             </div> */}
             <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.resigned}</p>
-              <p className="text-gray-600 font-medium text-center">Resigned</p>
+              <p className="text-4xl font-bold text-[#800000] mb-1 text-center">{facultyStats.probationary}</p>
+              <p className="text-gray-600 font-medium text-center">Probationary</p>
             </div>
             {/* <div className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
               <p className="text-3xl font-bold text-[#800000] mb-2">{facultyStats.retired}</p>
