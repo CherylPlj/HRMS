@@ -289,8 +289,7 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
             ? (isMobile ? 'w-64 translate-x-0' : 'w-64') 
             : (isMobile ? '-translate-x-full w-64' : 'w-20')
           } 
-          flex-shrink-0 flex flex-col h-full z-30
-          ${isMobile ? 'fixed' : 'relative'}`}>
+          flex-shrink-0 flex flex-col fixed h-full z-30 md:relative md:translate-x-0`}>
           
           {/* Toggle Button - Above logo */}
           <div className="flex justify-center py-2">
@@ -384,7 +383,7 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
         </div>
 
         {/* Main Content Area - Adjusted margin for sidebar */}
-        <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 ml-0">
+        <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 min-w-0">
           {/* Header */}
           <header className="bg-white shadow-md sticky top-0 z-20">
             <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 space-y-3 md:space-y-0">
