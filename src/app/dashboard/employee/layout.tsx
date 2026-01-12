@@ -399,8 +399,8 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
                   href={href}
                   className={`flex items-center rounded-md cursor-pointer transition-colors
                     ${isSidebarOpen 
-                      ? 'space-x-3 px-3 py-2' 
-                      : 'flex-col justify-center py-2 space-y-1'
+                      ? 'space-x-3 px-3 py-2 justify-start' 
+                      : 'flex-col justify-center items-center py-2 space-y-1'
                     }
                     ${isActive ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
                   title={item.name}
@@ -426,14 +426,13 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
         </div>
 
         {/* Main Content Area - Adjusted margin for sidebar */}
-        <div className={`flex-1 flex flex-col overflow-hidden
-          ${isSidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+        <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
           {/* Header */}
           <header className="bg-white shadow-md sticky top-0 z-20">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 space-y-4 sm:space-y-0">
+            <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 space-y-3 md:space-y-0">
               {/* Title and Breadcrumb */}
               <div className="flex items-center">
-                <h1 className="text-xl font-bold text-red-700">
+                <h1 className="text-xl md:text-2xl font-bold text-red-700">
                   {getPageTitle()}
                 </h1>
               </div>
@@ -459,7 +458,7 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
+          <main className="flex-1 overflow-y-auto bg-gray-50 p-3 md:p-4">
             {children}
           </main>
         </div>

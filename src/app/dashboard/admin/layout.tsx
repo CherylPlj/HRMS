@@ -493,8 +493,8 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
                   }}
                   className={`flex items-center rounded-md cursor-pointer transition-colors
                     ${isSidebarOpen 
-                      ? 'space-x-3 px-3 py-2' 
-                      : 'flex-col justify-center py-2 space-y-1'
+                      ? 'space-x-3 px-3 py-2 justify-start' 
+                      : 'flex-col justify-center items-center py-2 space-y-1'
                     }
                     ${isActive ? 'text-[#ffd700] font-semibold bg-[#660000]' : 'text-white hover:bg-[#660000]'}`}
                   title={item.name}
@@ -520,11 +520,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
         </div>
 
         {/* Main Content Area - Adjusted margin for sidebar */}
-        <div className={`flex-1 flex flex-col overflow-hidden
-          ${isMobile 
-            ? 'ml-0' 
-            : (isSidebarOpen ? 'ml-64' : 'ml-20')
-          } transition-all duration-300`}>
+        <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
           {/* Header */}
           <header className="bg-white shadow-md sticky top-0 z-20">
             <div className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 space-y-3 md:space-y-0">
@@ -540,7 +536,7 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
                     <i className="fas fa-bars text-xl"></i>
                   </button>
                 )}
-                <h1 className="text-lg md:text-xl font-bold text-red-700 truncate">
+                <h1 className="text-xl md:text-2xl font-bold text-red-700 truncate">
                   {getPageTitle()}
                 </h1>
               </div>
