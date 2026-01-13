@@ -3,14 +3,14 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
 
 // PATCH: Update a leave type
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const id = params.id;
+    const { id } = await params;
     let body;
     try {
       body = await request.json();
@@ -69,14 +69,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // DELETE: Delete a leave type
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const id = params.id;
+    const { id } = await params;
 
     // First, check if the leave type exists
     const { data: leaveType, error: fetchError } = await supabaseAdmin

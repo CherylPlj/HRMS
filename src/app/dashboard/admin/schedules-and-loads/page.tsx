@@ -10,6 +10,7 @@ import FacultyScheduleView from '@/components/schedule/FacultyScheduleView';
 import Toast from '@/components/Toast';
 import FacultySubjectLoadsTab from '@/components/schedule/FacultySubjectLoadsTab';
 import SectionAssignmentsTab from '@/components/section/SectionAssignmentsTab';
+import SISSchedulesTab from '@/components/schedule/SISSchedulesTab';
 
 function SchedulePageContent() {
   const {
@@ -718,7 +719,7 @@ function SchedulePageContent() {
 }
 
 function CombinedSchedulesAndLoadsPage() {
-  const [activeTab, setActiveTab] = useState<'schedules' | 'loads' | 'assignments'>('schedules');
+  const [activeTab, setActiveTab] = useState<'schedules' | 'sis-schedules' | 'loads' | 'assignments'>('schedules');
 
   return (
     <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
@@ -738,6 +739,21 @@ function CombinedSchedulesAndLoadsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               Schedules
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('sis-schedules')}
+            className={`${
+              activeTab === 'sis-schedules'
+                ? 'border-[#800000] text-[#800000]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              SIS Schedules
             </div>
           </button>
           <button
@@ -778,6 +794,8 @@ function CombinedSchedulesAndLoadsPage() {
         <ScheduleProvider>
           <SchedulePageContent />
         </ScheduleProvider>
+      ) : activeTab === 'sis-schedules' ? (
+        <SISSchedulesTab />
       ) : activeTab === 'loads' ? (
         <FacultySubjectLoadsTab />
       ) : (

@@ -7,6 +7,7 @@ import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Calendar, Clock, Eye, Pen, Trash2 } from 'lucide-react';
+import { FILE_SIZE_LIMITS } from '@/lib/fileValidation';
 
 // Define leave types as string literals
 type RequestType = 'Leave' | 'Undertime';
@@ -1821,7 +1822,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                 accept=".jpg,.jpeg,.png"
                                             />
                                             <p className="mt-1 text-sm text-gray-500">
-                                                Upload your signature (JPG or PNG only)
+                                                Upload your signature (JPG or PNG only, max {FILE_SIZE_LIMITS.IMAGE / (1024 * 1024)} MB)
                                             </p>
                                         </div>
                             </div>
@@ -1838,7 +1839,7 @@ const LeaveRequestFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                                 accept=".jpg,.jpeg,.png"
                                             />
                                             <p className="mt-1 text-sm text-gray-500">
-                                                Upload department head signature (JPG or PNG only)
+                                                Upload department head signature (JPG or PNG only, max {FILE_SIZE_LIMITS.IMAGE / (1024 * 1024)} MB)
                                             </p>
                                         </div>
                             </div>

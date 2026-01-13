@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { timeRangesOverlap } from '@/lib/timeUtils';
 
 const scheduleSchema = z.object({
   facultyId: z.number().int().positive(),
@@ -95,24 +96,77 @@ export async function PUT(
       );
     }
 
-    // Check for conflicts (excluding current schedule)
-    const conflictingSchedule = await prisma.schedules.findFirst({
+    // Validation 1: Check if teacher has overlapping time for different subjects (excluding current schedule)
+    const existingFacultySchedules = await prisma.schedules.findMany({
       where: {
         id: { not: scheduleId },
         facultyId: validatedData.facultyId,
         day: validatedData.day,
-        time: validatedData.time,
+      },
+      include: {
+        subject: true,
       },
     });
 
-    if (conflictingSchedule) {
-      return NextResponse.json(
-        {
-          error: 'Schedule conflict detected',
-          message: `Faculty already has a class scheduled at ${validatedData.day} ${validatedData.time}`,
+    // Check for overlapping times (not just exact matches)
+    for (const existingSchedule of existingFacultySchedules) {
+      if (timeRangesOverlap(existingSchedule.time, validatedData.time)) {
+        // If it's a different subject, it's a conflict
+        if (existingSchedule.subjectId !== validatedData.subjectId) {
+          const subject = await prisma.subject.findUnique({
+            where: { id: validatedData.subjectId },
+          });
+          return NextResponse.json(
+            {
+              error: 'Schedule conflict detected',
+              message: `Faculty already has ${existingSchedule.subject.name} scheduled at ${validatedData.day} ${existingSchedule.time}. Cannot assign ${subject?.name || 'this subject'} at overlapping time ${validatedData.time}.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Validation 2: Check if section already has a different teacher at overlapping time
+    // Two teachers cannot have same/overlapping time in one section
+    const sectionSchedules = await prisma.schedules.findMany({
+      where: {
+        id: { not: scheduleId },
+        classSectionId: validatedData.classSectionId,
+        day: validatedData.day,
+      },
+      include: {
+        faculty: {
+          include: {
+            User: {
+              select: {
+                FirstName: true,
+                LastName: true,
+              },
+            },
+          },
         },
-        { status: 400 }
-      );
+        subject: true,
+      },
+    });
+
+    for (const sectionSchedule of sectionSchedules) {
+      if (timeRangesOverlap(sectionSchedule.time, validatedData.time)) {
+        // If it's a different teacher, conflict (two teachers cannot be in same section at same time)
+        if (sectionSchedule.facultyId !== validatedData.facultyId) {
+          const otherTeacherName = `${sectionSchedule.faculty.User.FirstName} ${sectionSchedule.faculty.User.LastName}`;
+          const classSection = await prisma.classSection.findUnique({
+            where: { id: validatedData.classSectionId },
+          });
+          return NextResponse.json(
+            {
+              error: 'Schedule conflict detected',
+              message: `Section ${classSection?.name || 'this section'} already has ${otherTeacherName} teaching ${sectionSchedule.subject.name} at ${validatedData.day} ${sectionSchedule.time}. Cannot assign another teacher at overlapping time ${validatedData.time}.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Update schedule

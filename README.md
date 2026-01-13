@@ -80,6 +80,15 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=http://localhost:3000/dashboard
 # Email Configuration
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-16-character-app-password
+
+# SIS/Enrollment System Integration
+ENROLLMENT_BASE_URL=https://sjsfi-enrollment.vercel.app
+SJSFI_SHARED_SECRET=your_shared_secret_here
+SJSFI_HRMS_API_KEY=your_hrms_api_key_here
+
+# SIS Sync Configuration (Optional - for bidirectional sync)
+SIS_SYNC_ENABLED=false
+SIS_UPDATE_ENDPOINT=/api/hrms/update-schedule-assignment
 ```
 
 ### Email Features

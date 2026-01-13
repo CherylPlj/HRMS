@@ -240,7 +240,21 @@ export async function POST(request: NextRequest) {
                     return name;
                 });
 
-                if (LeaveType && !validLeaveTypeNames.includes(LeaveType)) {
+                // Normalize the incoming leave type for comparison (case-insensitive, strip " Leave" suffix)
+                const normalizeLeaveType = (leaveType: string): string => {
+                    const normalized = leaveType.trim();
+                    if (normalized.toLowerCase().endsWith(' leave')) {
+                        return normalized.slice(0, -6).trim();
+                    }
+                    return normalized;
+                };
+
+                const normalizedIncomingType = normalizeLeaveType(LeaveType);
+                const isValidLeaveType = validLeaveTypeNames.some(
+                    (validType: string) => validType.toLowerCase() === normalizedIncomingType.toLowerCase()
+                );
+
+                if (LeaveType && !isValidLeaveType) {
                     console.error('Invalid leave type:', LeaveType, 'Valid types:', validLeaveTypeNames);
                     return NextResponse.json(
                         { error: `Invalid leave type. Must be one of: ${validLeaveTypeNames.join(', ')}` },

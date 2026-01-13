@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import SectionAssignmentForm from '@/components/section/SectionAssignmentForm';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Faculty {
   FacultyID: number;
@@ -42,6 +42,8 @@ export default function SectionAssignmentsPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGradeLevel, setFilterGradeLevel] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchSections();
@@ -138,6 +140,17 @@ export default function SectionAssignmentsPage() {
 
     return matchesSearch && matchesGradeLevel;
   });
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterGradeLevel]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredSections.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSections = filteredSections.slice(startIndex, endIndex);
 
   // Get unique grade levels for filter
   const gradeLevels = Array.from(new Set(sections.map(s => s.gradeLevel).filter(Boolean))).sort();
@@ -361,7 +374,7 @@ export default function SectionAssignmentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSections.map((section) => (
+                {paginatedSections.map((section) => (
                   <tr key={section.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{section.name}</div>
@@ -404,6 +417,115 @@ export default function SectionAssignmentsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination - Always Visible */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-3 bg-white border-t border-gray-200">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <span>Rows per page:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="text-gray-500">
+              Showing {filteredSections.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredSections.length)} of {filteredSections.length} entries
+            </span>
+          </div>
+
+          {totalPages > 0 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded border ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {(() => {
+                const pages: (number | string)[] = [];
+                const maxVisiblePages = 5;
+
+                if (totalPages <= maxVisiblePages) {
+                  for (let i = 1; i <= totalPages; i++) {
+                    pages.push(i);
+                  }
+                } else {
+                  if (currentPage <= 3) {
+                    for (let i = 1; i <= 4; i++) {
+                      pages.push(i);
+                    }
+                    pages.push('ellipsis');
+                    pages.push(totalPages);
+                  } else if (currentPage >= totalPages - 2) {
+                    pages.push(1);
+                    pages.push('ellipsis');
+                    for (let i = totalPages - 3; i <= totalPages; i++) {
+                      pages.push(i);
+                    }
+                  } else {
+                    pages.push(1);
+                    pages.push('ellipsis');
+                    for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                      pages.push(i);
+                    }
+                    pages.push('ellipsis');
+                    pages.push(totalPages);
+                  }
+                }
+
+                return pages.map((page, index) => {
+                  if (page === 'ellipsis') {
+                    return (
+                      <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  const pageNumber = page as number;
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`px-3 py-1 rounded border ${
+                        currentPage === pageNumber
+                          ? 'bg-[#800000] text-white border-[#800000]'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                });
+              })()}
+
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded border ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                }`}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal */}

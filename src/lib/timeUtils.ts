@@ -77,3 +77,41 @@ export function formatTimeRangeShort(timeRange: string): string {
     return timeRange;
   }
 }
+
+/**
+ * Parse a time range string into start and end minutes
+ * @param timeRange - Time range in format "HH:MM-HH:MM" (e.g., "08:00-09:00")
+ * @returns Object with startMinutes and endMinutes, or null if invalid
+ */
+export function parseTimeRange(timeRange: string): { startMinutes: number; endMinutes: number } | null {
+  try {
+    const match = timeRange.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+
+    const [, startHour, startMin, endHour, endMin] = match.map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (startMinutes >= endMinutes) return null; // Invalid range
+
+    return { startMinutes, endMinutes };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if two time ranges overlap
+ * @param timeRange1 - First time range (e.g., "08:00-09:00")
+ * @param timeRange2 - Second time range (e.g., "08:30-09:30")
+ * @returns true if the time ranges overlap, false otherwise
+ */
+export function timeRangesOverlap(timeRange1: string, timeRange2: string): boolean {
+  const range1 = parseTimeRange(timeRange1);
+  const range2 = parseTimeRange(timeRange2);
+
+  if (!range1 || !range2) return false;
+
+  // Two ranges overlap if: range1.start < range2.end AND range2.start < range1.end
+  return range1.startMinutes < range2.endMinutes && range2.startMinutes < range1.endMinutes;
+}
