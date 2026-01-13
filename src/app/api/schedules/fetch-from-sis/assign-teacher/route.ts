@@ -71,55 +71,116 @@ export async function POST(request: Request) {
             }, { status: 404 });
         }
 
-        // Validation: Check if teacher has overlapping time on the same day
-        // Teachers cannot have two subjects at the same time and same day
-        const existingFacultySchedules = await prisma.schedules.findMany({
+        // Check if schedule already exists in HRMS (for "SIS Only" records that might need updating)
+        const existingSchedule = await prisma.schedules.findFirst({
             where: {
-                facultyId: facultyId,
+                subjectId: subjectId,
+                classSectionId: classSectionId,
                 day: day,
-            },
-            include: {
-                subject: true,
+                time: time,
             },
         });
 
-        // Check for overlapping times (not just exact matches)
-        for (const existingSchedule of existingFacultySchedules) {
-            if (timeRangesOverlap(existingSchedule.time, time)) {
-                return NextResponse.json({
-                    success: false,
-                    error: 'Schedule conflict detected',
-                    message: `Teacher already has ${existingSchedule.subject.name} scheduled at ${day} ${existingSchedule.time}. Cannot assign ${subject.name} at overlapping time ${time} on the same day.`,
-                }, { status: 400 });
-            }
-        }
+        // If schedule exists, update it instead of creating a new one
+        let schedule;
+        if (existingSchedule) {
+            // Validation: Check if teacher has overlapping time on the same day (excluding current schedule)
+            const existingFacultySchedules = await prisma.schedules.findMany({
+                where: {
+                    id: { not: existingSchedule.id },
+                    facultyId: facultyId,
+                    day: day,
+                },
+                include: {
+                    subject: true,
+                },
+            });
 
-        // Create schedule in HRMS
-        const schedule = await prisma.schedules.create({
-            data: {
-                facultyId,
-                subjectId,
-                classSectionId,
-                day,
-                time,
-                duration: duration || 1,
-            },
-            include: {
-                faculty: {
-                    include: {
-                        User: {
-                            select: {
-                                FirstName: true,
-                                LastName: true,
-                                Email: true,
+            // Check for overlapping times (not just exact matches)
+            for (const existingFacultySchedule of existingFacultySchedules) {
+                if (timeRangesOverlap(existingFacultySchedule.time, time)) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Schedule conflict detected',
+                        message: `Teacher already has ${existingFacultySchedule.subject.name} scheduled at ${day} ${existingFacultySchedule.time}. Cannot assign ${subject.name} at overlapping time ${time} on the same day.`,
+                    }, { status: 400 });
+                }
+            }
+
+            // Update existing schedule
+            schedule = await prisma.schedules.update({
+                where: { id: existingSchedule.id },
+                data: {
+                    facultyId,
+                    duration: duration || existingSchedule.duration || 1,
+                },
+                include: {
+                    faculty: {
+                        include: {
+                            User: {
+                                select: {
+                                    FirstName: true,
+                                    LastName: true,
+                                    Email: true,
+                                },
                             },
                         },
                     },
+                    subject: true,
+                    classSection: true,
                 },
-                subject: true,
-                classSection: true,
-            },
-        });
+            });
+        } else {
+            // Validation: Check if teacher has overlapping time on the same day
+            // Teachers cannot have two subjects at the same time and same day
+            const existingFacultySchedules = await prisma.schedules.findMany({
+                where: {
+                    facultyId: facultyId,
+                    day: day,
+                },
+                include: {
+                    subject: true,
+                },
+            });
+
+            // Check for overlapping times (not just exact matches)
+            for (const existingFacultySchedule of existingFacultySchedules) {
+                if (timeRangesOverlap(existingFacultySchedule.time, time)) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Schedule conflict detected',
+                        message: `Teacher already has ${existingFacultySchedule.subject.name} scheduled at ${day} ${existingFacultySchedule.time}. Cannot assign ${subject.name} at overlapping time ${time} on the same day.`,
+                    }, { status: 400 });
+                }
+            }
+
+            // Create new schedule in HRMS (for "SIS Only" records, this creates the HRMS record)
+            schedule = await prisma.schedules.create({
+                data: {
+                    facultyId,
+                    subjectId,
+                    classSectionId,
+                    day,
+                    time,
+                    duration: duration || 1,
+                },
+                include: {
+                    faculty: {
+                        include: {
+                            User: {
+                                select: {
+                                    FirstName: true,
+                                    LastName: true,
+                                    Email: true,
+                                },
+                            },
+                        },
+                    },
+                    subject: true,
+                    classSection: true,
+                },
+            });
+        }
 
         // Sync to SIS (if enabled and endpoint available)
         const employeeId = faculty.EmployeeID;
@@ -134,7 +195,9 @@ export async function POST(request: Request) {
         }
 
         // Build response message
-        let message = 'Teacher assigned successfully';
+        let message = existingSchedule 
+            ? 'Teacher assignment updated successfully' 
+            : 'Teacher assigned successfully and schedule created in HRMS';
         if (syncResult) {
             if (syncResult.synced) {
                 message += ' and synced to SIS';

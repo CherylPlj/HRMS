@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { timeRangesOverlap } from '@/lib/timeUtils';
+import { syncAssignmentToSIS } from '@/lib/sisSync';
 
 const scheduleSchema = z.object({
   facultyId: z.number().int().positive(),
@@ -10,6 +11,7 @@ const scheduleSchema = z.object({
   day: z.string().min(1),
   time: z.string().min(1),
   duration: z.number().positive().min(0.5, 'Duration must be at least 0.5 hours').max(5, 'Duration cannot exceed 5 hours per subject per day'),
+  sisScheduleId: z.number().int().positive().optional(), // Optional SIS schedule ID for syncing
 });
 
 // GET /api/schedules/[id] - Get single schedule
@@ -189,6 +191,11 @@ export async function PUT(
                 Email: true,
               },
             },
+            Employee: {
+              select: {
+                EmployeeID: true,
+              },
+            },
           },
         },
         subject: true,
@@ -196,7 +203,36 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(updatedSchedule);
+    // Sync to SIS if SIS schedule ID is provided
+    let syncResult = null;
+    if (validatedData.sisScheduleId && updatedSchedule.faculty?.Employee?.EmployeeID) {
+      try {
+        syncResult = await syncAssignmentToSIS({
+          scheduleId: validatedData.sisScheduleId,
+          employeeId: updatedSchedule.faculty.Employee.EmployeeID,
+          assigned: true,
+        });
+      } catch (syncError) {
+        console.error('Error syncing to SIS:', syncError);
+        // Don't fail the update if sync fails
+        syncResult = {
+          success: true,
+          synced: false,
+          message: syncError instanceof Error ? syncError.message : 'Failed to sync to SIS',
+        };
+      }
+    }
+
+    // Build response
+    const response: any = {
+      ...updatedSchedule,
+    };
+
+    if (syncResult) {
+      response.sync = syncResult;
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

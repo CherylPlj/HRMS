@@ -72,6 +72,7 @@ export default function SISSchedulesTab() {
     const [substituting, setSubstituting] = useState<number | null>(null);
     const [availableTeachers, setAvailableTeachers] = useState<Record<number, Faculty[]>>({});
     const [syncingExisting, setSyncingExisting] = useState(false);
+    const [editingFaculty, setEditingFaculty] = useState<number | null>(null);
 
     // Fetch SIS schedules
     const fetchSISSchedules = async () => {
@@ -371,8 +372,9 @@ export default function SISSchedulesTab() {
                 throw new Error(data.error || 'Failed to assign teacher');
             }
 
+            // Use the message from the API response, which indicates if schedule was created or updated
             setToast({
-                message: 'Teacher assigned successfully!',
+                message: data.message || 'Teacher assigned successfully!',
                 type: 'success',
             });
 
@@ -386,6 +388,120 @@ export default function SISSchedulesTab() {
             });
         } finally {
             setAssigning(null);
+        }
+    };
+
+    // Edit assigned faculty
+    const handleEditFaculty = async (schedule: SISSchedule, newFacultyId: number) => {
+        if (!schedule.subjectId || !schedule.classSectionId) {
+            setToast({
+                message: 'Cannot edit: Subject or Section not found in HRMS.',
+                type: 'error',
+            });
+            return;
+        }
+
+        setEditingFaculty(schedule.sisId);
+        try {
+            // If schedule doesn't exist in HRMS (SIS Only), create it using assign-teacher endpoint
+            // This endpoint handles both creating new schedules and updating existing ones
+            if (!schedule.hrmsScheduleId) {
+                const response = await fetch('/api/schedules/fetch-from-sis/assign-teacher', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sisScheduleId: schedule.sisId,
+                        facultyId: newFacultyId,
+                        subjectId: schedule.subjectId,
+                        classSectionId: schedule.classSectionId,
+                        day: schedule.day,
+                        time: schedule.time,
+                        duration: schedule.duration,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || 'Failed to assign teacher');
+                }
+
+                setToast({
+                    message: data.message || 'Teacher assigned and schedule created in HRMS successfully!',
+                    type: 'success',
+                });
+
+                // Refresh schedules
+                await fetchSISSchedules();
+                return;
+            }
+
+            // If schedule exists in HRMS, update it using PUT endpoint
+            // Include sisScheduleId in the request so the endpoint can sync to SIS
+            const response = await fetch(`/api/schedules/${schedule.hrmsScheduleId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    facultyId: newFacultyId,
+                    subjectId: schedule.subjectId,
+                    classSectionId: schedule.classSectionId,
+                    day: schedule.day,
+                    time: schedule.time,
+                    duration: schedule.duration,
+                    sisScheduleId: schedule.sisId || undefined, // Include SIS schedule ID for syncing
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Failed to update faculty assignment');
+            }
+
+            // Check sync result from the response
+            const syncResult = data.sync;
+            if (syncResult) {
+                if (syncResult.synced) {
+                    setToast({
+                        message: 'Faculty assignment updated and synced to SIS successfully!',
+                        type: 'success',
+                    });
+                } else {
+                    // Sync was attempted but didn't succeed (e.g., endpoint not available, sync disabled)
+                    // This is not necessarily an error - assignment is still updated in HRMS
+                    setToast({
+                        message: 'Faculty assignment updated in HRMS. ' + (syncResult.message || 'Sync to SIS was not completed.'),
+                        type: 'success', // Use success since HRMS update succeeded
+                    });
+                }
+            } else if (schedule.sisId) {
+                // If SIS ID was provided but no sync result, it means sync wasn't attempted (e.g., missing Employee ID)
+                setToast({
+                    message: 'Faculty assignment updated in HRMS. Could not sync to SIS (missing Employee ID or sync not configured).',
+                    type: 'success', // Still success since HRMS update worked
+                });
+            } else {
+                // No SIS ID, so no sync needed
+                setToast({
+                    message: 'Faculty assignment updated successfully!',
+                    type: 'success',
+                });
+            }
+
+            // Refresh schedules
+            await fetchSISSchedules();
+        } catch (error) {
+            console.error('Error editing faculty:', error);
+            setToast({
+                message: error instanceof Error ? error.message : 'Failed to update faculty assignment',
+                type: 'error',
+            });
+        } finally {
+            setEditingFaculty(null);
         }
     };
 
@@ -425,7 +541,7 @@ export default function SISSchedulesTab() {
             {/* Header with Actions */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">SIS Schedules</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Schedules</h3>
                     <p className="text-sm text-gray-500">
                         Fetch schedules from SIS and assign teachers
                     </p>
@@ -498,24 +614,10 @@ export default function SISSchedulesTab() {
 
             {/* Stats */}
             {schedules.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="text-sm text-gray-500">Total Schedules</div>
                         <div className="text-2xl font-bold text-gray-900">{schedules.length}</div>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="text-sm text-gray-500">Synced to SIS</div>
-                        <div className="text-2xl font-bold text-green-600">
-                            {schedules.filter(s => s.syncStatus === 'synced').length}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">In both systems</div>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="text-sm text-gray-500">HRMS Only</div>
-                        <div className="text-2xl font-bold text-orange-600">
-                            {schedules.filter(s => s.syncStatus === 'hrms-only').length}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">Not in SIS</div>
                     </div>
                     <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="text-sm text-gray-500">Unassigned</div>
@@ -614,7 +716,7 @@ export default function SISSchedulesTab() {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Sync Status
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Actions
                                     </th>
                                 </tr>
@@ -732,7 +834,7 @@ export default function SISSchedulesTab() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                                             {!schedule.isAssigned ? (
                                                 <TeacherAssignmentDropdown
                                                     schedule={schedule}
@@ -760,7 +862,13 @@ export default function SISSchedulesTab() {
                                                     disabled={!schedule.subjectId || !schedule.classSectionId}
                                                 />
                                             ) : (
-                                                <span className="text-green-600">✓ Assigned</span>
+                                                <EditFacultyDropdown
+                                                    schedule={schedule}
+                                                    faculties={faculties}
+                                                    onEdit={handleEditFaculty}
+                                                    editing={editingFaculty === schedule.sisId}
+                                                    disabled={!schedule.subjectId || !schedule.classSectionId}
+                                                />
                                             )}
                                         </td>
                                     </tr>
@@ -868,6 +976,146 @@ export default function SISSchedulesTab() {
                     type={toast.type}
                     onClose={() => setToast(null)}
                 />
+            )}
+        </div>
+    );
+}
+
+interface EditFacultyDropdownProps {
+    schedule: SISSchedule;
+    faculties: Faculty[];
+    onEdit: (schedule: SISSchedule, facultyId: number) => void;
+    editing: boolean;
+    disabled: boolean;
+}
+
+function EditFacultyDropdown({
+    schedule,
+    faculties,
+    onEdit,
+    editing,
+    disabled,
+}: EditFacultyDropdownProps) {
+    const [selectedFacultyId, setSelectedFacultyId] = useState<number | ''>(schedule.facultyId || '');
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleEdit = () => {
+        if (selectedFacultyId && typeof selectedFacultyId === 'number' && selectedFacultyId !== schedule.facultyId) {
+            onEdit(schedule, selectedFacultyId);
+            setIsOpen(false);
+        }
+    };
+
+    if (disabled) {
+        return (
+            <span className="text-xs text-gray-400 italic">
+                Cannot edit
+            </span>
+        );
+    }
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                disabled={editing}
+                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                title="Edit assigned faculty"
+            >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                {editing ? 'Updating...' : 'Edit'}
+            </button>
+
+            {isOpen && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                        onClick={() => setIsOpen(false)}
+                    ></div>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                        <div 
+                            className="bg-white rounded-lg shadow-2xl w-full max-w-md border-2 border-gray-300 pointer-events-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-5 space-y-4">
+                                {/* Schedule Details */}
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Edit Faculty Assignment</h3>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-600">Subject:</span>
+                                            <span className="ml-2 font-medium text-gray-900">
+                                                {schedule.subjectCode && `[${schedule.subjectCode}] `}
+                                                {schedule.subjectName}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600">Section:</span>
+                                            <span className="ml-2 font-medium text-gray-900">{schedule.sectionName}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600">Day:</span>
+                                            <span className="ml-2 font-medium text-gray-900">{schedule.day}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600">Time:</span>
+                                            <span className="ml-2 font-medium text-gray-900">{schedule.time}</span>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <span className="text-gray-600">Current Teacher:</span>
+                                            <span className="ml-2 font-medium text-gray-900">{schedule.facultyName}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                        Select New Teacher
+                                    </label>
+                                    <select
+                                        value={selectedFacultyId}
+                                        onChange={(e) => setSelectedFacultyId(Number(e.target.value) || '')}
+                                        className="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                    >
+                                        <option value="">-- Select Teacher --</option>
+                                        {faculties.map((faculty) => {
+                                            const position = faculty.Position || 'N/A';
+                                            const designation = faculty.Employee?.EmploymentDetail?.Designation 
+                                                ? faculty.Employee.EmploymentDetail.Designation.replace(/_/g, ' ')
+                                                : 'N/A';
+                                            const load = faculty._count?.Schedules || 0;
+                                            const isCurrent = faculty.FacultyID === schedule.facultyId;
+                                            
+                                            return (
+                                                <option key={faculty.FacultyID} value={faculty.FacultyID}>
+                                                    {faculty.User.FirstName} {faculty.User.LastName} - {position} ({designation}) - Load: {load}
+                                                    {isCurrent ? ' (Current)' : ''}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={handleEdit}
+                                        disabled={!selectedFacultyId || editing || selectedFacultyId === schedule.facultyId}
+                                        className="flex-1 px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Update
+                                    </button>
+                                    <button
+                                        onClick={() => setIsOpen(false)}
+                                        className="px-4 py-2.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );
