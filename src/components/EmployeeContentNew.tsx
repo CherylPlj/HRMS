@@ -294,14 +294,73 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
 
       const result = await response.json();
       
-      // Update the employees list with the updated employee
-      setEmployees(employees.map(emp => 
-        emp.employeeId === editedEmployee.EmployeeID ? { ...emp, ...result } : emp
-      ));
+      // Refresh employees list to reflect the updated data
+      if (viewMode === 'paginated') {
+        // Refetch current page
+        await fetchEmployees(pagination.currentPage);
+      } else {
+        // Refetch all employees
+        await fetchAllEmployees();
+      }
       
-      // Update the selected employee if it's currently selected
+      // Refetch the selected employee if it's currently selected
       if (selectedEmployee?.employeeId === editedEmployee.EmployeeID) {
-        setSelectedEmployee({ ...selectedEmployee, ...result });
+        try {
+          const employeeResponse = await fetch(`/api/employees/${editedEmployee.EmployeeID}`);
+          if (employeeResponse.ok) {
+            const employeeData = await employeeResponse.json();
+            // Map the API response to match the state structure
+            const employmentDetail = employeeData.EmploymentDetail?.[0] || employeeData.EmploymentDetail || {};
+            const contactInfo = employeeData.ContactInfo?.[0] || employeeData.ContactInfo || {};
+            const governmentID = employeeData.GovernmentID?.[0] || employeeData.GovernmentID || {};
+            const department = employeeData.Department || {};
+            const family = employeeData.Family || [];
+            const skills = employeeData.skills || [];
+            const trainings = employeeData.trainings || [];
+            const medicalInfo = employeeData.MedicalInfo?.[0] || employeeData.MedicalInfo || {};
+            
+            const mappedEmployee = {
+              employeeId: employeeData.EmployeeID,
+              id: employeeData.EmployeeID,
+              firstName: employeeData.FirstName || '',
+              surname: employeeData.LastName || '',
+              middleName: employeeData.MiddleName || '',
+              nameExtension: employeeData.ExtensionName || '',
+              fullName: [employeeData.FirstName, employeeData.MiddleName, employeeData.LastName, employeeData.ExtensionName].filter(Boolean).join(' '),
+              birthDate: employeeData.DateOfBirth ? new Date(employeeData.DateOfBirth).toISOString().split('T')[0] : '',
+              birthPlace: employeeData.PlaceOfBirth || '',
+              sex: employeeData.Sex || '',
+              civilStatus: employeeData.CivilStatus || '',
+              email: contactInfo.Email || employeeData.UserID || '',
+              position: employmentDetail.Position || '',
+              designation: employmentDetail.Designation || '',
+              departmentId: employeeData.DepartmentID,
+              departmentName: department.DepartmentName || '',
+              photo: employeeData.Photo || '',
+              status: employmentDetail.EmploymentStatus || 'Active',
+              employeeType: employeeData.EmployeeType || 'Regular',
+              phone: contactInfo.Phone || '',
+              hireDate: employmentDetail.HireDate || '',
+              salaryGrade: employmentDetail.SalaryGrade || '',
+              ...employeeData,
+              EmploymentDetail: employmentDetail,
+              ContactInfo: contactInfo,
+              GovernmentID: governmentID,
+              Department: department,
+              Family: family,
+              Skills: skills,
+              trainings: trainings,
+              MedicalInfo: medicalInfo
+            };
+            setSelectedEmployee(mappedEmployee);
+            setEditedEmployee({
+              ...mappedEmployee,
+              EmployeeID: mappedEmployee.employeeId,
+            });
+          }
+        } catch (error) {
+          console.error('Error refetching selected employee:', error);
+        }
       }
 
       setIsEditing(false);
