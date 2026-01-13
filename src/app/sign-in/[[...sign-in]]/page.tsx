@@ -784,7 +784,10 @@ export default function SignInPage() {
           console.log(`Redirecting authenticated ${role} user to dashboard...`);
 
           // Use window.location.replace for hard redirect to prevent back navigation
-          if (role === 'admin' || role === 'super admin') {
+          // Registrars are redirected to external enrollment portal (no HRMS interface)
+          if (role === 'registrar') {
+            window.location.replace('https://sjsfi-enrollment.vercel.app/registrar/home');
+          } else if (role === 'admin' || role === 'super admin') {
             window.location.replace('/dashboard/admin');
           } else if (role === 'faculty') {
             window.location.replace('/dashboard/faculty');

@@ -67,7 +67,8 @@ export async function POST(request: Request) {
         console.log(`[Sync Existing] Found ${sisSchedules.length} schedules in SIS`);
 
         // Get all HRMS schedules with faculty assigned
-        const hrmsSchedules = await prisma.schedules.findMany({
+        // Query without classSection include to avoid errors with orphaned records
+        const hrmsSchedulesRaw = await prisma.schedules.findMany({
             include: {
                 faculty: {
                     include: {
@@ -86,9 +87,34 @@ export async function POST(request: Request) {
                     },
                 },
                 subject: true,
-                classSection: true,
             },
         });
+
+        // Get unique class section IDs and fetch all valid sections in one query
+        const classSectionIds = [...new Set(hrmsSchedulesRaw.map(s => s.classSectionId).filter((id): id is number => id !== null))];
+        const classSections = await prisma.classSection.findMany({
+            where: {
+                id: {
+                    in: classSectionIds,
+                },
+            },
+        });
+
+        // Create a map for quick lookup
+        const classSectionMap = new Map(classSections.map(section => [section.id, section]));
+
+        // Filter schedules to only include those with valid class sections
+        const hrmsSchedules = hrmsSchedulesRaw
+            .filter(schedule => schedule.classSectionId && classSectionMap.has(schedule.classSectionId))
+            .map(schedule => {
+                const classSection = classSectionMap.get(schedule.classSectionId!);
+                if (!classSection) return null;
+                return {
+                    ...schedule,
+                    classSection,
+                };
+            })
+            .filter((schedule): schedule is NonNullable<typeof schedule> => schedule !== null);
 
         console.log(`[Sync Existing] Found ${hrmsSchedules.length} HRMS schedules with teachers assigned`);
 
@@ -100,6 +126,18 @@ export async function POST(request: Request) {
 
         for (const hrmsSchedule of hrmsSchedules) {
             if (!hrmsSchedule.faculty || !hrmsSchedule.faculty.Employee?.EmployeeID) {
+                skippedCount++;
+                continue;
+            }
+
+            // Skip schedules with invalid or missing class sections
+            if (!hrmsSchedule.classSection) {
+                syncResults.push({
+                    hrmsScheduleId: hrmsSchedule.id,
+                    status: 'skipped',
+                    reason: 'Class section not found or invalid',
+                    subject: hrmsSchedule.subject.name,
+                });
                 skippedCount++;
                 continue;
             }

@@ -81,14 +81,16 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
         
         // Check if user should be on employee dashboard
         if (role !== 'employee' && !role.includes('employee')) {
-          if (role === 'admin' || role.includes('admin')) {
+          if (role === 'registrar') {
+            // Registrars are redirected to external enrollment portal (no HRMS interface)
+            window.location.href = 'https://sjsfi-enrollment.vercel.app/';
+            return;
+          } else if (role === 'admin' || role.includes('admin')) {
             router.push('/dashboard/admin');
           } else if (role === 'faculty') {
             router.push('/dashboard/faculty');
           } else if (role === 'cashier') {
             router.push('/dashboard/cashier');
-          } else if (role === 'registrar') {
-            router.push('/dashboard/registrar');
           } else {
             router.push('/dashboard');
           }

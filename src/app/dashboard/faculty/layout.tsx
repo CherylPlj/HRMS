@@ -100,12 +100,14 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
         
         // Check if user should be on faculty dashboard
         if (activeRole !== 'faculty') {
-          if (activeRole === 'admin' || activeRole.includes('admin')) {
+          if (activeRole === 'registrar') {
+            // Registrars are redirected to external enrollment portal (no HRMS interface)
+            window.location.href = 'https://sjsfi-enrollment.vercel.app/';
+            return;
+          } else if (activeRole === 'admin' || activeRole.includes('admin')) {
             router.push('/dashboard/admin');
           } else if (activeRole === 'cashier') {
             router.push('/dashboard/cashier');
-          } else if (activeRole === 'registrar') {
-            router.push('/dashboard/registrar');
           } else {
             router.push('/dashboard');
           }

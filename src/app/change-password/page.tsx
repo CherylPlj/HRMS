@@ -152,12 +152,22 @@ export default function ChangePasswordPage() {
         throw new Error(errorData.error || 'Failed to update password change flag');
       }
 
-      // Password successfully changed - get user's role and redirect to appropriate dashboard
+      // Password successfully changed - get user's role and redirect appropriately
       try {
         const email = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
         if (email) {
           const role = await getActiveRole(undefined, email);
+          
+          // Get dashboard path (may be external URL for registrars)
           const dashboardPath = role ? getDashboardPath(role) : '/dashboard';
+          
+          // Check if this is an external URL (registrars go to enrollment portal)
+          if (dashboardPath.startsWith('http://') || dashboardPath.startsWith('https://')) {
+            window.location.href = dashboardPath;
+            return;
+          }
+          
+          // For internal paths, use router
           router.push(dashboardPath);
         } else {
           // Fallback to general dashboard if email not available

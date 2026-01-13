@@ -112,6 +112,12 @@ export default function DashboardLayout({
           return;
         }
 
+        // Registrars are redirected to external enrollment portal (no HRMS interface)
+        if (role === 'registrar') {
+          window.location.href = 'https://sjsfi-enrollment.vercel.app/';
+          return;
+        }
+
         // Map roles to dashboard paths
         let dashboardPath = role;
         if (role === 'super admin') {
@@ -126,7 +132,7 @@ export default function DashboardLayout({
         // But only if not already on a valid role-specific dashboard
         else if (pathname.startsWith('/dashboard/')) {
           const currentPath = pathname.split('/dashboard/')[1]?.split('/')[0];
-          const validPaths = ['admin', 'faculty', 'cashier', 'registrar', 'employee'];
+          const validPaths = ['admin', 'faculty', 'cashier', 'employee'];
           const isOnValidPath = validPaths.includes(currentPath);
           
           // Only redirect if on wrong dashboard or on an invalid path

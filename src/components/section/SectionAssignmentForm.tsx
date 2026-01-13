@@ -49,7 +49,7 @@ export default function SectionAssignmentForm({
   onCancel,
   loading = false,
 }: SectionAssignmentFormProps) {
-  const [selectedSectionId, setSelectedSectionId] = useState<number>(section?.id || 0);
+  const [selectedSectionId, setSelectedSectionId] = useState<number | ''>(section?.id || '');
   const [adviserFacultyId, setAdviserFacultyId] = useState<number | null>(section?.adviserFacultyId || null);
   const [homeroomTeacherId, setHomeroomTeacherId] = useState<number | null>(section?.homeroomTeacherId || null);
   const [sectionHeadId, setSectionHeadId] = useState<number | null>(section?.sectionHeadId || null);
@@ -73,6 +73,20 @@ export default function SectionAssignmentForm({
       setSectionHeadId(section.sectionHeadId || null);
     }
   }, [section]);
+
+  // Fetch assignments when a section is selected (for create mode)
+  useEffect(() => {
+    if (!isEditMode) {
+      if (selectedSectionId && typeof selectedSectionId === 'number' && selectedSectionId > 0) {
+        fetchSectionAssignments(selectedSectionId);
+      } else {
+        // Clear assignments if no section is selected
+        setAdviserFacultyId(null);
+        setHomeroomTeacherId(null);
+        setSectionHeadId(null);
+      }
+    }
+  }, [selectedSectionId, isEditMode]);
 
   const loadFormData = async () => {
     setLoadingData(true);
@@ -99,6 +113,22 @@ export default function SectionAssignmentForm({
     }
   };
 
+  const fetchSectionAssignments = async (sectionId: number) => {
+    try {
+      const response = await fetch(`/api/class-sections/${sectionId}/assignments`);
+      if (response.ok) {
+        const data = await response.json();
+        // Update the form fields with existing assignments
+        setAdviserFacultyId(data.adviser?.facultyId || null);
+        setHomeroomTeacherId(data.homeroomTeacher?.facultyId || null);
+        setSectionHeadId(data.sectionHead?.facultyId || null);
+      }
+    } catch (err) {
+      console.error('Error fetching section assignments:', err);
+      // Don't show error to user, just log it
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -109,7 +139,7 @@ export default function SectionAssignmentForm({
     }
 
     const success = await onSubmit({
-      sectionId: selectedSectionId,
+      sectionId: typeof selectedSectionId === 'number' ? selectedSectionId : 0,
       adviserFacultyId,
       homeroomTeacherId,
       sectionHeadId,
@@ -145,7 +175,7 @@ export default function SectionAssignmentForm({
           <select
             id="sectionId"
             value={selectedSectionId}
-            onChange={(e) => setSelectedSectionId(parseInt(e.target.value) || 0)}
+            onChange={(e) => setSelectedSectionId(e.target.value ? parseInt(e.target.value) : '')}
             required
             disabled={isEditMode}
             className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none"

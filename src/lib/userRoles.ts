@@ -152,17 +152,19 @@ export async function getHighestPriorityRole(userId?: string, email?: string): P
 
 /**
  * Get dashboard path for a role
+ * Note: Registrars are redirected to external enrollment portal (no HRMS interface)
  */
 export function getDashboardPath(role: string): string {
   const roleLower = role.toLowerCase();
-  if (roleLower.includes('admin') || roleLower.includes('super')) {
+  if (roleLower.includes('registrar')) {
+    // Registrars use external enrollment portal
+    return 'https://sjsfi-enrollment.vercel.app/';
+  } else if (roleLower.includes('admin') || roleLower.includes('super')) {
     return '/dashboard/admin';
   } else if (roleLower.includes('faculty')) {
     return '/dashboard/faculty';
   } else if (roleLower.includes('cashier')) {
     return '/dashboard/cashier';
-  } else if (roleLower.includes('registrar')) {
-    return '/dashboard/registrar';
   } else if (roleLower.includes('employee')) {
     return '/dashboard/employee';
   }

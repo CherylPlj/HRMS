@@ -18,6 +18,14 @@ interface SyncToSISOptions {
     assigned: boolean; // true to assign, false to unassign
 }
 
+interface SyncSectionAdviserOptions {
+    sectionId: number; // HRMS section ID
+    sectionName: string; // Section name
+    employeeId: string | null; // HRMS Employee ID (e.g., "2026-0001") or null to unassign
+    adviserName: string | null; // Full name of adviser or null
+    adviserEmail?: string | null; // Email of adviser
+}
+
 interface SyncResult {
     success: boolean;
     synced: boolean; // Whether sync was attempted and succeeded
@@ -181,6 +189,138 @@ export async function syncAssignmentToSIS(options: SyncToSISOptions): Promise<Sy
             synced: false,
             error: error instanceof Error ? error.message : 'Unknown error',
             message: 'Assignment saved in HRMS, but sync to SIS encountered an error.',
+        };
+    }
+}
+
+/**
+ * Syncs a section adviser assignment to SIS enrollment system
+ * 
+ * @param options - Sync options including sectionId, employeeId, and adviser information
+ * @returns Sync result indicating success/failure
+ */
+export async function syncSectionAdviserToSIS(options: SyncSectionAdviserOptions): Promise<SyncResult> {
+    const ENROLLMENT_BASE_URL = process.env.ENROLLMENT_BASE_URL || 'http://localhost:3000';
+    const SHARED_SECRET = process.env.SJSFI_SHARED_SECRET || '';
+    const API_KEY = process.env.SJSFI_HRMS_API_KEY || '';
+    
+    // Check if sync is enabled
+    const syncEnabled = process.env.SIS_SYNC_ENABLED === 'true';
+    
+    // Get SIS update endpoint for section adviser (defaults to /api/hrms/assign-adviser)
+    const rawEndpoint = process.env.SIS_SECTION_ADVISER_ENDPOINT || '/api/hrms/assign-adviser';
+    const updateEndpoint = rawEndpoint.startsWith('/') ? rawEndpoint : `/${rawEndpoint}`;
+    
+    // If sync is not enabled, return success but indicate no sync was attempted
+    if (!syncEnabled) {
+        return {
+            success: true,
+            synced: false,
+            message: 'SIS sync is disabled (SIS_SYNC_ENABLED is not set to "true")',
+        };
+    }
+    
+    // Validate required environment variables
+    if (!SHARED_SECRET) {
+        console.warn('[SIS Sync] Missing SJSFI_SHARED_SECRET - skipping sync');
+        return {
+            success: true,
+            synced: false,
+            message: 'SIS sync skipped: Missing SJSFI_SHARED_SECRET',
+        };
+    }
+    
+    if (!API_KEY) {
+        console.warn('[SIS Sync] Missing SJSFI_HRMS_API_KEY - skipping sync');
+        return {
+            success: true,
+            synced: false,
+            message: 'SIS sync skipped: Missing SJSFI_HRMS_API_KEY',
+        };
+    }
+    
+    try {
+        // Prepare request body in SIS format
+        const requestBody = {
+            sectionId: options.sectionId,
+            sectionName: options.sectionName,
+            adviser: options.employeeId ? {
+                employeeId: options.employeeId,
+                adviserName: options.adviserName || '',
+                adviserEmail: options.adviserEmail || '',
+            } : null, // null means unassign
+        };
+        
+        const rawBody = JSON.stringify(requestBody);
+        
+        // Generate timestamp and signature (same as fetch operations)
+        const timestamp = Date.now().toString();
+        const message = rawBody + timestamp;
+        const hmac = crypto.createHmac('sha256', SHARED_SECRET);
+        hmac.update(message);
+        const signature = hmac.digest('hex');
+        
+        // Make POST request to SIS
+        const url = `${ENROLLMENT_BASE_URL}${updateEndpoint}`;
+        console.log(`[SIS Sync] Attempting to sync section adviser to SIS: ${url}`);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`,
+                'x-timestamp': timestamp,
+                'x-signature': signature,
+            },
+            body: rawBody,
+        });
+        
+        const responseText = await response.text();
+        let responseData;
+        
+        try {
+            responseData = JSON.parse(responseText);
+        } catch {
+            responseData = { error: 'Invalid JSON response', raw: responseText };
+        }
+        
+        if (!response.ok) {
+            // Handle 404 as "endpoint doesn't exist yet" - this is expected if SIS hasn't implemented it
+            if (response.status === 404) {
+                console.warn(`[SIS Sync] SIS endpoint not found (404): ${url}. This is expected if SIS hasn't implemented the section adviser endpoint yet.`);
+                return {
+                    success: true, // Still return success - assignment was created in HRMS
+                    synced: false,
+                    message: `SIS sync endpoint not available (404). Adviser assignment saved in HRMS only.`,
+                };
+            }
+            
+            // Handle other errors
+            console.error(`[SIS Sync] Failed to sync section adviser to SIS: ${response.status} - ${JSON.stringify(responseData)}`);
+            return {
+                success: true, // Still return success - assignment was created in HRMS
+                synced: false,
+                error: `SIS sync failed: ${responseData.error || response.statusText || 'Unknown error'}`,
+                message: `Adviser assignment saved in HRMS, but sync to SIS failed.`,
+            };
+        }
+        
+        // Success!
+        console.log(`[SIS Sync] Successfully synced section adviser to SIS: sectionId=${options.sectionId}, employeeId=${options.employeeId || 'null'}`);
+        return {
+            success: true,
+            synced: true,
+            message: 'Section adviser synced to SIS successfully',
+        };
+        
+    } catch (error) {
+        // Network errors or other exceptions
+        console.error('[SIS Sync] Error syncing section adviser to SIS:', error);
+        return {
+            success: true, // Still return success - assignment was created in HRMS
+            synced: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            message: 'Adviser assignment saved in HRMS, but sync to SIS encountered an error.',
         };
     }
 }

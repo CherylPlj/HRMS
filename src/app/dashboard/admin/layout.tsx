@@ -191,12 +191,14 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
         
         // Check if user should be on admin dashboard
         if (activeRole !== 'admin' && !activeRole.includes('admin')) {
-          if (activeRole === 'faculty') {
+          if (activeRole === 'registrar') {
+            // Registrars are redirected to external enrollment portal (no HRMS interface)
+            window.location.href = 'https://sjsfi-enrollment.vercel.app/registrar/home';
+            return;
+          } else if (activeRole === 'faculty') {
             router.push('/dashboard/faculty');
           } else if (activeRole === 'cashier') {
             router.push('/dashboard/cashier');
-          } else if (activeRole === 'registrar') {
-            router.push('/dashboard/registrar');
           } else {
             router.push('/dashboard');
           }

@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { syncSectionAdviserToSIS } from '@/lib/sisSync';
 
 // GET /api/class-sections/[id]/assignments - Get assignments for a specific section
 export async function GET(
@@ -152,16 +153,54 @@ export async function PUT(
       );
     }
 
-    // Validate faculty IDs if provided
-    if (adviserFacultyId !== null && adviserFacultyId !== undefined) {
-      const faculty = await prisma.faculty.findUnique({
-        where: { FacultyID: adviserFacultyId },
-      });
-      if (!faculty) {
-        return NextResponse.json(
-          { error: `Faculty with ID ${adviserFacultyId} not found` },
-          { status: 404 }
-        );
+    // Validate faculty IDs if provided and get adviser name
+    let adviserName: string | null | undefined = undefined; // undefined means don't update
+    if (adviserFacultyId !== undefined) {
+      if (adviserFacultyId !== null && adviserFacultyId !== 0) {
+        const faculty = await prisma.faculty.findUnique({
+          where: { FacultyID: adviserFacultyId },
+          include: {
+            User: {
+              select: {
+                FirstName: true,
+                LastName: true,
+              },
+            },
+          },
+        });
+        if (!faculty) {
+          return NextResponse.json(
+            { error: `Faculty with ID ${adviserFacultyId} not found` },
+            { status: 404 }
+          );
+        }
+        
+        // Check advisory class limit (max 4 per teacher)
+        // Exclude the current section from count (allows updating the same section)
+        const existingAdvisoryCount = await prisma.classSection.count({
+          where: {
+            adviserFacultyId: adviserFacultyId,
+            id: {
+              not: sectionId,
+            },
+          },
+        });
+        
+        if (existingAdvisoryCount >= 4) {
+          const teacherName = `${faculty.User.FirstName} ${faculty.User.LastName}`.trim();
+          return NextResponse.json(
+            { 
+              error: `Teacher ${teacherName} already has ${existingAdvisoryCount} advisory classes. Maximum allowed is 4 advisory classes per teacher.` 
+            },
+            { status: 400 }
+          );
+        }
+        
+        // Get the adviser's full name
+        adviserName = `${faculty.User.FirstName} ${faculty.User.LastName}`.trim();
+      } else {
+        // Explicitly clear the adviser name when adviser is removed (set to null)
+        adviserName = null;
       }
     }
 
@@ -189,14 +228,30 @@ export async function PUT(
       }
     }
 
+    // Prepare update data
+    const updateData: any = {};
+    
+    // Only update fields that are explicitly provided in the request
+    if (adviserFacultyId !== undefined) {
+      updateData.adviserFacultyId = adviserFacultyId;
+      // Always update adviser name when adviserFacultyId is provided (even if null to clear it)
+      if (adviserName !== undefined) {
+        updateData.adviser = adviserName;
+      }
+    }
+    
+    if (homeroomTeacherId !== undefined) {
+      updateData.homeroomTeacherId = homeroomTeacherId;
+    }
+    
+    if (sectionHeadId !== undefined) {
+      updateData.sectionHeadId = sectionHeadId;
+    }
+
     // Update the section
     const updatedSection = await prisma.classSection.update({
       where: { id: sectionId },
-      data: {
-        adviserFacultyId: adviserFacultyId === null ? null : adviserFacultyId,
-        homeroomTeacherId: homeroomTeacherId === null ? null : homeroomTeacherId,
-        sectionHeadId: sectionHeadId === null ? null : sectionHeadId,
-      },
+      data: updateData,
       include: {
         adviserFaculty: {
           include: {
@@ -248,6 +303,28 @@ export async function PUT(
         },
       },
     });
+
+    // Sync adviser assignment to SIS
+    if (adviserFacultyId !== existingSection.adviserFacultyId) {
+      try {
+        const syncResult = await syncSectionAdviserToSIS({
+          sectionId: updatedSection.id,
+          sectionName: updatedSection.name,
+          employeeId: updatedSection.adviserFaculty?.Employee?.EmployeeID || null,
+          adviserName: updatedSection.adviserFaculty ? `${updatedSection.adviserFaculty.User.FirstName} ${updatedSection.adviserFaculty.User.LastName}`.trim() : null,
+          adviserEmail: updatedSection.adviserFaculty?.User.Email || null,
+        });
+        
+        if (syncResult.synced) {
+          console.log(`[Section Assignments] Successfully synced adviser assignment to SIS for section ${updatedSection.name}`);
+        } else {
+          console.warn(`[Section Assignments] Adviser assignment saved in HRMS but not synced to SIS: ${syncResult.message || syncResult.error}`);
+        }
+      } catch (error) {
+        // Log error but don't fail the request - assignment is saved in HRMS
+        console.error('[Section Assignments] Error syncing adviser to SIS:', error);
+      }
+    }
 
     return NextResponse.json({
       sectionId: updatedSection.id,

@@ -204,14 +204,17 @@ export default clerkMiddleware(async (auth, req) => {
                     const role = await getActiveRole(userId ? userId : undefined);
 
                     // Redirect to appropriate dashboard based on role
+                    // Registrars are redirected to external enrollment portal (no HRMS interface)
+                    if (role === 'registrar') {
+                        return NextResponse.redirect('https://sjsfi-enrollment.vercel.app/');
+                    }
+                    
                     const dashboardPath = role === 'admin' || role === 'super admin' 
                         ? '/dashboard/admin'
                         : role === 'faculty'
                         ? '/dashboard/faculty'
                         : role === 'cashier'
                         ? '/dashboard/cashier'
-                        : role === 'registrar'
-                        ? '/dashboard/registrar'
                         : role === 'employee' || role?.includes('employee')
                         ? '/dashboard/employee'
                         : '/dashboard';
