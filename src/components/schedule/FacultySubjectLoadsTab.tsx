@@ -62,6 +62,7 @@ export default function FacultySubjectLoadsTab() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
+  const [filterLoad, setFilterLoad] = useState<string>('all');
   const [expandedFaculty, setExpandedFaculty] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -168,7 +169,17 @@ export default function FacultySubjectLoadsTab() {
       filterDepartment === 'all' ||
       load.schedules.some((s) => s.subject.department === filterDepartment);
 
-    return matchesSearch && matchesDepartment;
+    const matchesLoad = (() => {
+      if (filterLoad === 'all') return true;
+      if (filterLoad === '0') return load.totalHoursPerWeek === 0;
+      if (filterLoad === '1-10') return load.totalHoursPerWeek >= 1 && load.totalHoursPerWeek <= 10;
+      if (filterLoad === '11-20') return load.totalHoursPerWeek >= 11 && load.totalHoursPerWeek <= 20;
+      if (filterLoad === '21-30') return load.totalHoursPerWeek >= 21 && load.totalHoursPerWeek <= 30;
+      if (filterLoad === '31+') return load.totalHoursPerWeek >= 31;
+      return true;
+    })();
+
+    return matchesSearch && matchesDepartment && matchesLoad;
   });
 
   // Get unique departments
@@ -201,7 +212,7 @@ export default function FacultySubjectLoadsTab() {
 
       {/* Search and Filter */}
       <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
               Search
@@ -239,6 +250,27 @@ export default function FacultySubjectLoadsTab() {
                     {dept}
                   </option>
                 ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="filterLoad" className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by Load
+            </label>
+            <div className="relative">
+              <select
+                id="filterLoad"
+                value={filterLoad}
+                onChange={(e) => setFilterLoad(e.target.value)}
+                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md appearance-none"
+              >
+                <option value="all">All Loads</option>
+                <option value="0">0 hours</option>
+                <option value="1-10">1-10 hours</option>
+                <option value="11-20">11-20 hours</option>
+                <option value="21-30">21-30 hours</option>
+                <option value="31+">31+ hours</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>

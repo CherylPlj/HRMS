@@ -91,7 +91,7 @@ export default function ScheduleTable({
               </div>
 
               {(onEdit || onDelete) && (
-                <div className="flex space-x-3 pt-2 border-t border-gray-200">
+                <div className="hidden flex space-x-3 pt-2 border-t border-gray-200">
                   {onEdit && (
                     <button
                       onClick={() => onEdit(schedule)}
@@ -164,7 +164,7 @@ export default function ScheduleTable({
               <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Duration
               </th>
-              <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="hidden px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -201,7 +201,7 @@ export default function ScheduleTable({
                 <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {schedule.duration}h
                 </td>
-                <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="hidden px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end space-x-2 sm:space-x-3">
                     {onEdit && (
                       <button

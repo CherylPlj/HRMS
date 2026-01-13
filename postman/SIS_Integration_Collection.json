@@ -1,0 +1,462 @@
+{
+	"info": {
+		"_postman_id": "sis-integration-collection",
+		"name": "SIS Integration Tests",
+		"description": "Collection for testing SIS-HRMS integration endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User Access Lookup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{test_email}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/xr/user-access-lookup",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"user-access-lookup"
+					]
+				},
+				"description": "Lookup user access and roles by email"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"let body = pm.request.body.raw || '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);",
+							"",
+							"console.log(\"Generated timestamp:\", timestamp);",
+							"console.log(\"Generated signature:\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Section Assignments",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/xr/section-assignments",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"section-assignments"
+					]
+				},
+				"description": "Get all section assignments (advisers, homeroom teachers, section heads)"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"const body = '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Section Assignments (Filtered)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/xr/section-assignments?gradeLevel=7&schoolYear=2024-2025",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"section-assignments"
+					],
+					"query": [
+						{
+							"key": "gradeLevel",
+							"value": "7"
+						},
+						{
+							"key": "schoolYear",
+							"value": "2024-2025"
+						}
+					]
+				},
+				"description": "Get section assignments filtered by grade level and school year"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"const body = '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Faculty Availability",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/xr/faculty-availability/{{test_employee_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"faculty-availability",
+						"{{test_employee_id}}"
+					]
+				},
+				"description": "Check if faculty is available for teaching or currently on leave"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"const body = '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Faculty Qualifications",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/xr/faculty-qualifications/{{test_employee_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"faculty-qualifications",
+						"{{test_employee_id}}"
+					]
+				},
+				"description": "Get faculty education, licenses, and certifications"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"const body = '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Faculty Workload",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/xr/faculty-workload/{{test_employee_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"faculty-workload",
+						"{{test_employee_id}}"
+					]
+				},
+				"description": "Get faculty current teaching load and availability"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"const body = '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Workload Validation",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "x-timestamp",
+						"value": "{{timestamp}}",
+						"type": "text"
+					},
+					{
+						"key": "x-signature",
+						"value": "{{signature}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"employeeId\": \"{{test_employee_id}}\",\n  \"additionalHours\": 3,\n  \"additionalSections\": 1,\n  \"day\": \"Monday\",\n  \"time\": \"10:00-11:30\",\n  \"duration\": 1.5\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/xr/faculty-workload/validate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"xr",
+						"faculty-workload",
+						"validate"
+					]
+				},
+				"description": "Validate if faculty can take additional workload"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const sharedSecret = pm.environment.get(\"shared_secret\");",
+							"const timestamp = Date.now().toString();",
+							"pm.environment.set(\"timestamp\", timestamp);",
+							"",
+							"let body = pm.request.body.raw || '';",
+							"const message = body + timestamp;",
+							"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+							"pm.environment.set(\"signature\", signature);",
+							"",
+							"console.log(\"Generated timestamp:\", timestamp);",
+							"console.log(\"Generated signature:\", signature);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Collection-level pre-request script",
+					"// This runs before every request in the collection",
+					"const sharedSecret = pm.environment.get(\"shared_secret\");",
+					"const timestamp = Date.now().toString();",
+					"pm.environment.set(\"timestamp\", timestamp);",
+					"",
+					"// Get request body (for POST requests)",
+					"let body = '';",
+					"if (pm.request.body && pm.request.body.raw) {",
+					"    body = pm.request.body.raw;",
+					"}",
+					"",
+					"// Generate signature",
+					"const message = body + timestamp;",
+					"const signature = CryptoJS.HmacSHA256(message, sharedSecret).toString();",
+					"pm.environment.set(\"signature\", signature);"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://your-hrms-domain.com",
+			"type": "string"
+		}
+	]
+}
