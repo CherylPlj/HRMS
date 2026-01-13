@@ -145,7 +145,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Validation 1: Check if teacher has overlapping time for different subjects
+        // Validation 1: Check if teacher has overlapping time on the same day
+        // Teachers cannot have two subjects at the same time and same day
         // Get all existing schedules for this faculty on the days being processed
         const existingFacultySchedules = await handlePreparedStatementError(() =>
           prisma.schedules.findMany({
@@ -164,15 +165,13 @@ export async function POST(request: NextRequest) {
           const daySchedules = existingFacultySchedules.filter(s => s.day === day);
           for (const existingSchedule of daySchedules) {
             if (timeRangesOverlap(existingSchedule.time, validatedData.time)) {
-              // If it's a different subject, it's a conflict
-              if (existingSchedule.subjectId !== validatedData.subjectId) {
-                errors.push({ 
-                  index: i, 
-                  error: 'Schedule conflict detected',
-                  message: `Faculty already has ${existingSchedule.subject.name} scheduled at ${day} ${existingSchedule.time}. Cannot assign ${subject.name} at overlapping time ${validatedData.time}.`
-                });
-                break;
-              }
+              // Any overlapping time on the same day is a conflict, regardless of subject
+              errors.push({ 
+                index: i, 
+                error: 'Schedule conflict detected',
+                message: `Teacher already has ${existingSchedule.subject.name} scheduled at ${day} ${existingSchedule.time}. Cannot assign ${subject.name} at overlapping time ${validatedData.time} on the same day.`
+              });
+              break;
             }
           }
           if (errors.some(e => e.index === i)) break; // Exit outer loop if error found

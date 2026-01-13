@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { syncAssignmentToSIS } from '@/lib/sisSync';
+import { timeRangesOverlap } from '@/lib/timeUtils';
 
 /**
  * POST /api/schedules/fetch-from-sis/assign-teacher
@@ -68,6 +69,29 @@ export async function POST(request: Request) {
                 success: false,
                 error: 'Class section not found',
             }, { status: 404 });
+        }
+
+        // Validation: Check if teacher has overlapping time on the same day
+        // Teachers cannot have two subjects at the same time and same day
+        const existingFacultySchedules = await prisma.schedules.findMany({
+            where: {
+                facultyId: facultyId,
+                day: day,
+            },
+            include: {
+                subject: true,
+            },
+        });
+
+        // Check for overlapping times (not just exact matches)
+        for (const existingSchedule of existingFacultySchedules) {
+            if (timeRangesOverlap(existingSchedule.time, time)) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Schedule conflict detected',
+                    message: `Teacher already has ${existingSchedule.subject.name} scheduled at ${day} ${existingSchedule.time}. Cannot assign ${subject.name} at overlapping time ${time} on the same day.`,
+                }, { status: 400 });
+            }
         }
 
         // Create schedule in HRMS

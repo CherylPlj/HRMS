@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { timeRangesOverlap } from '@/lib/timeUtils';
 
 const scheduleItemSchema = z.object({
   // Faculty can be identified by ID, name, or email
@@ -270,24 +271,35 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Check for schedule conflicts
+        // Check for schedule conflicts - teachers cannot have two subjects at the same time and same day
+        let hasConflict = false;
         if (facultyId) {
-          const conflictingSchedule = await prisma.schedules.findFirst({
+          const existingFacultySchedules = await prisma.schedules.findMany({
             where: {
               facultyId: facultyId,
               day: schedule.day,
-              time: schedule.time,
+            },
+            include: {
+              subject: true,
             },
           });
 
-          if (conflictingSchedule) {
-            result.failed++;
-            result.errors.push({
-              row: rowNum,
-              message: `Schedule conflict: Faculty already has a class on ${schedule.day} at ${schedule.time}`,
-            });
-            continue;
+          // Check for overlapping times (not just exact matches)
+          for (const existingSchedule of existingFacultySchedules) {
+            if (timeRangesOverlap(existingSchedule.time, schedule.time)) {
+              result.failed++;
+              result.errors.push({
+                row: rowNum,
+                message: `Schedule conflict: Teacher already has ${existingSchedule.subject.name} scheduled at ${schedule.day} ${existingSchedule.time}. Cannot assign another subject at overlapping time ${schedule.time} on the same day.`,
+              });
+              hasConflict = true;
+              break;
+            }
           }
+        }
+
+        if (hasConflict) {
+          continue; // Skip to next schedule
         }
 
         // Create schedule
