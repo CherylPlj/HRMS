@@ -32,6 +32,16 @@ interface ClassSection {
   sectionHead?: Faculty | null;
 }
 
+// Helper to get section name (handles both HRMS and SIS formats)
+const getSectionName = (section: ClassSection | any): string => {
+  return section.name || section.section?.name || '';
+};
+
+// Helper to get section grade level (handles both HRMS and SIS formats)
+const getSectionGradeLevel = (section: ClassSection | any): string | null => {
+  return section.gradeLevel || section.section?.gradeLevel || null;
+};
+
 export default function SectionAssignmentsTab() {
   const [sections, setSections] = useState<ClassSection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,15 +63,47 @@ export default function SectionAssignmentsTab() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/class-sections?includeAssignments=true');
+      const response = await fetch('/api/hrms/sections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
       if (!response.ok) {
-        throw new Error('Failed to fetch sections');
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        let errorMessage = `Failed to fetch sections: ${response.status} ${response.statusText}`;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch (e) {
+            // If JSON parsing fails, use the status text
+            console.error('Failed to parse error response as JSON:', e);
+          }
+        } else {
+          // Response is HTML or plain text (like a 404 page)
+          const textResponse = await response.text();
+          console.error('Non-JSON error response:', textResponse.substring(0, 200));
+        }
+        
+        throw new Error(errorMessage);
       }
-      const data = await response.json();
-      setSections(data);
-    } catch (err) {
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response');
+      }
+      
+      const sections = await response.json();
+      console.log('[SectionAssignmentsTab] Fetched sections:', sections);
+      setSections(sections);
+    } catch (err: any) {
       console.error('Error fetching sections:', err);
-      setError('Failed to load section assignments');
+      setError(err.message || 'Failed to load section assignments');
     } finally {
       setLoading(false);
     }
@@ -127,8 +169,11 @@ export default function SectionAssignmentsTab() {
 
   // Filter sections
   const filteredSections = sections.filter((section) => {
+    const sectionName = getSectionName(section);
+    const sectionGradeLevel = getSectionGradeLevel(section);
+    
     const matchesSearch = 
-      section.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sectionName && sectionName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       section.adviserFaculty?.User?.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       section.adviserFaculty?.User?.LastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       section.homeroomTeacher?.User?.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +181,7 @@ export default function SectionAssignmentsTab() {
       section.sectionHead?.User?.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       section.sectionHead?.User?.LastName?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesGradeLevel = filterGradeLevel === 'all' || section.gradeLevel === filterGradeLevel;
+    const matchesGradeLevel = filterGradeLevel === 'all' || sectionGradeLevel === filterGradeLevel;
 
     return matchesSearch && matchesGradeLevel;
   });
@@ -152,8 +197,8 @@ export default function SectionAssignmentsTab() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedSections = filteredSections.slice(startIndex, endIndex);
 
-  // Get unique grade levels for filter
-  const gradeLevels = Array.from(new Set(sections.map(s => s.gradeLevel).filter(Boolean))).sort();
+  // Get unique grade levels for filter (handles both HRMS and SIS formats)
+  const gradeLevels = Array.from(new Set(sections.map(s => getSectionGradeLevel(s)).filter(Boolean))).sort();
 
   // Calculate stats
   const totalSections = sections.length;
@@ -375,15 +420,15 @@ export default function SectionAssignmentsTab() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedSections.map((section) => (
-                  <tr key={section.id} className="hover:bg-gray-50">
+                  <tr key={section.id || (section as any).sectionId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{section.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{getSectionName(section)}</div>
                       {section.schoolYear && (
                         <div className="text-sm text-gray-500">{section.schoolYear}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{section.gradeLevel || '-'}</div>
+                      <div className="text-sm text-gray-900">{getSectionGradeLevel(section) || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{formatTeacherName(section.adviserFaculty)}</div>

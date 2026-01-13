@@ -998,9 +998,60 @@ function EditFacultyDropdown({
 }: EditFacultyDropdownProps) {
     const [selectedFacultyId, setSelectedFacultyId] = useState<number | ''>(schedule.facultyId || '');
     const [isOpen, setIsOpen] = useState(false);
+    const [conflicts, setConflicts] = useState<Array<{ type: 'teacher' | 'section'; message: string; conflictingSchedule: any }>>([]);
+    const [checkingConflicts, setCheckingConflicts] = useState(false);
+
+    // Check for conflicts when faculty selection changes
+    const checkConflicts = async (facultyId: number) => {
+        if (!schedule.subjectId || !schedule.classSectionId || !facultyId) {
+            setConflicts([]);
+            return;
+        }
+
+        setCheckingConflicts(true);
+        try {
+            const response = await fetch('/api/schedules/check-conflicts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    facultyId: facultyId,
+                    subjectId: schedule.subjectId,
+                    classSectionId: schedule.classSectionId,
+                    day: schedule.day,
+                    time: schedule.time,
+                    scheduleId: schedule.hrmsScheduleId || undefined,
+                }),
+            });
+
+            const data = await response.json();
+            if (data.hasConflicts) {
+                setConflicts(data.conflicts || []);
+            } else {
+                setConflicts([]);
+            }
+        } catch (error) {
+            console.error('Error checking conflicts:', error);
+            setConflicts([]);
+        } finally {
+            setCheckingConflicts(false);
+        }
+    };
+
+    const handleFacultyChange = (facultyId: number | '') => {
+        setSelectedFacultyId(facultyId);
+        if (facultyId && typeof facultyId === 'number' && facultyId !== schedule.facultyId) {
+            checkConflicts(facultyId);
+        } else {
+            setConflicts([]);
+        }
+    };
 
     const handleEdit = () => {
         if (selectedFacultyId && typeof selectedFacultyId === 'number' && selectedFacultyId !== schedule.facultyId) {
+            // Prevent submission if conflicts exist
+            if (conflicts.length > 0) {
+                return;
+            }
             onEdit(schedule, selectedFacultyId);
             setIsOpen(false);
         }
@@ -1017,7 +1068,13 @@ function EditFacultyDropdown({
     return (
         <div className="relative">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    setIsOpen(!isOpen);
+                    if (!isOpen) {
+                        setConflicts([]);
+                        setSelectedFacultyId(schedule.facultyId || '');
+                    }
+                }}
                 disabled={editing}
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 title="Edit assigned faculty"
@@ -1032,7 +1089,10 @@ function EditFacultyDropdown({
                 <>
                     <div
                         className="fixed inset-0 bg-black bg-opacity-50 z-40"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                            setIsOpen(false);
+                            setConflicts([]);
+                        }}
                     ></div>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                         <div 
@@ -1076,7 +1136,7 @@ function EditFacultyDropdown({
                                     </label>
                                     <select
                                         value={selectedFacultyId}
-                                        onChange={(e) => setSelectedFacultyId(Number(e.target.value) || '')}
+                                        onChange={(e) => handleFacultyChange(Number(e.target.value) || '')}
                                         className="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                     >
                                         <option value="">-- Select Teacher --</option>
@@ -1097,16 +1157,66 @@ function EditFacultyDropdown({
                                         })}
                                     </select>
                                 </div>
+
+                                {/* Conflict Warnings */}
+                                {checkingConflicts && (
+                                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Checking for conflicts...
+                                    </div>
+                                )}
+
+                                {conflicts.length > 0 && !checkingConflicts && (
+                                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                                        <div className="flex items-center gap-2 text-red-800 font-semibold">
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            </svg>
+                                            Schedule Conflict Detected
+                                        </div>
+                                        <div className="text-sm text-red-700 space-y-2">
+                                            {conflicts.map((conflict, idx) => (
+                                                <div key={idx} className="border-l-4 border-red-400 pl-3">
+                                                    <div className="font-medium mb-1">
+                                                        {conflict.type === 'teacher' ? 'Teacher Conflict:' : 'Section Conflict:'}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        {conflict.message}
+                                                    </div>
+                                                    {conflict.conflictingSchedule && (
+                                                        <div className="mt-1 text-xs bg-red-100 p-2 rounded">
+                                                            <div><strong>Conflicting Schedule:</strong></div>
+                                                            <div>Subject: {conflict.conflictingSchedule.subjectName}</div>
+                                                            <div>Section: {conflict.conflictingSchedule.sectionName}</div>
+                                                            <div>Teacher: {conflict.conflictingSchedule.teacherName}</div>
+                                                            <div>Time: {conflict.conflictingSchedule.day} {conflict.conflictingSchedule.time}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="text-xs text-red-600 font-medium mt-2">
+                                            ⚠ Cannot assign teacher due to schedule conflict. Please resolve conflicts first.
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         onClick={handleEdit}
-                                        disabled={!selectedFacultyId || editing || selectedFacultyId === schedule.facultyId}
+                                        disabled={!selectedFacultyId || editing || selectedFacultyId === schedule.facultyId || conflicts.length > 0 || checkingConflicts}
                                         className="flex-1 px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Update
                                     </button>
                                     <button
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            setConflicts([]);
+                                        }}
                                         className="px-4 py-2.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                                     >
                                         Cancel
@@ -1138,12 +1248,63 @@ function TeacherAssignmentDropdown({
 }: TeacherAssignmentDropdownProps) {
     const [selectedFacultyId, setSelectedFacultyId] = useState<number | ''>('');
     const [isOpen, setIsOpen] = useState(false);
+    const [conflicts, setConflicts] = useState<Array<{ type: 'teacher' | 'section'; message: string; conflictingSchedule: any }>>([]);
+    const [checkingConflicts, setCheckingConflicts] = useState(false);
+
+    // Check for conflicts when faculty selection changes
+    const checkConflicts = async (facultyId: number) => {
+        if (!schedule.subjectId || !schedule.classSectionId || !facultyId) {
+            setConflicts([]);
+            return;
+        }
+
+        setCheckingConflicts(true);
+        try {
+            const response = await fetch('/api/schedules/check-conflicts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    facultyId: facultyId,
+                    subjectId: schedule.subjectId,
+                    classSectionId: schedule.classSectionId,
+                    day: schedule.day,
+                    time: schedule.time,
+                }),
+            });
+
+            const data = await response.json();
+            if (data.hasConflicts) {
+                setConflicts(data.conflicts || []);
+            } else {
+                setConflicts([]);
+            }
+        } catch (error) {
+            console.error('Error checking conflicts:', error);
+            setConflicts([]);
+        } finally {
+            setCheckingConflicts(false);
+        }
+    };
+
+    const handleFacultyChange = (facultyId: number | '') => {
+        setSelectedFacultyId(facultyId);
+        if (facultyId && typeof facultyId === 'number') {
+            checkConflicts(facultyId);
+        } else {
+            setConflicts([]);
+        }
+    };
 
     const handleAssign = () => {
         if (selectedFacultyId && typeof selectedFacultyId === 'number') {
+            // Prevent submission if conflicts exist
+            if (conflicts.length > 0) {
+                return;
+            }
             onAssign(schedule, selectedFacultyId);
             setIsOpen(false);
             setSelectedFacultyId('');
+            setConflicts([]);
         }
     };
 
@@ -1158,7 +1319,13 @@ function TeacherAssignmentDropdown({
     return (
         <div className="relative">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    setIsOpen(!isOpen);
+                    if (!isOpen) {
+                        setConflicts([]);
+                        setSelectedFacultyId('');
+                    }
+                }}
                 disabled={assigning}
                 className="px-3 py-1.5 text-sm bg-[#800000] text-white rounded hover:bg-[#600000] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1169,7 +1336,10 @@ function TeacherAssignmentDropdown({
                 <>
                     <div
                         className="fixed inset-0 bg-black bg-opacity-50 z-40"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                            setIsOpen(false);
+                            setConflicts([]);
+                        }}
                     ></div>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                         <div 
@@ -1215,7 +1385,7 @@ function TeacherAssignmentDropdown({
                                     </label>
                                     <select
                                         value={selectedFacultyId}
-                                        onChange={(e) => setSelectedFacultyId(Number(e.target.value) || '')}
+                                        onChange={(e) => handleFacultyChange(Number(e.target.value) || '')}
                                         className="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] bg-white"
                                     >
                                         <option value="">-- Select Teacher --</option>
@@ -1234,16 +1404,66 @@ function TeacherAssignmentDropdown({
                                         })}
                                     </select>
                                 </div>
+
+                                {/* Conflict Warnings */}
+                                {checkingConflicts && (
+                                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Checking for conflicts...
+                                    </div>
+                                )}
+
+                                {conflicts.length > 0 && !checkingConflicts && (
+                                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                                        <div className="flex items-center gap-2 text-red-800 font-semibold">
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            </svg>
+                                            Schedule Conflict Detected
+                                        </div>
+                                        <div className="text-sm text-red-700 space-y-2">
+                                            {conflicts.map((conflict, idx) => (
+                                                <div key={idx} className="border-l-4 border-red-400 pl-3">
+                                                    <div className="font-medium mb-1">
+                                                        {conflict.type === 'teacher' ? 'Teacher Conflict:' : 'Section Conflict:'}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        {conflict.message}
+                                                    </div>
+                                                    {conflict.conflictingSchedule && (
+                                                        <div className="mt-1 text-xs bg-red-100 p-2 rounded">
+                                                            <div><strong>Conflicting Schedule:</strong></div>
+                                                            <div>Subject: {conflict.conflictingSchedule.subjectName}</div>
+                                                            <div>Section: {conflict.conflictingSchedule.sectionName}</div>
+                                                            <div>Teacher: {conflict.conflictingSchedule.teacherName}</div>
+                                                            <div>Time: {conflict.conflictingSchedule.day} {conflict.conflictingSchedule.time}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="text-xs text-red-600 font-medium mt-2">
+                                            ⚠ Cannot assign teacher due to schedule conflict. Please resolve conflicts first.
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         onClick={handleAssign}
-                                        disabled={!selectedFacultyId || assigning}
+                                        disabled={!selectedFacultyId || assigning || conflicts.length > 0 || checkingConflicts}
                                         className="flex-1 px-4 py-2.5 text-sm font-medium bg-[#800000] text-white rounded-lg hover:bg-[#600000] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Assign
                                     </button>
                                     <button
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            setConflicts([]);
+                                        }}
                                         className="px-4 py-2.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                                     >
                                         Cancel

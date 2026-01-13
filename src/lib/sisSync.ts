@@ -163,13 +163,123 @@ export async function syncAssignmentToSIS(options: SyncToSISOptions): Promise<Sy
                 };
             }
             
+            // Handle 409 - Schedule already has a teacher assigned
+            if (response.status === 409) {
+                const currentTeacher = responseData.currentTeacher;
+                // Check if it's the same teacher - if so, consider it synced
+                if (currentTeacher && currentTeacher.teacherId === options.employeeId) {
+                    console.log(`[SIS Sync] Schedule already has the same teacher assigned (${options.employeeId}). Considered synced.`);
+                    return {
+                        success: true,
+                        synced: true,
+                        message: 'Schedule already has this teacher assigned in SIS. No update needed.',
+                    };
+                } else {
+                    // Different teacher - try to replace by unassigning first, then assigning new teacher
+                    const currentTeacherName = currentTeacher?.teacherName || currentTeacher?.teacherId || 'another teacher';
+                    console.log(`[SIS Sync] Schedule has different teacher (${currentTeacherName}). Attempting to replace...`);
+                    
+                    try {
+                        // Step 1: Unassign current teacher
+                        const unassignBody = {
+                            scheduleId: options.scheduleId,
+                            teacher: null, // null means unassign (consistent with section adviser unassignment)
+                        };
+                        
+                        const unassignRawBody = JSON.stringify(unassignBody);
+                        const unassignTimestamp = Date.now().toString();
+                        const unassignMessage = unassignRawBody + unassignTimestamp;
+                        const unassignHmac = crypto.createHmac('sha256', SHARED_SECRET);
+                        unassignHmac.update(unassignMessage);
+                        const unassignSignature = unassignHmac.digest('hex');
+                        
+                        const unassignResponse = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${API_KEY}`,
+                                'x-timestamp': unassignTimestamp,
+                                'x-signature': unassignSignature,
+                            },
+                            body: unassignRawBody,
+                        });
+                        
+                        // Step 2: Assign new teacher (retry the original request)
+                        if (unassignResponse.ok || unassignResponse.status === 404) {
+                            // Retry the assignment
+                            const retryResponse = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${API_KEY}`,
+                                    'x-timestamp': timestamp,
+                                    'x-signature': signature,
+                                },
+                                body: rawBody,
+                            });
+                            
+                            const retryResponseText = await retryResponse.text();
+                            let retryResponseData;
+                            try {
+                                retryResponseData = JSON.parse(retryResponseText);
+                            } catch {
+                                retryResponseData = { error: 'Invalid JSON response', raw: retryResponseText };
+                            }
+                            
+                            if (retryResponse.ok) {
+                                console.log(`[SIS Sync] Successfully replaced teacher: ${currentTeacherName} -> ${options.employeeId}`);
+                                return {
+                                    success: true,
+                                    synced: true,
+                                    message: `Teacher replaced successfully (replaced ${currentTeacherName} with new teacher).`,
+                                };
+                            } else if (retryResponse.status === 409) {
+                                // Still 409 after unassign - might be a timing issue or SIS doesn't support unassign
+                                console.warn(`[SIS Sync] Still getting 409 after unassign attempt. SIS may not support automatic replacement.`);
+                                return {
+                                    success: true,
+                                    synced: false,
+                                    error: `Schedule already has ${currentTeacherName} assigned in SIS`,
+                                    message: `Assignment updated in HRMS, but SIS still has ${currentTeacherName} assigned. Please unassign the current teacher in SIS manually, then try again.`,
+                                };
+                            } else {
+                                console.error(`[SIS Sync] Failed to assign new teacher after unassign: ${retryResponse.status}`);
+                                return {
+                                    success: true,
+                                    synced: false,
+                                    error: `Failed to assign new teacher: ${retryResponseData.error || retryResponse.statusText}`,
+                                    message: `Assignment updated in HRMS, but failed to replace teacher in SIS: ${retryResponseData.error || retryResponse.statusText}`,
+                                };
+                            }
+                        } else {
+                            // Unassign failed - SIS might not support unassign or requires different approach
+                            console.warn(`[SIS Sync] Could not unassign current teacher (${unassignResponse.status}). SIS may require manual unassignment.`);
+                            return {
+                                success: true,
+                                synced: false,
+                                error: `Schedule already has ${currentTeacherName} assigned in SIS`,
+                                message: `Assignment updated in HRMS, but SIS already has ${currentTeacherName} assigned. Please unassign the current teacher in SIS first, then try again.`,
+                            };
+                        }
+                    } catch (replaceError) {
+                        console.error('[SIS Sync] Error attempting to replace teacher:', replaceError);
+                        return {
+                            success: true,
+                            synced: false,
+                            error: `Schedule already has ${currentTeacherName} assigned in SIS`,
+                            message: `Assignment updated in HRMS, but SIS already has ${currentTeacherName} assigned. Could not automatically replace. Please unassign in SIS first.`,
+                        };
+                    }
+                }
+            }
+            
             // Handle other errors
             console.error(`[SIS Sync] Failed to sync to SIS: ${response.status} - ${JSON.stringify(responseData)}`);
             return {
                 success: true, // Still return success - assignment was created in HRMS
                 synced: false,
                 error: `SIS sync failed: ${responseData.error || response.statusText || 'Unknown error'}`,
-                message: `Assignment saved in HRMS, but sync to SIS failed.`,
+                message: `Assignment saved in HRMS, but sync to SIS failed: ${responseData.error || response.statusText || 'Unknown error'}`,
             };
         }
         

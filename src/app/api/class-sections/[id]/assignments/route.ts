@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
-import { syncSectionAdviserToSIS } from '@/lib/sisSync';
 
 // GET /api/class-sections/[id]/assignments - Get assignments for a specific section
 export async function GET(
@@ -304,27 +303,9 @@ export async function PUT(
       },
     });
 
-    // Sync adviser assignment to SIS
-    if (adviserFacultyId !== existingSection.adviserFacultyId) {
-      try {
-        const syncResult = await syncSectionAdviserToSIS({
-          sectionId: updatedSection.id,
-          sectionName: updatedSection.name,
-          employeeId: updatedSection.adviserFaculty?.Employee?.EmployeeID || null,
-          adviserName: updatedSection.adviserFaculty ? `${updatedSection.adviserFaculty.User.FirstName} ${updatedSection.adviserFaculty.User.LastName}`.trim() : null,
-          adviserEmail: updatedSection.adviserFaculty?.User.Email || null,
-        });
-        
-        if (syncResult.synced) {
-          console.log(`[Section Assignments] Successfully synced adviser assignment to SIS for section ${updatedSection.name}`);
-        } else {
-          console.warn(`[Section Assignments] Adviser assignment saved in HRMS but not synced to SIS: ${syncResult.message || syncResult.error}`);
-        }
-      } catch (error) {
-        // Log error but don't fail the request - assignment is saved in HRMS
-        console.error('[Section Assignments] Error syncing adviser to SIS:', error);
-      }
-    }
+    // Assignment is stored in HRMS database
+    // SIS will fetch assignments from HRMS when needed via the /api/xr/section-assignments endpoint
+    console.log(`[Section Assignments] Assignment updated in HRMS for section ${updatedSection.name}. SIS can fetch via /api/xr/section-assignments`);
 
     return NextResponse.json({
       sectionId: updatedSection.id,
