@@ -30,6 +30,32 @@ export async function GET(
       );
     }
 
+    // First check if the schedule exists and has a valid classSection
+    const scheduleExists = await prisma.schedules.findUnique({
+      where: { id: scheduleId },
+      select: { classSectionId: true },
+    });
+
+    if (!scheduleExists) {
+      return NextResponse.json(
+        { error: 'Schedule not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if the classSection still exists
+    const classSectionExists = await prisma.classSection.findUnique({
+      where: { id: scheduleExists.classSectionId },
+      select: { id: true },
+    });
+
+    if (!classSectionExists) {
+      return NextResponse.json(
+        { error: 'Schedule references a deleted class section' },
+        { status: 404 }
+      );
+    }
+
     const schedule = await prisma.schedules.findUnique({
       where: { id: scheduleId },
       include: {
@@ -49,13 +75,6 @@ export async function GET(
         classSection: true,
       },
     });
-
-    if (!schedule) {
-      return NextResponse.json(
-        { error: 'Schedule not found' },
-        { status: 404 }
-      );
-    }
 
     return NextResponse.json(schedule);
   } catch (error) {

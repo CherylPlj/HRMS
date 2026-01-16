@@ -41,12 +41,26 @@ export async function POST(request: NextRequest) {
       };
     }> = [];
 
+    // Get all valid classSection IDs to filter out orphaned schedules
+    const validClassSectionIds = await prisma.classSection.findMany({
+      select: { id: true },
+    }).then(sections => sections.map(s => s.id));
+
+    // Verify the requested classSectionId is valid
+    if (!validClassSectionIds.includes(classSectionId)) {
+      return NextResponse.json(
+        { error: 'Invalid class section ID' },
+        { status: 400 }
+      );
+    }
+
     // Validation 1: Check if teacher has overlapping time on the same day
     const existingFacultySchedules = await prisma.schedules.findMany({
       where: {
         ...(scheduleId ? { id: { not: scheduleId } } : {}),
         facultyId: facultyId,
         day: day,
+        classSectionId: { in: validClassSectionIds },
       },
       include: {
         subject: true,

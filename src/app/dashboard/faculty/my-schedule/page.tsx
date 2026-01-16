@@ -23,10 +23,18 @@ interface Schedule {
   };
 }
 
+interface ClassSection {
+  id: number;
+  name: string;
+  gradeLevel?: string | null;
+  section?: string | null;
+}
+
 export default function MySchedulePage() {
   const { user } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [advisorySections, setAdvisorySections] = useState<ClassSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [facultyName, setFacultyName] = useState<string>('');
@@ -199,32 +207,49 @@ export default function MySchedulePage() {
     fetchFacultyId();
   }, [user]);
 
-  // Fetch schedules when facultyId is available
+  // Fetch schedules and advisory classes when facultyId is available
   useEffect(() => {
-    const fetchSchedules = async () => {
+    const fetchData = async () => {
       if (!facultyId) return;
 
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`/api/schedules/faculty/${facultyId}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch schedules');
+        // Fetch schedules
+        const schedulesResponse = await fetch(`/api/schedules/faculty/${facultyId}`);
+        if (!schedulesResponse.ok) {
+          const errorText = await schedulesResponse.text();
+          console.error('Schedules API error:', schedulesResponse.status, errorText);
+          throw new Error(`Failed to fetch schedules: ${schedulesResponse.status}`);
         }
+        const schedulesData = await schedulesResponse.json();
+        
+        // The API returns { faculty, schedules, schedulesByDay, summary }
+        // Ensure schedules array is set correctly
+        const schedulesArray = Array.isArray(schedulesData.schedules) 
+          ? schedulesData.schedules 
+          : [];
+        
+        setSchedules(schedulesArray);
 
-        const data = await response.json();
-        setSchedules(data.schedules || []);
+        // Fetch sections with assignments to get advisory roles
+        const sectionsResponse = await fetch('/api/class-sections?includeAssignments=true');
+        if (sectionsResponse.ok) {
+          const sections: any[] = await sectionsResponse.json();
+          // Filter sections where this faculty is assigned as adviser
+          const advisory = sections.filter((s: any) => s.adviserFacultyId === facultyId);
+          setAdvisorySections(advisory);
+        }
       } catch (err) {
-        console.error('Error fetching schedules:', err);
-        setError('Failed to load your schedule');
+        console.error('Error fetching data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load your schedule');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSchedules();
+    fetchData();
   }, [facultyId]);
 
   if (loading) {
@@ -323,7 +348,7 @@ export default function MySchedulePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -399,39 +424,58 @@ export default function MySchedulePage() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-8 w-8 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Advisory Classes</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {advisorySections.length}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Schedule View */}
-      {schedules.length > 0 ? (
+      {/* Advisory Classes Section */}
+      {advisorySections.length > 0 && (
+        <div className="bg-white rounded-lg shadow mb-6 sm:mb-8 p-6">
+          <div className="flex flex-wrap gap-2">
+          <p className="text-lg font-medium text-gray-500">Advisory Classes : </p>
+
+            {advisorySections.map((section) => (
+              <span
+                key={section.id}
+                className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full"
+              >
+                {section.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Schedule View - Always show to display faculty info and summary */}
+      {facultyId && (
         <div className="bg-white rounded-lg shadow">
           <FacultyScheduleView 
-            facultyId={facultyId!}
+            facultyId={facultyId}
           />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow p-12">
-          <div className="text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No Schedule</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              You don't have any classes scheduled yet.
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              Please contact the administrator if you believe this is an error.
-            </p>
-          </div>
         </div>
       )}
     </div>

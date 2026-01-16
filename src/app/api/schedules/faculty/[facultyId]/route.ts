@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, handlePreparedStatementError } from '@/lib/prisma';
 
 // GET /api/schedules/faculty/[facultyId] - Get all schedules for a specific faculty
 export async function GET(
@@ -18,19 +18,21 @@ export async function GET(
     }
 
     // Check if faculty exists
-    const faculty = await prisma.faculty.findUnique({
-      where: { FacultyID: facultyId },
-      include: {
-        User: {
-          select: {
-            FirstName: true,
-            LastName: true,
-            Email: true,
+    const faculty = await handlePreparedStatementError(() =>
+      prisma.faculty.findUnique({
+        where: { FacultyID: facultyId },
+        include: {
+          User: {
+            select: {
+              FirstName: true,
+              LastName: true,
+              Email: true,
+            },
           },
+          Department: true,
         },
-        Department: true,
-      },
-    });
+      })
+    );
 
     if (!faculty) {
       return NextResponse.json(
@@ -39,18 +41,42 @@ export async function GET(
       );
     }
 
-    // Get all schedules for this faculty
-    const schedules = await prisma.schedules.findMany({
-      where: { facultyId },
-      include: {
-        subject: true,
-        classSection: true,
-      },
-      orderBy: [
-        { day: 'asc' },
-        { time: 'asc' },
-      ],
-    });
+    // Get all valid classSection IDs to filter out orphaned schedules
+    const validClassSectionIds = await handlePreparedStatementError(() =>
+      prisma.classSection.findMany({
+        select: { id: true },
+      })
+    ).then(sections => sections.map(s => s.id));
+
+    // Build where clause - only filter by classSectionId if we have valid IDs
+    const where: any = {
+      facultyId,
+    };
+    
+    // Only add classSectionId filter if we have valid IDs to filter by
+    // This prevents filtering out all schedules when there are no class sections
+    if (validClassSectionIds.length > 0) {
+      where.classSectionId = { in: validClassSectionIds };
+    } else {
+      // If no valid class sections exist, return empty schedules
+      // This is likely a data integrity issue, but prevents errors
+      where.classSectionId = { in: [] };
+    }
+
+    // Get all schedules for this faculty (only with valid classSectionIds)
+    const schedules = await handlePreparedStatementError(() =>
+      prisma.schedules.findMany({
+        where,
+        include: {
+          subject: true,
+          classSection: true,
+        },
+        orderBy: [
+          { day: 'asc' },
+          { time: 'asc' },
+        ],
+      })
+    );
 
     // Calculate total hours per week
     const totalHoursPerWeek = schedules.reduce(

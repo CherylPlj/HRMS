@@ -27,7 +27,17 @@ export async function GET(request: NextRequest) {
     const facultyId = searchParams.get('facultyId');
     const day = searchParams.get('day');
 
-    const where: any = {};
+    // First, get all valid classSection IDs to filter out orphaned schedules
+    const validClassSectionIds = await handlePreparedStatementError(() =>
+      prisma.classSection.findMany({
+        select: { id: true },
+      })
+    ).then(sections => sections.map(s => s.id));
+
+    const where: any = {
+      // Only include schedules with valid classSectionIds
+      classSectionId: { in: validClassSectionIds },
+    };
     
     if (facultyId) {
       where.facultyId = parseInt(facultyId);

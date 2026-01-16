@@ -78,7 +78,7 @@ export default function SectionAssignmentsPage() {
   };
 
   const handleSubmit = async (data: {
-    sectionId: number;
+    sectionIds: number[];
     adviserFacultyId: number | null;
     homeroomTeacherId: number | null;
     sectionHeadId: number | null;
@@ -87,24 +87,53 @@ export default function SectionAssignmentsPage() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/class-sections/${data.sectionId}/assignments`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          adviserFacultyId: data.adviserFacultyId,
-          homeroomTeacherId: data.homeroomTeacherId,
-          sectionHeadId: data.sectionHeadId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update assignments');
+      if (!data.sectionIds || data.sectionIds.length === 0) {
+        throw new Error('Please select at least one section');
       }
 
-      setToast({ message: 'Section assignments updated successfully!', type: 'success' });
+      // Assign to all selected sections
+      const results = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const sectionId of data.sectionIds) {
+        try {
+          const response = await fetch(`/api/class-sections/${sectionId}/assignments`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              adviserFacultyId: data.adviserFacultyId,
+              homeroomTeacherId: data.homeroomTeacherId,
+              sectionHeadId: data.sectionHeadId,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update assignment');
+          }
+
+          successCount++;
+        } catch (err: any) {
+          errorCount++;
+          results.push({
+            sectionId,
+            error: err.message || 'Failed to update assignment',
+          });
+        }
+      }
+
+      if (errorCount > 0) {
+        const errorMessages = results.map(r => `Section ${r.sectionId}: ${r.error}`).join(', ');
+        throw new Error(`Failed to assign ${errorCount} of ${data.sectionIds.length} sections. ${errorMessages}`);
+      }
+
+      setToast({ 
+        message: `Successfully assigned to ${successCount} section${successCount !== 1 ? 's' : ''}!`, 
+        type: 'success' 
+      });
       await fetchSections();
       setShowModal(false);
       setEditingSection(null);

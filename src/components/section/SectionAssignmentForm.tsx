@@ -34,7 +34,7 @@ interface ClassSection {
 interface SectionAssignmentFormProps {
   section?: ClassSection | null;
   onSubmit: (data: {
-    sectionId: number;
+    sectionIds: number[];
     adviserFacultyId: number | null;
     homeroomTeacherId: number | null;
     sectionHeadId: number | null;
@@ -49,10 +49,8 @@ export default function SectionAssignmentForm({
   onCancel,
   loading = false,
 }: SectionAssignmentFormProps) {
-  const [selectedSectionId, setSelectedSectionId] = useState<number | ''>(section?.id || '');
+  const [selectedSectionIds, setSelectedSectionIds] = useState<number[]>(section?.id ? [section.id] : []);
   const [adviserFacultyId, setAdviserFacultyId] = useState<number | null>(section?.adviserFacultyId || null);
-  const [homeroomTeacherId, setHomeroomTeacherId] = useState<number | null>(section?.homeroomTeacherId || null);
-  const [sectionHeadId, setSectionHeadId] = useState<number | null>(section?.sectionHeadId || null);
 
   const [sections, setSections] = useState<ClassSection[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -60,6 +58,7 @@ export default function SectionAssignmentForm({
   const [error, setError] = useState<string | null>(null);
 
   const isEditMode = !!section;
+  const MAX_SECTIONS = 4;
 
   useEffect(() => {
     loadFormData();
@@ -67,26 +66,10 @@ export default function SectionAssignmentForm({
 
   useEffect(() => {
     if (section) {
-      setSelectedSectionId(section.id);
+      setSelectedSectionIds([section.id]);
       setAdviserFacultyId(section.adviserFacultyId || null);
-      setHomeroomTeacherId(section.homeroomTeacherId || null);
-      setSectionHeadId(section.sectionHeadId || null);
     }
   }, [section]);
-
-  // Fetch assignments when a section is selected (for create mode)
-  useEffect(() => {
-    if (!isEditMode) {
-      if (selectedSectionId && typeof selectedSectionId === 'number' && selectedSectionId > 0) {
-        fetchSectionAssignments(selectedSectionId);
-      } else {
-        // Clear assignments if no section is selected
-        setAdviserFacultyId(null);
-        setHomeroomTeacherId(null);
-        setSectionHeadId(null);
-      }
-    }
-  }, [selectedSectionId, isEditMode]);
 
   const loadFormData = async () => {
     setLoadingData(true);
@@ -113,36 +96,54 @@ export default function SectionAssignmentForm({
     }
   };
 
-  const fetchSectionAssignments = async (sectionId: number) => {
-    try {
-      const response = await fetch(`/api/class-sections/${sectionId}/assignments`);
-      if (response.ok) {
-        const data = await response.json();
-        // Update the form fields with existing assignments
-        setAdviserFacultyId(data.adviser?.facultyId || null);
-        setHomeroomTeacherId(data.homeroomTeacher?.facultyId || null);
-        setSectionHeadId(data.sectionHead?.facultyId || null);
+  const handleSectionToggle = (sectionId: number) => {
+    setError(null);
+    setSelectedSectionIds(prev => {
+      if (prev.includes(sectionId)) {
+        // Unselect section
+        return prev.filter(id => id !== sectionId);
+      } else {
+        // Select section (max 4)
+        if (prev.length >= MAX_SECTIONS) {
+          setError(`Maximum ${MAX_SECTIONS} sections can be selected at once`);
+          return prev;
+        }
+        return [...prev, sectionId];
       }
-    } catch (err) {
-      console.error('Error fetching section assignments:', err);
-      // Don't show error to user, just log it
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSectionIds.length === sections.length) {
+      // Deselect all
+      setSelectedSectionIds([]);
+    } else {
+      // Select up to MAX_SECTIONS
+      const availableIds = sections.slice(0, MAX_SECTIONS).map(s => s.id);
+      setSelectedSectionIds(availableIds);
     }
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!selectedSectionId) {
-      setError('Please select a section');
+    if (selectedSectionIds.length === 0) {
+      setError('Please select at least one section');
+      return;
+    }
+
+    if (!adviserFacultyId) {
+      setError('Please select an adviser');
       return;
     }
 
     const success = await onSubmit({
-      sectionId: typeof selectedSectionId === 'number' ? selectedSectionId : 0,
+      sectionIds: selectedSectionIds,
       adviserFacultyId,
-      homeroomTeacherId,
-      sectionHeadId,
+      homeroomTeacherId: null, // Always send null for homeroom teacher
+      sectionHeadId: null, // Always send null for section head
     });
 
     if (success && onCancel) {
@@ -166,29 +167,80 @@ export default function SectionAssignmentForm({
         </div>
       )}
 
-      {/* Section Selection */}
-      <div>
-        <label htmlFor="sectionId" className="block text-sm font-medium text-gray-700">
-          Section <span className="text-red-500">*</span>
-        </label>
-        <div className="relative mt-1">
-          <select
-            id="sectionId"
-            value={selectedSectionId}
-            onChange={(e) => setSelectedSectionId(e.target.value ? parseInt(e.target.value) : '')}
-            required
-            disabled={isEditMode}
-            className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none"
-          >
-            <option value="">Select Section</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} {s.gradeLevel ? `(${s.gradeLevel})` : ''}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+      {/* Section Selection - Multiple with checkboxes */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700">
+            Sections <span className="text-red-500">*</span>
+          </label>
+          {!isEditMode && sections.length > 0 && (
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="text-xs text-[#800000] hover:text-[#600018] font-medium px-2 py-1"
+            >
+              {selectedSectionIds.length === Math.min(sections.length, MAX_SECTIONS) ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
         </div>
+        <p className="text-xs text-gray-500">Select up to {MAX_SECTIONS} sections</p>
+        {!isEditMode && (
+          <div className="mt-2 max-h-64 overflow-y-auto border border-gray-300 rounded-md p-3 bg-gray-50 space-y-2">
+            {sections.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No sections available</p>
+            ) : (
+              <div className="space-y-2">
+                {sections.map((s) => {
+                  const isSelected = selectedSectionIds.includes(s.id);
+                  const isDisabled = !isSelected && selectedSectionIds.length >= MAX_SECTIONS;
+                  return (
+                    <label
+                      key={s.id}
+                      className={`flex items-start p-3 rounded-lg cursor-pointer transition-colors border ${
+                        isDisabled
+                          ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200'
+                          : isSelected
+                          ? 'bg-[#800000]/10 hover:bg-[#800000]/20 border-[#800000]/30'
+                          : 'bg-white hover:bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleSectionToggle(s.id)}
+                        disabled={isDisabled || isEditMode}
+                        className="h-4 w-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 mt-0.5"
+                      />
+                      <div className="ml-3 flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900">
+                          {s.name} {s.gradeLevel ? `(${s.gradeLevel})` : ''}
+                        </div>
+                        {s.adviserFaculty && (
+                          <div className="text-xs text-gray-500 mt-0.5 truncate">
+                            Current: {s.adviserFaculty.User.FirstName} {s.adviserFaculty.User.LastName}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        {isEditMode && (
+          <div className="mt-2 p-3 border border-gray-300 rounded-md bg-gray-50">
+            <p className="text-sm text-gray-900">{section?.name} {section?.gradeLevel ? `(${section.gradeLevel})` : ''}</p>
+          </div>
+        )}
+        {selectedSectionIds.length > 0 && (
+          <p className="mt-2 text-xs text-gray-600">
+            {selectedSectionIds.length} section{selectedSectionIds.length !== 1 ? 's' : ''} selected
+            {selectedSectionIds.length >= MAX_SECTIONS && (
+              <span className="text-amber-600 ml-1">(Maximum reached)</span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Adviser Assignment */}
@@ -207,66 +259,6 @@ export default function SectionAssignmentForm({
             className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md appearance-none"
           >
             <option value="">No Adviser Assigned</option>
-            {faculties.map((faculty) => {
-              const designation = faculty.Employee?.EmploymentDetail?.Designation;
-              const designationText = designation ? ` - ${designation.replace(/_/g, ' ')}` : '';
-              return (
-                <option key={faculty.FacultyID} value={faculty.FacultyID}>
-                  {faculty.User.FirstName} {faculty.User.LastName}{designationText}
-                </option>
-              );
-            })}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Homeroom Teacher Assignment */}
-      <div>
-        <label htmlFor="homeroomTeacherId" className="block text-sm font-medium text-gray-700 mb-1">
-          Homeroom Teacher
-        </label>
-        <p className="text-xs text-gray-500 mb-2">
-          Assign a teacher as the homeroom teacher for daily class management
-        </p>
-        <div className="relative">
-          <select
-            id="homeroomTeacherId"
-            value={homeroomTeacherId || ''}
-            onChange={(e) => setHomeroomTeacherId(e.target.value ? parseInt(e.target.value) : null)}
-            className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md appearance-none"
-          >
-            <option value="">No Homeroom Teacher Assigned</option>
-            {faculties.map((faculty) => {
-              const designation = faculty.Employee?.EmploymentDetail?.Designation;
-              const designationText = designation ? ` - ${designation.replace(/_/g, ' ')}` : '';
-              return (
-                <option key={faculty.FacultyID} value={faculty.FacultyID}>
-                  {faculty.User.FirstName} {faculty.User.LastName}{designationText}
-                </option>
-              );
-            })}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Section Head Assignment */}
-      <div>
-        <label htmlFor="sectionHeadId" className="block text-sm font-medium text-gray-700 mb-1">
-          Section Head
-        </label>
-        <p className="text-xs text-gray-500 mb-2">
-          Assign a teacher as the section head for administrative oversight
-        </p>
-        <div className="relative">
-          <select
-            id="sectionHeadId"
-            value={sectionHeadId || ''}
-            onChange={(e) => setSectionHeadId(e.target.value ? parseInt(e.target.value) : null)}
-            className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-[#800000] focus:border-[#800000] sm:text-sm rounded-md appearance-none"
-          >
-            <option value="">No Section Head Assigned</option>
             {faculties.map((faculty) => {
               const designation = faculty.Employee?.EmploymentDetail?.Designation;
               const designationText = designation ? ` - ${designation.replace(/_/g, ' ')}` : '';
@@ -323,9 +315,9 @@ export default function SectionAssignmentForm({
               {isEditMode ? 'Updating...' : 'Assigning...'}
             </span>
           ) : isEditMode ? (
-            'Update Assignments'
+            'Update Assignment'
           ) : (
-            'Assign Teachers'
+            `Assign Adviser to ${selectedSectionIds.length > 0 ? `${selectedSectionIds.length} ` : ''}Section${selectedSectionIds.length !== 1 ? 's' : ''}`
           )}
         </button>
       </div>

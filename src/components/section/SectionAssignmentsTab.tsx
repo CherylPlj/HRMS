@@ -63,43 +63,16 @@ export default function SectionAssignmentsTab() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/hrms/sections', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
+      // Fetch from HRMS endpoint to get sections with updated assignments
+      // This includes adviser, homeroom teacher, and section head data
+      const response = await fetch('/api/class-sections?includeAssignments=true');
       if (!response.ok) {
-        // Check if response is JSON before parsing
-        const contentType = response.headers.get('content-type');
-        let errorMessage = `Failed to fetch sections: ${response.status} ${response.statusText}`;
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorData.message || errorMessage;
-          } catch (e) {
-            // If JSON parsing fails, use the status text
-            console.error('Failed to parse error response as JSON:', e);
-          }
-        } else {
-          // Response is HTML or plain text (like a 404 page)
-          const textResponse = await response.text();
-          console.error('Non-JSON error response:', textResponse.substring(0, 200));
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      // Check content type before parsing JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Server returned non-JSON response');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch sections' }));
+        throw new Error(errorData.error || `Failed to fetch sections: ${response.status} ${response.statusText}`);
       }
       
       const sections = await response.json();
-      console.log('[SectionAssignmentsTab] Fetched sections:', sections);
+      console.log('[SectionAssignmentsTab] Fetched sections with assignments:', sections);
       setSections(sections);
     } catch (err: any) {
       console.error('Error fetching sections:', err);
@@ -120,7 +93,7 @@ export default function SectionAssignmentsTab() {
   };
 
   const handleSubmit = async (data: {
-    sectionId: number;
+    sectionIds: number[];
     adviserFacultyId: number | null;
     homeroomTeacherId: number | null;
     sectionHeadId: number | null;
@@ -129,25 +102,68 @@ export default function SectionAssignmentsTab() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/class-sections/${data.sectionId}/assignments`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          adviserFacultyId: data.adviserFacultyId,
-          homeroomTeacherId: data.homeroomTeacherId,
-          sectionHeadId: data.sectionHeadId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update assignments');
+      if (!data.sectionIds || data.sectionIds.length === 0) {
+        throw new Error('Please select at least one section');
       }
 
-      setToast({ message: 'Section assignments updated successfully!', type: 'success' });
+      if (!data.adviserFacultyId) {
+        throw new Error('Please select an adviser');
+      }
+
+      // Assign adviser to all selected sections
+      const results = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const sectionId of data.sectionIds) {
+        try {
+          const response = await fetch(`/api/class-sections/${sectionId}/assignments`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              adviserFacultyId: data.adviserFacultyId,
+              homeroomTeacherId: null, // Always set to null
+              sectionHeadId: null, // Always set to null
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update assignment');
+          }
+
+          successCount++;
+        } catch (err: any) {
+          errorCount++;
+          results.push({
+            sectionId,
+            error: err.message || 'Failed to update assignment',
+          });
+        }
+      }
+
+      if (errorCount > 0) {
+        const errorMessages = results.map(r => `Section ${r.sectionId}: ${r.error}`).join(', ');
+        throw new Error(`Failed to assign ${errorCount} of ${data.sectionIds.length} sections. ${errorMessages}`);
+      }
+
+      setToast({
+        message: `Successfully assigned adviser to ${successCount} section${successCount !== 1 ? 's' : ''}!`,
+        type: 'success',
+      });
+      
+      // Refresh sections and reload page to update faculty load if this is part of a schedule assignment flow
       await fetchSections();
+      
+      // Trigger a page reload to refresh faculty load data
+      // This ensures the load count is updated everywhere it's displayed
+      if (typeof window !== 'undefined') {
+        // Check if we need to refresh parent components that display faculty load
+        window.dispatchEvent(new CustomEvent('sectionsUpdated'));
+      }
+      
       setShowModal(false);
       setEditingSection(null);
       return true;
@@ -175,11 +191,7 @@ export default function SectionAssignmentsTab() {
     const matchesSearch = 
       (sectionName && sectionName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       section.adviserFaculty?.User?.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      section.adviserFaculty?.User?.LastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      section.homeroomTeacher?.User?.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      section.homeroomTeacher?.User?.LastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      section.sectionHead?.User?.FirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      section.sectionHead?.User?.LastName?.toLowerCase().includes(searchTerm.toLowerCase());
+      section.adviserFaculty?.User?.LastName?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesGradeLevel = filterGradeLevel === 'all' || sectionGradeLevel === filterGradeLevel;
 
@@ -203,8 +215,6 @@ export default function SectionAssignmentsTab() {
   // Calculate stats
   const totalSections = sections.length;
   const sectionsWithAdviser = sections.filter(s => s.adviserFacultyId).length;
-  const sectionsWithHomeroom = sections.filter(s => s.homeroomTeacherId).length;
-  const sectionsWithHead = sections.filter(s => s.sectionHeadId).length;
 
   const formatTeacherName = (faculty: Faculty | null | undefined) => {
     if (!faculty) return 'Not Assigned';
@@ -259,41 +269,6 @@ export default function SectionAssignmentsTab() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow rounded-xl border border-gray-100">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 p-3 bg-indigo-50 rounded-lg">
-                <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">With Homeroom</dt>
-                  <dd className="text-2xl font-bold text-gray-900">{sectionsWithHomeroom}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow rounded-xl border border-gray-100">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 p-3 bg-purple-50 rounded-lg">
-                <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">With Section Head</dt>
-                  <dd className="text-2xl font-bold text-gray-900">{sectionsWithHead}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Search and Filter */}
@@ -404,18 +379,12 @@ export default function SectionAssignmentsTab() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Grade Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Adviser
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Homeroom Teacher
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Section Head
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Adviser
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -434,18 +403,6 @@ export default function SectionAssignmentsTab() {
                       <div className="text-sm text-gray-900">{formatTeacherName(section.adviserFaculty)}</div>
                       {section.adviserFaculty && (
                         <div className="text-sm text-gray-500">{section.adviserFaculty.User.Email}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{formatTeacherName(section.homeroomTeacher)}</div>
-                      {section.homeroomTeacher && (
-                        <div className="text-sm text-gray-500">{section.homeroomTeacher.User.Email}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{formatTeacherName(section.sectionHead)}</div>
-                      {section.sectionHead && (
-                        <div className="text-sm text-gray-500">{section.sectionHead.User.Email}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -580,7 +537,7 @@ export default function SectionAssignmentsTab() {
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
-                  {editingSection ? 'Edit Section Assignments' : 'Assign Teachers to Section'}
+                  {editingSection ? 'Edit Section Assignment' : 'Assign Adviser to Sections'}
                 </h3>
                 <button
                   onClick={handleCloseModal}

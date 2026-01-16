@@ -73,8 +73,8 @@ const findTrainingDataAnswer = (message: string, trainingData: Record<string, st
     'promotion', 'promotions', 'eligibility',
     'training', 'needs', 'recommendation', 'recommendations',
     'disciplinary', 'risk', 'analysis',
-    'attendance', 'check', 'view',
-    'upload', 'submit', 'update', 'edit'
+    'upload', 'submit', 'update', 'edit',
+    'schedule', 'schedules', 'class', 'classes', 'teaching', 'subject', 'section', 'sections', 'time', 'day', 'days'
   ];
   
   // Find keywords in the message
@@ -124,7 +124,7 @@ const findTrainingDataAnswer = (message: string, trainingData: Record<string, st
     { pattern: /(how|what|where|when).*(manage|view|process).*(recruitment|candidate|vacancy)/i, keys: ['recruitment'] },
     { pattern: /(how|what|where|when).*(view|check|see).*(performance|review|goal)/i, keys: ['performance', 'review'] },
     { pattern: /(how|what|where|when).*(view|check|see).*(training|recommendation)/i, keys: ['training'] },
-    { pattern: /(how|what|where|when).*(check|view|see).*(attendance)/i, keys: ['attendance'] },
+    { pattern: /(how|what|where|when).*(view|check|see|find).*(schedule|class|classes|teaching)/i, keys: ['schedule'] },
   ];
   
   for (const { pattern, keys } of questionPatterns) {
@@ -155,7 +155,6 @@ const getOutOfScopeResponse = (userRole: string): string => {
 • Performance management (reviews, goals, KPIs, promotions)
 • Disciplinary actions and risk analysis
 • Training needs analysis and recommendations
-• Attendance tracking and management
 • AI-powered insights and reports
 • User management and system administration
 
@@ -166,9 +165,9 @@ Please ask me about any of these HRMS-related topics, and I'll be happy to help!
 • Updating your personal information
 • Submitting and tracking leave requests
 • Uploading and managing documents
+• Viewing your teaching schedule
 • Accessing the employee directory
 • Viewing your performance reviews and goals
-• Checking your attendance records
 • Viewing training recommendations
 • General HRMS navigation
 
@@ -181,7 +180,6 @@ Please ask me about any of these faculty-related topics, and I'll be happy to he
 • Managing your documents
 • Accessing the employee directory
 • Viewing your performance reviews and goals
-• Checking your attendance records
 • Viewing training recommendations
 • Accessing your employee portal
 • General HRMS navigation
@@ -207,7 +205,6 @@ Key Responsibilities:
 - Leave request processing and approval
 - Recruitment and hiring processes with AI-powered screening
 - Training needs analysis and recommendations
-- Attendance tracking and management
 - Employee directory management
 - User management and role assignments
 - AI-powered insights and analytics
@@ -219,10 +216,9 @@ Available Features:
 4. Leave - Process leave requests, approve/reject applications, and manage leave records
 5. Recruitment - Manage job postings (vacancies), candidate applications, AI-powered candidate screening, interviews, and hiring process. AI provides candidate scoring, recommendations, and interview questions
 6. Training - Manage training programs, track employee training history, and use AI to analyze training needs and recommend courses
-7. Attendance - Track and manage employee attendance records, view attendance patterns and statistics
-8. Directory - Search and view employee directory with filtering by name, department, position, and years of service. View employee profiles and contact information
-9. AI Dashboard - View AI-powered insights including candidate screening statistics and training needs
-10. User Management - Create, edit, and manage user accounts and permissions (Super Admin only)
+7. Directory - Search and view employee directory with filtering by name, department, position, and years of service. View employee profiles and contact information
+8. AI Dashboard - View AI-powered insights including candidate screening statistics and training needs
+9. User Management - Create, edit, and manage user accounts and permissions (Super Admin only)
 
 AI Agent Capabilities:
 - Candidate Screening: Automatically screens candidates against job requirements, provides multi-dimensional scoring (resume, qualifications, experience, skills), and generates interview questions
@@ -249,17 +245,26 @@ Key Features for Faculty:
 - Document Upload and Management
 - Leave Request Submission and Tracking
 - Employee Directory Access
-- Attendance Records
 - Training Recommendations
+- Teaching Schedule Management
 
 Available Sections:
 1. Dashboard - Overview of personal information, recent activities, and AI insights
 2. Personal Data - Update personal information, contact details, and emergency contacts
 3. Documents - Upload and manage personal documents (certificates, IDs, etc.)
 4. Leave Request - Submit leave applications and view request status
-5. Attendance - View your attendance records and statistics
+5. My Schedule - View your teaching schedule with classes, subjects, sections, days, and times. See your weekly schedule organized by day, view total classes, subjects, and sections. Download your schedule as PDF. View advisory classes you're assigned to
 6. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
 7. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
+
+Schedule Features:
+- View your complete weekly teaching schedule
+- See all classes organized by day (Monday through Saturday)
+- View subject names, section names, time slots, and duration
+- Check total number of classes, subjects, and sections you teach
+- View advisory classes you're assigned to
+- Download your schedule as a PDF document
+- See schedule statistics including total hours per week
 
 Guidelines:
 - Provide friendly, helpful guidance with clear formatting
@@ -272,7 +277,8 @@ Guidelines:
 - Format responses for easy reading with proper spacing
 - Stay focused on SJSFI HRMS topics only
 - If asked about unrelated topics, politely redirect to HRMS features
-- When discussing training, explain how AI recommendations can help with career development`,
+- When discussing training, explain how AI recommendations can help with career development
+- When discussing schedules, guide users to the "My Schedule" section to view their specific schedule`,
 
   employee: `You are an AI assistant for the SJSFI (San Jose School of Future Innovation) HRMS (Human Resource Management System). You help employees navigate the system and manage their information.
 
@@ -281,7 +287,6 @@ Key Features for Employees:
 - Document Management
 - Leave Request Submission and Tracking
 - Employee Directory Access
-- Attendance Records
 - Training Recommendations
 
 Available Sections:
@@ -289,9 +294,8 @@ Available Sections:
 2. Personal Data - Update personal information and contact details
 3. Documents - Upload and manage personal documents
 4. Leave Request - Submit and track leave applications
-5. Attendance - View your attendance records and statistics
-6. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
-7. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
+5. Training - View your training history and AI-recommended training programs based on your skill gaps and career development needs
+6. Directory - Search and view employee directory, find colleagues by name, department, or position, and view contact information
 
 Guidelines:
 - Provide clear, simple instructions with proper formatting
@@ -336,9 +340,7 @@ const TRAINING_DATA = {
     
     // "How do I use AI disciplinary risk analysis?": "To use AI disciplinary risk analysis:\n\n1. Go to the Disciplinary section or AI Dashboard\n2. Navigate to Disciplinary Risk Analysis\n3. Select an employee to analyze\n4. The AI will evaluate:\n   - Disciplinary record history\n   - Recent violations (last 6 months)\n   - Attendance issues and patterns\n   - Performance trends\n5. Review the AI-generated risk score and level (Low, Medium, High, Critical)\n6. Check risk factors and pattern analysis\n7. Follow recommended actions for intervention\n8. Monitor high-risk employees regularly",
     
-    "How do I view AI dashboard insights?": "To view AI dashboard insights:\n\n1. Go to the Dashboard or AI Dashboard section\n2. View comprehensive AI-powered analytics:\n   - Candidate screening statistics (today, this week, this month)\n   - Training needs by department and priority\n   - Recent AI recommendations\n3. Click on any insight to view detailed information\n4. Use insights to make data-driven HR decisions\n5. Refresh to get the latest AI analysis",
-    
-    "How do I manage attendance?": "To manage attendance:\n\n1. Go to the Attendance section (if available)\n2. View employee attendance records\n3. Track attendance patterns and statistics\n4. Identify attendance issues\n5. Attendance data is also used in:\n   - Performance reviews (attendance scores)\n   - Disciplinary risk analysis\n   - Employee evaluations\n6. Export attendance reports if needed"
+    "How do I view AI dashboard insights?": "To view AI dashboard insights:\n\n1. Go to the Dashboard or AI Dashboard section\n2. View comprehensive AI-powered analytics:\n   - Candidate screening statistics (today, this week, this month)\n   - Training needs by department and priority\n   - Recent AI recommendations\n3. Click on any insight to view detailed information\n4. Use insights to make data-driven HR decisions\n5. Refresh to get the latest AI analysis"
   },
   
   faculty: {
@@ -358,7 +360,15 @@ const TRAINING_DATA = {
     
     "How do I view training recommendations?": "To view AI training recommendations:\n\n1. Go to the Performance or Training section\n2. Navigate to Training Recommendations\n3. View AI-generated recommendations based on:\n   - Your current skills vs position requirements\n   - Skill gaps identified\n   - Performance improvement areas\n4. Each recommendation includes:\n   - Training title and description\n   - Estimated hours\n   - Priority level (Low, Medium, High, Critical)\n5. Review your training history and completed courses\n6. Enroll in recommended training programs",
     
-    "How do I check my attendance?": "To check your attendance:\n\n1. Go to the Attendance section (if available)\n2. View your attendance records and statistics\n3. See your attendance history with dates and status\n4. Check attendance patterns and trends"
+    "How do I view my schedule?": "To view your teaching schedule:\n\n1. Go to the My Schedule section\n2. You'll see your complete weekly schedule organized by day\n3. View all your classes with:\n   - Subject names\n   - Section names\n   - Day and time\n   - Duration\n4. Check the summary statistics:\n   - Total number of classes\n   - Number of different subjects\n   - Number of different sections\n   - Total hours per week\n5. View any advisory classes you're assigned to\n6. Download your schedule as PDF using the download button\n\nThe schedule shows all your teaching assignments for the current semester.",
+    
+    "What is my teaching schedule?": "To view your teaching schedule:\n\n1. Navigate to the My Schedule section in the faculty dashboard\n2. Your schedule will display:\n   - All classes organized by day (Monday through Saturday)\n   - Subject and section for each class\n   - Time slots and duration\n   - Summary statistics\n3. You can download your schedule as a PDF for your records\n4. If you don't see any schedule, contact the administrator as your schedule may not be assigned yet",
+    
+    "How do I see my classes?": "To see your classes:\n\n1. Go to the My Schedule section\n2. Your schedule displays all your teaching assignments:\n   - Organized by day of the week\n   - Shows subject name, section name, time, and duration\n3. View summary information:\n   - Total classes you teach\n   - Number of subjects\n   - Number of sections\n   - Total hours per week\n4. Check advisory classes if you're assigned as an adviser\n5. Download the schedule as PDF if needed",
+    
+    "Where is my schedule?": "Your teaching schedule is available in the My Schedule section:\n\n1. Navigate to My Schedule in the faculty dashboard\n2. View your weekly schedule with all classes\n3. See classes organized by day with subject, section, and time information\n4. Check the summary for total classes, subjects, sections, and hours\n5. Download as PDF if you need a copy\n\nIf you can't find your schedule or it appears empty, please contact the administrator to ensure your schedule has been assigned.",
+    
+    "How do I download my schedule?": "To download your schedule as PDF:\n\n1. Go to the My Schedule section\n2. Make sure your schedule is loaded\n3. Click the 'Download Schedule (PDF)' button at the top right\n4. The PDF will include:\n   - Your name and faculty information\n   - Complete weekly schedule organized by day\n   - Summary statistics\n   - All classes with subject, section, time, and duration\n5. The file will be saved with a filename including your name and date\n\nYou can use this PDF for your records or to share with others if needed."
     
     // Performance module hidden for now
     // "How do I view promotion analysis?": "To view your promotion analysis:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. View AI-generated promotion eligibility analysis:\n   - Eligibility score\n   - Recommendation (Ready, Consider, NeedsDevelopment, NotReady)\n   - Strengths and development areas\n   - Next steps for promotion readiness\n4. This analysis considers your performance, goals, training, and tenure"
@@ -378,9 +388,7 @@ const TRAINING_DATA = {
     
     // "How do I view my performance goals?": "To view your performance goals:\n\n1. Go to the Performance section\n2. Navigate to Goals or Performance Goals\n3. View all your assigned goals with:\n   - Goal title and description\n   - Status (NotStarted, InProgress, OnTrack, Completed, etc.)\n   - Progress percentage\n   - Due dates\n4. Track your progress and update goal status\n5. Goals are linked to your performance reviews",
     
-    "How do I view training recommendations?": "To view AI training recommendations:\n\n1. Go to the Training section\n2. Navigate to Training Recommendations\n3. View AI-generated recommendations based on:\n   - Your current skills vs position requirements\n   - Skill gaps identified\n4. Each recommendation includes:\n   - Training title and description\n   - Estimated hours\n   - Priority level (Low, Medium, High, Critical)\n5. Review your training history and completed courses\n6. Enroll in recommended training programs",
-    
-    "How do I check my attendance?": "To check your attendance:\n\n1. Go to the Attendance section (if available)\n2. View your attendance records and statistics\n3. See your attendance history with dates and status\n4. Check attendance patterns and trends"
+    "How do I view training recommendations?": "To view AI training recommendations:\n\n1. Go to the Training section\n2. Navigate to Training Recommendations\n3. View AI-generated recommendations based on:\n   - Your current skills vs position requirements\n   - Skill gaps identified\n4. Each recommendation includes:\n   - Training title and description\n   - Estimated hours\n   - Priority level (Low, Medium, High, Critical)\n5. Review your training history and completed courses\n6. Enroll in recommended training programs"
     
     // Performance module hidden for now
     // "How do I view promotion analysis?": "To view your promotion analysis:\n\n1. Go to the Performance section\n2. Navigate to Promotion Analysis or AI Dashboard\n3. View AI-generated promotion eligibility analysis:\n   - Eligibility score\n   - Recommendation (Ready, Consider, NeedsDevelopment, NotReady)\n   - Strengths and development areas\n   - Next steps for promotion readiness\n4. This analysis considers your performance, goals, training, and tenure"
@@ -514,10 +522,10 @@ ${userRole === 'admin' ? `
 ` : userRole === 'faculty' ? `
 • "How do I submit a leave request?"
 • "How do I upload documents?"
+• "How do I view my schedule?"
 • "How do I view my performance reviews?"
 • "How do I view my performance goals?"
 • "How do I view training recommendations?"
-• "How do I check my attendance?"
 • "How do I use the employee directory?"
 ` : `
 • "How do I update my personal information?"
@@ -526,7 +534,6 @@ ${userRole === 'admin' ? `
 • "How do I view my performance reviews?"
 • "How do I view my performance goals?"
 • "How do I view training recommendations?"
-• "How do I check my attendance?"
 `}
 
 For more specific help, please contact your HR administrator or IT support.`;

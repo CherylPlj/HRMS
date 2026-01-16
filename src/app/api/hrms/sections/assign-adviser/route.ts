@@ -146,10 +146,20 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        // Find the section by sectionId or sectionName
+        // Find the section - prefer sectionName for matching (more reliable since section names are synced from SIS)
+        // If only sectionId is provided, try to find by HRMS ID (though SIS sectionId won't match HRMS ID)
         let section = null;
         
-        if (assignmentData.sectionId) {
+        // Priority 1: Match by sectionName (recommended - aligns with SIS)
+        if (assignmentData.sectionName) {
+            section = await prisma.classSection.findUnique({
+                where: { name: assignmentData.sectionName },
+            });
+            console.log(`Looking for section by name: "${assignmentData.sectionName}" - ${section ? 'Found' : 'Not found'}`);
+        }
+        
+        // Priority 2: Fallback to sectionId (HRMS internal ID, not SIS sectionId)
+        if (!section && assignmentData.sectionId) {
             const sectionId = typeof assignmentData.sectionId === 'string' 
                 ? parseInt(assignmentData.sectionId, 10) 
                 : assignmentData.sectionId;
@@ -157,16 +167,14 @@ export async function POST(request: NextRequest) {
             section = await prisma.classSection.findUnique({
                 where: { id: sectionId },
             });
-        } else if (assignmentData.sectionName) {
-            section = await prisma.classSection.findUnique({
-                where: { name: assignmentData.sectionName },
-            });
+            console.log(`Looking for section by ID: ${sectionId} - ${section ? 'Found' : 'Not found'}`);
         }
 
         if (!section) {
             console.warn('Section not found:', { sectionId: assignmentData.sectionId, sectionName: assignmentData.sectionName });
             return Response.json({ 
                 error: 'Section not found',
+                message: 'Please provide sectionName for reliable matching. Section names are synced from SIS.',
                 sectionId: assignmentData.sectionId,
                 sectionName: assignmentData.sectionName,
             }, { status: 404 });

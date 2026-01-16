@@ -65,7 +65,7 @@ export default function SISSchedulesTab() {
     const [assigning, setAssigning] = useState<number | null>(null);
     const [syncing, setSyncing] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-    const [filter, setFilter] = useState<'all' | 'assigned' | 'unassigned'>('unassigned');
+    const [filter, setFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
@@ -273,8 +273,8 @@ export default function SISSchedulesTab() {
                 type: 'success',
             });
 
-            // Refresh schedules
-            await fetchSISSchedules();
+            // Refresh schedules and faculty load
+            await Promise.all([fetchSISSchedules(), fetchFaculties()]);
         } catch (error) {
             console.error('Error restoring original teacher:', error);
             setToast({
@@ -325,8 +325,8 @@ export default function SISSchedulesTab() {
                 type: 'success',
             });
 
-            // Refresh schedules
-            await fetchSISSchedules();
+            // Refresh schedules and faculty load
+            await Promise.all([fetchSISSchedules(), fetchFaculties()]);
         } catch (error) {
             console.error('Error assigning substitute teacher:', error);
             setToast({
@@ -378,8 +378,8 @@ export default function SISSchedulesTab() {
                 type: 'success',
             });
 
-            // Refresh schedules
-            await fetchSISSchedules();
+            // Refresh schedules and faculty load
+            await Promise.all([fetchSISSchedules(), fetchFaculties()]);
         } catch (error) {
             console.error('Error assigning teacher:', error);
             setToast({
@@ -433,8 +433,8 @@ export default function SISSchedulesTab() {
                     type: 'success',
                 });
 
-                // Refresh schedules
-                await fetchSISSchedules();
+                // Refresh schedules and faculty load
+                await Promise.all([fetchSISSchedules(), fetchFaculties()]);
                 return;
             }
 
@@ -492,8 +492,8 @@ export default function SISSchedulesTab() {
                 });
             }
 
-            // Refresh schedules
-            await fetchSISSchedules();
+            // Refresh schedules and faculty load
+            await Promise.all([fetchSISSchedules(), fetchFaculties()]);
         } catch (error) {
             console.error('Error editing faculty:', error);
             setToast({
@@ -506,24 +506,33 @@ export default function SISSchedulesTab() {
     };
 
     // Filter schedules
-    const filteredSchedules = schedules.filter((schedule) => {
-        // Status filter
-        if (filter === 'assigned' && !schedule.isAssigned) return false;
-        if (filter === 'unassigned' && schedule.isAssigned) return false;
+    const filteredSchedules = schedules
+        .filter((schedule) => {
+            // Status filter
+            if (filter === 'assigned' && !schedule.isAssigned) return false;
+            if (filter === 'unassigned' && schedule.isAssigned) return false;
 
-        // Search filter
-        if (searchTerm) {
-            const search = searchTerm.toLowerCase();
-            return (
-                schedule.subjectName.toLowerCase().includes(search) ||
-                schedule.sectionName.toLowerCase().includes(search) ||
-                schedule.day.toLowerCase().includes(search) ||
-                schedule.instructor.toLowerCase().includes(search)
-            );
-        }
+            // Search filter
+            if (searchTerm) {
+                const search = searchTerm.toLowerCase();
+                return (
+                    schedule.subjectName.toLowerCase().includes(search) ||
+                    schedule.sectionName.toLowerCase().includes(search) ||
+                    schedule.day.toLowerCase().includes(search) ||
+                    schedule.instructor.toLowerCase().includes(search)
+                );
+            }
 
-        return true;
-    });
+            return true;
+        })
+        .sort((a, b) => {
+            // When filter is 'all', put unassigned schedules on top
+            if (filter === 'all') {
+                if (!a.isAssigned && b.isAssigned) return -1;
+                if (a.isAssigned && !b.isAssigned) return 1;
+            }
+            return 0;
+        });
 
     // Pagination calculations
     const totalPages = Math.max(1, Math.ceil(filteredSchedules.length / itemsPerPage));
@@ -714,9 +723,6 @@ export default function SISSchedulesTab() {
                                         Status
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Sync Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Actions
                                     </th>
                                 </tr>
@@ -794,46 +800,6 @@ export default function SISSchedulesTab() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {schedule.syncStatus === 'synced' && (
-                                                <span 
-                                                    className="px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800"
-                                                    title="This assignment exists in both HRMS and SIS"
-                                                >
-                                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                    Synced
-                                                </span>
-                                            )}
-                                            {schedule.syncStatus === 'hrms-only' && (
-                                                <span 
-                                                    className="px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800"
-                                                    title="This assignment exists only in HRMS. It has not been synced to SIS."
-                                                >
-                                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                    </svg>
-                                                    HRMS Only
-                                                </span>
-                                            )}
-                                            {schedule.syncStatus === 'sis-only' && (
-                                                <span 
-                                                    className="px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800"
-                                                    title="This assignment exists in SIS but not in HRMS"
-                                                >
-                                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                                    </svg>
-                                                    SIS Only
-                                                </span>
-                                            )}
-                                            {(!schedule.syncStatus || schedule.syncStatus === 'unassigned') && (
-                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600">
-                                                    -
-                                                </span>
-                                            )}
-                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                                             {!schedule.isAssigned ? (
                                                 <TeacherAssignmentDropdown
@@ -868,6 +834,7 @@ export default function SISSchedulesTab() {
                                                     onEdit={handleEditFaculty}
                                                     editing={editingFaculty === schedule.sisId}
                                                     disabled={!schedule.subjectId || !schedule.classSectionId}
+                                                    onRefreshFaculties={fetchFaculties}
                                                 />
                                             )}
                                         </td>
@@ -987,6 +954,7 @@ interface EditFacultyDropdownProps {
     onEdit: (schedule: SISSchedule, facultyId: number) => void;
     editing: boolean;
     disabled: boolean;
+    onRefreshFaculties?: () => Promise<void>;
 }
 
 function EditFacultyDropdown({
@@ -995,6 +963,7 @@ function EditFacultyDropdown({
     onEdit,
     editing,
     disabled,
+    onRefreshFaculties,
 }: EditFacultyDropdownProps) {
     const [selectedFacultyId, setSelectedFacultyId] = useState<number | ''>(schedule.facultyId || '');
     const [isOpen, setIsOpen] = useState(false);
@@ -1068,9 +1037,14 @@ function EditFacultyDropdown({
     return (
         <div className="relative">
             <button
-                onClick={() => {
+                onClick={async () => {
+                    const wasClosed = !isOpen;
                     setIsOpen(!isOpen);
-                    if (!isOpen) {
+                    if (wasClosed) {
+                        // Refresh faculty data when opening modal to get latest load counts
+                        if (onRefreshFaculties) {
+                            await onRefreshFaculties();
+                        }
                         setConflicts([]);
                         setSelectedFacultyId(schedule.facultyId || '');
                     }
@@ -1101,31 +1075,31 @@ function EditFacultyDropdown({
                         >
                             <div className="p-5 space-y-4">
                                 {/* Schedule Details */}
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
-                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Edit Faculty Assignment</h3>
-                                    <div className="grid grid-cols-2 gap-2 text-sm">
-                                        <div>
-                                            <span className="text-gray-600">Subject:</span>
-                                            <span className="ml-2 font-medium text-gray-900">
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                                    <h3 className="text-base font-semibold text-gray-900 mb-3">Edit Faculty Assignment</h3>
+                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="flex flex-col">
+                                            <span className="text-gray-600 text-xs mb-1">Subject:</span>
+                                            <span className="font-medium text-gray-900 break-words">
                                                 {schedule.subjectCode && `[${schedule.subjectCode}] `}
                                                 {schedule.subjectName}
                                             </span>
                                         </div>
-                                        <div>
-                                            <span className="text-gray-600">Section:</span>
-                                            <span className="ml-2 font-medium text-gray-900">{schedule.sectionName}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-gray-600 text-xs mb-1">Section:</span>
+                                            <span className="font-medium text-gray-900 break-words">{schedule.sectionName}</span>
                                         </div>
-                                        <div>
-                                            <span className="text-gray-600">Day:</span>
-                                            <span className="ml-2 font-medium text-gray-900">{schedule.day}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-gray-600 text-xs mb-1">Day:</span>
+                                            <span className="font-medium text-gray-900">{schedule.day}</span>
                                         </div>
-                                        <div>
-                                            <span className="text-gray-600">Time:</span>
-                                            <span className="ml-2 font-medium text-gray-900">{schedule.time}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-gray-600 text-xs mb-1">Time:</span>
+                                            <span className="font-medium text-gray-900">{schedule.time}</span>
                                         </div>
-                                        <div className="col-span-2">
-                                            <span className="text-gray-600">Current Teacher:</span>
-                                            <span className="ml-2 font-medium text-gray-900">{schedule.facultyName}</span>
+                                        <div className="col-span-2 flex flex-col pt-2 border-t border-gray-300">
+                                            <span className="text-gray-600 text-xs mb-1">Current Teacher:</span>
+                                            <span className="font-medium text-gray-900 break-words">{schedule.facultyName}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1137,7 +1111,7 @@ function EditFacultyDropdown({
                                     <select
                                         value={selectedFacultyId}
                                         onChange={(e) => handleFacultyChange(Number(e.target.value) || '')}
-                                        className="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                     >
                                         <option value="">-- Select Teacher --</option>
                                         {faculties.map((faculty) => {

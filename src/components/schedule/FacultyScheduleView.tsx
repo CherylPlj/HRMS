@@ -92,7 +92,15 @@ export default function FacultyScheduleView({ facultyId }: FacultyScheduleViewPr
     );
   }
 
-  const { faculty, schedulesByDay, summary } = data;
+  const { faculty, schedules, schedulesByDay, summary } = data;
+
+  // Normalize schedulesByDay keys to match DAYS_OF_WEEK format (capitalize first letter)
+  const normalizedSchedulesByDay: Record<string, any[]> = {};
+  Object.keys(schedulesByDay || {}).forEach((day) => {
+    // Normalize day name: capitalize first letter, lowercase rest
+    const normalizedDay = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
+    normalizedSchedulesByDay[normalizedDay] = schedulesByDay[day];
+  });
 
   // Calculate workload percentage (assuming 40 hours max for full-time)
   const maxHours = 40;
@@ -240,9 +248,9 @@ export default function FacultyScheduleView({ facultyId }: FacultyScheduleViewPr
                   <h4 className="text-sm sm:text-base font-medium text-gray-900">{day}</h4>
                 </div>
                 <div className="p-3 sm:p-4">
-                  {schedulesByDay[day] && schedulesByDay[day].length > 0 ? (
+                  {normalizedSchedulesByDay[day] && normalizedSchedulesByDay[day].length > 0 ? (
                     <div className="space-y-2">
-                      {schedulesByDay[day].map((schedule) => (
+                      {normalizedSchedulesByDay[day].map((schedule) => (
                         <div
                           key={schedule.id}
                           className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded"
