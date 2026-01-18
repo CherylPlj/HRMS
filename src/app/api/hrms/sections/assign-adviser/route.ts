@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     if (!timestamp || !signature || isNaN(tsInt) || Math.abs(now - tsInt) > 5 * 60 * 1000) {
         console.warn('Invalid timestamp or signature window.');
         console.log('Debug - timestamp empty?', !timestamp, 'signature empty?', !signature, 'tsInt:', tsInt, 'time diff:', Math.abs(now - tsInt));
-        return Response.json({ error: 'Invalid request' }, { status: 400 });
+        return Response.json({ error: 'Invalid timestamp or signature window' }, { status: 400 });
     }
 
     const rawBody = await request.text();
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     if (!verifySignature(rawBody, timestamp, signature)) {
         console.warn('Signature verification failed');
-        return Response.json({ error: 'Invalid request' }, { status: 403 });
+        return Response.json({ error: 'Invalid signature' }, { status: 403 });
     }
 
     let data: string;
@@ -127,12 +127,12 @@ export async function POST(request: NextRequest) {
         console.log('Parsed data:', data);
     } catch (err) {
         console.error('Zod validation failed:', err);
-        return Response.json({ error: 'Invalid request' }, { status: 400 });
+        return Response.json({ error: 'Invalid request format or missing data field' }, { status: 400 });
     }
 
     if (!data) {
         console.warn('data not present after parsing.');
-        return Response.json({ error: 'Invalid request' }, { status: 400 });
+        return Response.json({ error: 'Missing or empty data field' }, { status: 400 });
     }
 
     // Parse the assignment data
