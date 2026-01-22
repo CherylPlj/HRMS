@@ -150,6 +150,12 @@ export default function AllVacanciesPage() {
             All Vacancies
           </h1>
 
+          <div className="bg-yellow-50 border-l-4 rounded p-4 mb-8" style={{ borderColor: '#DAA520' }}>
+            <p className="text-sm sm:text-base text-black italic">
+              <strong>Note:</strong> The job openings and vacancies displayed here do not reflect SJSFI's current openings and are only part of a capstone project for demonstration purposes.
+            </p>
+          </div>
+
           {/* Search Bar */}
           <div className="mb-8">
             <div className="relative">
@@ -159,7 +165,7 @@ export default function AllVacanciesPage() {
                 placeholder="Search job titles..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] text-sm sm:text-base"
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] text-sm sm:text-base bg-white text-black"
                 style={{ borderColor: '#F0E68C' }}
               />
             </div>

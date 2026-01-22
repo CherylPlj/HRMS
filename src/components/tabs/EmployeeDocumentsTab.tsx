@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Download, Eye, ExternalLink, X, Plus, Pen, Trash2, FileText, Search } from 'lucide-react';
+import { Download, Eye, ExternalLink, X, Plus, Pen, Trash2, FileText, Search, ChevronDown } from 'lucide-react';
 import ManageDocumentTypes from '../ManageDocumentTypes';
 
 interface Employee {
@@ -469,18 +469,18 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
             placeholder="Search documents..."
             value={documentSearchTerm}
             onChange={(e) => setDocumentSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] text-sm md:text-base"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] text-sm md:text-base bg-white"
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 sm:w-48">
+          <div className="flex-1 sm:w-48 relative">
             <select
               id="documentTypeFilter"
               value={selectedDocumentType}
               onChange={(e) => setSelectedDocumentType(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2 text-sm"
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2 pr-8 pl-3 text-sm appearance-none bg-white"
               title="Filter by Document Type"
             >
               <option value="all">All Types</option>
@@ -490,13 +490,14 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
                 </option>
               ))}
             </select>
+            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
           </div>
-          <div className="flex-1 sm:w-48">
+          <div className="flex-1 sm:w-48 relative">
             <select
               id="documentStatusFilter"
               value={selectedDocumentStatus}
               onChange={(e) => setSelectedDocumentStatus(e.target.value)}
-              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2 text-sm"
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#800000] focus:ring-[#800000] py-2 pr-8 pl-3 text-sm appearance-none bg-white"
               title="Filter by Status"
             >
               <option value="all">All Statuses</option>
@@ -504,6 +505,7 @@ const EmployeeDocumentsTab: React.FC<Props> = ({ documents, documentTypes, emplo
               <option value="Approved">Approved</option>
               <option value="Returned">Returned</option>
             </select>
+            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
           </div>
           <div className="shrink-0">
             <ManageDocumentTypes

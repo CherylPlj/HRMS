@@ -220,6 +220,12 @@ export default function CareersPage() {
             We are currently looking for qualified and passionate individuals to join our team. Explore the available positions below and find the opportunity that matches your skills and career aspirations.
           </p>
 
+          <div className="bg-yellow-50 border-l-4 rounded p-4 mb-8" style={{ borderColor: '#DAA520' }}>
+            <p className="text-sm sm:text-base text-black italic">
+              <strong>Note:</strong> The job openings and vacancies displayed here do not reflect SJSFI's current openings and are only part of a capstone project for demonstration purposes.
+            </p>
+          </div>
+
           {/* Vacancies List */}
           {loading ? (
             <div className="text-center py-12">

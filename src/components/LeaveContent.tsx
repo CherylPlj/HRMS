@@ -513,19 +513,21 @@ const LeaveContent: React.FC = () => {
                     </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-                    <div className="flex-1 sm:flex-none">
-                        <ManageLeaveTypes
-                            leaveTypes={leaveTypes}
-                            onUpdate={fetchLeaveTypes}
-                        />
-                    </div>
+                    {activeTab === 'management' && (
+                        <div className="flex-1 sm:flex-none">
+                            <ManageLeaveTypes
+                                leaveTypes={leaveTypes}
+                                onUpdate={fetchLeaveTypes}
+                            />
+                        </div>
+                    )}
                     {activeTab !== 'dashboard' && (
                         <button
                             onClick={handleDownloadPDF}
                             className="bg-[#800000] hover:bg-red-800 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base flex-1 sm:flex-none whitespace-nowrap"
                         >
                             <Download size={18} />
-                            <span>Download Report</span>
+                            <span>Download</span>
                         </button>
                     )}
                 </div>

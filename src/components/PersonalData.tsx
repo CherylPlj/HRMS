@@ -959,10 +959,11 @@ const validateDateOfBirth = (dob: string): string | undefined => {
           if (!confirmSwitch) {
             return;
           }
-          
-          // Cancel editing for current tab
-          handleCancelEditTab(activeTab as keyof typeof editingTabs);
         }
+        
+        // Always cancel editing for current tab when switching, regardless of whether there are changes
+        // This ensures only one tab can be in edit mode at a time
+        handleCancelEditTab(activeTab as keyof typeof editingTabs);
       }
     }
     
@@ -1663,7 +1664,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
 
       {/* Photo Upload Modal */}
       {showPhotoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h3 className="text-lg md:text-xl font-bold text-gray-900">Update Photo</h3>
@@ -1769,7 +1770,7 @@ const validateDateOfBirth = (dob: string): string | undefined => {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">

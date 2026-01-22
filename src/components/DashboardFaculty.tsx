@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabaseClient';
 import { DateTime } from 'luxon';
+import { formatTimeRangeShort } from '@/lib/timeUtils';
 
 // Add interfaces for component props
 interface ComponentWithBackButton {
@@ -107,6 +108,26 @@ export default function DashboardFaculty() {
     pendingReviews: 0,
     totalMetrics: 0
   });
+
+  const [scheduleData, setScheduleData] = useState({
+    totalClasses: 0,
+    totalHoursPerWeek: 0,
+    totalSubjects: 0,
+    totalSections: 0
+  });
+
+  const [todaySchedule, setTodaySchedule] = useState<Array<{
+    id: number;
+    day: string;
+    time: string;
+    duration: number;
+    subject: {
+      name: string;
+    };
+    classSection: {
+      name: string;
+    };
+  }>>([]);
 
   // Fetch Supabase UserID and FacultyID when Clerk user is available
   useEffect(() => {
@@ -269,6 +290,9 @@ export default function DashboardFaculty() {
           await fetchDisciplinaryData(facultyData.EmployeeID);
           await fetchPerformanceData(facultyData.EmployeeID);
         }
+
+        // Fetch schedule data
+        await fetchScheduleData(facultyData.FacultyID);
       }
     } catch (error) {
       console.error('Error fetching other dashboard data:', error);
@@ -298,6 +322,48 @@ export default function DashboardFaculty() {
       }
     } catch (error) {
       console.error('Error fetching disciplinary data:', error);
+    }
+  };
+
+  // Fetch schedule data
+  const fetchScheduleData = async (facultyId: number) => {
+    try {
+      const response = await fetch(`/api/schedules/faculty/${facultyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const schedules = data.schedules || [];
+        const uniqueSubjects = new Set(schedules.map((s: any) => s.subject?.name || s.subject?.id)).size;
+        const uniqueSections = new Set(schedules.map((s: any) => s.classSection?.name || s.classSection?.id)).size;
+        const totalHours = schedules.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
+
+        setScheduleData({
+          totalClasses: schedules.length,
+          totalHoursPerWeek: totalHours,
+          totalSubjects: uniqueSubjects,
+          totalSections: uniqueSections
+        });
+
+        // Get today's day of the week
+        const today = new Date();
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayDayName = dayNames[today.getDay()];
+        
+        // Filter schedules for today
+        const todaySchedules = schedules.filter((s: any) => 
+          s.day && s.day.toLowerCase() === todayDayName.toLowerCase()
+        );
+        
+        // Sort by time
+        todaySchedules.sort((a: any, b: any) => {
+          const timeA = a.time?.split('-')[0] || '';
+          const timeB = b.time?.split('-')[0] || '';
+          return timeA.localeCompare(timeB);
+        });
+        
+        setTodaySchedule(todaySchedules);
+      }
+    } catch (error) {
+      console.error('Error fetching schedule data:', error);
     }
   };
 
@@ -542,7 +608,7 @@ export default function DashboardFaculty() {
             </div>
           </div>
 
-          {/* Second Row: Document Requirements, Leave */}
+          {/* Second Row: Document Requirements, Leave, Schedule */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Document Requirements Card */}
             <div 
@@ -557,22 +623,22 @@ export default function DashboardFaculty() {
                 <i className="fas fa-chevron-right text-gray-400"></i>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="bg-yellow-100 rounded-lg p-4">
+                <div className="bg-yellow-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-hourglass-half text-yellow-700 mb-2 text-lg"></i>
                   <p className="text-2xl font-bold">{documentRequirements.pending}</p>
                   <p className="text-xs text-yellow-700">Pending</p>
                 </div>
-                <div className="bg-blue-100 rounded-lg p-4">
+                <div className="bg-blue-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-paper-plane text-blue-700 mb-2 text-lg"></i>
                   <p className="text-2xl font-bold">{documentRequirements.submitted}</p>
                   <p className="text-xs text-blue-700">Submitted</p>
                 </div>
-                <div className="bg-green-100 rounded-lg p-4">
+                <div className="bg-green-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-check-circle text-green-700 mb-2 text-lg"></i>
                   <p className="text-2xl font-bold">{documentRequirements.approved}</p>
                   <p className="text-xs text-green-700">Approved</p>
                 </div>
-                <div className="bg-red-100 rounded-lg p-4">
+                <div className="bg-red-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-times-circle text-red-700 mb-2 text-lg"></i>
                   <p className="text-2xl font-bold">{documentRequirements.rejected}</p>
                   <p className="text-xs text-red-700">Returned</p>
@@ -606,23 +672,102 @@ export default function DashboardFaculty() {
                   style={{ width: `${(leaveData.approved / leaveData.available) * 100}%` }}
                 ></div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                <div className="bg-yellow-100 rounded-lg p-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-yellow-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-hourglass-half text-yellow-700 mb-2 text-lg"></i>
-                  <p className="text-xl font-bold">{leaveData.pending}</p>
+                  <p className="text-2xl font-bold">{leaveData.pending}</p>
                   <p className="text-xs text-yellow-700">Pending</p>
                 </div>
-                <div className="bg-green-100 rounded-lg p-4">
+                <div className="bg-green-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-check-circle text-green-700 mb-2 text-lg"></i>
-                  <p className="text-xl font-bold">{leaveData.approved}</p>
+                  <p className="text-2xl font-bold">{leaveData.approved}</p>
                   <p className="text-xs text-green-700">Approved</p>
                 </div>
-                <div className="bg-red-100 rounded-lg p-4">
+                <div className="bg-red-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
                   <i className="fas fa-times-circle text-red-700 mb-2 text-lg"></i>
-                  <p className="text-xl font-bold">{leaveData.rejected}</p>
+                  <p className="text-2xl font-bold">{leaveData.rejected}</p>
                   <p className="text-xs text-red-700">Returned</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Third Row: My Schedule and Today's Schedule */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Schedule Card */}
+            <div 
+              onClick={() => router.push('/dashboard/faculty/my-schedule')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-semibold">
+                  <i className="fas fa-calendar-alt mr-2 text-[#800000]"></i>
+                  My Schedule
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="bg-blue-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
+                  <i className="fas fa-book text-blue-700 mb-2 text-lg"></i>
+                  <p className="text-2xl font-bold">{scheduleData.totalClasses}</p>
+                  <p className="text-xs text-blue-700">Total Classes</p>
+                </div>
+                <div className="bg-green-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
+                  <i className="fas fa-clock text-green-700 mb-2 text-lg"></i>
+                  <p className="text-2xl font-bold">{scheduleData.totalHoursPerWeek}</p>
+                  <p className="text-xs text-green-700">Hours/Week</p>
+                </div>
+                <div className="bg-purple-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
+                  <i className="fas fa-book-open text-purple-700 mb-2 text-lg"></i>
+                  <p className="text-2xl font-bold">{scheduleData.totalSubjects}</p>
+                  <p className="text-xs text-purple-700">Subjects</p>
+                </div>
+                <div className="bg-orange-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[100px]">
+                  <i className="fas fa-users text-orange-700 mb-2 text-lg"></i>
+                  <p className="text-2xl font-bold">{scheduleData.totalSections}</p>
+                  <p className="text-xs text-orange-700">Sections</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Today's Schedule Card */}
+            <div 
+              onClick={() => router.push('/dashboard/faculty/my-schedule')}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-semibold">
+                  <i className="fas fa-calendar-day mr-2 text-[#800000]"></i>
+                  Today's Schedule
+                </h3>
+                <i className="fas fa-chevron-right text-gray-400"></i>
+              </div>
+              {todaySchedule.length > 0 ? (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {todaySchedule.map((schedule) => (
+                    <div
+                      key={schedule.id}
+                      className="bg-blue-50 border border-blue-200 rounded-lg p-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 text-sm">{schedule.subject.name}</p>
+                          <p className="text-xs text-gray-600 mt-1">{schedule.classSection.name}</p>
+                        </div>
+                        <div className="text-right ml-2">
+                          <p className="text-xs font-medium text-gray-900">{formatTimeRangeShort(schedule.time)}</p>
+                          <p className="text-xs text-gray-500">{schedule.duration}h</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <i className="fas fa-calendar-times text-gray-300 text-4xl mb-3"></i>
+                  <p className="text-sm text-gray-500">No classes scheduled for today</p>
+                </div>
+              )}
             </div>
           </div>
 

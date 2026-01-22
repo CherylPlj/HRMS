@@ -50,7 +50,7 @@ const InputField = ({
       onChange={onChange}
       required={required}
       placeholder={placeholder}
-      className={`w-full border ${error ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
+      className={`w-full border ${error ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white text-black`}
     />
     {showErrorMessage && error && (
       <p className="mt-1 text-sm text-red-500">{error}</p>
@@ -547,7 +547,7 @@ const ApplicantPage = () => {
                   required
                   value={formData.sex}
                   onChange={handleChange}
-                  className={`w-full border ${errors.sex ? 'border-red-500' : 'border-gray-300'} rounded-md pl-3 pr-10 py-2 appearance-none focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white`}
+                  className={`w-full border ${errors.sex ? 'border-red-500' : 'border-gray-300'} rounded-md pl-3 pr-10 py-2 appearance-none focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white text-black`}
                 >
                   <option value="">-- Select Sex --</option>
                   <option value="Male">Male</option>
@@ -570,7 +570,7 @@ const ApplicantPage = () => {
                 value={formData.dateOfBirth}
                 onChange={handleChange}
                 max={new Date().toISOString().split('T')[0]}
-                className={`w-full border ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
+                className={`w-full border ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white text-black`}
               />
               {errors.dateOfBirth && (
                 <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>
@@ -608,7 +608,7 @@ const ApplicantPage = () => {
                   required
                   value={formData.vacancy}
                   onChange={handleChange}
-                  className={`w-full border ${errors.vacancy ? 'border-red-500' : 'border-gray-300'} rounded-md pl-3 pr-10 py-2 appearance-none focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white`}
+                  className={`w-full border ${errors.vacancy ? 'border-red-500' : 'border-gray-300'} rounded-md pl-3 pr-10 py-2 appearance-none focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white text-black`}
                 >
                   <option value="">Select Job Title</option>
                   {vacancies.map((vacancy) => (
@@ -632,7 +632,7 @@ const ApplicantPage = () => {
                 accept=".pdf,.doc,.docx"
                 required
                 onChange={handleFileChange}
-                className={`w-full border ${errors.resume ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]`}
+                className={`w-full border ${errors.resume ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] bg-white text-black`}
               />
               {errors.resume && (
                 <p className="mt-1 text-sm text-red-500">{errors.resume}</p>

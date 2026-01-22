@@ -316,7 +316,7 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ employeeId }) => {
 
       {/* Add/Edit Form */}
       {showForm && currentRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-[9999]">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center px-4 md:px-6 py-3 md:py-4 border-b">
               <h3 className="text-lg md:text-xl font-bold text-gray-800">
