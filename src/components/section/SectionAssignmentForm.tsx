@@ -249,7 +249,7 @@ export default function SectionAssignmentForm({
           Class Adviser
         </label>
         <p className="text-xs text-gray-500 mb-2">
-          Assign a teacher as the class adviser for forms, clearance, and student concerns routing
+          Assign a teacher as the class adviser
         </p>
         <div className="relative">
           <select

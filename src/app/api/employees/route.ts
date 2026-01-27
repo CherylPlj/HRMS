@@ -1,5 +1,43 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { encrypt, decrypt, encryptFields, decryptFields } from '@/lib/encryption';
+
+// Fields that should be encrypted in GovernmentID
+const GOVERNMENT_ID_ENCRYPTED_FIELDS = [
+  'SSSNumber',
+  'TINNumber',
+  'PhilHealthNumber',
+  'PagIbigNumber',
+  'GSISNumber',
+  'PRCLicenseNumber',
+  'BIRNumber',
+  'PassportNumber',
+] as const;
+
+// Fields that should be encrypted in EmploymentDetail
+const SALARY_ENCRYPTED_FIELDS = [
+  'SalaryAmount',
+  'SalaryGrade',
+] as const;
+
+// Fields that should be encrypted in MedicalInfo
+const MEDICAL_ENCRYPTED_FIELDS = [
+  'medicalNotes',
+  'allergies',
+  'disabilityDetails',
+  'pwdIdNumber',
+  'healthInsuranceNumber',
+  'physicianContact',
+  'emergencyProcedures',
+  'bloodType',
+  'accommodationsNeeded',
+  'emergencyProtocol',
+  'disabilityCertification',
+  'assistiveTechnology',
+  'mobilityAids',
+  'communicationNeeds',
+  'workplaceModifications',
+] as const;
 import { currentUser } from '@clerk/nextjs/server';
 
 export async function GET(request: Request) {
@@ -56,16 +94,50 @@ export async function GET(request: Request) {
       throw error;
     }
 
+    // Decrypt encrypted fields for each employee
+    const decryptedEmployees = (employees || []).map((emp: any) => {
+      const decrypted = { ...emp };
+
+      // Decrypt EmploymentDetail salary fields
+      if (emp.EmploymentDetail && Array.isArray(emp.EmploymentDetail) && emp.EmploymentDetail.length > 0) {
+        decrypted.EmploymentDetail = emp.EmploymentDetail.map((ed: any) =>
+          decryptFields(ed, SALARY_ENCRYPTED_FIELDS, 'salary')
+        );
+      } else if (emp.EmploymentDetail) {
+        decrypted.EmploymentDetail = decryptFields(emp.EmploymentDetail, SALARY_ENCRYPTED_FIELDS, 'salary');
+      }
+
+      // Decrypt GovernmentID fields
+      if (emp.GovernmentID && Array.isArray(emp.GovernmentID) && emp.GovernmentID.length > 0) {
+        decrypted.GovernmentID = emp.GovernmentID.map((gid: any) =>
+          decryptFields(gid, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government')
+        );
+      } else if (emp.GovernmentID) {
+        decrypted.GovernmentID = decryptFields(emp.GovernmentID, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government');
+      }
+
+      // Decrypt MedicalInfo fields
+      if (emp.MedicalInfo && Array.isArray(emp.MedicalInfo) && emp.MedicalInfo.length > 0) {
+        decrypted.MedicalInfo = emp.MedicalInfo.map((mi: any) =>
+          decryptFields(mi, MEDICAL_ENCRYPTED_FIELDS, 'medical')
+        );
+      } else if (emp.MedicalInfo) {
+        decrypted.MedicalInfo = decryptFields(emp.MedicalInfo, MEDICAL_ENCRYPTED_FIELDS, 'medical');
+      }
+
+      return decrypted;
+    });
+
     // Return different response structure based on whether all records were requested
     if (all) {
       return NextResponse.json({
-        employees,
+        employees: decryptedEmployees,
         totalCount: totalCount || 0
       });
     } else {
       const totalPages = Math.ceil((totalCount || 0) / limit);
       return NextResponse.json({
-        employees,
+        employees: decryptedEmployees,
         pagination: {
           currentPage: page,
           totalPages,
@@ -333,20 +405,27 @@ export async function POST(request: Request) {
 
     // Create government ID if provided
     if (data.SSSNumber || data.TINNumber || data.PhilHealthNumber || data.PagIbigNumber || data.GSISNumber || data.PRCLicenseNumber || data.PRCValidity) {
+      // Encrypt government ID fields before storing
+      const govIdData: any = {
+        employeeId: newEmployee.EmployeeID,
+        SSSNumber: data.SSSNumber || null,
+        TINNumber: data.TINNumber || null,
+        PhilHealthNumber: data.PhilHealthNumber || null,
+        PagIbigNumber: data.PagIbigNumber || null,
+        GSISNumber: data.GSISNumber || null,
+        PRCLicenseNumber: data.PRCLicenseNumber || null,
+        PRCValidity: data.PRCValidity || null,
+        BIRNumber: data.BIRNumber || null,
+        PassportNumber: data.PassportNumber || null,
+        PassportValidity: data.PassportValidity || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      const encryptedGovIdData = encryptFields(govIdData, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government');
+
       const { error: govIdError } = await supabaseAdmin
         .from('GovernmentID')
-        .insert({
-          employeeId: newEmployee.EmployeeID,
-          SSSNumber: data.SSSNumber || null,
-          TINNumber: data.TINNumber || null,
-          PhilHealthNumber: data.PhilHealthNumber || null,
-          PagIbigNumber: data.PagIbigNumber || null,
-          GSISNumber: data.GSISNumber || null,
-          PRCLicenseNumber: data.PRCLicenseNumber || null,
-          PRCValidity: data.PRCValidity || null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+        .insert(encryptedGovIdData);
 
       if (govIdError) {
         console.error('Error creating government ID:', govIdError);
@@ -850,19 +929,26 @@ export async function PATCH(request: Request) {
 
     // Update or create GovernmentID record
     if (data.SSSNumber !== undefined || data.TINNumber !== undefined || data.PhilHealthNumber !== undefined || data.PagIbigNumber !== undefined || data.GSISNumber !== undefined || data.PRCLicenseNumber !== undefined || data.PRCValidity !== undefined) {
+      // Encrypt government ID fields before storing
+      const govIdData: any = {
+        employeeId: data.EmployeeID,
+        SSSNumber: data.SSSNumber || null,
+        TINNumber: data.TINNumber || null,
+        PhilHealthNumber: data.PhilHealthNumber || null,
+        PagIbigNumber: data.PagIbigNumber || null,
+        GSISNumber: data.GSISNumber || null,
+        PRCLicenseNumber: data.PRCLicenseNumber || null,
+        PRCValidity: data.PRCValidity || null,
+        BIRNumber: data.BIRNumber || null,
+        PassportNumber: data.PassportNumber || null,
+        PassportValidity: data.PassportValidity || null,
+        updatedAt: new Date().toISOString()
+      };
+      const encryptedGovIdData = encryptFields(govIdData, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government');
+
       const { error: govIdError } = await supabaseAdmin
         .from('GovernmentID')
-        .upsert({
-          employeeId: data.EmployeeID,
-          SSSNumber: data.SSSNumber || null,
-          TINNumber: data.TINNumber || null,
-          PhilHealthNumber: data.PhilHealthNumber || null,
-          PagIbigNumber: data.PagIbigNumber || null,
-          GSISNumber: data.GSISNumber || null,
-          PRCLicenseNumber: data.PRCLicenseNumber || null,
-          PRCValidity: data.PRCValidity || null,
-          updatedAt: new Date().toISOString()
-        }, {
+        .upsert(encryptedGovIdData, {
           onConflict: 'employeeId'
         });
 

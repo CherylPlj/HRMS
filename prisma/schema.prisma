@@ -167,7 +167,7 @@ model EmploymentDetail {
   Designation      Designation?
   Position         String?
   SalaryGrade      String?
-  SalaryAmount     Decimal?          @db.Decimal(10, 2)
+  SalaryAmount     String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime?         @updatedAt
   createdBy        String?

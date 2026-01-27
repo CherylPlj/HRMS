@@ -2,6 +2,26 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { isUserAdmin } from '@/utils/serverRoleUtils';
+import { encrypt, decrypt, encryptFields, decryptFields } from '@/lib/encryption';
+
+// Fields that should be encrypted in MedicalInfo
+const MEDICAL_ENCRYPTED_FIELDS = [
+  'medicalNotes',
+  'allergies',
+  'disabilityDetails',
+  'pwdIdNumber',
+  'healthInsuranceNumber',
+  'physicianContact',
+  'emergencyProcedures',
+  'bloodType',
+  'accommodationsNeeded',
+  'emergencyProtocol',
+  'disabilityCertification',
+  'assistiveTechnology',
+  'mobilityAids',
+  'communicationNeeds',
+  'workplaceModifications',
+] as const;
 
 export async function GET(
   request: Request,
@@ -25,7 +45,10 @@ export async function GET(
       return NextResponse.json({});
     }
 
-    return NextResponse.json(medicalInfo);
+    // Decrypt sensitive fields before returning
+    const decryptedMedicalInfo = decryptFields(medicalInfo, MEDICAL_ENCRYPTED_FIELDS, 'medical');
+
+    return NextResponse.json(decryptedMedicalInfo);
   } catch (error) {
     console.error('Error fetching medical info:', error);
     
@@ -75,32 +98,35 @@ export async function POST(
     // Ensure numeric fields are properly typed
     if (data.disabilityPercentage) data.disabilityPercentage = parseInt(data.disabilityPercentage);
 
+    // Encrypt sensitive fields before storing
+    const encryptedData = encryptFields(data, MEDICAL_ENCRYPTED_FIELDS, 'medical');
+
     const medicalInfo = await prisma.medicalInfo.create({
       data: {
         employeeId: employeeId,
-        medicalNotes: data.medicalNotes,
+        medicalNotes: encryptedData.medicalNotes,
         lastCheckup: data.lastCheckup,
         vaccination: data.vaccination,
-        allergies: data.allergies,
-        bloodType: data.bloodType,
+        allergies: encryptedData.allergies,
+        bloodType: encryptedData.bloodType,
         hasDisability: data.hasDisability || false,
         disabilityType: data.disabilityType,
-        disabilityDetails: data.disabilityDetails,
-        accommodationsNeeded: data.accommodationsNeeded,
-        pwdIdNumber: data.pwdIdNumber,
+        disabilityDetails: encryptedData.disabilityDetails,
+        accommodationsNeeded: encryptedData.accommodationsNeeded,
+        pwdIdNumber: encryptedData.pwdIdNumber,
         pwdIdValidity: data.pwdIdValidity,
-        disabilityCertification: data.disabilityCertification,
+        disabilityCertification: encryptedData.disabilityCertification,
         disabilityPercentage: data.disabilityPercentage,
-        assistiveTechnology: data.assistiveTechnology,
-        mobilityAids: data.mobilityAids,
-        communicationNeeds: data.communicationNeeds,
-        workplaceModifications: data.workplaceModifications,
-        emergencyProtocol: data.emergencyProtocol,
-        emergencyProcedures: data.emergencyProcedures,
+        assistiveTechnology: encryptedData.assistiveTechnology,
+        mobilityAids: encryptedData.mobilityAids,
+        communicationNeeds: encryptedData.communicationNeeds,
+        workplaceModifications: encryptedData.workplaceModifications,
+        emergencyProtocol: encryptedData.emergencyProtocol,
+        emergencyProcedures: encryptedData.emergencyProcedures,
         primaryPhysician: data.primaryPhysician,
-        physicianContact: data.physicianContact,
+        physicianContact: encryptedData.physicianContact,
         healthInsuranceProvider: data.healthInsuranceProvider,
-        healthInsuranceNumber: data.healthInsuranceNumber,
+        healthInsuranceNumber: encryptedData.healthInsuranceNumber,
         healthInsuranceExpiryDate: data.healthInsuranceExpiryDate
       }
     });
@@ -156,67 +182,73 @@ export async function PUT(
     // Ensure numeric fields are properly typed
     if (data.disabilityPercentage) data.disabilityPercentage = parseInt(data.disabilityPercentage);
 
+    // Encrypt sensitive fields before storing
+    const encryptedData = encryptFields(data, MEDICAL_ENCRYPTED_FIELDS, 'medical');
+
     const updatedMedicalInfo = await prisma.medicalInfo.upsert({
       where: {
         employeeId: employeeId
       },
       update: {
-        medicalNotes: data.medicalNotes,
+        medicalNotes: encryptedData.medicalNotes,
         lastCheckup: data.lastCheckup,
         vaccination: data.vaccination,
-        allergies: data.allergies,
-        bloodType: data.bloodType,
+        allergies: encryptedData.allergies,
+        bloodType: encryptedData.bloodType,
         hasDisability: data.hasDisability,
         disabilityType: data.disabilityType,
-        disabilityDetails: data.disabilityDetails,
-        accommodationsNeeded: data.accommodationsNeeded,
-        pwdIdNumber: data.pwdIdNumber,
+        disabilityDetails: encryptedData.disabilityDetails,
+        accommodationsNeeded: encryptedData.accommodationsNeeded,
+        pwdIdNumber: encryptedData.pwdIdNumber,
         pwdIdValidity: data.pwdIdValidity,
-        disabilityCertification: data.disabilityCertification,
+        disabilityCertification: encryptedData.disabilityCertification,
         disabilityPercentage: data.disabilityPercentage,
-        assistiveTechnology: data.assistiveTechnology,
-        mobilityAids: data.mobilityAids,
-        communicationNeeds: data.communicationNeeds,
-        workplaceModifications: data.workplaceModifications,
-        emergencyProtocol: data.emergencyProtocol,
-        emergencyProcedures: data.emergencyProcedures,
+        assistiveTechnology: encryptedData.assistiveTechnology,
+        mobilityAids: encryptedData.mobilityAids,
+        communicationNeeds: encryptedData.communicationNeeds,
+        workplaceModifications: encryptedData.workplaceModifications,
+        emergencyProtocol: encryptedData.emergencyProtocol,
+        emergencyProcedures: encryptedData.emergencyProcedures,
         primaryPhysician: data.primaryPhysician,
-        physicianContact: data.physicianContact,
+        physicianContact: encryptedData.physicianContact,
         healthInsuranceProvider: data.healthInsuranceProvider,
-        healthInsuranceNumber: data.healthInsuranceNumber,
+        healthInsuranceNumber: encryptedData.healthInsuranceNumber,
         healthInsuranceExpiryDate: data.healthInsuranceExpiryDate
       },
       create: {
         employeeId: employeeId,
-        medicalNotes: data.medicalNotes,
+        medicalNotes: encryptedData.medicalNotes,
         lastCheckup: data.lastCheckup,
         vaccination: data.vaccination,
-        allergies: data.allergies,
-        bloodType: data.bloodType,
+        allergies: encryptedData.allergies,
+        bloodType: encryptedData.bloodType,
         hasDisability: data.hasDisability || false,
         disabilityType: data.disabilityType,
-        disabilityDetails: data.disabilityDetails,
-        accommodationsNeeded: data.accommodationsNeeded,
-        pwdIdNumber: data.pwdIdNumber,
+        disabilityDetails: encryptedData.disabilityDetails,
+        accommodationsNeeded: encryptedData.accommodationsNeeded,
+        pwdIdNumber: encryptedData.pwdIdNumber,
         pwdIdValidity: data.pwdIdValidity,
-        disabilityCertification: data.disabilityCertification,
+        disabilityCertification: encryptedData.disabilityCertification,
         disabilityPercentage: data.disabilityPercentage,
-        assistiveTechnology: data.assistiveTechnology,
-        mobilityAids: data.mobilityAids,
-        communicationNeeds: data.communicationNeeds,
-        workplaceModifications: data.workplaceModifications,
-        emergencyProtocol: data.emergencyProtocol,
-        emergencyProcedures: data.emergencyProcedures,
+        assistiveTechnology: encryptedData.assistiveTechnology,
+        mobilityAids: encryptedData.mobilityAids,
+        communicationNeeds: encryptedData.communicationNeeds,
+        workplaceModifications: encryptedData.workplaceModifications,
+        emergencyProtocol: encryptedData.emergencyProtocol,
+        emergencyProcedures: encryptedData.emergencyProcedures,
         primaryPhysician: data.primaryPhysician,
-        physicianContact: data.physicianContact,
+        physicianContact: encryptedData.physicianContact,
         healthInsuranceProvider: data.healthInsuranceProvider,
-        healthInsuranceNumber: data.healthInsuranceNumber,
+        healthInsuranceNumber: encryptedData.healthInsuranceNumber,
         healthInsuranceExpiryDate: data.healthInsuranceExpiryDate
       }
     });
 
+    // Decrypt before returning
+    const decryptedMedicalInfo = decryptFields(updatedMedicalInfo, MEDICAL_ENCRYPTED_FIELDS, 'medical');
+
     console.log('Medical info updated successfully:', updatedMedicalInfo);
-    return NextResponse.json(updatedMedicalInfo);
+    return NextResponse.json(decryptedMedicalInfo);
   } catch (error) {
     console.error('Error updating medical info:', error);
     

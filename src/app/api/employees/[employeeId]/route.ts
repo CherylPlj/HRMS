@@ -3,6 +3,25 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { currentUser } from '@clerk/nextjs/server';
 import { clerkClient } from '@clerk/nextjs/server';
 import { getUserRoleFlexible } from '@/lib/getUserRoleFlexible';
+import { encrypt, decrypt, encryptFields, decryptFields, isEncrypted } from '@/lib/encryption';
+
+// Fields that should be encrypted in GovernmentID
+const GOVERNMENT_ID_ENCRYPTED_FIELDS = [
+  'SSSNumber',
+  'TINNumber',
+  'PhilHealthNumber',
+  'PagIbigNumber',
+  'GSISNumber',
+  'PRCLicenseNumber',
+  'BIRNumber',
+  'PassportNumber',
+] as const;
+
+// Fields that should be encrypted in EmploymentDetail
+const SALARY_ENCRYPTED_FIELDS = [
+  'SalaryAmount',
+  'SalaryGrade',
+] as const;
 
 // Helper function to sanitize integer values (handles undefined, null, empty strings, and string "undefined")
 function sanitizeInteger(value: any): number | null {
@@ -98,7 +117,10 @@ export async function GET(
         .select('*')
         .eq('employeeId', employeeId)
         .single();
-      employmentDetail = empDetail;
+      // Decrypt salary fields before returning
+      if (empDetail) {
+        employmentDetail = decryptFields(empDetail, SALARY_ENCRYPTED_FIELDS, 'salary');
+      }
     } catch (e) {
       console.log('No employment detail found');
     }
@@ -122,7 +144,10 @@ export async function GET(
         .select('*')
         .eq('employeeId', employeeId)
         .single();
-      governmentId = govId;
+      // Decrypt government ID fields before returning
+      if (govId) {
+        governmentId = decryptFields(govId, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government');
+      }
     } catch (e) {
       console.log('No government ID found');
     }
@@ -202,7 +227,10 @@ export async function PATCH(
         .select('*')
         .eq('employeeId', employeeId)
         .single();
-      currentEmploymentDetail = currentEmp;
+      // Decrypt salary fields for comparison
+      if (currentEmp) {
+        currentEmploymentDetail = decryptFields(currentEmp, SALARY_ENCRYPTED_FIELDS, 'salary');
+      }
     } catch (e) {
       console.log('No current employment detail found');
     }
@@ -269,24 +297,79 @@ export async function PATCH(
 
     // Update or create EmploymentDetail record
     if (employmentFieldsChanged) {
+      // Prepare employment detail data
+      const empDetailData: any = {
+        employeeId: employeeId,
+        EmploymentStatus: data.EmploymentStatus || 'Regular',
+        HireDate: data.HireDate,
+        ResignationDate: data.ResignationDate || null,
+        Designation: data.Designation || null,
+        Position: data.Position || null,
+        SalaryGrade: data.SalaryGrade || null,
+        SalaryAmount: data.SalaryAmount !== undefined ? (data.SalaryAmount || null) : undefined,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Check if SalaryAmount is already encrypted (shouldn't happen, but handle it)
+      // If it's encrypted, we need to decrypt it first, then re-encrypt
+      if (empDetailData.SalaryAmount != null && typeof empDetailData.SalaryAmount === 'string') {
+        if (isEncrypted(empDetailData.SalaryAmount)) {
+          // Decrypt first, then it will be re-encrypted below
+          try {
+            const decryptedValue = decrypt(empDetailData.SalaryAmount, 'salary');
+            // Convert back to number if it was originally a number
+            if (decryptedValue) {
+              const numValue = parseFloat(decryptedValue);
+              if (!isNaN(numValue)) {
+                empDetailData.SalaryAmount = numValue;
+              } else {
+                empDetailData.SalaryAmount = decryptedValue;
+              }
+            } else {
+              empDetailData.SalaryAmount = null;
+            }
+          } catch (error) {
+            console.warn('Failed to decrypt SalaryAmount, treating as plain text:', error);
+            // If decryption fails, try to parse as number
+            const numValue = parseFloat(empDetailData.SalaryAmount);
+            if (!isNaN(numValue)) {
+              empDetailData.SalaryAmount = numValue;
+            }
+          }
+        } else {
+          // Not encrypted, but might be a string representation of a number
+          const numValue = parseFloat(empDetailData.SalaryAmount);
+          if (!isNaN(numValue)) {
+            empDetailData.SalaryAmount = numValue;
+          }
+        }
+      }
+
+      // Encrypt salary fields before storing
+      // NOTE: The database column SalaryAmount must be TEXT/VARCHAR to store encrypted values
+      // If the column is still Decimal, this will fail. A migration is required.
+      const encryptedEmpDetailData = encryptFields(empDetailData, SALARY_ENCRYPTED_FIELDS, 'salary');
+
       const { error: employmentError } = await supabaseAdmin
         .from('EmploymentDetail')
-        .upsert({
-          employeeId: employeeId,
-          EmploymentStatus: data.EmploymentStatus || 'Regular',
-          HireDate: data.HireDate,
-          ResignationDate: data.ResignationDate || null,
-          Designation: data.Designation || null,
-          Position: data.Position || null,
-          SalaryGrade: data.SalaryGrade || null,
-          SalaryAmount: data.SalaryAmount !== undefined ? (data.SalaryAmount || null) : undefined,
-          updatedAt: new Date().toISOString()
-        }, {
+        .upsert(encryptedEmpDetailData, {
           onConflict: 'employeeId'
         });
 
       if (employmentError) {
         console.error('Error updating employment detail:', employmentError);
+        // Check if error is due to column type mismatch (Decimal vs encrypted string)
+        if (employmentError.code === '22P02' && employmentError.message?.includes('numeric')) {
+          console.error('⚠️  Database schema issue: SalaryAmount column must be TEXT/VARCHAR to store encrypted values.');
+          console.error('⚠️  Please run a migration to change SalaryAmount from Decimal to TEXT.');
+          return NextResponse.json(
+            { 
+              error: 'Database schema mismatch: SalaryAmount column must be TEXT to store encrypted values. Please contact the administrator.',
+              details: employmentError.message
+            },
+            { status: 500 }
+          );
+        }
         throw employmentError;
       }
 
@@ -369,19 +452,26 @@ export async function PATCH(
 
     // Update or create GovernmentID record
     if (data.SSSNumber !== undefined || data.TINNumber !== undefined || data.PhilHealthNumber !== undefined || data.PagIbigNumber !== undefined || data.GSISNumber !== undefined || data.PRCLicenseNumber !== undefined || data.PRCValidity !== undefined) {
+      // Encrypt government ID fields before storing
+      const govIdData: any = {
+        employeeId: employeeId,
+        SSSNumber: data.SSSNumber || null,
+        TINNumber: data.TINNumber || null,
+        PhilHealthNumber: data.PhilHealthNumber || null,
+        PagIbigNumber: data.PagIbigNumber || null,
+        GSISNumber: data.GSISNumber || null,
+        PRCLicenseNumber: data.PRCLicenseNumber || null,
+        PRCValidity: data.PRCValidity || null,
+        BIRNumber: data.BIRNumber || null,
+        PassportNumber: data.PassportNumber || null,
+        PassportValidity: data.PassportValidity || null,
+        updatedAt: new Date().toISOString()
+      };
+      const encryptedGovIdData = encryptFields(govIdData, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government');
+
       const { error: govIdError } = await supabaseAdmin
         .from('GovernmentID')
-        .upsert({
-          employeeId: employeeId,
-          SSSNumber: data.SSSNumber || null,
-          TINNumber: data.TINNumber || null,
-          PhilHealthNumber: data.PhilHealthNumber || null,
-          PagIbigNumber: data.PagIbigNumber || null,
-          GSISNumber: data.GSISNumber || null,
-          PRCLicenseNumber: data.PRCLicenseNumber || null,
-          PRCValidity: data.PRCValidity || null,
-          updatedAt: new Date().toISOString()
-        }, {
+        .upsert(encryptedGovIdData, {
           onConflict: 'employeeId'
         });
 
@@ -415,7 +505,10 @@ export async function PATCH(
         .select('*')
         .eq('employeeId', employeeId)
         .single();
-      employmentDetail = empDetail;
+      // Decrypt salary fields before returning
+      if (empDetail) {
+        employmentDetail = decryptFields(empDetail, SALARY_ENCRYPTED_FIELDS, 'salary');
+      }
     } catch (e) {
       console.log('No employment detail found');
     }
@@ -437,7 +530,10 @@ export async function PATCH(
         .select('*')
         .eq('employeeId', employeeId)
         .single();
-      governmentId = govId;
+      // Decrypt government ID fields before returning
+      if (govId) {
+        governmentId = decryptFields(govId, GOVERNMENT_ID_ENCRYPTED_FIELDS, 'government');
+      }
     } catch (e) {
       console.log('No government ID found');
     }

@@ -1,0 +1,2991 @@
+openapi: 3.0.3
+info:
+  title: HRMS API
+  description: |
+    Human Resource Management System API for SJSFI (San Jose School of Future Innovation).
+    This API provides programmatic access to HRMS functionality including employee management,
+    leave management, recruitment, performance reviews, and integration endpoints.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://your-domain.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: Authentication and authorization endpoints
+  - name: Employees
+    description: Employee management endpoints
+  - name: Users
+    description: User account management
+  - name: Documents
+    description: Document upload and management
+  - name: Leave Management
+    description: Leave request and approval management
+  - name: Recruitment
+    description: Job vacancies and candidate management
+  - name: Performance
+    description: Performance reviews, goals, and KPIs
+  - name: Directory
+    description: Employee directory and search
+  - name: Chat/AI
+    description: AI-powered chat assistant
+  - name: Integration
+    description: Cross-system integration endpoints (XR)
+  - name: Schedules
+    description: Teaching schedules and assignments
+  - name: Webhooks
+    description: Webhook endpoints for external integrations
+  - name: Utilities
+    description: Utility endpoints
+
+security:
+  - ClerkAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+  - ApiKeyAuth:
+    type: http
+    scheme: bearer
+
+paths:
+  # Authentication & Authorization
+  /getUserRole:
+    get:
+      tags:
+        - Authentication
+      summary: Get user role by ID or email
+      description: Retrieves user role information using API key authentication
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: userId
+          in: query
+          description: User ID
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          description: User email address
+          required: false
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: User role retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role:
+                    type: string
+                    example: admin
+                  userId:
+                    type: string
+                    example: "2025-0001"
+                  email:
+                    type: string
+                    example: user@example.com
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Employee Management
+  /employees:
+    get:
+      tags:
+        - Employees
+      summary: Get list of employees
+      description: Retrieves a paginated list of employees with optional filters
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: all
+          in: query
+          description: Return all records without pagination
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Employees retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  employees:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Employee'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  totalCount:
+                    type: integer
+                    description: Total count (when all=true)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Employees
+      summary: Create a new employee
+      description: Creates a new employee record with required information
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeRequest'
+            examples:
+              basic:
+                summary: Basic employee creation
+                value:
+                  FirstName: John
+                  LastName: Doe
+                  MiddleName: M
+                  ExtensionName: Jr
+                  DateOfBirth: "1990-01-15"
+                  Sex: Male
+                  HireDate: "2024-01-15"
+                  EmploymentStatus: Regular
+                  Designation: Faculty
+                  Position: Teacher
+                  DepartmentID: 1
+                  Email: john.doe@example.com
+                  Phone: "+1234567890"
+      responses:
+        '200':
+          description: Employee created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Employee already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Employee already exists with this email address
+                existingEmployeeId: "2025-0001"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Employees
+      summary: Update an employee
+      description: Updates an existing employee record
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployeeRequest'
+      responses:
+        '200':
+          description: Employee updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /employees/{employeeId}:
+    get:
+      tags:
+        - Employees
+      summary: Get employee by ID
+      description: Retrieves detailed information about a specific employee
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          description: Employee ID
+          schema:
+            type: string
+            example: "2025-0001"
+      responses:
+        '200':
+          description: Employee retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Employees
+      summary: Update employee by ID
+      description: Updates a specific employee record
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployeeRequest'
+      responses:
+        '200':
+          description: Employee updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Employees
+      summary: Delete employee (soft delete)
+      description: Soft deletes an employee and related records
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Employee deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  employeeId:
+                    type: string
+                  clerkDeleted:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /employees/{employeeId}/medical:
+    get:
+      tags:
+        - Employees
+      summary: Get employee medical information
+      description: Retrieves medical information for an employee
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Medical information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedicalInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Employees
+      summary: Update employee medical information
+      description: Updates medical information for an employee
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedicalInfo'
+      responses:
+        '200':
+          description: Medical information updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /employees/{employeeId}/certificates:
+    get:
+      tags:
+        - Employees
+      summary: List employee certificates
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificates retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Certificate'
+
+    post:
+      tags:
+        - Employees
+      summary: Add employee certificate
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Certificate'
+      responses:
+        '201':
+          description: Certificate created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+
+  /employees/{employeeId}/certificates/{id}:
+    get:
+      tags:
+        - Employees
+      summary: Get certificate by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Certificate retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+
+    delete:
+      tags:
+        - Employees
+      summary: Delete certificate
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Certificate deleted
+
+  /employees/{employeeId}/skills:
+    get:
+      tags:
+        - Employees
+      summary: List employee skills
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skills retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+
+    post:
+      tags:
+        - Employees
+      summary: Add employee skill
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Skill'
+      responses:
+        '201':
+          description: Skill created
+
+  /employees/{employeeId}/skills/{id}:
+    patch:
+      tags:
+        - Employees
+      summary: Update employee skill
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Skill'
+      responses:
+        '200':
+          description: Skill updated
+
+    delete:
+      tags:
+        - Employees
+      summary: Delete employee skill
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Skill deleted
+
+  /employees/export:
+    get:
+      tags:
+        - Employees
+      summary: Export employees to CSV/XLSX
+      description: Exports employee data in CSV or XLSX format
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, xlsx]
+            default: csv
+        - name: designation
+          in: query
+          schema:
+            type: string
+        - name: hireDateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: hireDateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            enum: [LastName, FirstName, EmployeeID]
+        - name: orderDir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Export file generated
+          content:
+            application/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /employees/import:
+    post:
+      tags:
+        - Employees
+      summary: Import employees from CSV
+      description: Bulk import employees from CSV file
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  imported:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+
+  # Leave Management
+  /leaves:
+    get:
+      tags:
+        - Leave Management
+      summary: Get leave requests
+      description: Retrieves a list of leave requests with optional filters
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Pending, Approved, Returned]
+        - name: facultyId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 500
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Leave requests retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaves:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Leave'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      hasMore:
+                        type: boolean
+
+    post:
+      tags:
+        - Leave Management
+      summary: Create leave request
+      description: Creates a new leave request
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeaveRequest'
+            examples:
+              sickLeave:
+                summary: Sick leave request
+                value:
+                  FacultyID: 1
+                  RequestType: Leave
+                  LeaveType: Sick
+                  StartDate: "2024-01-15"
+                  EndDate: "2024-01-20"
+                  Reason: Medical appointment
+              undertime:
+                summary: Undertime request
+                value:
+                  FacultyID: 1
+                  RequestType: Undertime
+                  LeaveType: Sick
+                  StartDate: "2024-01-15"
+                  EndDate: "2024-01-15"
+                  TimeIn: "2024-01-15T08:00:00Z"
+                  TimeOut: "2024-01-15T12:00:00Z"
+                  Reason: Medical appointment
+      responses:
+        '200':
+          description: Leave request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /leaves/{id}:
+    get:
+      tags:
+        - Leave Management
+      summary: Get leave request by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Leave request retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leave'
+
+    patch:
+      tags:
+        - Leave Management
+      summary: Update leave request
+      description: Updates leave request status (approve/reject)
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Pending, Approved, Returned]
+                comments:
+                  type: string
+      responses:
+        '200':
+          description: Leave request updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leave'
+
+  /leaves/faculty/{facultyId}:
+    get:
+      tags:
+        - Leave Management
+      summary: Get leave requests for faculty
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: facultyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Leave requests retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Leave'
+
+  # Recruitment
+  /vacancies:
+    get:
+      tags:
+        - Recruitment
+      summary: Get job vacancies
+      description: Retrieves list of job vacancies (admin only)
+      security:
+        - ClerkAuth: []
+      responses:
+        '200':
+          description: Vacancies retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vacancy'
+
+    post:
+      tags:
+        - Recruitment
+      summary: Create job vacancy
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVacancyRequest'
+      responses:
+        '201':
+          description: Vacancy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vacancy'
+
+  /vacancies/{id}:
+    get:
+      tags:
+        - Recruitment
+      summary: Get vacancy by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vacancy retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vacancy'
+
+    patch:
+      tags:
+        - Recruitment
+      summary: Update vacancy
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVacancyRequest'
+      responses:
+        '200':
+          description: Vacancy updated
+
+    delete:
+      tags:
+        - Recruitment
+      summary: Delete vacancy
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vacancy deleted
+
+  /vacancies/public:
+    get:
+      tags:
+        - Recruitment
+      summary: Get public job vacancies
+      description: Public endpoint to retrieve active job vacancies (no authentication required)
+      responses:
+        '200':
+          description: Public vacancies retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vacancy'
+
+  /candidates:
+    get:
+      tags:
+        - Recruitment
+      summary: Get candidates
+      description: Retrieves list of candidates (admin only)
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: vacancyId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Candidates retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Candidate'
+
+    post:
+      tags:
+        - Recruitment
+      summary: Create candidate
+      description: Creates a new candidate application (admin only)
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateCandidateRequest'
+      responses:
+        '201':
+          description: Candidate created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+
+  /candidates/{id}:
+    get:
+      tags:
+        - Recruitment
+      summary: Get candidate by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Candidate retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+
+    patch:
+      tags:
+        - Recruitment
+      summary: Update candidate status
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Status:
+                  type: string
+                  enum: [ApplicationInitiated, InterviewScheduled, Hired, Returned]
+                InterviewDate:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Candidate updated
+
+  /candidates/public:
+    post:
+      tags:
+        - Recruitment
+      summary: Submit public candidate application
+      description: Public endpoint for submitting job applications (no authentication required)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - VacancyID
+                - FirstName
+                - LastName
+                - Email
+                - Sex
+                - DateOfBirth
+              properties:
+                VacancyID:
+                  type: integer
+                FirstName:
+                  type: string
+                LastName:
+                  type: string
+                Email:
+                  type: string
+                  format: email
+                Sex:
+                  type: string
+                  enum: [Male, Female]
+                DateOfBirth:
+                  type: string
+                  format: date
+                ContactNumber:
+                  type: string
+                resume:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # Performance Management
+  /performance/reviews:
+    get:
+      tags:
+        - Performance
+      summary: Get performance reviews
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+        - name: reviewerId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending, completed, approved, all]
+      responses:
+        '200':
+          description: Performance reviews retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PerformanceReview'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Performance
+      summary: Create performance review
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePerformanceReviewRequest'
+      responses:
+        '201':
+          description: Performance review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceReview'
+
+  /performance/reviews/{id}:
+    get:
+      tags:
+        - Performance
+      summary: Get performance review by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Performance review retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceReview'
+
+    patch:
+      tags:
+        - Performance
+      summary: Update performance review
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePerformanceReviewRequest'
+      responses:
+        '200':
+          description: Performance review updated
+
+  /performance/my-performance:
+    get:
+      tags:
+        - Performance
+      summary: Get current user's performance data
+      security:
+        - ClerkAuth: []
+      responses:
+        '200':
+          description: Performance data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PerformanceReview'
+                  goals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Goal'
+
+  # Directory
+  /directory:
+    get:
+      tags:
+        - Directory
+      summary: Search employee directory
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+        - name: position
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Directory search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Employee'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  filterOptions:
+                    type: object
+                    properties:
+                      departments:
+                        type: array
+                        items:
+                          type: string
+                      positions:
+                        type: array
+                        items:
+                          type: string
+                      statuses:
+                        type: array
+                        items:
+                          type: string
+
+  # Chat/AI
+  /chat:
+    post:
+      tags:
+        - Chat/AI
+      summary: Chat with AI assistant
+      description: Sends a message to the AI assistant and receives a response
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: User's message/question
+                userRole:
+                  type: string
+                  enum: [admin, faculty, employee]
+                  default: faculty
+                conversationHistory:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: AI response received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  fallback:
+                    type: boolean
+                    description: Indicates if response came from fallback/training data
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: AI service quota exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+                  retryAfter:
+                    type: integer
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: AI service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+
+  # Integration Endpoints (XR)
+  /xr/user-access-lookup:
+    post:
+      tags:
+        - Integration
+      summary: User access lookup (Cross-system integration)
+      description: |
+        Verifies user access and role for cross-system integration.
+        Requires API key authentication with HMAC signature verification.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: x-timestamp
+          in: header
+          required: true
+          description: Request timestamp in milliseconds
+          schema:
+            type: string
+        - name: x-signature
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of request body + timestamp
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: User access information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Email:
+                    type: string
+                  Role:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /xr/faculty-availability/{employeeId}:
+    get:
+      tags:
+        - Integration
+      summary: Check faculty availability
+      description: |
+        Checks if a faculty member is available or on leave.
+        Requires API key authentication with HMAC signature verification.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: x-timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Faculty availability status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacultyAvailability'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid signature
+        '404':
+          description: Faculty not found
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /xr/faculty-qualifications/{employeeId}:
+    get:
+      tags:
+        - Integration
+      summary: Get faculty qualifications
+      description: Retrieves complete faculty credentials and qualifications
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: x-timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Faculty qualifications retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacultyQualifications'
+
+  /xr/faculty-workload/{employeeId}:
+    get:
+      tags:
+        - Integration
+      summary: Get faculty workload
+      description: Retrieves current teaching load and schedule
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: x-timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Faculty workload retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacultyWorkload'
+
+  /xr/faculty-workload/validate:
+    post:
+      tags:
+        - Integration
+      summary: Validate faculty workload assignment
+      description: Validates if a new teaching assignment can be added without overloading
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: x-timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employeeId
+                - newSections
+              properties:
+                employeeId:
+                  type: string
+                newSections:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      subjectId:
+                        type: integer
+                      sectionId:
+                        type: integer
+                      day:
+                        type: string
+                      timeStart:
+                        type: string
+                      timeEnd:
+                        type: string
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canAssign:
+                    type: boolean
+                  reason:
+                    type: string
+                  currentWorkload:
+                    type: object
+                  proposedWorkload:
+                    type: object
+                  conflicts:
+                    type: array
+                    items:
+                      type: object
+
+  # Documents
+  /employee-documents:
+    get:
+      tags:
+        - Documents
+      summary: Get employee documents
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+        - name: documentTypeId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Documents retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+
+    post:
+      tags:
+        - Documents
+      summary: Upload employee document
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - employeeId
+                - documentTypeId
+                - file
+              properties:
+                employeeId:
+                  type: string
+                documentTypeId:
+                  type: integer
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+
+  /employee-documents/{documentId}:
+    get:
+      tags:
+        - Documents
+      summary: Get document by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+
+    delete:
+      tags:
+        - Documents
+      summary: Delete document
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document deleted
+
+  /faculty-documents:
+    get:
+      tags:
+        - Documents
+      summary: Get faculty documents
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: facultyId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Documents retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+
+    post:
+      tags:
+        - Documents
+      summary: Upload faculty document
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - facultyId
+                - documentTypeId
+                - file
+              properties:
+                facultyId:
+                  type: integer
+                documentTypeId:
+                  type: integer
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Document uploaded
+
+  /faculty-documents/{documentId}:
+    get:
+      tags:
+        - Documents
+      summary: Get faculty document by ID
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document retrieved
+
+    delete:
+      tags:
+        - Documents
+      summary: Delete faculty document
+      security:
+        - ClerkAuth: []
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document deleted
+
+  # Webhooks
+  /webhooks/clerk:
+    post:
+      tags:
+        - Webhooks
+      summary: Clerk webhook endpoint
+      description: Receives webhook events from Clerk authentication service
+      security:
+        - SvixSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [user.created, user.updated, user.deleted, session.created, session.ended, invitation.accepted, invitation.expired]
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # Utilities
+  /ip:
+    get:
+      tags:
+        - Utilities
+      summary: Get client IP address
+      description: Returns the client's IP address (public endpoint)
+      responses:
+        '200':
+          description: IP address retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ip:
+                    type: string
+
+  /generate-employee-id:
+    get:
+      tags:
+        - Utilities
+      summary: Generate unique employee ID
+      description: Generates a unique employee ID for the current year
+      security:
+        - ClerkAuth: []
+      responses:
+        '200':
+          description: Employee ID generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  employeeId:
+                    type: string
+                    example: "2025-0001"
+
+  /generate-user-id:
+    get:
+      tags:
+        - Utilities
+      summary: Generate unique user ID
+      description: Generates a unique user ID
+      security:
+        - ClerkAuth: []
+      responses:
+        '200':
+          description: User ID generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    example: "2025-0001"
+
+components:
+  securitySchemes:
+    ClerkAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk session token authentication
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: API key for system-to-system integration. Valid keys: SJSFI_SIS_API_KEY, SJSFI_LMS_API_KEY, SJSFI_HRMS_API_KEY
+    SvixSignature:
+      type: apiKey
+      in: header
+      name: svix-signature
+      description: Svix webhook signature verification
+
+  schemas:
+    Employee:
+      type: object
+      properties:
+        EmployeeID:
+          type: string
+          example: "2025-0001"
+        UserID:
+          type: string
+          nullable: true
+        FirstName:
+          type: string
+        LastName:
+          type: string
+        MiddleName:
+          type: string
+          nullable: true
+        ExtensionName:
+          type: string
+          nullable: true
+        Sex:
+          type: string
+          enum: [Male, Female, Intersex]
+        DateOfBirth:
+          type: string
+          format: date
+        PlaceOfBirth:
+          type: string
+          nullable: true
+        CivilStatus:
+          type: string
+          nullable: true
+        Nationality:
+          type: string
+          nullable: true
+        Religion:
+          type: string
+          nullable: true
+        DepartmentID:
+          type: integer
+          nullable: true
+        Photo:
+          type: string
+          nullable: true
+        EmploymentDetail:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmploymentDetail'
+        ContactInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactInfo'
+        GovernmentID:
+          type: object
+          nullable: true
+          properties:
+            SSSNumber:
+              type: string
+              nullable: true
+            TINNumber:
+              type: string
+              nullable: true
+            PhilHealthNumber:
+              type: string
+              nullable: true
+            PagIbigNumber:
+              type: string
+              nullable: true
+            GSISNumber:
+              type: string
+              nullable: true
+            PRCLicenseNumber:
+              type: string
+              nullable: true
+            PRCValidity:
+              type: string
+              format: date
+              nullable: true
+        Department:
+          type: object
+          nullable: true
+          properties:
+            DepartmentName:
+              type: string
+        Family:
+          type: array
+          items:
+            $ref: '#/components/schemas/FamilyMember'
+        Education:
+          type: array
+          items:
+            $ref: '#/components/schemas/Education'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+        certificates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certificate'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateEmployeeRequest:
+      type: object
+      required:
+        - FirstName
+        - LastName
+        - DateOfBirth
+        - HireDate
+        - Sex
+      properties:
+        FirstName:
+          type: string
+        LastName:
+          type: string
+        MiddleName:
+          type: string
+        ExtensionName:
+          type: string
+        DateOfBirth:
+          type: string
+          format: date
+        Sex:
+          type: string
+          enum: [Male, Female, Intersex]
+        HireDate:
+          type: string
+          format: date
+        EmploymentStatus:
+          type: string
+          enum: [Hired, Resigned, Regular, Probationary, Part_Time, Retired]
+          default: Regular
+        Designation:
+          type: string
+          enum: [President, Admin_Officer, Vice_President, Registrar, Faculty, Principal, Cashier]
+        Position:
+          type: string
+        DepartmentID:
+          type: integer
+        Email:
+          type: string
+          format: email
+        Phone:
+          type: string
+        PresentAddress:
+          type: string
+        PermanentAddress:
+          type: string
+        EmergencyContactName:
+          type: string
+        EmergencyContactNumber:
+          type: string
+        SSSNumber:
+          type: string
+        TINNumber:
+          type: string
+        PhilHealthNumber:
+          type: string
+        PagIbigNumber:
+          type: string
+        GSISNumber:
+          type: string
+        PRCLicenseNumber:
+          type: string
+        PRCValidity:
+          type: string
+          format: date
+        SalaryGrade:
+          type: string
+        SalaryAmount:
+          type: number
+
+    UpdateEmployeeRequest:
+      type: object
+      properties:
+        EmployeeID:
+          type: string
+        FirstName:
+          type: string
+        LastName:
+          type: string
+        MiddleName:
+          type: string
+        ExtensionName:
+          type: string
+        Sex:
+          type: string
+          enum: [Male, Female, Intersex]
+        DateOfBirth:
+          type: string
+          format: date
+        PlaceOfBirth:
+          type: string
+        CivilStatus:
+          type: string
+        Nationality:
+          type: string
+        Religion:
+          type: string
+        DepartmentID:
+          type: integer
+        HireDate:
+          type: string
+          format: date
+        EmploymentStatus:
+          type: string
+          enum: [Hired, Resigned, Regular, Probationary, Part_Time, Retired]
+        Designation:
+          type: string
+          enum: [President, Admin_Officer, Vice_President, Registrar, Faculty, Principal, Cashier]
+        Position:
+          type: string
+        Email:
+          type: string
+          format: email
+        Phone:
+          type: string
+        PresentAddress:
+          type: string
+        PermanentAddress:
+          type: string
+        EmergencyContactName:
+          type: string
+        EmergencyContactNumber:
+          type: string
+
+    EmploymentDetail:
+      type: object
+      properties:
+        EmploymentStatus:
+          type: string
+          enum: [Hired, Resigned, Regular, Probationary, Part_Time, Retired]
+        HireDate:
+          type: string
+          format: date
+        ResignationDate:
+          type: string
+          format: date
+          nullable: true
+        Designation:
+          type: string
+          enum: [President, Admin_Officer, Vice_President, Registrar, Faculty, Principal, Cashier]
+          nullable: true
+        Position:
+          type: string
+          nullable: true
+        SalaryGrade:
+          type: string
+          nullable: true
+        SalaryAmount:
+          type: number
+          nullable: true
+
+    ContactInfo:
+      type: object
+      properties:
+        Email:
+          type: string
+          format: email
+        Phone:
+          type: string
+          nullable: true
+        PresentAddress:
+          type: string
+          nullable: true
+        PermanentAddress:
+          type: string
+          nullable: true
+        EmergencyContactName:
+          type: string
+          nullable: true
+        EmergencyContactNumber:
+          type: string
+          nullable: true
+
+    MedicalInfo:
+      type: object
+      properties:
+        medicalNotes:
+          type: string
+          nullable: true
+        lastCheckup:
+          type: string
+          format: date
+          nullable: true
+        vaccination:
+          type: string
+          nullable: true
+        allergies:
+          type: string
+          nullable: true
+        hasDisability:
+          type: boolean
+        disabilityType:
+          type: string
+          nullable: true
+        disabilityDetails:
+          type: string
+          nullable: true
+
+    FamilyMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        name:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        occupation:
+          type: string
+          nullable: true
+        isDependent:
+          type: boolean
+        relationship:
+          type: string
+        contactNumber:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+
+    Education:
+      type: object
+      properties:
+        id:
+          type: integer
+        level:
+          type: string
+        schoolName:
+          type: string
+        course:
+          type: string
+        yearGraduated:
+          type: integer
+          nullable: true
+        honors:
+          type: string
+          nullable: true
+
+    Skill:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        proficiencyLevel:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        issuedBy:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        fileUrl:
+          type: string
+          nullable: true
+
+    Leave:
+      type: object
+      properties:
+        LeaveID:
+          type: integer
+        FacultyID:
+          type: integer
+        RequestType:
+          type: string
+          enum: [Leave, Undertime]
+        LeaveType:
+          type: string
+        StartDate:
+          type: string
+          format: date-time
+        EndDate:
+          type: string
+          format: date-time
+        TimeIn:
+          type: string
+          format: date-time
+          nullable: true
+        TimeOut:
+          type: string
+          format: date-time
+          nullable: true
+        Reason:
+          type: string
+        Status:
+          type: string
+          enum: [Pending, Approved, Returned]
+        employeeSignature:
+          type: string
+          nullable: true
+        departmentHeadSignature:
+          type: string
+          nullable: true
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+        Faculty:
+          type: object
+          properties:
+            Name:
+              type: string
+            Department:
+              type: string
+            UserID:
+              type: string
+              nullable: true
+
+    CreateLeaveRequest:
+      type: object
+      required:
+        - FacultyID
+        - LeaveType
+        - StartDate
+        - EndDate
+        - Reason
+      properties:
+        FacultyID:
+          type: integer
+        RequestType:
+          type: string
+          enum: [Leave, Undertime]
+          default: Leave
+        LeaveType:
+          type: string
+        StartDate:
+          type: string
+          format: date
+        EndDate:
+          type: string
+          format: date
+        TimeIn:
+          type: string
+          format: date-time
+        TimeOut:
+          type: string
+          format: date-time
+        Reason:
+          type: string
+        employeeSignature:
+          type: string
+        departmentHeadSignature:
+          type: string
+
+    Vacancy:
+      type: object
+      properties:
+        VacancyID:
+          type: integer
+        JobTitle:
+          type: string
+        VacancyName:
+          type: string
+        Description:
+          type: string
+          nullable: true
+        Status:
+          type: string
+          enum: [Active, Closed, Draft]
+        DatePosted:
+          type: string
+          format: date-time
+          nullable: true
+        NumberOfPositions:
+          type: integer
+        HiringManager:
+          type: string
+          nullable: true
+        DateCreated:
+          type: string
+          format: date-time
+        DateModified:
+          type: string
+          format: date-time
+
+    CreateVacancyRequest:
+      type: object
+      required:
+        - JobTitle
+        - VacancyName
+      properties:
+        JobTitle:
+          type: string
+        VacancyName:
+          type: string
+        Description:
+          type: string
+        HiringManager:
+          type: string
+        Status:
+          type: string
+          enum: [Active, Closed, Draft]
+          default: Active
+        DatePosted:
+          type: string
+          format: date-time
+        NumberOfPositions:
+          type: integer
+          default: 1
+
+    UpdateVacancyRequest:
+      type: object
+      properties:
+        JobTitle:
+          type: string
+        VacancyName:
+          type: string
+        Description:
+          type: string
+        Status:
+          type: string
+          enum: [Active, Closed, Draft]
+        NumberOfPositions:
+          type: integer
+
+    Candidate:
+      type: object
+      properties:
+        CandidateID:
+          type: integer
+        VacancyID:
+          type: integer
+        FirstName:
+          type: string
+        LastName:
+          type: string
+        MiddleName:
+          type: string
+          nullable: true
+        ExtensionName:
+          type: string
+          nullable: true
+        FullName:
+          type: string
+        Email:
+          type: string
+          format: email
+        ContactNumber:
+          type: string
+          nullable: true
+        DateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        Sex:
+          type: string
+          enum: [Male, Female, Intersex]
+          nullable: true
+        Status:
+          type: string
+          enum: [ApplicationInitiated, InterviewScheduled, Hired, Returned]
+        Resume:
+          type: string
+          nullable: true
+        ResumeUrl:
+          type: string
+          nullable: true
+        InterviewDate:
+          type: string
+          format: date-time
+          nullable: true
+        DateCreated:
+          type: string
+          format: date-time
+        DateModified:
+          type: string
+          format: date-time
+        Vacancy:
+          type: object
+          nullable: true
+          properties:
+            VacancyID:
+              type: integer
+            VacancyName:
+              type: string
+            JobTitle:
+              type: string
+
+    CreateCandidateRequest:
+      type: object
+      required:
+        - VacancyID
+        - LastName
+        - FirstName
+        - Email
+      properties:
+        VacancyID:
+          type: integer
+        LastName:
+          type: string
+        FirstName:
+          type: string
+        MiddleName:
+          type: string
+        ExtensionName:
+          type: string
+        Email:
+          type: string
+          format: email
+        ContactNumber:
+          type: string
+        DateOfBirth:
+          type: string
+          format: date
+        Sex:
+          type: string
+          enum: [Male, Female, Intersex]
+        Phone:
+          type: string
+        InterviewDate:
+          type: string
+          format: date-time
+        Status:
+          type: string
+          enum: [ApplicationInitiated, InterviewScheduled, Hired, Returned]
+        resume:
+          type: string
+          format: binary
+
+    PerformanceReview:
+      type: object
+      properties:
+        ReviewID:
+          type: integer
+        EmployeeID:
+          type: string
+        ReviewerID:
+          type: string
+          nullable: true
+        period:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        kpiScore:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 100
+        behaviorScore:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 100
+        attendanceScore:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 100
+        totalScore:
+          type: number
+          nullable: true
+        overallScore:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [draft, pending, completed, approved]
+        remarks:
+          type: string
+          nullable: true
+        employeeComments:
+          type: string
+          nullable: true
+        goals:
+          type: array
+          items:
+            type: object
+        achievements:
+          type: array
+          items:
+            type: string
+        improvementAreas:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePerformanceReviewRequest:
+      type: object
+      required:
+        - employeeId
+        - startDate
+        - endDate
+      properties:
+        employeeId:
+          type: string
+        reviewerId:
+          type: string
+        period:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        kpiScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        behaviorScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        attendanceScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        totalScore:
+          type: number
+        status:
+          type: string
+          enum: [draft, pending, completed, approved]
+        remarks:
+          type: string
+        employeeComments:
+          type: string
+        goals:
+          type: array
+          items:
+            type: object
+        achievements:
+          type: array
+          items:
+            type: string
+        improvementAreas:
+          type: array
+          items:
+            type: string
+
+    UpdatePerformanceReviewRequest:
+      type: object
+      properties:
+        kpiScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        behaviorScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        attendanceScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        totalScore:
+          type: number
+        status:
+          type: string
+          enum: [draft, pending, completed, approved]
+        remarks:
+          type: string
+        employeeComments:
+          type: string
+
+    Goal:
+      type: object
+      properties:
+        GoalID:
+          type: integer
+        EmployeeID:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [NotStarted, InProgress, OnTrack, Completed, Overdue]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        dueDate:
+          type: string
+          format: date
+
+    Document:
+      type: object
+      properties:
+        DocumentID:
+          type: integer
+        employeeId:
+          type: string
+          nullable: true
+        facultyId:
+          type: integer
+          nullable: true
+        DocumentTypeID:
+          type: integer
+        SubmissionStatus:
+          type: string
+          enum: [Submitted, Approved, Returned, Pending]
+        FileUrl:
+          type: string
+        UploadDate:
+          type: string
+          format: date-time
+
+    FacultyAvailability:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        facultyId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        isAvailable:
+          type: boolean
+        availability:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [Available, Unavailable]
+            reason:
+              type: string
+              nullable: true
+        employmentStatus:
+          type: string
+        employeeType:
+          type: string
+        userStatus:
+          type: string
+        department:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        currentLeave:
+          type: object
+          nullable: true
+          properties:
+            leaveId:
+              type: integer
+            type:
+              type: string
+            requestType:
+              type: string
+            startDate:
+              type: string
+              format: date-time
+            endDate:
+              type: string
+              format: date-time
+            reason:
+              type: string
+            status:
+              type: string
+        upcomingLeaves:
+          type: array
+          items:
+            type: object
+        recentLeaves:
+          type: array
+          items:
+            type: object
+
+    FacultyQualifications:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        facultyId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        education:
+          type: array
+          items:
+            type: object
+        licenses:
+          type: object
+          properties:
+            prc:
+              type: object
+              properties:
+                isValid:
+                  type: boolean
+                licenseNumber:
+                  type: string
+                validity:
+                  type: string
+                  format: date
+        certifications:
+          type: array
+          items:
+            type: object
+        qualificationSummary:
+          type: object
+          properties:
+            hasValidPRCLicense:
+              type: boolean
+            hasPostgraduate:
+              type: boolean
+            yearsOfExperience:
+              type: number
+            isQualified:
+              type: boolean
+
+    FacultyWorkload:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        facultyId:
+          type: integer
+        name:
+          type: string
+        workload:
+          type: object
+          properties:
+            totalSections:
+              type: integer
+            totalHoursPerWeek:
+              type: number
+            workloadPercentage:
+              type: number
+            canTakeMoreSections:
+              type: boolean
+            availableHours:
+              type: number
+        schedules:
+          type: array
+          items:
+            type: object
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalCount:
+          type: integer
+        limit:
+          type: integer
+        hasNextPage:
+          type: boolean
+        hasPrevPage:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details (optional)
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Missing required field: FirstName
+            details: The FirstName field is required for employee creation
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unauthorized
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Forbidden
+            details: You do not have permission to perform this action
+
+    NotFound:
+      description: Not found - Resource doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Employee not found
+
+    Conflict:
+      description: Conflict - Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Employee already exists with this email address
+            existingEmployeeId: "2025-0001"
+
+    TooManyRequests:
+      description: Too many requests - Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Too many requests
+            details: Rate limit exceeded. Please try again later.
+
+    InternalServerError:
+      description: Internal server error - Server-side error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Failed to fetch employees
+            details: Database connection error

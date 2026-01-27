@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { timeRangesOverlap } from '@/lib/timeUtils';
 import { syncAssignmentToSIS } from '@/lib/sisSync';
+import crypto from 'crypto';
 
 const scheduleSchema = z.object({
   facultyId: z.number().int().positive(),
@@ -222,23 +223,99 @@ export async function PUT(
       },
     });
 
-    // Sync to SIS if SIS schedule ID is provided
+    // Sync to SIS if faculty has EmployeeID
     let syncResult = null;
-    if (validatedData.sisScheduleId && updatedSchedule.faculty?.Employee?.EmployeeID) {
-      try {
-        syncResult = await syncAssignmentToSIS({
-          scheduleId: validatedData.sisScheduleId,
-          employeeId: updatedSchedule.faculty.Employee.EmployeeID,
-          assigned: true,
-        });
-      } catch (syncError) {
-        console.error('Error syncing to SIS:', syncError);
-        // Don't fail the update if sync fails
-        syncResult = {
-          success: true,
-          synced: false,
-          message: syncError instanceof Error ? syncError.message : 'Failed to sync to SIS',
-        };
+    if (updatedSchedule.faculty?.Employee?.EmployeeID) {
+      let sisScheduleId = validatedData.sisScheduleId;
+      
+      // If SIS schedule ID is not provided, try to find matching SIS schedule
+      if (!sisScheduleId) {
+        try {
+          // Fetch schedules from SIS to find a match
+          const ENROLLMENT_BASE_URL = process.env.ENROLLMENT_BASE_URL || 'http://localhost:3000';
+          const SHARED_SECRET = process.env.SJSFI_SHARED_SECRET || '';
+          const API_KEY = process.env.SJSFI_HRMS_API_KEY || '';
+          
+          if (SHARED_SECRET && API_KEY) {
+            const requestBody = { data: "fetch-all-schedules" };
+            const rawBody = JSON.stringify(requestBody);
+            const timestamp = Date.now().toString();
+            const message = rawBody + timestamp;
+            const hmac = crypto.createHmac('sha256', SHARED_SECRET);
+            hmac.update(message);
+            const signature = hmac.digest('hex');
+            
+            const sisResponse = await fetch(`${ENROLLMENT_BASE_URL}/api/hrms/available-schedules`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`,
+                'x-timestamp': timestamp,
+                'x-signature': signature,
+              },
+              body: rawBody,
+            });
+            
+            if (sisResponse.ok) {
+              const sisData = await sisResponse.json();
+              const sisSchedules = sisData.schedules || sisData.data?.schedules || [];
+              
+              // Find matching SIS schedule by subject, section, day, and time
+              const matchingSisSchedule = sisSchedules.find((sisSchedule: any) => {
+                const scheduleData = sisSchedule.schedule || {};
+                const subjectData = sisSchedule.subject || {};
+                const sectionData = sisSchedule.section || {};
+                
+                // Match by subject name/code
+                const subjectMatches = 
+                  updatedSchedule.subject.name.toLowerCase().includes((subjectData.name || '').toLowerCase()) ||
+                  updatedSchedule.subject.code === subjectData.code;
+                
+                // Match by section name
+                const sectionMatches = 
+                  updatedSchedule.classSection.name.toLowerCase().includes((sectionData.name || '').toLowerCase());
+                
+                // Match by day
+                const dayMatches = scheduleData.day === validatedData.day;
+                
+                // Match by time (format: "HH:MM-HH:MM")
+                const timeMatches = scheduleData.startTime && scheduleData.endTime
+                  ? `${scheduleData.startTime}-${scheduleData.endTime}` === validatedData.time
+                  : false;
+                
+                return subjectMatches && sectionMatches && dayMatches && timeMatches;
+              });
+              
+              if (matchingSisSchedule) {
+                // SIS schedule ID can be in schedule.id or at the root level as scheduleId or id
+                sisScheduleId = matchingSisSchedule.schedule?.id || matchingSisSchedule.scheduleId || matchingSisSchedule.id;
+                console.log(`[Schedule Update] Found matching SIS schedule ID: ${sisScheduleId}`);
+              }
+            }
+          }
+        } catch (lookupError) {
+          console.warn('[Schedule Update] Could not lookup SIS schedule ID:', lookupError);
+          // Continue without SIS sync if lookup fails
+        }
+      }
+      
+      // Sync to SIS if we have a SIS schedule ID
+      if (sisScheduleId) {
+        try {
+          syncResult = await syncAssignmentToSIS({
+            scheduleId: sisScheduleId,
+            employeeId: updatedSchedule.faculty.Employee.EmployeeID,
+            assigned: true,
+          });
+        } catch (syncError) {
+          console.error('Error syncing to SIS:', syncError);
+          // Don't fail the update if sync fails
+          syncResult = {
+            success: true,
+            synced: false,
+            message: syncError instanceof Error ? syncError.message : 'Failed to sync to SIS',
+          };
+        }
       }
     }
 

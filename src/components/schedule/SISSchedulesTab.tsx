@@ -1070,7 +1070,7 @@ function EditFacultyDropdown({
                     ></div>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                         <div 
-                            className="bg-white rounded-lg shadow-2xl w-full max-w-md border-2 border-gray-300 pointer-events-auto"
+                            className="bg-white rounded-lg shadow-2xl w-full max-w-lg border-2 border-gray-300 pointer-events-auto max-h-[90vh] overflow-y-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-5 space-y-4">
@@ -1144,41 +1144,43 @@ function EditFacultyDropdown({
                                 )}
 
                                 {conflicts.length > 0 && !checkingConflicts && (
-                                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-3">
                                         <div className="flex items-center gap-2 text-red-800 font-semibold">
-                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                             </svg>
-                                            Schedule Conflict Detected
+                                            <span>Schedule Conflict Detected</span>
                                         </div>
-                                        <div className="text-sm text-red-700 space-y-2">
+                                        <div className="text-sm text-red-700 space-y-3">
                                             {conflicts.map((conflict, idx) => (
-                                                <div key={idx} className="border-l-4 border-red-400 pl-3">
-                                                    <div className="font-medium mb-1">
+                                                <div key={idx} className="border-l-4 border-red-400 pl-3 pr-2">
+                                                    <div className="font-medium mb-1.5">
                                                         {conflict.type === 'teacher' ? 'Teacher Conflict:' : 'Section Conflict:'}
                                                     </div>
-                                                    <div className="text-xs">
+                                                    <div className="text-xs break-words leading-relaxed">
                                                         {conflict.message}
                                                     </div>
                                                     {conflict.conflictingSchedule && (
-                                                        <div className="mt-1 text-xs bg-red-100 p-2 rounded">
-                                                            <div><strong>Conflicting Schedule:</strong></div>
-                                                            <div>Subject: {conflict.conflictingSchedule.subjectName}</div>
-                                                            <div>Section: {conflict.conflictingSchedule.sectionName}</div>
-                                                            <div>Teacher: {conflict.conflictingSchedule.teacherName}</div>
-                                                            <div>Time: {conflict.conflictingSchedule.day} {conflict.conflictingSchedule.time}</div>
+                                                        <div className="mt-2 text-xs bg-red-100 p-2.5 rounded break-words">
+                                                            <div className="font-semibold mb-1.5">Conflicting Schedule:</div>
+                                                            <div className="space-y-1">
+                                                                <div><span className="font-medium">Subject:</span> {conflict.conflictingSchedule.subjectName}</div>
+                                                                <div><span className="font-medium">Section:</span> {conflict.conflictingSchedule.sectionName}</div>
+                                                                <div><span className="font-medium">Teacher:</span> {conflict.conflictingSchedule.teacherName}</div>
+                                                                <div><span className="font-medium">Time:</span> {conflict.conflictingSchedule.day} {conflict.conflictingSchedule.time}</div>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="text-xs text-red-600 font-medium mt-2">
+                                        <div className="text-xs text-red-600 font-medium mt-3 pt-2 border-t border-red-200">
                                             ⚠ Cannot assign teacher due to schedule conflict. Please resolve conflicts first.
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="flex gap-3 pt-2">
+                                <div className="flex gap-3 pt-3 border-t border-gray-200">
                                     <button
                                         onClick={handleEdit}
                                         disabled={!selectedFacultyId || editing || selectedFacultyId === schedule.facultyId || conflicts.length > 0 || checkingConflicts}
@@ -1317,7 +1319,7 @@ function TeacherAssignmentDropdown({
                     ></div>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                         <div 
-                            className="bg-white rounded-lg shadow-2xl w-full max-w-md border-2 border-gray-300 pointer-events-auto"
+                            className="bg-white rounded-lg shadow-2xl w-full max-w-lg border-2 border-gray-300 pointer-events-auto max-h-[90vh] overflow-y-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-5 space-y-4">
@@ -1391,41 +1393,43 @@ function TeacherAssignmentDropdown({
                                 )}
 
                                 {conflicts.length > 0 && !checkingConflicts && (
-                                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-3">
                                         <div className="flex items-center gap-2 text-red-800 font-semibold">
-                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                             </svg>
-                                            Schedule Conflict Detected
+                                            <span>Schedule Conflict Detected</span>
                                         </div>
-                                        <div className="text-sm text-red-700 space-y-2">
+                                        <div className="text-sm text-red-700 space-y-3">
                                             {conflicts.map((conflict, idx) => (
-                                                <div key={idx} className="border-l-4 border-red-400 pl-3">
-                                                    <div className="font-medium mb-1">
+                                                <div key={idx} className="border-l-4 border-red-400 pl-3 pr-2">
+                                                    <div className="font-medium mb-1.5">
                                                         {conflict.type === 'teacher' ? 'Teacher Conflict:' : 'Section Conflict:'}
                                                     </div>
-                                                    <div className="text-xs">
+                                                    <div className="text-xs break-words leading-relaxed">
                                                         {conflict.message}
                                                     </div>
                                                     {conflict.conflictingSchedule && (
-                                                        <div className="mt-1 text-xs bg-red-100 p-2 rounded">
-                                                            <div><strong>Conflicting Schedule:</strong></div>
-                                                            <div>Subject: {conflict.conflictingSchedule.subjectName}</div>
-                                                            <div>Section: {conflict.conflictingSchedule.sectionName}</div>
-                                                            <div>Teacher: {conflict.conflictingSchedule.teacherName}</div>
-                                                            <div>Time: {conflict.conflictingSchedule.day} {conflict.conflictingSchedule.time}</div>
+                                                        <div className="mt-2 text-xs bg-red-100 p-2.5 rounded break-words">
+                                                            <div className="font-semibold mb-1.5">Conflicting Schedule:</div>
+                                                            <div className="space-y-1">
+                                                                <div><span className="font-medium">Subject:</span> {conflict.conflictingSchedule.subjectName}</div>
+                                                                <div><span className="font-medium">Section:</span> {conflict.conflictingSchedule.sectionName}</div>
+                                                                <div><span className="font-medium">Teacher:</span> {conflict.conflictingSchedule.teacherName}</div>
+                                                                <div><span className="font-medium">Time:</span> {conflict.conflictingSchedule.day} {conflict.conflictingSchedule.time}</div>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="text-xs text-red-600 font-medium mt-2">
+                                        <div className="text-xs text-red-600 font-medium mt-3 pt-2 border-t border-red-200">
                                             ⚠ Cannot assign teacher due to schedule conflict. Please resolve conflicts first.
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="flex gap-3 pt-2">
+                                <div className="flex gap-3 pt-3 border-t border-gray-200">
                                     <button
                                         onClick={handleAssign}
                                         disabled={!selectedFacultyId || assigning || conflicts.length > 0 || checkingConflicts}
@@ -1513,7 +1517,7 @@ function SubstituteTeacherDropdown({
                     ></div>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                         <div 
-                            className="bg-white rounded-lg shadow-2xl w-full max-w-md border-2 border-gray-300 pointer-events-auto"
+                            className="bg-white rounded-lg shadow-2xl w-full max-w-lg border-2 border-gray-300 pointer-events-auto max-h-[90vh] overflow-y-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-5 space-y-4">

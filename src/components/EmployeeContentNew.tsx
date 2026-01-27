@@ -1199,10 +1199,98 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
   };
 
   // Handle opening edit modal
-  const handleEditEmployee = (employee: any) => {
+  const handleEditEmployee = async (employee: any) => {
     console.log('Opening edit modal for employee:', employee);
     console.log('Available fields:', Object.keys(employee));
     
+    // Fetch fresh employee data from API to ensure decrypted values
+    // This is important because the employee object from the list might have encrypted values
+    try {
+      const employeeId = employee.employeeId || employee.EmployeeID;
+      if (employeeId) {
+        const response = await fetch(`/api/employees/${employeeId}`);
+        if (response.ok) {
+          const freshEmployeeData = await response.json();
+          
+          // Use fresh data from API (already decrypted)
+          const employmentDetail = freshEmployeeData.EmploymentDetail || {};
+          const contactInfo = freshEmployeeData.ContactInfo || {};
+          const governmentID = freshEmployeeData.GovernmentID || {};
+          
+          setEditEmployee({
+            EmployeeID: freshEmployeeData.EmployeeID || '',
+            UserID: freshEmployeeData.UserID || '',
+            LastName: freshEmployeeData.LastName || '',
+            FirstName: freshEmployeeData.FirstName || '',
+            MiddleName: freshEmployeeData.MiddleName || '',
+            ExtensionName: freshEmployeeData.ExtensionName || '',
+            Sex: freshEmployeeData.Sex || '',
+            Photo: freshEmployeeData.Photo || '',
+            DateOfBirth: freshEmployeeData.DateOfBirth ? new Date(freshEmployeeData.DateOfBirth).toISOString().split('T')[0] : '',
+            PlaceOfBirth: freshEmployeeData.PlaceOfBirth || '',
+            CivilStatus: freshEmployeeData.CivilStatus || '',
+            Nationality: freshEmployeeData.Nationality || '',
+            Religion: freshEmployeeData.Religion || '',
+            Email: contactInfo.Email || freshEmployeeData.Email || '',
+            Phone: contactInfo.Phone || '',
+            Address: freshEmployeeData.Address || '',
+            PresentAddress: contactInfo.PresentAddress || '',
+            PermanentAddress: contactInfo.PermanentAddress || '',
+            
+            // Government IDs (already decrypted from API)
+            SSSNumber: governmentID.SSSNumber || '',
+            TINNumber: governmentID.TINNumber || '',
+            PhilHealthNumber: governmentID.PhilHealthNumber || '',
+            PagIbigNumber: governmentID.PagIbigNumber || '',
+            GSISNumber: governmentID.GSISNumber || '',
+            PRCLicenseNumber: governmentID.PRCLicenseNumber || '',
+            PRCValidity: governmentID.PRCValidity || '',
+
+            EmploymentStatus: employmentDetail.EmploymentStatus || 'Regular',
+            HireDate: employmentDetail.HireDate ? new Date(employmentDetail.HireDate).toISOString().split('T')[0] : '',
+            ResignationDate: employmentDetail.ResignationDate || null,
+            Designation: employmentDetail.Designation || null,
+            Position: employmentDetail.Position || '',
+            DepartmentID: freshEmployeeData.DepartmentID || null,
+            ContractID: freshEmployeeData.ContractID || null,
+            EmergencyContactName: contactInfo.EmergencyContactName || '',
+            EmergencyContactNumber: contactInfo.EmergencyContactNumber || '',
+            EmployeeType: employmentDetail.EmployeeType || 'Regular',
+            // These should now be decrypted from the API
+            // If SalaryGrade still looks encrypted (has colons), set to empty string
+            SalaryGrade: employmentDetail.SalaryGrade && !employmentDetail.SalaryGrade.includes(':') 
+              ? employmentDetail.SalaryGrade 
+              : '',
+            SalaryAmount: employmentDetail.SalaryAmount != null 
+              ? (typeof employmentDetail.SalaryAmount === 'string' 
+                  ? (employmentDetail.SalaryAmount.includes(':') 
+                      ? null // Still encrypted, skip it
+                      : (parseFloat(employmentDetail.SalaryAmount) || null))
+                  : employmentDetail.SalaryAmount)
+              : null,
+
+            Education: freshEmployeeData.Education || [],
+            EmploymentHistory: freshEmployeeData.EmploymentHistory || [],
+            MedicalInfo: freshEmployeeData.MedicalInfo || {},
+
+            createdAt: freshEmployeeData.createdAt || null,
+            updatedAt: freshEmployeeData.updatedAt || null
+          });
+          
+          // Initialize checkbox state based on whether addresses are the same
+          const presentAddress = contactInfo.PresentAddress || '';
+          const permanentAddress = contactInfo.PermanentAddress || '';
+          setEditSameAsPresentAddress(presentAddress === permanentAddress && presentAddress !== '');
+          setIsEditModalOpen(true);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fresh employee data for edit:', error);
+      // Fall through to use existing employee data
+    }
+    
+    // Fallback: Use existing employee data if API fetch fails
     // Populate the edit form with employee data
     setEditEmployee({
       EmployeeID: employee.employeeId || '',
@@ -1363,6 +1451,62 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
         await fetchAllEmployees();
       } else {
         await fetchEmployees(pagination.currentPage);
+      }
+
+      // Refetch the selected employee if it's currently selected
+      if (selectedEmployee?.employeeId === editEmployee.EmployeeID) {
+        try {
+          const employeeResponse = await fetch(`/api/employees/${editEmployee.EmployeeID}`);
+          if (employeeResponse.ok) {
+            const employeeData = await employeeResponse.json();
+            // Map the API response to match the state structure
+            const employmentDetail = employeeData.EmploymentDetail?.[0] || employeeData.EmploymentDetail || {};
+            const contactInfo = employeeData.ContactInfo?.[0] || employeeData.ContactInfo || {};
+            const governmentID = employeeData.GovernmentID?.[0] || employeeData.GovernmentID || {};
+            const department = employeeData.Department || {};
+            const family = employeeData.Family || [];
+            const skills = employeeData.skills || [];
+            const trainings = employeeData.trainings || [];
+            const medicalInfo = employeeData.MedicalInfo?.[0] || employeeData.MedicalInfo || {};
+            
+            const mappedEmployee = {
+              employeeId: employeeData.EmployeeID,
+              id: employeeData.EmployeeID,
+              firstName: employeeData.FirstName || '',
+              surname: employeeData.LastName || '',
+              middleName: employeeData.MiddleName || '',
+              nameExtension: employeeData.ExtensionName || '',
+              fullName: [employeeData.FirstName, employeeData.MiddleName, employeeData.LastName, employeeData.ExtensionName].filter(Boolean).join(' '),
+              birthDate: employeeData.DateOfBirth ? new Date(employeeData.DateOfBirth).toISOString().split('T')[0] : '',
+              birthPlace: employeeData.PlaceOfBirth || '',
+              sex: employeeData.Sex || '',
+              civilStatus: employeeData.CivilStatus || '',
+              email: contactInfo.Email || employeeData.UserID || '',
+              position: employmentDetail.Position || '',
+              designation: employmentDetail.Designation || '',
+              departmentId: employeeData.DepartmentID,
+              departmentName: department.DepartmentName || '',
+              photo: employeeData.Photo || '',
+              status: employmentDetail.EmploymentStatus || 'Active',
+              employeeType: employeeData.EmployeeType || 'Regular',
+              phone: contactInfo.Phone || '',
+              hireDate: employmentDetail.HireDate || '',
+              salaryGrade: employmentDetail.SalaryGrade || '',
+              ...employeeData,
+              EmploymentDetail: employmentDetail,
+              ContactInfo: contactInfo,
+              GovernmentID: governmentID,
+              Department: department,
+              Family: family,
+              Skills: skills,
+              trainings: trainings,
+              MedicalInfo: medicalInfo
+            };
+            setSelectedEmployee(mappedEmployee);
+          }
+        } catch (error) {
+          console.error('Error refetching selected employee:', error);
+        }
       }
     } catch (error) {
       console.error('Error updating employee:', error);
@@ -2319,7 +2463,7 @@ const [editEmployee, setEditEmployee] = useState<EmployeeFormState>({
                                 <input
                                   type="number"
                                   step="0.01"
-                                  value={editEmployee.SalaryAmount || ''}
+                                  value={editEmployee.SalaryAmount != null ? String(editEmployee.SalaryAmount) : ''}
                                   onChange={(e) => {
                                     const value = e.target.value.trim();
                                     if (value === '') {
