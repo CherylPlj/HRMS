@@ -84,8 +84,11 @@ export async function GET() {
         };
 
         // Map SIS schedules to a format suitable for display and assignment
-        const mappedSchedules = await Promise.all(
-            sisSchedules.map(async (sisSchedule: any) => {
+        // IMPORTANT: Do this sequentially to avoid exhausting the Prisma connection pool
+        // (especially on serverless deployments where the connection limit can be very low).
+        const mappedSchedules = [];
+
+        for (const sisSchedule of sisSchedules as any[]) {
                 // Extract data from SIS structure
                 const scheduleData = sisSchedule.schedule || {};
                 const subjectData = sisSchedule.subject || {};
@@ -350,7 +353,7 @@ export async function GET() {
                     isAssignedInSIS && !existsInHRMS ? 'sis-only' :
                     'unassigned';
 
-                return {
+                mappedSchedules.push({
                     sisId: sisSchedule.scheduleId,
                     subjectId,
                     subjectName,
@@ -378,9 +381,8 @@ export async function GET() {
                     termId: sisSchedule.term?.id,
                     // Raw SIS data for reference
                     rawData: sisSchedule,
-                };
-            })
-        );
+                });
+        }
 
         return NextResponse.json({
             success: true,
