@@ -414,6 +414,16 @@ export default function FacultyDashboard({ children }: { children: React.ReactNo
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+                  {/* Manual / Help - Faculty & Employee manual */}
+                  <a
+                    href="https://drive.google.com/drive/folders/1DIpqHqzYgL4sJx6HPu46ggpxxVOIB0AL?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 sm:p-2 rounded-full hover:bg-gray-200 transition"
+                    title="Faculty / Employee Manual"
+                  >
+                    <i className="fas fa-question-circle text-black text-sm sm:text-base md:text-lg"></i>
+                  </a>
                   {/* Chat Icon */}
                   <a
                     ref={chatButtonRef}

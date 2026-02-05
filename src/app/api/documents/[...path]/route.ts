@@ -16,10 +16,10 @@ export async function OPTIONS() {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const pathArray = await params.path;
+    const { path: pathArray } = await params;
     if (!pathArray || pathArray.length === 0) {
       return NextResponse.json(
         { error: 'File path is required' },
@@ -71,8 +71,10 @@ export async function GET(
       'txt': 'text/plain',
       'jpg': 'image/jpeg',
       'jpeg': 'image/jpeg',
+      'jfif': 'image/jpeg',
       'png': 'image/png',
-      'gif': 'image/gif'
+      'gif': 'image/gif',
+      'webp': 'image/webp',
     };
 
     const contentType = contentTypeMap[fileExtension] || 'application/octet-stream';
@@ -87,7 +89,7 @@ export async function GET(
       : `inline; filename="${encodeURIComponent(fileName)}"`;
 
     // Return the file with appropriate Content-Disposition
-    // Also set headers to allow iframe embedding and CORS
+    // Allow same-origin embedding so the view modal can display PDFs in iframe/embed
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': contentType,
@@ -97,6 +99,7 @@ export async function GET(
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
       },
     });
   } catch (error) {

@@ -97,9 +97,9 @@ export default clerkMiddleware(async (auth, req) => {
             // Don't call auth() for public routes - this allows them to be accessed without authentication
             const response = NextResponse.next();
             
-            // Add security headers
-            const isResumeApiRoute = url.pathname.startsWith('/api/candidates/resume/');
-            if (isResumeApiRoute) {
+            // Add security headers - allow same-origin embedding for document/resume preview APIs
+            const isPreviewApiRoute = url.pathname.startsWith('/api/candidates/resume/') || url.pathname.startsWith('/api/documents/');
+            if (isPreviewApiRoute) {
                 response.headers.set("X-Frame-Options", "SAMEORIGIN");
             } else {
                 response.headers.set("X-Frame-Options", "DENY");
@@ -133,9 +133,9 @@ export default clerkMiddleware(async (auth, req) => {
         // Add security headers
         const response = NextResponse.next();
         
-        // Allow iframe embedding for resume preview API route
-        const isResumeApiRoute = url.pathname.startsWith('/api/candidates/resume/');
-        if (isResumeApiRoute) {
+        // Allow same-origin embedding for document/resume preview APIs (view modal)
+        const isPreviewApiRoute = url.pathname.startsWith('/api/candidates/resume/') || url.pathname.startsWith('/api/documents/');
+        if (isPreviewApiRoute) {
             response.headers.set("X-Frame-Options", "SAMEORIGIN");
         } else {
             response.headers.set("X-Frame-Options", "DENY");

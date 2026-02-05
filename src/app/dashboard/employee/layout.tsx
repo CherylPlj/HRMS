@@ -441,6 +441,16 @@ export default function EmployeeDashboard({ children }: { children: React.ReactN
 
               {/* Right Side Icons and User Info */}
               <div className="flex items-center justify-between sm:justify-end space-x-4">
+                {/* Manual / Help - Faculty & Employee manual */}
+                <a
+                  href="https://drive.google.com/drive/folders/1DIpqHqzYgL4sJx6HPu46ggpxxVOIB0AL?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 sm:p-2 rounded-full hover:bg-gray-200 transition"
+                  title="Faculty / Employee Manual"
+                >
+                  <i className="fas fa-question-circle text-black text-sm sm:text-base md:text-lg"></i>
+                </a>
                 {/* Profile Section using Clerk's UserButton */}
                 <div className="flex items-center">
                   <UserButton

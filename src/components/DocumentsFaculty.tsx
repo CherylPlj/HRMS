@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, X, Eye, Paperclip, Filter, Trash2, Upload, Check, Download } from 'lucide-react';
+import { Plus, X, Eye, Paperclip, Filter, Trash2, Upload, Check, Download, ExternalLink } from 'lucide-react';
 import { uploadFacultyDocument, fetchFacultyDocuments } from '../api/faculty-documents';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '../lib/supabaseClient';
+import { FILE_INPUT_ACCEPT } from '@/lib/fileValidation';
 
 interface ComponentWithBackButton {
   onBack: () => void;
@@ -416,6 +417,15 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
   const getFileType = (url: string | undefined, mimeType?: string): 'image' | 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'other' => {
     if (!url) return 'other';
 
+    // Same-origin document proxy (like Recruitment resume proxy) - infer type from path
+    if (url.includes('/api/documents/')) {
+      const pathPart = url.replace(/^.*\/api\/documents\//, '');
+      const lastSegment = pathPart.split('/').pop() || '';
+      const ext = lastSegment.split('.').pop()?.toLowerCase();
+      if (ext === 'pdf') return 'pdf';
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return 'image';
+    }
+
     // Check MIME type first if available
     if (mimeType) {
       if (mimeType.startsWith('image/')) return 'image';
@@ -447,39 +457,30 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     }
   };
 
+  // Same pattern as Recruitment resume preview: proxy Supabase storage through /api/documents/
+  // so PDFs and images display in iframe (Content-Disposition: inline, same-origin).
   const getPreviewUrl = (url: string | undefined) => {
     if (!url) return '';
 
-    // Handle Google Drive URLs
-    const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (driveMatch) {
-      const fileId = driveMatch[1];
-      return `https://drive.google.com/file/d/${fileId}/preview`;
-    }
-
-    // Handle export=download URLs
-    const downloadMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
-    if (downloadMatch) {
-      const fileId = downloadMatch[1];
-      return `https://drive.google.com/file/d/${fileId}/preview`;
-    }
-
-    // Handle Supabase Storage URLs
-    if (url.includes('storage.googleapis.com') || url.includes('supabase')) {
-      // For images, return the URL directly
-      if (getFileType(url) === 'image') {
-        return url;
-      }
-      // For PDFs, return the URL directly as modern browsers can preview them
-      if (getFileType(url) === 'pdf') {
-        return url;
+    if (url.includes('supabase.co') || url.includes('storage.googleapis.com')) {
+      // Extract path after /documents/ (bucket name) - same as Recruitment uses /resumes/
+      const pathMatch = url.match(/\/documents\/(.+?)(?:\?|$)/);
+      if (pathMatch?.[1]?.trim()) {
+        let path = pathMatch[1].split('?')[0].trim();
+        try {
+          path = decodeURIComponent(path);
+        } catch {
+          // keep path as-is if decode fails
+        }
+        const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+        return `/api/documents/${encodedPath}`;
       }
     }
 
     return url;
   };
 
-  // Add preview component to handle different file types - Enhanced
+  // Add preview component to handle different file types (same pattern as Recruitment ResumePreviewModal)
   const FilePreview: React.FC<{ url: string; documentType?: string }> = ({ url, documentType }) => {
     const fileType = getFileType(url);
     const fileIcon = getFileTypeIcon(fileType);
@@ -487,12 +488,22 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
     return (
       <div className="w-full flex flex-col">
         {/* Preview Header */}
-        <div className="border-b pb-4 mb-4">
+        <div className="border-b pb-4 mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{fileIcon}</span>
             <h3 className="text-lg font-semibold text-[#800000]">{documentType || 'Document Preview'}</h3>
             <span className="text-sm text-gray-500 capitalize">({fileType} file)</span>
           </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-[#800000] text-sm flex items-center gap-1"
+            title="Open in new tab"
+          >
+            <ExternalLink size={14} />
+            Open in new tab
+          </a>
         </div>
 
         {/* Preview Content */}
@@ -509,11 +520,15 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             />
           )}
           {(fileType === 'pdf' || fileType === 'document') && (
-            <iframe
-              src={url}
-              title="Document Preview"
-              className="w-full h-[calc(70vh-4rem)] border-0 rounded shadow-lg"
-            />
+            <div className="w-full rounded shadow-lg overflow-hidden bg-gray-100" style={{ minHeight: 'calc(70vh - 4rem)' }}>
+              <embed
+                src={url}
+                type="application/pdf"
+                className="w-full border-0"
+                style={{ height: 'calc(70vh - 4rem)', minHeight: '500px' }}
+                title="Document Preview"
+              />
+            </div>
           )}
           {(fileType === 'spreadsheet' || fileType === 'presentation' || fileType === 'other') && (
             <div className="flex flex-col items-center justify-center h-[calc(70vh-4rem)] bg-gray-50 rounded-lg p-8">
@@ -737,7 +752,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                             {truncateFileName(getFileName(doc.FileUrl))}
                           </a>
                           <button
-                            onClick={() => setPreviewFileUrl(getPreviewUrl(doc.FileUrl))}
+                            onClick={() => setPreviewFileUrl(getPreviewUrl(doc.FileUrl) || doc.FileUrl || null)}
                             className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
                             title="View file"
                             aria-label="View file"
@@ -897,7 +912,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                           <td className="p-3">
                             <div className="font-medium">{dt.DocumentTypeName}</div>
                             <div className="text-xs text-gray-500">
-                              Accepted formats: {dt.AcceptedFileTypes || '.pdf, .doc, .docx, .jpg, .png'}
+                              Accepted formats: PDF and images only (JPG, PNG, GIF, WEBP)
                             </div>
                           </td>
                           <td className="p-3 text-sm text-gray-600">
@@ -930,7 +945,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                   {truncateFileName(getFileName(existingDoc.FileUrl))}
                                 </a>
                                 <button
-                                  onClick={() => setPreviewFileUrl(existingDoc.FileUrl!)}
+                                  onClick={() => setPreviewFileUrl(getPreviewUrl(existingDoc.FileUrl!) || existingDoc.FileUrl! || null)}
                                   className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
                                   title="View file"
                                 >
@@ -990,7 +1005,7 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
                                     type="file"
                                     name="file"
                                     className="hidden"
-                                    accept={dt.AcceptedFileTypes?.replace(/ /g, '')}
+                                    accept={FILE_INPUT_ACCEPT.FACULTY_DOCUMENTS}
                                     onChange={(e) => {
                                       if (e.target.files?.[0]) {
                                         e.target.form?.requestSubmit();
@@ -1127,7 +1142,10 @@ const DocumentsFaculty: React.FC<ComponentWithBackButton> = ({ onBack }) => {
             </button>
             <FilePreview
               url={previewFileUrl}
-              documentType={documents.find(doc => doc.FileUrl === previewFileUrl)?.DocumentType?.DocumentTypeName}
+              documentType={
+                documents.find(doc => doc.FileUrl && (getPreviewUrl(doc.FileUrl) === previewFileUrl || doc.FileUrl === previewFileUrl))
+                  ?.DocumentType?.DocumentTypeName
+              }
             />
           </div>
         </div>

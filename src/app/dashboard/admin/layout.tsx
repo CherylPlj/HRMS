@@ -554,6 +554,20 @@ export default function AdminDashboard({ children }: { children: React.ReactNode
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+                  {/* Manual / Help - opens role-specific Google Drive folder */}
+                  <a
+                    href={
+                      userRole === 'super admin'
+                        ? 'https://drive.google.com/drive/folders/1TmYRi57XWdj8hUEaC8vycNkV-E-8KfPo?usp=sharing'
+                        : 'https://drive.google.com/drive/folders/1LhrE1J2xihzN0tkxn820EuNS2TTsqsAJ?usp=sharing'
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 sm:p-2 rounded-full hover:bg-gray-200 transition"
+                    title={userRole === 'super admin' ? 'Super Admin Manual' : 'Admin Manual'}
+                  >
+                    <i className="fas fa-question-circle text-black text-sm sm:text-base md:text-lg"></i>
+                  </a>
                   {/* Chat Icon */}
                   <a
                     ref={chatButtonRef}

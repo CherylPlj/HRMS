@@ -192,6 +192,51 @@ export const facultyDocumentService = {
     }
   },
 
+  /**
+   * Download file content for preview (same-origin proxy so iframe can display PDFs).
+   */
+  async getFileContent(fileId: string, storageType: 'google-drive' | 'supabase' = 'google-drive'): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
+    try {
+      if (storageType === 'supabase') {
+        const { data, error } = await supabaseAdmin.storage
+          .from(DOCUMENTS_BUCKET)
+          .download(fileId);
+
+        if (error || !data) {
+          throw new Error(error?.message || 'File not found in Supabase Storage');
+        }
+
+        const buffer = Buffer.from(await data.arrayBuffer());
+        const fileName = fileId.split('/').pop() || 'file';
+        const ext = fileName.split('.').pop()?.toLowerCase() || '';
+        const mimeTypes: Record<string, string> = {
+          pdf: 'application/pdf',
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+        };
+        return { buffer, mimeType: mimeTypes[ext] || data.type || 'application/octet-stream', fileName };
+      } else {
+        const response = await drive.files.get(
+          { fileId, alt: 'media' },
+          { responseType: 'arraybuffer' }
+        );
+        const metadata = await drive.files.get({
+          fileId,
+          fields: 'name, mimeType',
+        });
+        const mimeType = (metadata.data.mimeType as string) || 'application/pdf';
+        const fileName = (metadata.data.name as string) || 'document.pdf';
+        return {
+          buffer: Buffer.from(response.data as ArrayBuffer),
+          mimeType,
+          fileName,
+        };
+      }
+    } catch (error) {
+      console.error(`Error getting file content from ${storageType}:`, error);
+      throw new Error(`Failed to get file content from ${storageType}`);
+    }
+  },
+
   async getFileMetadata(fileId: string, storageType: 'google-drive' | 'supabase' = 'google-drive') {
     try {
       if (storageType === 'supabase') {

@@ -55,14 +55,9 @@ export const ALLOWED_MIME_TYPES = {
     'image/webp',
   ],
   
-  // Faculty/Employee documents (all document types + images)
+  // Faculty/Employee documents (PDF and images only)
   FACULTY_DOCUMENTS: [
     'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.oasis.opendocument.text',
-    'application/rtf',
-    'text/plain',
     'image/jpeg',
     'image/jpg',
     'image/png',
@@ -85,7 +80,7 @@ export const ALLOWED_EXTENSIONS = {
   IMAGES: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   CSV: ['.csv'],
   EVIDENCE: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif', '.webp'],
-  FACULTY_DOCUMENTS: ['.pdf', '.doc', '.docx', '.odt', '.rtf', '.txt', '.jpg', '.jpeg', '.png', '.gif', '.webp'],
+  FACULTY_DOCUMENTS: ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'],
   CERTIFICATES: ['.pdf', '.jpg', '.jpeg', '.png'],
 } as const;
 
@@ -95,7 +90,7 @@ export const FILE_INPUT_ACCEPT = {
   IMAGES: 'image/jpeg,image/jpg,image/png,image/gif,image/webp',
   CSV: '.csv',
   EVIDENCE: '.pdf,.doc,.docx,image/*',
-  FACULTY_DOCUMENTS: '.pdf,.doc,.docx,.odt,.rtf,.txt,image/*',
+  FACULTY_DOCUMENTS: '.pdf,image/jpeg,image/jpg,image/png,image/gif,image/webp',
   CERTIFICATES: '.pdf,image/jpeg,image/jpg,image/png',
 } as const;
 
@@ -293,7 +288,7 @@ export function getFileValidationErrorMessage(
 ): string {
   const limits = {
     RESUME: { size: '5MB', types: 'PDF, DOC, DOCX, ODT, RTF, TXT' },
-    DOCUMENT: { size: '10MB', types: 'PDF, DOC, DOCX, ODT, RTF, TXT, Images' },
+    DOCUMENT: { size: '10MB', types: 'PDF, Images (JPG, PNG, GIF, WEBP)' },
     IMAGE: { size: '5MB', types: 'JPG, PNG, GIF, WEBP' },
     CSV: { size: '5MB', types: 'CSV' },
     EVIDENCE: { size: '10MB', types: 'PDF, DOC, DOCX, Images' },
